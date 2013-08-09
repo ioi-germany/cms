@@ -92,7 +92,11 @@ from .user import \
     AddParticipationHandler, \
     EditParticipationHandler, \
     AddTeamHandler, \
-    TeamHandler
+    TeamHandler, \
+    GroupListHandler, \
+    AddGroupHandler, \
+    RemoveGroupHandler, \
+    GroupHandler
 from .admin import \
     AddAdminHandler, \
     AdminsHandler, \
@@ -134,6 +138,13 @@ HANDLERS = [
     (r"/contest/([0-9]+)/user/([0-9]+)/remove", RemoveParticipationHandler),
     (r"/contest/([0-9]+)/user/([0-9]+)/edit", ParticipationHandler),
     (r"/contest/([0-9]+)/user/([0-9]+)/message", MessageHandler),
+
+    # Contest's groups
+
+    (r"/contest/([0-9]+)/groups", GroupListHandler),
+    (r"/contest/([0-9]+)/groups/add", AddGroupHandler),
+    (r"/contest/([0-9]+)/group/([0-9]+)/remove", RemoveGroupHandler),
+    (r"/contest/([0-9]+)/group/([0-9]+)/edit", GroupHandler),
 
     # Contest's tasks
 

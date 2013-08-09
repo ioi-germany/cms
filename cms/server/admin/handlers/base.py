@@ -46,7 +46,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import subqueryload
 
 from cms import __version__
-from cms.db import Admin, Contest, Participation, Question, \
+from cms.db import Admin, Contest, Group, Participation, Question, \
     Submission, SubmissionFormatElement, SubmissionResult, Task, Team, User, \
     UserTest
 from cms.grading.scoretypes import get_score_type_class
@@ -294,7 +294,7 @@ class BaseHandler(CommonRequestHandler):
         if self.current_user is not None:
             params["current_user"] = self.current_user
         if self.contest is not None:
-            params["phase"] = self.contest.phase(params["timestamp"])
+            params["phase"] = self.contest.main_group.phase(params["timestamp"])
             # Keep "== None" in filter arguments. SQLAlchemy does not
             # understand "is None".
             params["unanswered"] = self.sql_session.query(Question)\

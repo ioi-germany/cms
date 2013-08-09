@@ -32,10 +32,11 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from cms.db import Contest, Participation, Submission, Team, User
+from cms.db import Contest, Group, Participation, Submission, Team, User
 from cmscommon.datetime import make_datetime
 
-from .base import BaseHandler, SimpleHandler, require_permission
+from .base import BaseHandler, SimpleContestHandler, SimpleHandler, \
+    require_permission
 
 
 class UserHandler(BaseHandler):
@@ -273,15 +274,16 @@ class AddParticipationHandler(BaseHandler):
         user = self.safe_get_item(User, user_id)
 
         try:
-            contest_id = self.get_argument("contest_id")
-            assert contest_id != "null", "Please select a valid contest"
+            group_id = self.get_argument("group_id")
+            assert group_id != "null", "Please select a valid group"
         except Exception as error:
             self.application.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(fallback_page)
             return
 
-        self.contest = self.safe_get_item(Contest, contest_id)
+        group = self.safe_get_item(Group, group_id)
+        self.contest = group.contest
 
         attrs = {}
         self.get_bool(attrs, "hidden")
@@ -290,6 +292,7 @@ class AddParticipationHandler(BaseHandler):
         # Create the participation.
         participation = Participation(contest=self.contest,
                                       user=user,
+                                      group=group,
                                       hidden=attrs["hidden"],
                                       unrestricted=attrs["unrestricted"])
         self.sql_session.add(participation)
@@ -337,4 +340,115 @@ class EditParticipationHandler(BaseHandler):
             self.application.service.proxy_service.reinitialize()
 
         # Maybe they'll want to do this again (for another contest).
+        self.redirect(fallback_page)
+
+
+class GroupListHandler(SimpleContestHandler("groups.html")):
+    """Get returns the list of all groups.
+
+    """
+
+
+class AddGroupHandler(BaseHandler):
+    """Adds a new group.
+
+    """
+    @require_permission(BaseHandler.PERMISSION_ALL)
+    def post(self, contest_id):
+        fallback_page = self.url("contest", contest_id, "group", "add")
+
+        try:
+            attrs = dict()
+
+            self.get_string(attrs, "name")
+
+            assert attrs.get("name") is not None, \
+                "No name specified."
+
+            attrs["contest"] = self.safe_get_item(Contest, contest_id)
+
+            # Create the group.
+            group = Group(**attrs)
+            self.sql_session.add(group)
+
+        except Exception as error:
+            self.application.service.add_notification(
+                make_datetime(), "Invalid field(s)", repr(error))
+            self.redirect(fallback_page)
+            return
+
+        self.try_commit()
+        self.redirect(self.url("contest", contest_id, "group", group.id, "edit"))
+
+
+class RemoveGroupHandler(BaseHandler):
+    """Delete actually removes the group from CMS assuming it contains no participations.
+
+    """
+    @require_permission(BaseHandler.PERMISSION_ALL)
+    def delete(self, group_id):
+        fallback_page = self.url("contest", group.contest_id, "groups")
+
+        group = self.safe_get_item(User, group_id)
+
+        if len(group.participations) != 0:
+            self.application.service.add_notification(
+                make_datetime(), "Cannot delete group because it contains users.")
+            self.redirect(fallback_page)
+            return
+
+        self.sql_session.delete(group)
+        self.try_commit()
+
+        # Maybe they'll want to do this again (for another user)
+        self.write("../../groups")
+
+
+class GroupHandler(BaseHandler):
+    @require_permission(BaseHandler.PERMISSION_ALL)
+    def get(self, contest_id, group_id):
+        self.contest = self.safe_get_item(Contest, contest_id)
+
+        self.r_params = self.render_params()
+
+        group = self.safe_get_item(Group, group_id)
+        assert group.contest_id == self.contest.id
+
+        self.r_params["group"] = group
+        self.render("group.html", **self.r_params)
+
+    @require_permission(BaseHandler.PERMISSION_ALL)
+    def post(self, contest_id, group_id):
+        fallback_page = self.url("contest", contest_id, "group", group_id, "edit")
+
+        self.contest = self.safe_get_item(Contest, contest_id)
+        group = self.safe_get_item(Group, group_id)
+        assert group.contest_id == self.contest.id
+
+        try:
+            attrs = group.get_attrs()
+
+            self.get_string(attrs, "name", empty=None)
+
+            self.get_datetime(attrs, "start")
+            self.get_datetime(attrs, "stop")
+            self.get_timedelta_sec(attrs, "per_user_time")
+
+            self.get_bool(attrs, "analysis_enabled")
+            self.get_datetime(attrs, "analysis_start")
+            self.get_datetime(attrs, "analysis_stop")
+
+            assert attrs.get("name") is not None, \
+                "No group name specified."
+
+            # Update the group.
+            group.set_attrs(attrs)
+
+        except Exception as error:
+            self.application.service.add_notification(
+                make_datetime(), "Invalid field(s)", repr(error))
+            self.redirect(fallback_page)
+            return
+
+        self.try_commit()
         self.redirect(fallback_page)

@@ -38,7 +38,7 @@ import logging
 
 import tornado.web
 
-from cms.db import Contest, Message, Participation, Submission, User, Team
+from cms.db import Contest, Group, Message, Participation, Submission, User, Team
 from cmscommon.datetime import make_datetime
 
 from .base import BaseHandler, require_permission
@@ -148,6 +148,8 @@ class AddContestUserHandler(BaseHandler):
         try:
             user_id = self.get_argument("user_id")
             assert user_id != "null", "Please select a valid user"
+            group_id = self.get_argument("group_id")
+            assert group_id != "null", "Please select a valid group"
         except Exception as error:
             self.application.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
@@ -155,9 +157,10 @@ class AddContestUserHandler(BaseHandler):
             return
 
         user = self.safe_get_item(User, user_id)
+        group = self.safe_get_item(Group, group_id)
 
         # Create the participation.
-        participation = Participation(contest=self.contest, user=user)
+        participation = Participation(contest=self.contest, user=user, group=group)
         self.sql_session.add(participation)
 
         if self.try_commit():
@@ -231,6 +234,9 @@ class ParticipationHandler(BaseHandler):
                        .filter(Team.code == attrs["team"])\
                        .first()
             participation.team = team
+
+            group_id = self.get_argument("group_id")
+            participation.group = self.safe_get_item(Group, group_id)
 
         except Exception as error:
             self.application.service.add_notification(

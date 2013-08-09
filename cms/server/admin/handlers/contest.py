@@ -33,7 +33,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from cms import ServiceCoord, get_service_shards, get_service_address
-from cms.db import Contest, Participation, Submission
+from cms.db import Contest, Group, Participation, Submission
 from cmscommon.datetime import make_datetime
 
 from .base import BaseHandler, SimpleContestHandler, SimpleHandler, \
@@ -58,6 +58,12 @@ class AddContestHandler(
 
             # Create the contest.
             contest = Contest(**attrs)
+
+            # Add the default group
+            group = Group(name="default")
+            contest.groups.append(group)
+            contest.main_group = group
+
             self.sql_session.add(contest)
 
         except Exception as error:
@@ -119,16 +125,19 @@ class ContestHandler(SimpleContestHandler("contest.html")):
             self.get_timedelta_sec(attrs, "min_submission_interval")
             self.get_timedelta_sec(attrs, "min_user_test_interval")
 
-            self.get_datetime(attrs, "start")
-            self.get_datetime(attrs, "stop")
-
             self.get_string(attrs, "timezone", empty=None)
-            self.get_timedelta_sec(attrs, "per_user_time")
             self.get_int(attrs, "score_precision")
 
-            self.get_bool(attrs, "analysis_enabled")
-            self.get_datetime(attrs, "analysis_start")
-            self.get_datetime(attrs, "analysis_stop")
+            try:
+                main_group_id = self.get_argument("main_group_id")
+                assert main_group_id != "null", "Please select a valid main group"
+            except Exception as error:
+                self.application.service.add_notification(
+                    make_datetime(), "Invalid field(s)", repr(error))
+                self.redirect(fallback_page)
+                return
+
+            attrs["main_group"] = self.safe_get_item(Group, main_group_id)
 
             # Update the contest.
             contest.set_attrs(attrs)
