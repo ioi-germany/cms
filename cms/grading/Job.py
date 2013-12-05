@@ -6,6 +6,7 @@
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -36,7 +37,6 @@ certain testcase".
 """
 
 import json
-from copy import deepcopy
 
 from cms.db import File, Manager, Executable, UserTestExecutable, Evaluation
 
@@ -443,38 +443,37 @@ class JobGroup(object):
     # Evaluation
 
     @staticmethod
-    def from_submission_evaluation(submission, dataset):
-        job = EvaluationJob()
-
-        # Job
-        job.task_type = dataset.task_type
-        job.task_type_parameters = dataset.task_type_parameters
-
-        submission_result = submission.get_result(dataset)
-
-        # This should have been created by now.
-        assert submission_result is not None
-
-        # EvaluationJob; dict() is required to detach the dictionary
-        # that gets added to the Job from the control of SQLAlchemy
-        job.language = submission.language
-        job.files = dict(submission.files)
-        job.managers = dict(dataset.managers)
-        job.executables = dict(submission_result.executables)
-        job.time_limit = dataset.time_limit
-        job.memory_limit = dataset.memory_limit
-
+    def from_submission_evaluation(submission, dataset,
+                                   submission_result=None):
         jobs = dict()
 
         for k, testcase in dataset.testcases.iteritems():
-            job2 = deepcopy(job)
+            job = EvaluationJob()
 
-            job2.input = testcase.input
-            job2.output = testcase.output
-            job2.info = "evaluate submission %d on testcase %s" % \
-                        (submission.id, testcase.codename)
+            # Job
+            job.task_type = dataset.task_type
+            job.task_type_parameters = dataset.task_type_parameters
 
-            jobs[k] = job2
+            if submission_result is None:
+                submission_result = submission.get_result(dataset)
+
+            # This should have been created by now.
+            assert submission_result is not None
+
+            # EvaluationJob; dict() is required to detach the dictionary
+            # that gets added to the Job from the control of SQLAlchemy
+            job.language = submission.language
+            job.files = dict(submission.files)
+            job.managers = dict(dataset.managers)
+            job.executables = dict(submission_result.executables)
+            job.time_limit = dataset.time_limit
+            job.memory_limit = dataset.memory_limit
+            job.input = testcase.input
+            job.output = testcase.output
+            job.info = "evaluate submission %d on testcase %s" % \
+                       (submission.id, testcase.codename)
+
+            jobs[k] = job
 
         return JobGroup(jobs)
 
