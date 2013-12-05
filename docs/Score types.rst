@@ -10,7 +10,7 @@ For every submission, the score type of a task comes into play after the :doc:`t
 Standard score types
 ====================
 
-CMS ships with the following score types: Sum, GroupMin, GroupMul, GroupThreshold.
+CMS ships with the following score types: Sum, GroupMin, GroupMul, GroupThreshold, SubtaskGroup.
 
 The first of the four well-tested score types, Sum, is the simplest you can imagine, just assigning a fixed amount of points for each correct testcase. The other three are useful for grouping together testcases and assigning points for that group only if some conditions held. Groups are also known as subtasks in some contests. The group score types also allow test cases to be weighted, even for groups of size 1.
 
@@ -57,3 +57,16 @@ The parameter string is of the form :samp:`[[{m1}, {t1}, {T1}], [{m2}, {t2}, {T2
 The task needs to be crafted in such a way that the meaning of the outcome is appropriate for this score type.
 
 For Batch tasks, this means that the tasks creates the outcome through a comparator program. Using diff does not make sense given that its outcomes can only be 0.0 or 1.0.
+
+.. _scoretypes_subtaskgroup:
+
+SubtaskGroup
+------------
+
+SubtaskGroup distinguishes between subtasks and groups. A subtask can contain multiple groups. The score of a subtask is the sum of the scores of the groups it contains. The score of a group is calculated as in :ref:`scoretypes_groupmin`.
+
+Each subtask has a name (which is displayed to the contestants) and can be either public or private. The official (private) score is the sum of the scores of only the private subtasks.
+
+Test cases can occur in any number of groups. They will all be evaluated exactly once but can be taken into account for computing the scores of multiple groups.
+
+The parameter string is a (json encoded) list of subtask specifications. A subtask specification is a dictionary with entries :samp:`name` (a string), :samp:`public` (a boolean) and :samp:`groups` (a list of group specifications). A group specification is a dictionary with entries :samp:`points` (the maximum number of points for this group) and :samp:`cases` (a list of test case code names).
