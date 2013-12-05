@@ -7,6 +7,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
+# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -82,6 +83,11 @@ class Submission(Base):
 
     # Language of submission, or None if not applicable.
     language = Column(
+        String,
+        nullable=True)
+
+    # Additional parameters
+    additional_info = Column(
         String,
         nullable=True)
 

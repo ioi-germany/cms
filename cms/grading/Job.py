@@ -6,6 +6,7 @@
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -466,8 +467,18 @@ class JobGroup(object):
             job.files = dict(submission.files)
             job.managers = dict(dataset.managers)
             job.executables = dict(submission_result.executables)
-            job.time_limit = dataset.time_limit
-            job.memory_limit = dataset.memory_limit
+
+            if submission.additional_info is None:
+                additional_limits = {}
+            else:
+                additional_info = json.loads(submission.additional_info)
+                additional_limits = additional_info.get("limits", {})
+
+            job.time_limit = additional_limits.get("weak_time_limit",
+                                                   dataset.time_limit)
+            job.memory_limit = additional_limits.get("weak_mem_limit",
+                                                     dataset.memory_limit)
+
             job.input = testcase.input
             job.output = testcase.output
             job.info = "evaluate submission %d on testcase %s" % \

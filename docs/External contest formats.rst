@@ -195,7 +195,7 @@ You can add test submissions which are automatically evaluated by :file:`cmsGerM
 
 For each test submission, you have to specify the expected results, which :file:`cmsGerMake` automatically compares to the actual results. You could say "this submission should get 50 points for private and 150 points for public test cases; it should succeed for all test cases except the last one, where it should exceed the time limit".
 
-Test submissions will **in a future version** be evaluated with increased (weak) time and memory limits. In the end, the used time (or memory) is compared to the weak and (lower) strong limits. The purpose of this is to ensure some "safety margin" (e.g.: the correct test submissions should take only need the allowed time; the slow test submissions should need at least twice the allowed time).
+Test submissions are evaluated with increased (weak) time and memory limits. In the end, the used time (or memory) is compared to the weak and (lower) strong limits. The purpose of this is to ensure some "safety margin" (e.g.: the correct test submissions should take only need the allowed time; the slow test submissions should need at least twice the allowed time).
 
 Referencing test cases
 ----------------------
