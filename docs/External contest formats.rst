@@ -176,3 +176,153 @@ Since Polygon doesn't support CMS directly, some task parameters cannot be set u
 By default, all tasks are batch files, with custom checker and score type is Sum. Loaders assumes that checker is check.cpp and written with usage of testlib.h. It provides customized version of testlib.h which allows using Polygon checkers with CMS. Checkers will be compiled during importing the contest. This is important in case the architecture where the loading happens is different from the architecture of the workers.
 
 Polygon (by now) doesn't allow custom contest-wide files, so general contest options should be hard-coded in the loader.
+
+
+German import format
+=====================
+
+An example contest can be found here: `<https://github.com/ioi-germany/testcontest>`_
+
+You can test a contest locally using the :file:`cmsGerMake` command. It will create a :file:`build` directory inside the given contest directory, copy all files from the contest directory to the build directory and then build the contest (read the configuration files, generate test cases, ...).
+
+Similarly, use :file:`cmsImporter` or :file:`cmsReimporter` as usual. **Warning:** :file:`cmsReimporter` currently ignores test submissions.
+
+Contests and tasks are specified using python scripts :file:`contest-config.py` and :file:`taskname/config.py`.
+
+Each time a contest or task is built, the respective python configuration files are executed. The configuration files contain static information like a list of all users, task names and time limits but are also responsible for e.g. compiling test case generators, generating test cases, validating test cases and compiling task statements.
+
+The python scripts are provided with some variables and functions (both global and local): The methods of a :ref:`ContestConfig` or :ref:`TaskConfig` (and their superclass :ref:`CommonConfig`) object that are marked as :samp:`@exported_function` as well as other contents of the :samp:`exported` dictionary.
+
+Lazy rebuilding
+---------------
+
+We use a mechanism to ensure that most operations are only performed if necessary, for example:
+
+* Compiling
+* Executing a command
+* Making a zip file
+* Testing a test submission
+
+E.g., a command usually has to be executed only if the executable, the command line arguments, any input file or any output file has changed.
+
+Although this is relatively stable, it may happen that a necessary operation is not executed (for example, if you forgot to install a LaTeX package before the previous run and now you installed it). In such cases, you can remove the :file:`build` directory (or change one of the output or input files).
+
+Below, we describe the internals of this mechanism (for details, see :file:`cms/rules/Rule.py`):
+
+A :samp:`Rule` object is created whenever an operation is requested. We call the details of such a request the rule's *mission*. A rule's mission could for example be "compile source.cpp to binary using g++" or "run binary using input.txt for stdin and output.txt for stdout; beware, the binary could also read extradata.txt!".
+
+Subsequently (in :samp:`Rule.ensure()`), we check if the last result (:samp:`RuleResult`) of this mission can be found on the disk (we look for a file whose name is essentially the hash sum of the mission). If no, then we run the rule (compile, execute the binary, ...). If yes, then we retrieve the set of dependency/output file names along with their expected hash sums (the ones after the last time the rule was run) from the result file. If one of the saved hash sums is different from the current one, we run the rule, otherwise we don't. In the end (if nothing terrible happened), we find out the dependencies/outputs (e.g., g++ usually returns them with the -MMD flag) and save these results (so that they can be retrieved using the mission the next time this rule is supposed to be run). The results can comprise other information than dependency/output file names, e.g. compiler output, some representation of the result of the evaluation of a test submission, etc.
+
+Supplements
+-----------
+
+A supplement is a header file that is automatically generated immediately before a compilation (e.g. of a LaTeX statement) is performed. Its job is to provide information that can easily be extracted from the configuration file to the compiler, for example the task name, the time and memory limits and sample test cases.
+
+Constraints
+-----------
+
+You can specify simple constraints (e.g., 5 <= N <= 100) in the configuration file which are then automatically provided to both the task statement and test case checkers.
+
+Test submissions (a.k.a. unit tests)
+------------------------------------
+
+You can add test submissions which are automatically evaluated by :file:`cmsGerMake` and submitted by :file:`cmsImporter` (**Warning:** :file:`cmsReimporter` currently ignores test submissions).
+
+For each test submission, you have to specify the expected results, which :file:`cmsGerMake` automatically compares to the actual results. You could say "this submission should get 50 points for private and 150 points for public test cases; it should succeed for all test cases except the last one, where it should exceed the time limit".
+
+Test submissions will **in a future version** be evaluated with increased (weak) time and memory limits. In the end, the used time (or memory) is compared to the weak and (lower) strong limits. The purpose of this is to ensure some "safety margin" (e.g.: the correct test submissions should take only need the allowed time; the slow test submissions should need at least twice the allowed time).
+
+Referencing test cases
+----------------------
+
+For test submission result specifications, you need some way to reference test cases. Doing so by code name (a number) can be cumbersome, in particular if you decide add test cases later. For this reason, you can give subtasks, groups and test cases internal (short) names. If you have a subtask called "small" containing a group called "nastycases", then you can reference the second test case in this group by :samp:`task.small.nastycases.t1` (notice the 0-based indexing!). The fact that we add attributes of the given names to task/subtask/group objects, unfortunately makes this a bit fragile, so you have to choose reasonable names that aren't attributes, yet. This name-based referencing can also be found in the :file:`subtasks` output directory (you can find the test cases both in :file:`subtasks` and :file:`cases`).
+
+Detailed (partial) feedback
+---------------------------
+
+We can give partial feedback by creating a (public) detailed feedback subtask containing a subset of the official test cases. These detailed feedback subtasks can be automatically created using :py:meth:`cmscontrib.gerpythonformat.TaskConfig.generate_feedback` after you have marked the wanted test cases by handing :samp:`feedback=True` to :py:meth:`cmscontrib.gerpythonformat.TaskConfig.MyGroup.add_testcase` (or :py:meth:`cmscontrib.gerpythonformat.TaskConfig.MyGroup.testcase`).
+
+Compiling
+---------
+
+You can compile c++, latex and asymptote files using the commands :samp:`compilecpp`, :samp:`compilelatex`, :samp:`compileasy`. Call them with the base name of the file you want to compile (e.g. :samp:`gen` if you want to compile :samp:`gen.cpp` or :samp:`statement` if you want to compile :samp:`statement.tex`). For convenience, you can use the :samp:`compile` function which automatically figures out the corresponding extension.
+
+Executables
+-----------
+
+Compiling a c++ file returns an executable object.
+
+
+
+Test cases and scoring
+----------------------
+
+Only the :ref:`scoretypes_subtaskgroup` score type is supported.
+
+The usual way to specify subtasks, groups and test cases is the following::
+
+    output_generator(compile("solution"))  # Compiles :file:`solution.cpp` and
+    gen = compile("gen")  # Compiles :file:`gen.cpp`
+    # Create the public subtask
+    with subtask("Public", "public", public=True):
+        with group(100):  # Group with 100 points
+            testcase(explicit.p("1.in"))
+    # Create the first subtask
+    with subtask("Subtask 1", "small"):
+        with group(20):  # Group with 20 points
+            testcase(gen.p(1, 5), feedback=True)
+            testcase(gen.p(2, 7))
+        with group(20):  # Group with 20 points
+            testcase(gen.p(3, 9))
+            testcase(gen.p(4, 11))
+    generate_feedback()
+
+
+Calling :samp:`testcase(gen.p(1, 5))` generates a test case and adds it to
+
+.. _CommonConfig:
+
+CommonConfig
+------------
+
+.. autoclass:: cmscontrib.gerpythonformat.CommonConfig.CommonConfig
+
+.. _ContestConfig:
+
+ContestConfig
+-------------
+
+.. autoclass:: cmscontrib.gerpythonformat.ContestConfig.ContestConfig
+    :show-inheritance:
+
+.. _TaskConfig:
+
+TaskConfig
+----------
+
+.. autoclass:: cmscontrib.gerpythonformat.TaskConfig.TaskConfig
+    :show-inheritance:
+
+Scope
+^^^^^
+
+.. autoclass:: cmscontrib.gerpythonformat.TaskConfig.Scope
+    :show-inheritance:
+
+MySubtask
+^^^^^^^^^
+
+.. autoclass:: cmscontrib.gerpythonformat.TaskConfig.MySubtask
+    :show-inheritance:
+
+MyGroup
+^^^^^^^
+
+.. autoclass:: cmscontrib.gerpythonformat.TaskConfig.MyGroup
+    :show-inheritance:
+
+MyCase
+^^^^^^
+
+.. autoclass:: cmscontrib.gerpythonformat.TaskConfig.MyCase
+    :show-inheritance:
