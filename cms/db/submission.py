@@ -9,6 +9,7 @@
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
+# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -109,6 +110,11 @@ class Submission(Base):
     def short_comment(self):
         """The first line of the comment."""
         return self.comment.split("\n", 1)[0]
+
+    # Additional parameters
+    additional_info = Column(
+        String,
+        nullable=True)
 
     # Follows the description of the fields automatically added by
     # SQLAlchemy.

@@ -6,6 +6,7 @@
 # Copyright © 2013-2015 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -535,6 +536,17 @@ class EvaluationJob(Job):
         info = "evaluate submission %d on testcase %s" % \
             (submission.id, testcase.codename)
 
+        if submission.additional_info is None:
+            additional_limits = {}
+        else:
+            additional_info = json.loads(submission.additional_info)
+            additional_limits = additional_info.get("limits", {})
+
+        time_limit = additional_limits.get("weak_time_limit",
+                                           dataset.time_limit)
+        memory_limit = additional_limits.get("weak_mem_limit",
+                                             dataset.memory_limit)
+
         # dict() is required to detach the dictionary that gets added
         # to the Job from the control of SQLAlchemy
         return EvaluationJob(
@@ -546,8 +558,8 @@ class EvaluationJob(Job):
             files=dict(submission.files),
             managers=dict(dataset.managers),
             executables=dict(submission_result.executables),
-            time_limit=dataset.time_limit,
-            memory_limit=dataset.memory_limit,
+            time_limit=time_limit,
+            memory_limit=memory_limit,
             input=testcase.input,
             output=testcase.output,
             info=info
