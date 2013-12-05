@@ -7,6 +7,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -153,6 +154,53 @@ def get_evaluation_command(language, executable_filename):
     else:
         raise ValueError("Unknown language %s." % language)
     return command
+
+
+def unit_test_compare(limits, expected, evaluation):
+    result = []
+
+    def check(val, weak, strong):
+        if val > weak:
+            return -1
+        if val < strong:
+            return 1
+        else:
+            return 0
+
+    # check time constraints
+    if evaluation.execution_time is not None:  # TODO What if this is None?
+        timeverdict = check(float(evaluation.execution_time),
+                            float(limits["weak_time_limit"]),
+                            float(limits["strong_time_limit"]))
+        if timeverdict == -1:
+            result.append("time")
+        elif timeverdict == 0:
+            result.append("time?")
+
+    # check memory constraints
+    if evaluation.execution_memory is not None:  # TODO What if this is None?
+        memverdict = check(float(evaluation.execution_memory) / 2**20,
+                           float(limits["weak_mem_limit"]),
+                           float(limits["strong_mem_limit"]))
+        if "violating memory limits" in json.loads(evaluation.text)[0]:
+            memverdict = -1
+        if memverdict == -1:
+            result.append("memory")
+        elif memverdict == 0:
+            result.append("memory?")
+
+    # check solution (if possible)
+    if float(evaluation.outcome) > 0:
+        result.append(evaluation.outcome)
+    elif len(result) == 0:
+        result.append(evaluation.outcome)
+
+    if expected in result or expected == "any":
+        accepted = True
+    else:
+        accepted = False
+
+    return accepted, result
 
 
 def format_status_text(status, translator=None):

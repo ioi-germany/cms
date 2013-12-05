@@ -62,6 +62,12 @@ def do_setup():
             os.path.join("static", "lib", "*.*"),
             os.path.join("static", "*.*"),
         ],
+        "cmscontrib": [
+            os.path.join("gerpythonformat", "lib", "include", "*.*"),
+            os.path.join("gerpythonformat", "lib", "ready", "*.*"),
+            os.path.join("gerpythonformat", "templates", "*.*"),
+            os.path.join("gerpythonformat", "templates", "*", "*.*"),
+        ],
         "cmstestsuite": [
             os.path.join("code", "*.*"),
             os.path.join("tasks", "batch_stdio", "data", "*.*"),
@@ -102,6 +108,7 @@ def do_setup():
                     "cmsranking",
                     "cmscontrib",
                     "cmscontrib.updaters",
+                    "cmscontrib.gerpythonformat",
                     "cmstaskenv",
                     "cmstestsuite",
                     "cmstestsuite.web",
@@ -149,6 +156,8 @@ def do_setup():
 
                   "cmsYamlImporter=cmscompat.YamlImporter:main",
                   "cmsYamlReimporter=cmscompat.YamlReimporter:main",
+
+                  "cmsGerMake=cmscontrib.gerpythonformat.GerMake:main"
               ]
           },
           keywords="ioi programming contest grader management system",
