@@ -64,6 +64,12 @@ PACKAGE_DATA = {
     "cms.locale": [
         os.path.join("*", "LC_MESSAGES", "*.*"),
     ],
+    "cmscontrib": [
+        os.path.join("gerpythonformat", "lib", "include", "*.*"),
+        os.path.join("gerpythonformat", "lib", "ready", "*.*"),
+        os.path.join("gerpythonformat", "templates", "*.*"),
+        os.path.join("gerpythonformat", "templates", "*", "*.*"),
+    ],
     "cmsranking": [
         os.path.join("static", "img", "*.*"),
         os.path.join("static", "lib", "*.*"),
@@ -149,6 +155,7 @@ setup(
             "cmsMake=cmstaskenv.cmsMake:main",
             "cmsYamlImporter=cmscompat.YamlImporter:main",
             "cmsYamlReimporter=cmscompat.YamlReimporter:main",
+            "cmsGerMake=cmscontrib.gerpythonformat.GerMake:main",
         ]
     },
     keywords="ioi programming contest grader management system",
