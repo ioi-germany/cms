@@ -10,7 +10,7 @@ For every submission, the score type of a task comes into play after the :doc:`t
 Standard score types
 ====================
 
-Like task types, CMS has the most common score types built in. They are Sum, GroupMin, GroupMul, GroupThreshold. There is also a score type called Relative, but it is an experiment not meant for usage.
+Like task types, CMS has the most common score types built in. They are Sum, GroupMin, GroupMul, GroupThreshold and SubtaskGroup. There is also a score type called Relative, but it is an experiment not meant for usage.
 
 The first of the four well-tested score types, Sum, is the simplest you can imagine, just assigning a certain amount of points for each correct testcases. The other three are useful for grouping together testcases and assigning points for that group only if some conditions held. Groups are also known as subtasks in some contests. The group score types also allow test cases to be weighted, even for groups of size 1.
 
@@ -49,3 +49,17 @@ GroupThreshold
 GroupThreshold thinks of the outcomes not as a measure of success, but as an amount of resources used by the submission to solve the testcase. The testcase is then successfully solved if the outcome is between 0.0 and a certain number, the threshold, specified separately for each group.
 
 The parameter string is of the form :samp:`[[{m1}, {t1}, {T1}], [{m2}, {t2}, {T2}], ...]` where the additional parameter :samp:`{T}` for each group is the threshold.
+
+
+.. _scoretypes_subtaskgroup:
+
+SubtaskGroup
+------------
+
+SubtaskGroup distinguishes between subtasks and groups. A subtask can contain multiple groups. The score of a subtask is the sum of the scores of the groups it contains. The score of a group is calculated as in :ref:`scoretypes_groupmin`.
+
+Each subtask has a name (which is displayed to the contestants) and can be either public or private. The official (private) score is the sum of the scores of only the private subtasks.
+
+Test cases can occur in any number of groups. They will all be evaluated exactly once but can be taken into account for computing the scores of multiple groups.
+
+The parameter string is a (json encoded) list of subtask specifications. A subtask specification is a dictionary with entries :samp:`name` (a string), :samp:`public` (a boolean) and :samp:`groups` (a list of group specifications). A group specification is a dictionary with entries :samp:`points` (the maximum number of points for this group) and :samp:`cases` (a list of test case code names).
