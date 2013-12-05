@@ -6,6 +6,7 @@
 # Copyright © 2013-2015 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -504,7 +505,8 @@ class EvaluationJob(Job):
         return cls(**data)
 
     @staticmethod
-    def from_submission(operation, submission, dataset):
+    def from_submission(operation, submission, dataset,
+                        submission_result=None):
         """Create an EvaluationJob from a submission.
 
         operation (ESOperation): an EVALUATION operation.
@@ -523,7 +525,8 @@ class EvaluationJob(Job):
 
         multithreaded = _is_contest_multithreaded(submission.task.contest)
 
-        submission_result = submission.get_result(dataset)
+        if submission_result is None:
+            submission_result = submission.get_result(dataset)
         # This should have been created by now.
         assert submission_result is not None
 
