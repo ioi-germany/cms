@@ -373,13 +373,6 @@ class MyCase(object):
         """
         return os.path.join(self.directory, "out.txt")
 
-    @property
-    def genfile(self):
-        """
-        The generator input file name.
-        """
-        return os.path.join(self.directory, "gen.txt")
-
     def _get_cases(self):
         """
         Utility method for being able to find the test cases contained in a
