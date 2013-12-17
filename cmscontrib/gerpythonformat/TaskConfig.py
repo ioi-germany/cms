@@ -716,12 +716,19 @@ class TaskConfig(CommonConfig, Scope):
     def make_testcase(self, prog):
         """
         Create (and return) a test case, but do not add it to any test
-        case group (so it is evaluated but doesn't count towards the score).
+        case group (so it will be evaluated but doesn't count towards the
+        score).
+
         The input file is generated via a call to prog() where stdout is
         redirected to the input file.
-        The reference output file is generated using the specified output
-        generator.
-        There won't be any checks yet.
+
+        The reference output file is generated using the previously specified
+        output generator.
+
+        The test case will not be checked, yet!
+
+        prog (Executable): program to run to generate the test case
+
         """
         codename = "%.04d" % (len(self.cases)+1)
 
@@ -942,6 +949,32 @@ class TaskConfig(CommonConfig, Scope):
     def test_submission(self, *args, **kwargs):
         """
         Create a test submission from the given source file(s).
+
+        non-keyword arguments (list): the (source) file names
+
+        score (float): the expected official (private) score
+
+        public_score (float): the expected public score
+
+        expected (dict): the expectations for the test cases;
+                         by default, we expect all test cases to succeed
+
+        weak_time_limit (float): larger time limit this submission
+                                 is evaluated with (in multiples of
+                                 the time limit for this task)
+
+        strong_time_limit (float): smaller time limit this submission
+                                   is evaluated with (in multiples of
+                                   the time limit for this task)
+
+        weak_mem_limit (float): larger memory limit this submission
+                                is evaluated with (in multiples of
+                                the memory limit for this task)
+
+        strong_mem_limit (float): smaller memory limit this submission
+                                  is evaluated with (in multiples of
+                                  the memory limit for this task)
+
         """
         print_msg("Added test submission {}"
                   .format([self.contest.short_path(s) for s in args]),
