@@ -462,16 +462,6 @@ class MySubmission(object):
                        for f in self.filenames)
 
 
-def explicit(filename, stdout):
-    """
-    Helper function for testcases which are explicitly available in a
-    file (often sample test cases). Since this object is callable and behaves
-    like any Executable it can be used as generator etc.
-    """
-    with open(filename) as stdin:
-        shutil.copyfileobj(stdin, stdout)
-
-
 class TaskConfig(CommonConfig, Scope):
     """
     Class for task configuration files.
@@ -528,8 +518,6 @@ class TaskConfig(CommonConfig, Scope):
         self.strong_mem_limit = 0.5
 
         self.exported["task"] = self
-
-        self.exported["explicit"] = self.encapsulate(explicit)
 
         # utils
         self.exported["token_equ"] = self.upstream.token_equ_fp
@@ -749,6 +737,21 @@ class TaskConfig(CommonConfig, Scope):
             self.cases.append(case)
             self.cases_by_codename[codename] = case
             return case
+
+    @exported_function
+    def explicit(self, filename):
+        """
+        Helper function for testcases which are explicitly available in a
+        file (often sample test cases). Returns a generator that simply uses
+        the given file as input file.
+
+        filename (string): name of the input file
+
+        """
+        def f(stdout):
+            with open(filename) as stdin:
+                shutil.copyfileobj(stdin, stdout)
+        return self.encapsulate(f)
 
     @exported_function
     def subtask(self, description, name=None, public=False):
