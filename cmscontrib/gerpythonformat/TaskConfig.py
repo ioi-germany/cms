@@ -76,7 +76,7 @@ class Scope(object):
         res += self.constraints
         return res
 
-    def checker(self, p):
+    def add_checker(self, p):
         """
         Register a test case checker for this task, subtask or group.
 
@@ -87,7 +87,7 @@ class Scope(object):
         print_msg("Adding checker {}".format(p), headerdepth=10)
         self.checkers.append(p)
 
-    def constraint(self, s, silent=None):
+    def add_constraint(self, s, silent=None):
         """
         Add a constraint for this task, subtask or group.
         The constraint format is described in the docs
@@ -810,6 +810,36 @@ class TaskConfig(CommonConfig, Scope):
         if len(self.subtask_stack) == 0:
             raise Exception("group() called outside subtask")
         return self.subtask_stack[-1].group(*args, **kwargs)
+
+    @exported_function
+    def checker(self, *args, **kwargs):
+        """
+        Register a test case checker for the "current" task, subtask or group.
+
+        See :py:meth:`.Scope.add_checker`.
+
+        """
+        if len(self.group_stack) > 0:
+            self.group_stack[-1].add_checker(*args, **kwargs)
+        elif len(self.subtask_stack) > 0:
+            self.subtask_stack[-1].add_checker(*args, **kwargs)
+        else:
+            self.add_checker(*args, **kwargs)
+
+    @exported_function
+    def constraint(self, *args, **kwargs):
+        """
+        Add a constraint for the "current" task, subtask or group.
+
+        See :py:meth:`.Scope.add_constraint`.
+
+        """
+        if len(self.group_stack) > 0:
+            self.group_stack[-1].add_constraint(*args, **kwargs)
+        elif len(self.subtask_stack) > 0:
+            self.subtask_stack[-1].add_constraint(*args, **kwargs)
+        else:
+            self.add_constraint(*args, **kwargs)
 
     @exported_function
     def add_testcase(self, *args, **kwargs):
