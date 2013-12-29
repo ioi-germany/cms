@@ -76,7 +76,7 @@ class Scope(object):
         res += self.constraints
         return res
 
-    def checker(self, p):
+    def add_checker(self, p):
         """
         Register a test case checker for this task, subtask or group.
 
@@ -87,7 +87,7 @@ class Scope(object):
         print_msg("Adding checker {}".format(p), headerdepth=10)
         self.checkers.append(p)
 
-    def constraint(self, s, silent=None):
+    def add_constraint(self, s, silent=None):
         """
         Add a constraint for this task, subtask or group.
         The constraint format is described in the docs
@@ -373,13 +373,6 @@ class MyCase(object):
         """
         return os.path.join(self.directory, "out.txt")
 
-    @property
-    def genfile(self):
-        """
-        The generator input file name.
-        """
-        return os.path.join(self.directory, "gen.txt")
-
     def _get_cases(self):
         """
         Utility method for being able to find the test cases contained in a
@@ -469,16 +462,6 @@ class MySubmission(object):
                        for f in self.filenames)
 
 
-def explicit(filename, stdout):
-    """
-    Helper function for testcases which are explicitly available in a
-    file (often sample test cases). Since this object is callable and behaves
-    like any Executable it can be used as generator etc.
-    """
-    with open(filename) as stdin:
-        shutil.copyfileobj(stdin, stdout)
-
-
 class TaskConfig(CommonConfig, Scope):
     """
     Class for task configuration files.
@@ -535,8 +518,6 @@ class TaskConfig(CommonConfig, Scope):
         self.strong_mem_limit = 0.5
 
         self.exported["task"] = self
-
-        self.exported["explicit"] = self.encapsulate(explicit)
 
         # utils
         self.exported["token_equ"] = self.upstream.token_equ_fp
@@ -735,12 +716,19 @@ class TaskConfig(CommonConfig, Scope):
     def make_testcase(self, prog):
         """
         Create (and return) a test case, but do not add it to any test
-        case group (so it is evaluated but doesn't count towards the score).
+        case group (so it will be evaluated but doesn't count towards the
+        score).
+
         The input file is generated via a call to prog() where stdout is
         redirected to the input file.
-        The reference output file is generated using the specified output
-        generator.
-        There won't be any checks yet.
+
+        The reference output file is generated using the previously specified
+        output generator.
+
+        The test case will not be checked, yet!
+
+        prog (Executable): program to run to generate the test case
+
         """
         codename = "%.04d" % (len(self.cases)+1)
 
@@ -756,6 +744,21 @@ class TaskConfig(CommonConfig, Scope):
             self.cases.append(case)
             self.cases_by_codename[codename] = case
             return case
+
+    @exported_function
+    def explicit(self, filename):
+        """
+        Helper function for testcases which are explicitly available in a
+        file (often sample test cases). Returns a generator that simply uses
+        the given file as input file.
+
+        filename (string): name of the input file
+
+        """
+        def f(stdout):
+            with open(filename) as stdin:
+                shutil.copyfileobj(stdin, stdout)
+        return self.encapsulate(f)
 
     @exported_function
     def subtask(self, description, name=None, public=False):
@@ -817,6 +820,36 @@ class TaskConfig(CommonConfig, Scope):
         if len(self.subtask_stack) == 0:
             raise Exception("group() called outside subtask")
         return self.subtask_stack[-1].group(*args, **kwargs)
+
+    @exported_function
+    def checker(self, *args, **kwargs):
+        """
+        Register a test case checker for the "current" task, subtask or group.
+
+        See :py:meth:`.Scope.add_checker`.
+
+        """
+        if len(self.group_stack) > 0:
+            self.group_stack[-1].add_checker(*args, **kwargs)
+        elif len(self.subtask_stack) > 0:
+            self.subtask_stack[-1].add_checker(*args, **kwargs)
+        else:
+            self.add_checker(*args, **kwargs)
+
+    @exported_function
+    def constraint(self, *args, **kwargs):
+        """
+        Add a constraint for the "current" task, subtask or group.
+
+        See :py:meth:`.Scope.add_constraint`.
+
+        """
+        if len(self.group_stack) > 0:
+            self.group_stack[-1].add_constraint(*args, **kwargs)
+        elif len(self.subtask_stack) > 0:
+            self.subtask_stack[-1].add_constraint(*args, **kwargs)
+        else:
+            self.add_constraint(*args, **kwargs)
 
     @exported_function
     def add_testcase(self, *args, **kwargs):
@@ -916,6 +949,32 @@ class TaskConfig(CommonConfig, Scope):
     def test_submission(self, *args, **kwargs):
         """
         Create a test submission from the given source file(s).
+
+        non-keyword arguments (list): the (source) file names
+
+        score (float): the expected official (private) score
+
+        public_score (float): the expected public score
+
+        expected (dict): the expectations for the test cases;
+                         by default, we expect all test cases to succeed
+
+        weak_time_limit (float): larger time limit this submission
+                                 is evaluated with (in multiples of
+                                 the time limit for this task)
+
+        strong_time_limit (float): smaller time limit this submission
+                                   is evaluated with (in multiples of
+                                   the time limit for this task)
+
+        weak_mem_limit (float): larger memory limit this submission
+                                is evaluated with (in multiples of
+                                the memory limit for this task)
+
+        strong_mem_limit (float): smaller memory limit this submission
+                                  is evaluated with (in multiples of
+                                  the memory limit for this task)
+
         """
         print_msg("Added test submission {}"
                   .format([self.contest.short_path(s) for s in args]),
