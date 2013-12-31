@@ -37,6 +37,7 @@
 
 import base64
 import gettext
+import glob
 import io
 import json
 import logging
@@ -44,6 +45,8 @@ import os
 import pickle
 import pkg_resources
 import re
+import socket
+import struct
 import tempfile
 import traceback
 from datetime import timedelta
@@ -52,6 +55,9 @@ from urllib import quote
 import tornado.web
 
 from sqlalchemy import func
+
+from werkzeug.http import parse_accept_header
+from werkzeug.datastructures import LanguageAccept
 
 from cms import SOURCE_EXT_TO_LANGUAGE_MAP, config
 from cms.log import initialize_logging
@@ -65,13 +71,33 @@ from cms.grading.scoretypes import get_score_type
 from cms.server import file_handler_gen, extract_archive, \
     actual_phase_required, get_url_root, filter_ascii, \
     CommonRequestHandler, format_size
-from cmscommon import ISOCodes
-from cmscommon.Cryptographics import encrypt_number
+from cmscommon.isocodes import is_language_code, translate_language_code, \
+    is_country_code, translate_country_code, \
+    is_language_country_code, translate_language_country_code
+from cmscommon.crypto import encrypt_number
 from cmscommon.datetime import make_datetime, make_timestamp, get_timezone
-from cmscommon.MimeTypes import get_type_for_file_name
+from cmscommon.mimetypes import get_type_for_file_name
 
 
 logger = logging.getLogger(__name__)
+
+
+def check_ip(client, wanted):
+    """Return if client IP belongs to the wanted subnet.
+
+    client (string): IP address to verify.
+    wanted (string): IP address or subnet to check against.
+
+    return (bool): whether client equals wanted (if the latter is an IP
+        address) or client belongs to wanted (if it's a subnet).
+
+    """
+    wanted, sep, subnet = wanted.partition('/')
+    subnet = 32 if sep == "" else int(subnet)
+    snmask = 2**32 - 2**(32 - subnet)
+    wanted = struct.unpack(">I", socket.inet_aton(wanted))[0]
+    client = struct.unpack(">I", socket.inet_aton(client))[0]
+    return (wanted & snmask) == (client & snmask)
 
 
 class BaseHandler(CommonRequestHandler):
@@ -139,7 +165,7 @@ class BaseHandler(CommonRequestHandler):
             self.clear_cookie("login")
             return None
         if config.ip_lock and user.ip is not None \
-                and user.ip != self.request.remote_ip:
+                and not check_ip(self.request.remote_ip, user.ip):
             self.clear_cookie("login")
             return None
         if config.block_hidden_users and user.hidden:
@@ -162,47 +188,37 @@ class BaseHandler(CommonRequestHandler):
         else:
             localization_dir = os.path.join(os.path.dirname(__file__), "mo")
 
-        # Copied (and modified) from Tornado's get_browser_locale
-        locales = list()
-        if "Accept-Language" in self.request.headers:
-            languages = self.request.headers["Accept-Language"].split(",")
-            scores = dict()
-            for language in languages:
-                parts = language.strip().split(";")
-                if len(parts) > 1 and parts[1].startswith("q="):
-                    try:
-                        score = float(parts[1][2:])
-                    except (ValueError, TypeError):
-                        score = 0.0
-                else:
-                    score = 1.0
-                scores[parts[0]] = score
-                locales.append(parts[0])
-            locales.sort(key=lambda l: scores[l], reverse=True)
-        if not locales:
-            locales.append("en_US")
-        # End of copied code
+        # Retrieve the available translations.
+        langs = ["en-US"] + [
+            path.split("/")[-3].replace("_", "-") for path in glob.glob(
+                os.path.join(localization_dir, "*", "LC_MESSAGES", "cms.mo"))]
+        # Select the one the user likes most.
+        lang = parse_accept_header(
+            self.request.headers.get("Accept-Language", ""),
+            LanguageAccept).best_match(langs, "en-US")
+        self.set_header("Content-Language", lang)
+        lang = lang.replace("-", "_")
 
         iso_639_locale = gettext.translation(
             "iso_639",
             os.path.join(config.iso_codes_prefix, "share", "locale"),
-            locales,
+            [lang],
             fallback=True)
         iso_3166_locale = gettext.translation(
             "iso_3166",
             os.path.join(config.iso_codes_prefix, "share", "locale"),
-            locales,
+            [lang],
             fallback=True)
         shared_mime_info_locale = gettext.translation(
             "shared-mime-info",
             os.path.join(
                 config.shared_mime_info_prefix, "share", "locale"),
-            locales,
+            [lang],
             fallback=True)
         cms_locale = gettext.translation(
             "cms",
             localization_dir,
-            locales,
+            [lang],
             fallback=True)
         cms_locale.add_fallback(iso_639_locale)
         cms_locale.add_fallback(iso_3166_locale)
@@ -494,7 +510,7 @@ class LoginHandler(BaseHandler):
             self.redirect("/?login_error=true")
             return
         if config.ip_lock and user.ip is not None \
-                and user.ip != self.request.remote_ip:
+                and not check_ip(self.request.remote_ip, user.ip):
             logger.info("Unexpected IP: user=%s pass=%s remote_ip=%s." %
                         (filtered_user, filtered_pass, self.request.remote_ip))
             self.redirect("/?login_error=true")
@@ -562,16 +578,15 @@ class TaskDescriptionHandler(BaseHandler):
 
         for statement in task.statements.itervalues():
             lang_code = statement.language
-            if ISOCodes.is_language_country_code(lang_code):
+            if is_language_country_code(lang_code):
                 statement.language_name = \
-                    ISOCodes.translate_language_country_code(lang_code,
-                                                             self.locale)
-            elif ISOCodes.is_language_code(lang_code):
+                    translate_language_country_code(lang_code, self.locale)
+            elif is_language_code(lang_code):
                 statement.language_name = \
-                    ISOCodes.translate_language_code(lang_code, self.locale)
-            elif ISOCodes.is_country_code(lang_code):
+                    translate_language_code(lang_code, self.locale)
+            elif is_country_code(lang_code):
                 statement.language_name = \
-                    ISOCodes.translate_country_code(lang_code, self.locale)
+                    translate_country_code(lang_code, self.locale)
             else:
                 statement.language_name = lang_code
 
@@ -1681,19 +1696,20 @@ class UserTestStatusHandler(BaseHandler):
         data = dict()
         if ur is None or not ur.compiled():
             data["status"] = 1
-            data["status_text"] = "Compiling..."
+            data["status_text"] = self._("Compiling...")
         elif ur.compilation_failed():
             data["status"] = 2
-            data["status_text"] = "Compilation failed " + \
-                                  "<a class=\"details\">details</a>"
+            data["status_text"] = "%s <a class=\"details\">%s</a>" % (
+                self._("Compilation failed"), self._("details"))
         elif not ur.evaluated():
             data["status"] = 3
-            data["status_text"] = "Executing..."
+            data["status_text"] = self._("Executing...")
         else:
             data["status"] = 4
-            data["status_text"] = "Executed <a class=\"details\">details</a>"
+            data["status_text"] = "%s <a class=\"details\">%s</a>" % (
+                self._("Evaluated"), self._("details"))
             if ur.execution_time is not None:
-                data["time"] = "%(seconds)0.3f s" % {
+                data["time"] = self._("%(seconds)0.3f s") % {
                     'seconds': ur.execution_time}
             else:
                 data["time"] = None

@@ -19,12 +19,15 @@
 
 from __future__ import unicode_literals
 from __future__ import absolute_import
+from __future__ import print_function
 
 import argparse
 import functools
 import io
 import json
+import logging
 import os
+import pprint
 import re
 import shutil
 import time
@@ -41,9 +44,11 @@ from werkzeug.wsgi import responder, wrap_file, SharedDataMiddleware, \
     DispatcherMiddleware
 from werkzeug.utils import redirect
 
-from cmscommon.EventSource import EventSource
+# Needed for initialization. Do not remove.
+import cmsranking.Logger
+
+from cmscommon.eventsource import EventSource
 from cmsranking.Config import config
-from cmsranking.Logger import logger
 from cmsranking.Entity import InvalidData
 import cmsranking.Contest as Contest
 import cmsranking.Task as Task
@@ -52,6 +57,9 @@ import cmsranking.User as User
 import cmsranking.Submission as Submission
 import cmsranking.Subchange as Subchange
 import cmsranking.Scoring as Scoring
+
+
+logger = logging.getLogger(__name__)
 
 
 class CustomUnauthorized(Unauthorized):
@@ -172,7 +180,7 @@ class StoreHandler(object):
         except InvalidData:
             logger.warning("Invalid data.", exc_info=True,
                            extra={'location': request.url,
-                                  'details': data})
+                                  'details': pprint.pformat(data)})
             raise BadRequest()
 
         response.status_code = 204
@@ -201,7 +209,7 @@ class StoreHandler(object):
         except InvalidData:
             logger.warning("Invalid data.", exc_info=True,
                            extra={'location': request.url,
-                                  'details': data})
+                                  'details': pprint.pformat(data)})
             raise BadRequest()
 
         response.status_code = 204
@@ -442,14 +450,14 @@ def main():
     args = parser.parse_args()
 
     if args.drop:
-        print "Are you sure you want to delete directory %s? [y/N]" % \
-              config.lib_dir,
+        print("Are you sure you want to delete directory %s? [y/N]" %
+              config.lib_dir, end='')
         ans = raw_input().lower()
         if ans in ['y', 'yes']:
-            print "Removing directory %s." % config.lib_dir
+            print("Removing directory %s." % config.lib_dir)
             shutil.rmtree(config.lib_dir)
         else:
-            print "Not removing directory %s." % config.lib_dir
+            print("Not removing directory %s." % config.lib_dir)
         return False
 
     toplevel_handler = RoutingHandler(DataWatcher(), ImageHandler(

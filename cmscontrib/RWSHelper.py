@@ -39,10 +39,10 @@ import sys
 import six
 
 if six.PY3:
-    from urllib.parse import quote, urljoin
+    from urllib.parse import quote, urljoin, urlsplit
 else:
     from urllib import quote
-    from urlparse import urljoin
+    from urlparse import urljoin, urlsplit
 
 from six.moves import xrange
 
@@ -138,10 +138,13 @@ def main():
         shards = list(xrange(len(config.rankings)))
 
     s = Session()
-    error = False
+    had_error = False
 
     for shard in shards:
         url = get_url(shard, args.entity_type, args.entity_id)
+        # XXX With requests-1.2 auth is automatically extracted from
+        # the URL: there is no need for this.
+        auth = urlsplit(url)
 
         if args.verbose:
             logger.info(
@@ -156,6 +159,7 @@ def main():
             body = None
 
         req = Request(ACTION_METHODS[args.action], url, data=body,
+                      auth=(auth.username, auth.password),
                       headers={'content-type': 'application/json'}).prepare()
 
         if args.verbose:
@@ -163,10 +167,10 @@ def main():
 
         try:
             res = s.send(req, verify=config.https_certfile)
-        except RequestException as e:
+        except RequestException as error:
             logger.error("Failed")
-            logger.info(repr(e))
-            error = True
+            logger.info(repr(error))
+            had_error = True
             continue
 
         if args.verbose:
@@ -174,13 +178,13 @@ def main():
 
         if 400 <= res.status_code < 600:
             logger.error("Unexpected status code: %d" % res.status_code)
-            error = True
+            had_error = True
             continue
 
         if args.action == "get":
             print(res.content)
 
-    if error:
+    if had_error:
         sys.exit(1)
 
 
