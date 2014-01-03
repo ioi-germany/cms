@@ -588,6 +588,11 @@ class Evaluation(Base):
         Integer,
         nullable=True)
 
+    # Output file's digest for this test
+    output = Column(
+        String,
+        nullable=True)
+
     # Worker shard and sandbox where the evaluation was performed.
     evaluation_shard = Column(
         Integer,

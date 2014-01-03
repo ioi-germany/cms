@@ -468,6 +468,8 @@ class JobGroup(object):
         job.executables = dict(submission_result.executables)
         job.time_limit = dataset.time_limit
         job.memory_limit = dataset.memory_limit
+        job.get_output = True
+        job.output_trunc_len = 1024
 
         jobs = dict()
 
@@ -503,6 +505,7 @@ class JobGroup(object):
                 execution_wall_clock_time=job.plus.get(
                     'execution_wall_clock_time'),
                 execution_memory=job.plus.get('execution_memory'),
+                output=job.user_output,
                 evaluation_shard=job.shard,
                 evaluation_sandbox=":".join(job.sandboxes),
                 testcase=sr.dataset.testcases[test_name])]
