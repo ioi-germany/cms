@@ -279,7 +279,8 @@ class TwoSteps(TaskType):
                 if job.get_output:
                     job.user_output = second_sandbox.get_file_to_storage(
                         "output.txt",
-                        "Output file in job %s" % job.info)
+                        "Output file in job %s" % job.info,
+                        trunc_len=job.output_trunc_len)
 
                 # If not asked otherwise, evaluate the output file
                 if not job.only_execution:

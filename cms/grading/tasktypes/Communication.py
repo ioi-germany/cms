@@ -240,7 +240,8 @@ class Communication(TaskType):
             if sandbox_mgr.file_exists("output.txt"):
                 job.user_output = sandbox_mgr.get_file_to_storage(
                     "output.txt",
-                    "Output file in job %s" % job.info)
+                    "Output file in job %s" % job.info,
+                    trunc_len=job.output_trunc_len)
             else:
                 job.user_output = None
 
