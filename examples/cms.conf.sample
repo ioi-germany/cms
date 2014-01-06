@@ -25,7 +25,8 @@
         "Worker":            [["localhost", 26000], ["localhost", 26001]],
         "ContestWebServer":  [["localhost", 21000]],
         "AdminWebServer":    [["localhost", 21100]],
-        "ProxyService":      [["localhost", 28600]]
+        "ProxyService":      [["localhost", 28600]],
+        "PrintingService":   [["localhost", 25123]]
         },
 
     "other_services":
@@ -109,6 +110,7 @@
     "_help": "client_max_body_size in nginx.conf too.",
     "max_submission_length": 100000,
     "max_input_length": 5000000,
+    "max_print_length": 10000000,
 
     "_help": "STL documentation path in the system (exposed in CWS).",
     "stl_path": "/usr/share/doc/stl-manual/html/",
@@ -137,6 +139,15 @@
     "_help": "you trust.",
     "rankings": ["http://usern4me:passw0rd@localhost:8890/"],
     "https_certfile": null,
+
+
+
+    "_section": "PrintingService",
+
+    "_help": "Printer name (if null, printing is disabled)",
+    "printer": null,
+    "max_pages_per_job": 10,
+    "max_jobs_per_user": 10,
 
 
 
