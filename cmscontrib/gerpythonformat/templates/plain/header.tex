@@ -1,0 +1,46 @@
+\NeedsTeXFormat{LaTeX2e}
+\documentclass[a4paper, 11pt]{scrartcl}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel}
+
+\usepackage{libertine} % sans serif font
+\usepackage{charter} % text font
+\usepackage[charter]{mathdesign} % math font
+\usepackage{inconsolata} % typewriter font
+
+\usepackage{a4wide}
+\usepackage{graphicx}
+\usepackage{pstricks}
+\usepackage{calc}
+\usepackage{ifthen}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{verbatim}
+
+\cfoot{\thepage/\pageref{LastPage}}
+\newdimen\headh
+\headh=36pt
+\lhead{}
+\rhead{}
+\chead{}
+\renewcommand{\headrulewidth}{0pt} % no top bar
+
+\addtolength{\topmargin}{-1cm}
+
+\def\heading#1{\section*{#1}}
+\def\sheading#1{\subsection*{#1}}
+
+\pagestyle{fancy}
+\parindent=0pt
+\parskip=\smallskipamount
+
+\AtBeginDocument{
+\headheight=72pt%
+\headsep=16pt%
+\vspace{2mm}%
+}
+

@@ -141,3 +141,203 @@ The following are optional files, that must be present for certain task types or
 - :file:`sol/stub.%l`: for tasks of type :ref:`tasktypes_communication`, this is the piece of code that is compiled together with the user submitted code, and is usually used to manage the communication with :file:`manager`. Again, all supported languages must be present.
 
 - :file:`att/*`: each file in this folder is added as an attachment to the task, named as the file's filename.
+
+
+German import format
+=====================
+
+An example contest can be found here: `<https://github.com/ioi-germany/testcontest>`_
+
+You can test a contest locally using the :file:`cmsGerMake` command. It will create a :file:`build` directory inside the given contest directory, copy all files from the contest directory to the build directory and then build the contest (read the configuration files, generate test cases, ...).
+
+Similarly, use :file:`cmsImporter` or :file:`cmsReimporter` as usual. **Warning:** :file:`cmsReimporter` currently ignores test submissions.
+
+Contests and tasks are specified using python scripts :file:`contest-config.py` and :file:`taskname/config.py`.
+
+Each time a contest or task is built, the respective python configuration files are executed. The configuration files contain static information like a list of all users, task names and time limits but are also responsible for e.g. compiling test case generators, generating test cases, validating test cases and compiling task statements.
+
+The python scripts are provided with some variables and functions (both global and local): The methods of a :ref:`ContestConfig` or :ref:`TaskConfig` (and their superclass :ref:`CommonConfig`) object that are marked as :samp:`@exported_function` as well as other contents of the :samp:`exported` dictionary.
+
+Lazy rebuilding
+---------------
+
+We use a mechanism to ensure that most operations are only performed if necessary, for example:
+
+* Compiling
+* Executing a command
+* Making a zip file
+* Testing a test submission
+
+E.g., a command usually has to be executed only if the executable, the command line arguments, any input file or any output file has changed.
+
+Although this is relatively stable, it may happen that a necessary operation is not executed (for example, if you forgot to install a LaTeX package before the previous run and now you installed it). In such cases, you can remove the :file:`build` directory (or change one of the output or input files).
+
+Below, we describe the internals of this mechanism (for details, see :file:`cms/rules/Rule.py`):
+
+A :samp:`Rule` object is created whenever an operation is requested. We call the details of such a request the rule's *mission*. A rule's mission could for example be "compile source.cpp to binary using g++" or "run binary using input.txt for stdin and output.txt for stdout; beware, the binary could also read extradata.txt!".
+
+Subsequently (in :samp:`Rule.ensure()`), we check if the last result (:samp:`RuleResult`) of this mission can be found on the disk (we look for a file whose name is essentially the hash sum of the mission). If no, then we run the rule (compile, execute the binary, ...). If yes, then we retrieve the set of dependency/output file names along with their expected hash sums (the ones after the last time the rule was run) from the result file. If one of the saved hash sums is different from the current one, we run the rule, otherwise we don't. In the end (if nothing terrible happened), we find out the dependencies/outputs (e.g., g++ usually returns them with the -MMD flag) and save these results (so that they can be retrieved using the mission the next time this rule is supposed to be run). The results can comprise other information than dependency/output file names, e.g. compiler output, some representation of the result of the evaluation of a test submission, etc.
+
+Compiling
+---------
+
+You can compile c++, latex and asymptote files using the commands :py:meth:`.compilecpp`, :py:meth:`.compilelatex`, :py:meth:`.compileasy`. Call them with the base name of the file you want to compile (e.g. :samp:`gen` if you want to compile :samp:`gen.cpp` or :samp:`statement` if you want to compile :samp:`statement.tex`). For convenience, you can use the :py:meth:`.compile` function which automatically figures out the corresponding extension.
+
+Supplements
+^^^^^^^^^^^
+
+A supplement is a header file that is automatically generated immediately before a compilation (e.g. of a LaTeX statement) is performed. Its job is to provide information that can easily be extracted from the configuration file to the compiler, for example the task name, the time and memory limits and sample test cases.
+
+Executables
+-----------
+
+For details, see :file:`cmscontrib/gerpythonformat/Executable.py`
+
+Compiling a c++ file returns an executable object. You can also create an executable object from a python function using :py:meth:`.encapsulate` or from a script file using :py:meth:`.ext_script`.
+
+An executable object can be called like a python function, handing it (normal or keyword) parameters (which are translated to command line arguments executable files). You can also specify stdin, stdout or stderr redirections and additional dependency file names. For example, :samp:`gen(5,6,"afds",stdin="in.txt",stdout="out.txt",dependencies=["dep.txt"])` is roughly equivalent to :samp:`gen 5 6 afds < in.txt > out.txt` and understands that it depends on or outputs :file:`in.txt`, :file:`out.txt` and :file:`dep.txt`.
+
+From an executable, you can construct another executable that
+
+* appends certain command line arguments (e.g., :samp:`gen.p(1,2)(3)` would run :samp:`gen 3 1 2`),
+* redirects stdin from a certain file by default (e.g., :samp:`gen.ifi("in.txt")()` would run :samp:`gen < in.txt`) or
+* writes a certain string to a file and redirects stdin from it (e.g., :samp:`gen.i(1,2)()` would write :samp:`1\\n2\\n` to a file :file:`.in` and run :samp:`gen < .in`).
+
+This can be particularly helpful for :ref:`creating test cases <gerformat_testcases>`.
+
+.. _gerformat_testcases:
+
+Generating test cases
+---------------------
+
+Before generating a test case, you have to specify an output generator using :py:meth:`.output_generator` (which accepts an executable).
+
+You can generate a test case using the :py:meth:`.make_testcase` method which accepts an executable printing the test case input to stdout. The test case input is generated using this executable and then the output generator is provided the input file through stdin and shall print the sample output to stdout.
+
+This method adds the test case to the task, but it does not add it to any subtasks or test case groups. Hence, the test case will be evaluated, but does not automatically count towards the score. See the next section on how to actually add the test case to a test case group.
+
+To hand command line arguments or stdin content to the test case generator, you should create a new executable using the methods explained above. For example, you could use :samp:`make_testcase(gen.i(1,2))` to generate a test case using :samp:`1\\n2\\n` for stdin.
+
+Explicit test cases
+^^^^^^^^^^^^^^^^^^^
+
+The utility function :py:meth:`.explicit` returns an executable that just retrieves the input file from the given file (useful for sample test cases).
+
+Subtasks, groups and test cases
+-------------------------------
+
+Only the :ref:`scoretypes_subtaskgroup` score type is supported.
+
+The usual way to specify subtasks, groups and test cases is the following::
+
+    output_generator(compile("solution"))  # Compiles solution.cpp and makes it the output generator for this task
+    gen = compile("gen")  # Compiles gen.cpp
+    chk = compile("checker")  # Compile chk.cpp
+    checker(chk.p(0))  # Add the command "checker 0" as a global test case checker
+    # Create the public subtask
+    with subtask("Public", "public", public=True):  # Create a public subtask
+        with group(100):  # Group with 100 points
+            testcase(explicit("1.in"))
+    # Create the first subtask
+    with subtask("Subtask 1", "small"):  # "small" is the internal name of this subtask
+        checker(chk.p(1))  # Add the command "checker 1" as a test case checker for this subtask
+        with group(20):  # Group with 20 points
+            testcase(gen.i(1, 5), feedback=True)
+            testcase(gen.i(2, 7))
+        with group(20):  # Group with 20 points
+            testcase(gen.i(3, 9))
+            testcase(gen.i(4, 11))
+    generate_feedback()  # Generate detailed feedback subtasks
+
+The :py:meth:`.TaskConfig.testcase` method generates a test case (using :py:meth:`.make_testcase`) and adds it to the current group (w.r.t. the :samp:`with` statements). If you have already generated a test case using :py:meth:`.make_testcase`, you can use :py:meth:`.TaskConfig.add_testcase` to add it to the current group.
+
+Detailed (partial) feedback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We can give partial feedback by creating a (public) detailed feedback subtask containing a subset of the official test cases. These detailed feedback subtasks can be automatically created using :py:meth:`.generate_feedback` after you have marked the wanted test cases by handing :samp:`feedback=True` to :py:meth:`.TaskConfig.add_testcase` (or :py:meth:`.TaskConfig.testcase`).
+
+Test case checkers
+^^^^^^^^^^^^^^^^^^
+
+To check if your test cases are all valid, you can specify test case checkers using :py:meth:`.checker`. You can add checkers to the task, to a subtask or to a group (the scope is again determined using the :samp:`with` statements). A test case checker is run whenever a test case is added to a group (not when it is created!). It receives the input file through stdin and the output file name is prepended to the list of command line arguments. The checker should return with an exit code different from 0 to indicate that the case is invalid.
+
+In the above example, :samp:`checker OUTPUT 0 < INPUT` would be run for all test cases and :samp:`checker OUTPUT 1 < INPUT` would be run for the test cases belonging to subtask 1.
+
+Constraints
+^^^^^^^^^^^
+
+You can add simple constraints (e.g., 5 <= N <= 100) to the task, a subtask or a group using :py:meth:`.constraint`. They are automatically provided to both the task statement and test case checkers.
+
+Referencing test cases
+^^^^^^^^^^^^^^^^^^^^^^
+
+For test submission result specifications (see below), you need some way to reference test cases. Doing so by code name (a number) can be cumbersome, in particular if you decide to add test cases later. For this reason, you can give subtasks, groups and test cases internal (short) names. If you have a subtask called "small" containing a group called "nastycases", then you can reference the second test case in this group by :samp:`task.small.nastycases.t1` (notice the 0-based indexing!). The fact that we add attributes of the given names to task/subtask/group objects, unfortunately makes this a bit fragile, so you have to choose reasonable names that aren't attributes, yet. This name-based referencing can also be found in the :file:`subtasks` output directory (you can find the test cases both in :file:`subtasks` and :file:`cases`).
+
+Test submissions (a.k.a. unit tests)
+------------------------------------
+
+Using :py:meth:`.test_submission`, you can add test submissions which are automatically evaluated by :file:`cmsGerMake` and submitted by :file:`cmsImporter` (**Warning:** :file:`cmsReimporter` currently ignores test submissions).
+
+For each test submission, you have to specify the expected results, which :file:`cmsGerMake` automatically compares to the actual results.
+
+For example, to add a test submission that should
+
+* get 50 private points,
+* get 150 public points,
+* exceeds its memory limit in the "nastycases" group,
+* exceeds its time limit in all other test cases in the "small" or "medium" subtask and
+* get 0 (relative) points for all other test cases, although it runs in time and doesn't crash,
+
+you can use the following code::
+
+    test_submission("veryclose.cpp", score=50, public_score=150,
+                    expected={"0.0": [task], "time": [task.small, task.medium], "memory": [task.small.nastycases]})`
+
+Test submissions are evaluated with increased (weak) time and memory limits. In the end, the used time (or memory) is compared to the weak and (lower) strong limits. The purpose of this is to ensure some "safety margin" (e.g.: the correct test submissions should only need the allowed time; the slow test submissions should need at least twice the allowed time). If the time or memory is between the strong and the weak limits, the result (which can be used in the :samp:`expected` dictionary) is :samp:`time?` or :samp:`memory?`. You can pass the weak and strong limits to :py:meth:`.test_submission` every time or use :py:meth:`.test_submission_limits` to specify them for the whole task (before calling :py:meth:`.test_submission`).
+
+.. _CommonConfig:
+
+CommonConfig
+------------
+
+.. autoclass:: cmscontrib.gerpythonformat.CommonConfig.CommonConfig
+
+.. _ContestConfig:
+
+ContestConfig
+-------------
+
+.. autoclass:: cmscontrib.gerpythonformat.ContestConfig.ContestConfig
+    :show-inheritance:
+
+.. _TaskConfig:
+
+TaskConfig
+----------
+
+.. autoclass:: cmscontrib.gerpythonformat.TaskConfig.TaskConfig
+    :show-inheritance:
+
+Scope
+^^^^^
+
+.. autoclass:: cmscontrib.gerpythonformat.TaskConfig.Scope
+    :show-inheritance:
+
+MySubtask
+^^^^^^^^^
+
+.. autoclass:: cmscontrib.gerpythonformat.TaskConfig.MySubtask
+    :show-inheritance:
+
+MyGroup
+^^^^^^^
+
+.. autoclass:: cmscontrib.gerpythonformat.TaskConfig.MyGroup
+    :show-inheritance:
+
+MyCase
+^^^^^^
+
+.. autoclass:: cmscontrib.gerpythonformat.TaskConfig.MyCase
+    :show-inheritance:
