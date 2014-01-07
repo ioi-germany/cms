@@ -43,7 +43,8 @@ from cms import config, ServiceCoord, get_service_shards, get_service_address
 from cms.io import WebService
 from cms.db import Session, Contest, User, Announcement, Question, Message, \
     Submission, SubmissionResult, File, Task, Dataset, Attachment, Manager, \
-    Testcase, SubmissionFormatElement, Statement
+    Testcase, SubmissionFormatElement, Statement, \
+    Group
 from cms.db.filecacher import FileCacher
 from cms.grading import compute_changes_for_dataset
 from cms.grading.tasktypes import get_task_type_class
@@ -217,7 +218,7 @@ class BaseHandler(CommonRequestHandler):
         params["contest"] = self.contest
         params["url_root"] = get_url_root(self.request.path)
         if self.contest is not None:
-            params["phase"] = self.contest.phase(params["timestamp"])
+            params["phase"] = self.contest.main_group.phase(params["timestamp"])
             # Keep "== None" in filter arguments. SQLAlchemy does not
             # understand "is None".
             params["unanswered"] = self.sql_session.query(Question)\
@@ -569,6 +570,7 @@ class AddContestHandler(BaseHandler):
     def post(self):
         try:
             attrs = dict()
+            group_attrs = dict()
 
             self.get_string(attrs, "name", empty=None)
             self.get_string(attrs, "description")
@@ -589,15 +591,21 @@ class AddContestHandler(BaseHandler):
             self.get_timedelta_sec(attrs, "min_submission_interval")
             self.get_timedelta_sec(attrs, "min_user_test_interval")
 
-            self.get_datetime(attrs, "start")
-            self.get_datetime(attrs, "stop")
+            self.get_datetime(group_attrs, "start")
+            self.get_datetime(group_attrs, "stop")
 
             self.get_string(attrs, "timezone", empty=None)
-            self.get_timedelta_sec(attrs, "per_user_time")
+            self.get_timedelta_sec(group_attrs, "per_user_time")
             self.get_int(attrs, "score_precision")
 
             # Create the contest.
             contest = Contest(**attrs)
+
+            # Add the default group
+            group = Group(name="default", **group_attrs)
+            contest.groups.append(group)
+            contest.main_group = group
+
             self.sql_session.add(contest)
 
         except Exception as error:
@@ -630,29 +638,34 @@ class ContestHandler(BaseHandler):
             self.get_string(attrs, "name", empty=None)
             self.get_string(attrs, "description")
 
+            try:
+                contest.main_group = self.safe_get_item(Group,
+                    self.get_argument("main_group", contest.main_group_id))
+            except KeyError:
+                self.application.service.add_notification(
+                    make_datetime(),
+                    "Group does not exist.",
+                    ""
+                    )
+                return
+
+
             assert attrs.get("name") is not None, "No contest name specified."
 
             attrs["languages"] = self.get_arguments("languages", [])
-
             self.get_int(attrs, "token_initial")
             self.get_int(attrs, "token_max")
             self.get_int(attrs, "token_total")
             self.get_timedelta_sec(attrs, "token_min_interval")
             self.get_timedelta_min(attrs, "token_gen_time")
             self.get_int(attrs, "token_gen_number")
-
             self.get_int(attrs, "max_submission_number")
             self.get_int(attrs, "max_user_test_number")
             self.get_timedelta_sec(attrs, "min_submission_interval")
             self.get_timedelta_sec(attrs, "min_user_test_interval")
 
-            self.get_datetime(attrs, "start")
-            self.get_datetime(attrs, "stop")
-
             self.get_string(attrs, "timezone", empty=None)
-            self.get_timedelta_sec(attrs, "per_user_time")
             self.get_int(attrs, "score_precision")
-
             # Update the contest.
             contest.set_attrs(attrs)
 
@@ -1575,6 +1588,10 @@ class UserViewHandler(BaseHandler):
             assert attrs.get("username") is not None, \
                 "No username specified."
 
+            attrs["group"] = \
+                self.safe_get_item(Group,
+                                   self.get_argument("group", user.group_id))
+
             self.get_ip_address_or_subnet(attrs, "ip")
 
             self.get_string(attrs, "timezone", empty=None)
@@ -1615,6 +1632,9 @@ class AddUserHandler(SimpleContestHandler("add_user.html")):
             assert attrs.get("username") is not None, \
                 "No username specified."
 
+            attrs["group"] = \
+                self.safe_get_item(Group, self.get_argument("group", ""))
+
             self.get_ip_address_or_subnet(attrs, "ip")
 
             self.get_string(attrs, "timezone", empty=None)
@@ -1641,6 +1661,82 @@ class AddUserHandler(SimpleContestHandler("add_user.html")):
             self.redirect("/user/%s" % user.id)
         else:
             self.redirect("/add_user/%s" % contest_id)
+
+
+class GroupViewHandler(BaseHandler):
+    """Shows the details of a single group.
+
+    """
+    def get(self, group_id):
+        group = self.safe_get_item(Group, group_id)
+        self.contest = group.contest
+
+        self.r_params = self.render_params()
+        self.r_params["selected_group"] = group
+        self.render("group.html", **self.r_params)
+
+    def post(self, group_id):
+        group = self.safe_get_item(Group, group_id)
+        self.contest = group.contest
+
+        try:
+            attrs = group.get_attrs()
+
+            self.get_string(attrs, "name")
+
+            assert attrs.get("name") is not None, "No group name specified."
+
+            self.get_datetime(attrs, "start")
+            self.get_datetime(attrs, "stop")
+            self.get_timedelta_sec(attrs, "per_user_time")
+
+            # Update the group.
+            group.set_attrs(attrs)
+
+        except Exception as error:
+            self.application.service.add_notification(
+                make_datetime(), "Invalid field(s)", repr(error))
+            self.redirect("/group/%s" % group_id)
+            return
+
+        if try_commit(self.sql_session, self):
+            # Update the group on RWS.
+            self.application.service.proxy_service.reinitialize()
+        self.redirect("/group/%s" % group_id)
+
+
+class AddGroupHandler(SimpleContestHandler("add_group.html")):
+    def post(self, contest_id):
+        self.contest = self.safe_get_item(Contest, contest_id)
+
+        try:
+            attrs = dict()
+
+            self.get_string(attrs, "name")
+
+            assert attrs.get("name") is not None, "No group name specified."
+
+            self.get_datetime(attrs, "start")
+            self.get_datetime(attrs, "stop")
+
+            self.get_timedelta_sec(attrs, "per_user_time")
+
+            # Create the group.
+            attrs["contest"] = self.contest
+            group = Group(**attrs)
+            self.sql_session.add(group)
+
+        except Exception as error:
+            self.application.service.add_notification(
+                make_datetime(), "Invalid field(s)", repr(error))
+            self.redirect("/add_group/%s" % contest_id)
+            return
+
+        if try_commit(self.sql_session, self):
+            self.application.service.scoring_service.reinitialize()
+            self.redirect("/group/%s" % group.id)
+        else:
+            self.redirect("/add_group/%s" % contest_id)
 
 
 class SubmissionViewHandler(BaseHandler):
@@ -1831,6 +1927,7 @@ _aws_handlers = [
     (r"/contest/([0-9]+)", ContestHandler),
     (r"/announcements/([0-9]+)", SimpleContestHandler("announcements.html")),
     (r"/userlist/([0-9]+)", SimpleContestHandler("userlist.html")),
+    (r"/grouplist/([0-9]+)", SimpleContestHandler("grouplist.html")),
     (r"/tasklist/([0-9]+)", SimpleContestHandler("tasklist.html")),
     (r"/contest/add", AddContestHandler),
     (r"/ranking/([0-9]+)", RankingHandler),
@@ -1853,6 +1950,8 @@ _aws_handlers = [
     (r"/delete_testcase/([0-9]+)", DeleteTestcaseHandler),
     (r"/user/([0-9]+)", UserViewHandler),
     (r"/add_user/([0-9]+)", AddUserHandler),
+    (r"/group/([0-9]+)", GroupViewHandler),
+    (r"/add_group/([0-9]+)", AddGroupHandler),
     (r"/add_announcement/([0-9]+)", AddAnnouncementHandler),
     (r"/remove_announcement/([0-9]+)", RemoveAnnouncementHandler),
     (r"/submission/([0-9]+)(?:/([0-9]+))?", SubmissionViewHandler),
