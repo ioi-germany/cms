@@ -106,8 +106,3 @@ from .util import mkdir, Address, ServiceCoord, get_service_address, \
     default_argument_parser, find_local_addresses
 from .conf import config
 from .plugin import plugin_list, plugin_lookup
-        self.max_print_length = 10000000
-
-        self.printer = None
-        self.max_pages_per_job = 10
-        self.max_jobs_per_user = 10
