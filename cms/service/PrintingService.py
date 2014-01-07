@@ -41,7 +41,7 @@ from gevent.event import Event
 
 from cms import config
 from cms.db.filecacher import FileCacher
-from cms.io.GeventLibrary import Service, rpc_method
+from cms.io import Service, rpc_method
 from cms.io.GeventUtils import rmtree
 from cms.db import SessionGen, PrintJob
 from cms.server import format_datetime
