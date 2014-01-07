@@ -121,22 +121,6 @@ def wait_without_std(procs):
     return [process.wait() for process in procs]
 
 
-def my_truncate(ff, size):
-    """Truncate file-like object ff at specified size. If file is
-    shorter than size, it is not modified (this is different from
-    using ff.truncate(), which doesn't mandate any specific behavior
-    in this case).
-
-    After truncations, the file position is reset to 0.
-
-    """
-    ff.seek(0, os.SEEK_END)
-    cur_size = ff.tell()
-    if cur_size > size:
-        ff.truncate(size)
-    ff.seek(0, os.SEEK_SET)
-
-
 class SandboxBase(object):
     """A base class for all sandboxes, meant to contain common
     resources.
@@ -296,9 +280,18 @@ class SandboxBase(object):
         logger.debug("Retrieving file %s from sandbox" % (path))
         real_path = self.relative_path(path)
         if trunc_len is not None:
-            file_ = open(real_path, "ab")
-            my_truncate(file_, trunc_len)
-            file_.close()
+            with open(real_path, "rb") as file_:
+                file_.seek(0, os.SEEK_END)
+                cur_size = file_.tell()
+                file_.seek(0, os.SEEK_SET)
+                if cur_size > trunc_len:
+                    real_path = tempfile.mktemp(dir=self.get_root_path())
+                    with open(real_path, "wb") as trunc_file:
+                        rem_len = trunc_len
+                        while rem_len > 0:
+                            c = file_.read(min(1024, rem_len))
+                            rem_len -= len(c)
+                            trunc_file.write(c)
         file_ = open(real_path, "rb")
         return file_
 
