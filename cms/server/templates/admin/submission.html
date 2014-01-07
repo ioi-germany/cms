@@ -138,7 +138,10 @@
       <tr>
         <th style="width: 10%">Outcome</th>
         <th style="width: 2%"></th>
-        <th style="width: 45%">Details</th>
+        <th style="width: 28%">Details</th>
+        <th style="width: 5%">In</th>
+        <th style="width: 6%">Out</th>
+        <th style="width: 6%">Ref</th>
         <th style="width: 8%">Shard</th>
         <th style="width: 15%">Resources</th>
         <th style="width: 20%">Sandbox</th>
@@ -154,6 +157,17 @@
         <td></td>
         {% end %}
         <td id="eval_text_{{ idx }}">{{ format_status_text(ev.text) }}</td>
+        <td style="text-align: center;">
+          <a href="javascript:void(0);" onclick="utils.show_file('Input {{ idx }}','{{ url_root }}/file/{{ shown_dataset.testcases[idx].input }}/input{{ idx }}')">In</a>
+        </td>
+        <td style="text-align: center;">
+        {% if ev.output is not None %}
+          <a href="javascript:void(0);" onclick="utils.show_file('Contestant output {{ idx }}','{{ url_root }}/file/{{ ev.output }}/output{{ idx }}')">Out</a>
+        {% end %}
+        </td>
+        <td style="text-align: center;">
+          <a href="javascript:void(0);" onclick="utils.show_file('Reference output {{ idx }}','{{ url_root }}/file/{{ shown_dataset.testcases[idx].output }}/output{{ idx }}')">OK</a>
+        </td>
         <td>{{ ev.evaluation_shard }}</td>
         <td>
           {% if ev.execution_time is not None %}

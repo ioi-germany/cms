@@ -277,7 +277,7 @@ class Batch(TaskType):
                     job.user_output = sandbox.get_file_to_storage(
                         output_filename,
                         "Output file in job %s" % job.info,
-                        trunc_len=100 * 1024)
+                        trunc_len=job.output_trunc_len)
 
                 # If not asked otherwise, evaluate the output file
                 if not job.only_execution:

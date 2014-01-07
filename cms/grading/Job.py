@@ -208,7 +208,8 @@ class EvaluationJob(Job):
                  time_limit=None, memory_limit=None,
                  success=None, outcome=None, text=None,
                  user_output=None, plus=None,
-                 only_execution=False, get_output=False):
+                 only_execution=False, get_output=False,
+                 output_trunc_len=None):
         """Initialization.
 
         See base class for the remaining arguments.
@@ -237,6 +238,8 @@ class EvaluationJob(Job):
             or to compare the output with the reference solution too.
         get_output (bool): whether to retrieve the execution output
             (together with only_execution, useful for the user tests).
+        output_trunc_len (int): length at which the output is truncated
+                                (no truncation if None)
 
         """
         if files is None:
@@ -263,6 +266,7 @@ class EvaluationJob(Job):
         self.plus = plus
         self.only_execution = only_execution
         self.get_output = get_output
+        self.output_trunc_len = output_trunc_len
 
     def export_to_dict(self):
         res = Job.export_to_dict(self)
@@ -286,6 +290,7 @@ class EvaluationJob(Job):
             'plus': self.plus,
             'only_execution': self.only_execution,
             'get_output': self.get_output,
+            'output_trunc_len': self.output_trunc_len,
             })
         return res
 
@@ -463,6 +468,8 @@ class JobGroup(object):
         job.executables = dict(submission_result.executables)
         job.time_limit = dataset.time_limit
         job.memory_limit = dataset.memory_limit
+        job.get_output = True
+        job.output_trunc_len = 1024
 
         jobs = dict()
 
@@ -498,6 +505,7 @@ class JobGroup(object):
                 execution_wall_clock_time=job.plus.get(
                     'execution_wall_clock_time'),
                 execution_memory=job.plus.get('execution_memory'),
+                output=job.user_output,
                 evaluation_shard=job.shard,
                 evaluation_sandbox=":".join(job.sandboxes),
                 testcase=sr.dataset.testcases[test_name])]
@@ -542,6 +550,7 @@ class JobGroup(object):
                         dataset.managers[manager_filename]
 
         job.get_output = True
+        job.output_trunc_len = 100 * 1024
         job.only_execution = True
 
         jobs = {"": job}
