@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,7 +22,7 @@ from Messenger import print_msg
 from CommonConfig import exported_function, CommonConfig
 from TaskConfig import TaskConfig
 from LocationStack import chdir
-from cms.db import Contest, User
+from cms.db import Contest, User, Group
 import os
 import shutil
 from datetime import datetime
@@ -271,13 +271,7 @@ class ContestConfig(CommonConfig):
         u (MyUser): test user
 
         """
-        self.testuser = User(username=u.username,
-                             password=u.password,
-                             first_name=u.firstname,
-                             last_name=u.lastname,
-                             ip=u.ip,
-                             hidden=u.hidden,
-                             timezone=u.timezone)
+        self._mytestuser = u
 
     def short_path(self, f):
         """
@@ -302,8 +296,6 @@ class ContestConfig(CommonConfig):
             raise Exception("You have to specify a default group")
         cdb = Contest(name=self.contestname, description=self._description)
         cdb.timezone = self._timezone
-        cdb.start = self.defaultgroup.start
-        cdb.stop = self.defaultgroup.stop
         cdb.token_initial = self.token_initial
         cdb.token_max = self.token_max
         cdb.token_total = self.token_total
@@ -315,7 +307,28 @@ class ContestConfig(CommonConfig):
         cdb.max_user_test_number = self.max_user_test_number
         cdb.min_user_test_interval = self.min_user_test_interval
 
+        self.groupsdb = {}
+        for g in self.groups:
+            if g.name in self.groupsdb:
+                raise Exception("Group {} specified multiple times")
+            gdb = Group(name=g.name)
+            gdb.start = g.start
+            gdb.stop = g.stop
+            self.groupsdb[g.name] = gdb
+            cdb.groups.append(gdb)
+            print("init group {}".format(gdb))
+
+        cdb.main_group = self.groupsdb[self.defaultgroup.name]
+
+        self.usersdb = {}
+
+        self.cdb = cdb
+
         return cdb
+
+    @property
+    def testuser(self):
+        return self._makeuser(self._mytestuser.username)
 
     def _makeuser(self, username):
         """
@@ -327,8 +340,8 @@ class ContestConfig(CommonConfig):
         return (User): database object for the user
 
         """
-        if self.testuser is not None and username == self.testuser.username:
-            return self.testuser
+        if username in self.usersdb:
+            return self.usersdb[username]
 
         for user in self.users:  # FIXME This could be done faster...
             if user.username == username:
@@ -338,7 +351,9 @@ class ContestConfig(CommonConfig):
                            last_name=user.lastname,
                            ip=user.ip,
                            hidden=user.hidden,
+                           group=self.groupsdb[user.group.name],
                            timezone=user.timezone)
+                self.usersdb[username] = udb
                 return udb
         raise KeyError
 

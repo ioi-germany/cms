@@ -178,6 +178,8 @@ class YamlLoader(Loader):
         contest.groups.append(group)
         contest.main_group = group
 
+        self.contest = contest
+
         return contest, tasks, users
 
     def has_changed(self, name):
@@ -242,7 +244,7 @@ class YamlLoader(Loader):
                            " I'm not trying again." % name)
         return False
 
-    def get_user(self, username, contest):
+    def get_user(self, username):
         """See docstring in class Loader.
 
         """
@@ -270,7 +272,7 @@ class YamlLoader(Loader):
 
         logger.info("User parameters loaded.")
 
-        return User(group=contest.main_group, **args)
+        return User(group=self.contest.main_group, **args)
 
     def get_task(self, name):
         """See docstring in class Loader.

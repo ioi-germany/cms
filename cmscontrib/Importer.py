@@ -97,7 +97,7 @@ class Importer(object):
         # Get the users or, if asked, generate them
         if self.user_number is None:
             for user in users:
-                contest.users.append(self.loader.get_user(user, contest))
+                contest.users.append(self.loader.get_user(user))
         else:
             logger.info("Generating %s random users." % self.user_number)
             contest.users = [User("User %d" % i,
