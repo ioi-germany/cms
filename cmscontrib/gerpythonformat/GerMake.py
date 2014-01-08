@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -58,11 +58,11 @@ class GerMake:
                     not any(True for t in contestconfig.tasks):
                 raise Exception("Task {} not found".format(self.task))
             contestconfig._makecontest()
+            for u in contestconfig.users:
+                contestconfig._makeuser(u.username)
             for t in contestconfig.tasks:
                 contestconfig._maketask(filecacher, t.name,
                                         local_test=self.local_test)
-            for u in contestconfig.users:
-                contestconfig._makeuser(u.username)
 
 
 def main():
