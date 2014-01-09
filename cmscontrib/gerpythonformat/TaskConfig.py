@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -755,9 +755,9 @@ class TaskConfig(CommonConfig, Scope):
         filename (string): name of the input file
 
         """
-        def f(stdout):
-            with open(filename) as stdin:
-                shutil.copyfileobj(stdin, stdout)
+        def f(stdout, stdin=None):
+            with open(filename) as fi:
+                shutil.copyfileobj(fi, stdout)
         return self.encapsulate(f)
 
     @exported_function
