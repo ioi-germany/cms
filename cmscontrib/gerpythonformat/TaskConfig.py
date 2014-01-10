@@ -691,9 +691,18 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         self.tasktype = "Communication"
+        some = False
+        all = True
         for end in ["c", "cpp", "pas"]:
-            self.managers["stub."+end] = \
-                os.path.join(self.wdir, "interface."+end)
+            interfacefile = os.path.join(self.wdir, "interface."+end)
+            if os.path.exists(interfacefile):
+                some = True
+                self.managers["stub."+end] = interfacefile
+            else:
+                all = False
+        if some != all:
+            print_msg("There are stubs for some but not all languages",
+                      warning=True, headerdepth=10)
         self.managers["manager"] = manager.get_path()
         self.tasktypeparameters = json.dumps([])
 

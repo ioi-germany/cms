@@ -115,9 +115,10 @@ class Communication(TaskType):
         format_filename = job.files.keys()[0]
         source_filenames = []
         # Stub.
-        source_filenames.append("stub%s" % source_ext)
-        files_to_get[source_filenames[-1]] = \
-            job.managers["stub%s" % source_ext].digest
+        if "stub%s" % source_ext in job.managers:
+            source_filenames.append("stub%s" % source_ext)
+            files_to_get[source_filenames[-1]] = \
+                job.managers["stub%s" % source_ext].digest
         # User's submission.
         source_filenames.append(format_filename.replace(".%l", source_ext))
         files_to_get[source_filenames[-1]] = \
@@ -206,7 +207,9 @@ class Communication(TaskType):
             command,
             job.time_limit,
             job.memory_limit,
-            allow_dirs=user_allow_dirs)
+            allow_dirs=user_allow_dirs,
+            stdin_redirect=fifo_in,
+            stdout_redirect=fifo_out)
 
         # Consume output.
         wait_without_std([process, manager])
