@@ -120,8 +120,9 @@ class Communication(TaskType):
         source_filenames = []
         # Stub.
         stub_filename = "stub%s" % source_ext
-        source_filenames.append(stub_filename)
-        files_to_get[stub_filename] = job.managers[stub_filename].digest
+        if stub_filename in job.managers:
+            source_filenames.append(stub_filename)
+            files_to_get[stub_filename] = job.managers[stub_filename].digest
         # User's submission.
         for filename, fileinfo in job.files.iteritems():
             source_filename = filename.replace(".%l", source_ext)
@@ -256,7 +257,9 @@ class Communication(TaskType):
                 commands[-1],
                 job.time_limit,
                 job.memory_limit,
-                allow_dirs=user_allow_dirs)
+                allow_dirs=user_allow_dirs,
+                stdin_redirect=fifo_in,
+                stdout_redirect=fifo_out)
 
         # Consume output.
         wait_without_std(processes + [manager])
