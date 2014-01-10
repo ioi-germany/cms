@@ -316,7 +316,6 @@ class ContestConfig(CommonConfig):
             gdb.stop = g.stop
             self.groupsdb[g.name] = gdb
             cdb.groups.append(gdb)
-            print("init group {}".format(gdb))
 
         cdb.main_group = self.groupsdb[self.defaultgroup.name]
 
