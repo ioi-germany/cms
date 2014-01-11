@@ -6,6 +6,7 @@
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -1787,6 +1788,32 @@ class SubmissionFileHandler(FileHandler):
         self.fetch(digest, "text/plain", real_filename)
 
 
+class SubmissionPatrolHandler(BaseHandler):
+    """Called when the admin patrols a submission.
+
+    """
+    def post(self, submission_id):
+        submission = self.safe_get_item(Submission, submission_id)
+
+        try:
+            attrs = {"comment": submission.comment}
+
+            self.get_string(attrs, "comment")
+
+            submission.set_attrs(attrs)
+
+        except Exception as error:
+            self.application.service.add_notification(
+                make_datetime(), "Invalid field(s)", repr(error))
+            self.redirect("/submission/%s" % submission_id)
+            return
+
+        try_commit(self.sql_session, self)
+        # TODO Redirect to /submission/submission_id/dataset_id if
+        # that is the origin of this request
+        self.redirect("/submission/%s" % submission_id)
+
+
 class QuestionsHandler(BaseHandler):
     """Page to see and send messages to all the contestants.
 
@@ -1956,6 +1983,7 @@ _aws_handlers = [
     (r"/remove_announcement/([0-9]+)", RemoveAnnouncementHandler),
     (r"/submission/([0-9]+)(?:/([0-9]+))?", SubmissionViewHandler),
     (r"/submission_file/([0-9]+)", SubmissionFileHandler),
+    (r"/submission_patrol/([0-9]+)", SubmissionPatrolHandler),
     (r"/file/([a-f0-9]+)/([a-zA-Z0-9_.-]+)", FileFromDigestHandler),
     (r"/message/([0-9]+)", MessageHandler),
     (r"/question/([0-9]+)", QuestionReplyHandler),

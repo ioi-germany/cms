@@ -112,6 +112,21 @@
 
 </div>
 
+<h2 id="title_patrolling" class="toggling_on">Patrolling</h2>
+
+<div id="patrolling">
+  <form enctype="multipart/form-data" action="{{ url_root }}/submission_patrol/{{ s.id }}" method="POST">
+    <table>
+      <tr>
+        <td>Comment</td>
+        <td><textarea name="comment" style="width: 100%" rows="2">{{ s.comment }}</textarea></td>
+      </tr>
+    </table>
+    <input type="submit"/>
+    <input type="reset" value="Reset" />
+  </form>
+</div>
+
   {% if sr is not None and sr.scored() %}
 
 <h2 id="title_evaluation_user" class="toggling_on">Evaluation (as seen by the user)</h2>
