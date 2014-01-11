@@ -53,6 +53,13 @@ template<typename T> bool from_string(const string &s, T &t) {
     return !in.fail() && in.eof() && string_representation_ok(s, t);
 }
 
+template<> bool from_string(const string &s, char &t) {
+    if (s.size() != 1)
+        return false;
+    t = s[0];
+    return true;
+}
+
 template<typename T> T from_string_or_fail(const string &s) {
     T t;
     if (!from_string(s, t)) {
