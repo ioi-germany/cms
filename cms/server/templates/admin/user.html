@@ -45,10 +45,11 @@ function update_additional_answer(element, invoker)
       <tr>
         <th style="width: 10%">Time</th>
         <th style="width: 14%">Task</th>
-        <th style="width: 35%">Status</th>
-        <th style="width: 15%">Files</th>
+        <th style="width: 32%">Status</th>
+        <th style="width: 13%">Files</th>
         <th style="width: 8%">Token</th>
-        <th style="width: 18%">Reevaluate</th>
+        <th style="width: 7">Patr.</th>
+        <th style="width: 16%">Reevaluate</th>
       </tr>
     </thead>
     <tbody>
@@ -131,6 +132,9 @@ function update_additional_answer(element, invoker)
           {% else %}
           Yes
           {% end %}
+        </td>
+        <td>
+          {{ s.short_comment }}
         </td>
         <td>
           {% set reevaluation_par_name = "submission" %}
