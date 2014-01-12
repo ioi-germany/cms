@@ -678,7 +678,7 @@ class TaskConfig(CommonConfig, Scope):
         self.tasktypeparameters = json.dumps([evaluation_param])
 
     @exported_function
-    def communication(self, manager):
+    def communication(self, manager, stub=True):
         """
         Specify this to be a communication task.
 
@@ -691,20 +691,15 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         self.tasktype = "Communication"
-        some = False
-        all = True
         for end in ["c", "cpp", "pas"]:
             interfacefile = os.path.join(self.wdir, "interface."+end)
-            if os.path.exists(interfacefile):
-                some = True
+            if stub:
                 self.managers["stub."+end] = interfacefile
-            else:
-                all = False
-        if some != all:
-            print_msg("There are stubs for some but not all languages",
-                      warning=True, headerdepth=10)
         self.managers["manager"] = manager.get_path()
-        self.tasktypeparameters = json.dumps([])
+        compilation_param = "alone"
+        if stub:
+            compilation_param = "stub"
+        self.tasktypeparameters = json.dumps([compilation_param])
 
     @exported_function
     def output_generator(self, s):

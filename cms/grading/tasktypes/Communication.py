@@ -7,6 +7,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2016 Masaki Hara <ackie.h.gmai@gmail.com>
+# Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -37,7 +38,7 @@ from cms.grading import compilation_step, \
     merge_evaluation_results
 from cms.grading.languagemanager import \
     LANGUAGES, HEADER_EXTS, SOURCE_EXTS, OBJECT_EXTS, get_language
-from cms.grading.ParameterTypes import ParameterTypeInt
+from cms.grading.ParameterTypes import ParameterTypeChoice, ParameterTypeInt
 from cms.grading.TaskType import TaskType, \
     create_sandbox, delete_sandbox
 from cms.db import Executable
@@ -70,12 +71,19 @@ class Communication(TaskType):
 
     name = "Communication"
 
+    _COMPILATION = ParameterTypeChoice(
+        "Compilation",
+        "compilation",
+        "",
+        {"alone": "Submissions are self-sufficient",
+         "grader": "Submissions are compiled with a grader"})
+
     _NUM_PROCESSES = ParameterTypeInt(
         "Number of Processes",
         "num_processes",
         "")
 
-    ACCEPTED_PARAMETERS = [_NUM_PROCESSES]
+    ACCEPTED_PARAMETERS = [_COMPILATION, _NUM_PROCESSES]
 
     def get_compilation_commands(self, submission_format):
         """See TaskType.get_compilation_commands."""
@@ -83,7 +91,8 @@ class Communication(TaskType):
         for language in LANGUAGES:
             source_ext = language.source_extension
             source_filenames = []
-            source_filenames.append("stub%s" % source_ext)
+            if self.parameters[0] == "stub":
+                source_filenames.append("stub%s" % source_ext)
             executable_filename = \
                 "_".join(pattern.replace(".%l", "")
                          for pattern in submission_format)
@@ -120,7 +129,7 @@ class Communication(TaskType):
         source_filenames = []
         # Stub.
         stub_filename = "stub%s" % source_ext
-        if stub_filename in job.managers:
+        if self.parameters[0] == "stub":
             source_filenames.append(stub_filename)
             files_to_get[stub_filename] = job.managers[stub_filename].digest
         # User's submission.
