@@ -519,7 +519,7 @@ class YamlLoader(Loader):
             for path in paths:
                 if os.path.exists(path):
                     args["task_type"] = "Communication"
-                    args["task_type_parameters"] = '[]'
+                    args["task_type_parameters"] = '["alone"]'
                     digest = self.file_cacher.put_file_from_path(
                         path,
                         "Manager for task %s" % name)
