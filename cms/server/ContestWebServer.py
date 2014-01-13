@@ -1235,10 +1235,10 @@ class SubmissionStatusHandler(BaseHandler):
             data["status"] = 2
             data["status_text"] = "%s <a class=\"details\">%s</a>" % (
                 self._("Compilation failed"), self._("details"))
-        elif not sr.evaluated():
+        elif not sr.evaluated(not submission.tokened()):
             data["status"] = 3
             data["status_text"] = self._("Evaluating...")
-        elif not sr.scored():
+        elif not sr.scored(not submission.tokened()):
             data["status"] = 4
             data["status_text"] = self._("Scoring...")
         else:
@@ -1291,7 +1291,7 @@ class SubmissionDetailsHandler(BaseHandler):
             else:
                 details = sr.public_score_details
 
-            if sr.scored():
+            if sr.scored(not submission.tokened()):
                 details = score_type.get_html_details(details, self._)
             else:
                 details = None

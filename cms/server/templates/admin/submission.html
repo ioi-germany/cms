@@ -94,8 +94,12 @@
         <td>{{ sr.compilation_sandbox }}</td>
       </tr>
       <tr>
-        <td>Evaluation attempts</td>
-        <td>{{ sr.evaluation_tries }}</td>
+        <td>Evaluation attempts (public test cases)</td>
+        <td>{{ sr.public_evaluation_tries }}</td>
+      </tr>
+      <tr>
+        <td>Evaluation attempts (private test cases)</td>
+        <td>{{ sr.private_evaluation_tries }}</td>
       </tr>
       {% end %}
       <tr>
@@ -112,7 +116,7 @@
 
 </div>
 
-  {% if sr is not None and sr.scored() %}
+  {% if sr is not None and sr.scored(not s.tokened()) %}
 
 <h2 id="title_evaluation_user" class="toggling_on">Evaluation (as seen by the user)</h2>
 <div id="evaluation_user">

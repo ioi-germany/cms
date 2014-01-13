@@ -319,8 +319,12 @@
                 job_type = 'Compiling';
                 object_type = 'submission';
             }
-            else if (job[0] == 'evaluate') {
-                job_type = 'Evaluating';
+            else if (job[0] == 'evaluate_public') {
+                job_type = 'Evaluating (public)';
+                object_type = 'submission';
+            }
+            else if (job[0] == 'evaluate_private') {
+                job_type = 'Evaluating (private)';
                 object_type = 'submission';
             }
             else if (job[0] == 'compile_test') {
