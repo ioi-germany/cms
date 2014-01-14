@@ -1055,12 +1055,7 @@ class TaskConfig(CommonConfig, Scope):
         tdb = Task(name=self.name,
                    title=self._title,
                    num=self.num)
-        tdb.token_initial = self.token_initial
-        tdb.token_max = self.token_max
-        tdb.token_total = self.token_total
-        tdb.token_min_interval = self.token_min_interval
-        tdb.token_gen_time = self.token_gen_time
-        tdb.token_gen_number = self.token_gen_number
+        self._set_tokens(tdb)
         tdb.max_submission_number = self.max_submission_number
         tdb.min_submission_interval = self.min_submission_interval
         tdb.max_user_test_number = self.max_user_test_number

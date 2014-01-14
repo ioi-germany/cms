@@ -296,12 +296,7 @@ class ContestConfig(CommonConfig):
             raise Exception("You have to specify a default group")
         cdb = Contest(name=self.contestname, description=self._description)
         cdb.timezone = self._timezone
-        cdb.token_initial = self.token_initial
-        cdb.token_max = self.token_max
-        cdb.token_total = self.token_total
-        cdb.token_min_interval = self.token_min_interval
-        cdb.token_gen_time = self.token_gen_time
-        cdb.token_gen_number = self.token_gen_number
+        self._set_tokens(cdb)
         cdb.max_submission_number = self.max_submission_number
         cdb.min_submission_interval = self.min_submission_interval
         cdb.max_user_test_number = self.max_user_test_number

@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -387,28 +387,18 @@ class CommonConfig(object):
         """
         Specify that there are no tokens available.
         """
-        self.token_initial = None
-        self.token_gen_number = 0
-        self.token_gen_time = timedelta()
-        self.token_max = None
-        self.token_min_interval = timedelta()
-        self.token_total = None
+        self.token_mode = "disabled"
 
     @exported_function
-    def infinite_tokens(self, min_interval=timedelta()):
+    def infinite_tokens(self):
         """
         Specify that there are infinitely many tokens available.
         """
-        self.token_initial = 0
-        self.token_gen_number = 1
-        self.token_gen_time = timedelta()
-        self.token_max = None
-        self.token_min_interval = min_interval
-        self.token_total = None
+        self.token_mode = "infinite"
 
     @exported_function
-    def tokens(self, initial, gen_number, gen_time, max=None,
-               min_interval=timedelta(), total=None):
+    def tokens(self, gen_initial, gen_number, gen_interval, gen_max=None,
+               min_interval=timedelta(), max_number=None):
         """
         Specify the number of tokens available.
 
@@ -426,12 +416,28 @@ class CommonConfig(object):
         total (int): maximum number of tokens the user can use in total
 
         """
-        self.token_initial = initial
-        self.token_gen_number = gen_number
-        self.token_gen_time = gen_time
-        self.token_max = max
+        self.token_mode = "finite"
+        self.token_max_number = max_number
         self.token_min_interval = min_interval
-        self.token_total = total
+        self.token_gen_initial = gen_initial
+        self.token_gen_number = gen_number
+        self.token_gen_interval = gen_interval
+        self.token_gen_max = gen_max
+
+    def _set_tokens(self, obj):
+        """Applies the token settings to the given db object (Contest or Task).
+
+        obj (Contest or Task): the database object
+
+        """
+        obj.token_mode = self.token_mode
+        if self.token_mode == "finite":
+            obj.token_max_number = self.token_max_number
+            obj.token_min_interval = self.token_min_interval
+            obj.token_gen_initial = self.token_gen_initial
+            obj.token_gen_number = self.token_gen_number
+            obj.token_gen_interval = self.token_gen_interval
+            obj.token_gen_max = self.token_gen_max
 
     # Submission and user test limits
 
