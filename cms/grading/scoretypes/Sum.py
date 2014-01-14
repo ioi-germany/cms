@@ -5,6 +5,7 @@
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
+# Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -103,45 +104,46 @@ class Sum(ScoreTypeAlone):
             score += self.parameters
         return score, public_score, []
 
-    def compute_score(self, submission_result):
+    def compute_score(self, submission_result, public):
         """Compute the score of a submission.
 
         See the same method in ScoreType for details.
 
         """
         # Actually, this means it didn't even compile!
-        if not submission_result.evaluated():
-            return 0.0, "[]", 0.0, "[]", json.dumps([])
+        if not submission_result.evaluated(public):
+            if public:
+                return 0.0, "[]"
+            else:
+                return 0.0, "[]", json.dumps([])
 
         # XXX Lexicographical order by codename
         indices = sorted(self.public_testcases.keys())
         evaluations = dict((ev.codename, ev)
                            for ev in submission_result.evaluations)
         testcases = []
-        public_testcases = []
         score = 0.0
-        public_score = 0.0
 
         for idx in indices:
-            this_score = float(evaluations[idx].outcome) * self.parameters
-            tc_outcome = self.get_public_outcome(this_score)
-            score += this_score
-            testcases.append({
-                "idx": idx,
-                "outcome": tc_outcome,
-                "text": evaluations[idx].text,
-                "time": evaluations[idx].execution_time,
-                "memory": evaluations[idx].execution_memory,
-                })
-            if self.public_testcases[idx]:
-                public_score += this_score
-                public_testcases.append(testcases[-1])
+            if self.public_testcases[idx] or not public:
+                this_score = float(evaluations[idx].outcome) * self.parameters
+                tc_outcome = self.get_public_outcome(this_score)
+                score += this_score
+                testcases.append({
+                    "idx": idx,
+                    "outcome": tc_outcome,
+                    "text": evaluations[idx].text,
+                    "time": evaluations[idx].execution_time,
+                    "memory": evaluations[idx].execution_memory,
+                    })
             else:
-                public_testcases.append({"idx": idx})
+                testcases.append({"idx": idx})
 
-        return score, json.dumps(testcases), \
-            public_score, json.dumps(public_testcases), \
-            json.dumps([])
+        if public:
+            return score, json.dumps(testcases)
+        else:
+            return score, json.dumps(testcases), \
+                json.dumps([])
 
     def get_public_outcome(self, outcome):
         """Return a public outcome from an outcome.

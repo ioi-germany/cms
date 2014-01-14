@@ -7,6 +7,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
+# Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -60,8 +61,9 @@ def to_compile(submission_result):
          r.compilation_tries < EvaluationService.MAX_COMPILATION_TRIES)
 
 
-def to_evaluate(submission_result):
-    """Return whether ES is interested in evaluating the submission.
+def to_evaluate_public(submission_result):
+    """Return whether ES is interested in evaluating the submission
+    on public test cases.
 
     submission_result (SubmissionResult): a submission result.
 
@@ -70,8 +72,24 @@ def to_evaluate(submission_result):
     """
     r = submission_result
     return r is not None and r.compilation_succeeded() and \
+        not r.public_evaluated() and \
+        r.public_evaluation_tries < EvaluationService.MAX_EVALUATION_TRIES
+
+
+def to_evaluate_private(submission_result):
+    """Return whether ES is interested in evaluating the submission
+    on private test cases.
+
+    submission_result (SubmissionResult): a submission result.
+
+    return (bool): True if ES wants to evaluate the submission.
+
+    """
+    r = submission_result
+    return r is not None and r.compilation_succeeded() and \
+        r.public_evaluated() and \
         not r.evaluated() and \
-        r.evaluation_tries < EvaluationService.MAX_EVALUATION_TRIES
+        r.private_evaluation_tries < EvaluationService.MAX_EVALUATION_TRIES
 
 
 def user_test_to_compile(user_test_result):
@@ -429,11 +447,18 @@ class WorkerPool(object):
                 dataset = Dataset.get_from_id(dataset_id, session)
                 job_group = \
                     JobGroup.from_submission_compilation(submission, dataset)
-            elif job_type == EvaluationService.JOB_TYPE_EVALUATION:
+            elif job_type == EvaluationService.JOB_TYPE_PUBLIC_EVALUATION:
                 submission = Submission.get_from_id(object_id, session)
                 dataset = Dataset.get_from_id(dataset_id, session)
                 job_group = \
-                    JobGroup.from_submission_evaluation(submission, dataset)
+                    JobGroup.from_submission_evaluation(submission, dataset,
+                                                        True)
+            elif job_type == EvaluationService.JOB_TYPE_PRIVATE_EVALUATION:
+                submission = Submission.get_from_id(object_id, session)
+                dataset = Dataset.get_from_id(dataset_id, session)
+                job_group = \
+                    JobGroup.from_submission_evaluation(submission, dataset,
+                                                        False)
             elif job_type == EvaluationService.JOB_TYPE_TEST_COMPILATION:
                 user_test = UserTest.get_from_id(object_id, session)
                 dataset = Dataset.get_from_id(dataset_id, session)
@@ -622,7 +647,8 @@ class EvaluationService(Service):
     JOB_PRIORITY_EXTRA_LOW = 4
 
     JOB_TYPE_COMPILATION = "compile"
-    JOB_TYPE_EVALUATION = "evaluate"
+    JOB_TYPE_PUBLIC_EVALUATION = "evaluate_public"
+    JOB_TYPE_PRIVATE_EVALUATION = "evaluate_private"
     JOB_TYPE_TEST_COMPILATION = "compile_test"
     JOB_TYPE_TEST_EVALUATION = "evaluate_test"
 
@@ -706,10 +732,19 @@ class EvaluationService(Service):
                                 EvaluationService.JOB_PRIORITY_HIGH,
                                 submission.timestamp):
                             new_jobs += 1
-                    elif to_evaluate(submission_result):
+                    elif to_evaluate_public(submission_result):
                         if self.push_in_queue(
                                 JobQueueEntry(
-                                    EvaluationService.JOB_TYPE_EVALUATION,
+                                    EvaluationService.JOB_TYPE_PUBLIC_EVALUATION,
+                                    submission.id,
+                                    dataset.id),
+                                EvaluationService.JOB_PRIORITY_HIGH,
+                                submission.timestamp):
+                            new_jobs += 1
+                    elif to_evaluate_private(submission_result):
+                        if self.push_in_queue(
+                                JobQueueEntry(
+                                    EvaluationService.JOB_TYPE_PRIVATE_EVALUATION,
                                     submission.id,
                                     dataset.id),
                                 EvaluationService.JOB_PRIORITY_MEDIUM,
@@ -826,8 +861,14 @@ class EvaluationService(Service):
                             stats["scored"] += 1
                         else:
                             stats["evaluated"] += 1
+                    elif not submission_result.public_evaluated():
+                        if submission_result.public_evaluation_tries >= \
+                                EvaluationService.MAX_EVALUATION_TRIES:
+                            stats["max_evaluations"] += 1
+                        else:
+                            stats["evaluating"] += 1
                     else:
-                        if submission_result.evaluation_tries >= \
+                        if submission_result.private_evaluation_tries >= \
                                 EvaluationService.MAX_EVALUATION_TRIES:
                             stats["max_evaluations"] += 1
                         else:
@@ -893,7 +934,11 @@ class EvaluationService(Service):
                 submission_id,
                 dataset_id),
             JobQueueEntry(
-                EvaluationService.JOB_TYPE_EVALUATION,
+                EvaluationService.JOB_TYPE_PUBLIC_EVALUATION,
+                submission_id,
+                dataset_id),
+            JobQueueEntry(
+                EvaluationService.JOB_TYPE_PRIVATE_EVALUATION,
                 submission_id,
                 dataset_id),
         ]
@@ -924,7 +969,8 @@ class EvaluationService(Service):
         job_type, object_id, dataset_id = job
 
         if job_type in (EvaluationService.JOB_TYPE_COMPILATION,
-                        EvaluationService.JOB_TYPE_EVALUATION):
+                        EvaluationService.JOB_TYPE_PUBLIC_EVALUATION,
+                        EvaluationService.JOB_TYPE_PRIVATE_EVALUATION):
             return self.submission_busy(object_id, dataset_id)
         elif job_type in (EvaluationService.JOB_TYPE_TEST_COMPILATION,
                           EvaluationService.JOB_TYPE_TEST_EVALUATION):
@@ -1016,7 +1062,7 @@ class EvaluationService(Service):
 
                 self.compilation_ended(submission_result)
 
-            elif job_type == EvaluationService.JOB_TYPE_EVALUATION:
+            elif job_type == EvaluationService.JOB_TYPE_PUBLIC_EVALUATION:
                 submission_result = SubmissionResult.get_from_id(
                     (object_id, dataset_id), session)
                 if submission_result is None:
@@ -1025,12 +1071,30 @@ class EvaluationService(Service):
                                  (object_id, dataset_id))
                     return
 
-                submission_result.evaluation_tries += 1
+                submission_result.public_evaluation_tries += 1
 
                 if job_success:
-                    job_group.to_submission_evaluation(submission_result)
+                    job_group.to_submission_evaluation(submission_result,
+                                                       True)
 
-                self.evaluation_ended(submission_result)
+                self.evaluation_ended(submission_result, True)
+
+            elif job_type == EvaluationService.JOB_TYPE_PRIVATE_EVALUATION:
+                submission_result = SubmissionResult.get_from_id(
+                    (object_id, dataset_id), session)
+                if submission_result is None:
+                    logger.error("[action_finished] Couldn't find "
+                                 "submission %d(%d) in the database." %
+                                 (object_id, dataset_id))
+                    return
+
+                submission_result.private_evaluation_tries += 1
+
+                if job_success:
+                    job_group.to_submission_evaluation(submission_result,
+                                                       False)
+
+                self.evaluation_ended(submission_result, False)
 
             elif job_type == EvaluationService.JOB_TYPE_TEST_COMPILATION:
                 user_test_result = UserTestResult.get_from_id(
@@ -1085,10 +1149,10 @@ class EvaluationService(Service):
         if submission_result.compilation_succeeded():
             self.push_in_queue(
                 JobQueueEntry(
-                    EvaluationService.JOB_TYPE_EVALUATION,
+                    EvaluationService.JOB_TYPE_PUBLIC_EVALUATION,
                     submission_result.submission_id,
                     submission_result.dataset_id),
-                EvaluationService.JOB_PRIORITY_MEDIUM,
+                EvaluationService.JOB_PRIORITY_HIGH,
                 submission.timestamp)
         # If instead submission failed compilation, we don't evaluate,
         # but we inform ScoringService of the new submission. We need
@@ -1125,7 +1189,7 @@ class EvaluationService(Service):
             logger.error("Compilation outcome %r not recognized." %
                          submission_result.compilation_outcome)
 
-    def evaluation_ended(self, submission_result):
+    def evaluation_ended(self, submission_result, public):
         """Actions to be performed when we have a submission that has
         been evaluated. In particular: we inform ScoringService on
         success, we requeue on failure.
@@ -1134,18 +1198,33 @@ class EvaluationService(Service):
 
         """
         submission = submission_result.submission
+        if public:
+            tries = submission_result.public_evaluation_tries
+            type_ = EvaluationService.JOB_TYPE_PUBLIC_EVALUATION
+        else:
+            tries = submission_result.private_evaluation_tries
+            type_ = EvaluationService.JOB_TYPE_PRIVATE_EVALUATION
         # Evaluation successful, we inform ScoringService so it can
         # update the score. We need to commit the session beforehand,
         # otherwise the ScoringService wouldn't receive the updated
         # submission.
-        if submission_result.evaluated():
+        if submission_result.evaluated(public):
             submission_result.sa_session.commit()
             self.scoring_service.new_evaluation(
                 submission_id=submission_result.submission_id,
                 dataset_id=submission_result.dataset_id)
+            # If we just evaluated the public test cases, evaluate
+            # the private test cases now.
+            if public:
+                self.push_in_queue(
+                    JobQueueEntry(
+                        EvaluationService.JOB_TYPE_PRIVATE_EVALUATION,
+                        submission_result.submission_id,
+                        submission_result.dataset_id),
+                    EvaluationService.JOB_PRIORITY_MEDIUM,
+                    submission.timestamp)
         # Evaluation unsuccessful, we requeue (or not).
-        elif submission_result.evaluation_tries > \
-                EvaluationService.MAX_EVALUATION_TRIES:
+        elif tries > EvaluationService.MAX_EVALUATION_TRIES:
             logger.error("Maximum tries reached for the evaluation of "
                          "submission %d(%d). I will not try again." %
                          (submission_result.submission_id,
@@ -1155,7 +1234,7 @@ class EvaluationService(Service):
             # evaluations that are probably failing again.
             self.push_in_queue(
                 JobQueueEntry(
-                    EvaluationService.JOB_TYPE_EVALUATION,
+                    type_,
                     submission_result.submission_id,
                     submission_result.dataset_id),
                 EvaluationService.JOB_PRIORITY_LOW,
@@ -1357,7 +1436,11 @@ class EvaluationService(Service):
                         submission_result.submission_id,
                         submission_result.dataset_id),
                     JobQueueEntry(
-                        EvaluationService.JOB_TYPE_EVALUATION,
+                        EvaluationService.JOB_TYPE_PUBLIC_EVALUATION,
+                        submission_result.submission_id,
+                        submission_result.dataset_id),
+                    JobQueueEntry(
+                        EvaluationService.JOB_TYPE_PRIVATE_EVALUATION,
                         submission_result.submission_id,
                         submission_result.dataset_id),
                     ]
@@ -1385,13 +1468,13 @@ class EvaluationService(Service):
                             submission_result.submission.timestamp)
                 elif level == "evaluation":
                     submission_result.invalidate_evaluation()
-                    if to_evaluate(submission_result):
+                    if to_evaluate_public(submission_result):
                         self.push_in_queue(
                             JobQueueEntry(
-                                EvaluationService.JOB_TYPE_EVALUATION,
+                                EvaluationService.JOB_TYPE_PUBLIC_EVALUATION,
                                 submission_result.submission_id,
                                 submission_result.dataset_id),
-                            EvaluationService.JOB_PRIORITY_MEDIUM,
+                            EvaluationService.JOB_PRIORITY_HIGH,
                             submission_result.submission.timestamp)
 
             session.commit()

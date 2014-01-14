@@ -7,7 +7,7 @@
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -449,11 +449,14 @@ class JobGroup(object):
     # Evaluation
 
     @staticmethod
-    def from_submission_evaluation(submission, dataset,
+    def from_submission_evaluation(submission, dataset, public,
                                    submission_result=None):
         jobs = dict()
 
         for k, testcase in dataset.testcases.iteritems():
+            if testcase.public != public:
+                continue
+
             job = EvaluationJob()
 
             # Job
@@ -495,15 +498,20 @@ class JobGroup(object):
 
         return JobGroup(jobs)
 
-    def to_submission_evaluation(self, sr):
+    def to_submission_evaluation(self, sr, public):
         # This should actually be useless.
-        sr.invalidate_evaluation()
+        #sr.invalidate_evaluation()
+        # ... but let's do this to be sure
+        if public:
+            sr.public_evaluation_tries = 0
+        else:
+            sr.private_evaluation_tries = 0
 
         # No need to check self.success or job.success because this
         # method gets called only if the first (and therefore the
         # second!) is True.
 
-        sr.set_evaluation_outcome()
+        sr.set_evaluation_outcome(public)
 
         for test_name, job in self.jobs.iteritems():
             assert isinstance(job, EvaluationJob)

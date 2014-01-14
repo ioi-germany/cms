@@ -24,7 +24,7 @@
     <td class="public_score undefined">{{ _("N/A") }}</td>
     {% end %}
     <td class="total_score undefined">{{ _("N/A") }}</td>
-{% elif not sr.evaluated() %}
+{% elif not sr.evaluated(not s.tokened()) %}
 <tr data-submission="{{ s_idx }}" data-status="3">
     {% raw col1 %}
     <td class="status">
@@ -34,7 +34,7 @@
     <td class="public_score undefined">{{ _("N/A") }}</td>
     {% end %}
     <td class="total_score undefined">{{ _("N/A") }}</td>
-{% elif not sr.scored() %}
+{% elif not sr.scored(not s.tokened()) %}
 <tr data-submission="{{ s_idx }}" data-status="4">
     {% raw col1 %}
     <td class="status">
