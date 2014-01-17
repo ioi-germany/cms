@@ -72,6 +72,7 @@ def do_setup():
             os.path.join("gerpythonformat", "lib", "ready", "*.*"),
             os.path.join("gerpythonformat", "templates", "*.*"),
             os.path.join("gerpythonformat", "templates", "*", "*.*"),
+            os.path.join("templates", "*.*"),
         ],
         "cmstestsuite": [
             os.path.join("code", "*.*"),
@@ -163,7 +164,9 @@ def do_setup():
                   "cmsYamlImporter=cmscompat.YamlImporter:main",
                   "cmsYamlReimporter=cmscompat.YamlReimporter:main",
 
-                  "cmsGerMake=cmscontrib.gerpythonformat.GerMake:main"
+                  "cmsGerMake=cmscontrib.gerpythonformat.GerMake:main",
+
+                  "cmsPasswordSlips=cmscontrib.PasswordSlips:main"
               ]
           },
           keywords="ioi programming contest grader management system",
