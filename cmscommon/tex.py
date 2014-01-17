@@ -27,16 +27,16 @@ def escape_tex_normal(string):
     returns (unicode): escaped string
 
     """
-    rep = {"&": r"\&",
-           "%": r"\%",
-           "$": r"\$",
-           "#": r"\#",
-           "_": r"\_",
-           "{": r"\{",
-           "}": r"\}",
-           "~": r"\textasciitilde",
-           "^": r"\textasciicircum",
-           "\\": r"\textbackslash"}
+    rep = {"&": r"\&{}",
+           "%": r"\%{}",
+           "$": r"\${}",
+           "#": r"\#{}",
+           "_": r"\_{}",
+           "{": r"\{{}",
+           "}": r"\}{}",
+           "~": r"\textasciitilde{}",
+           "^": r"\textasciicircum{}",
+           "\\": r"\textbackslash{}"}
     res = ""
     for c in string:
         if c in rep:
@@ -57,7 +57,7 @@ def escape_tex_tt(string):
     res = ""
     for c in string:
         if c in rep:
-            res += "\\char\"%02X" % ord(c)
+            res += "\\char\"%02X{}" % ord(c)
         else:
             res += c
     return res
