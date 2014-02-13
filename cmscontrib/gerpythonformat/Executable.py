@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -273,11 +273,9 @@ class CPPProgram(Executable):
 
 
 class InternalPython(Executable):
-    """An Executable which is actually a python function. If a feed is given,
-    a read-only file handle pointing to the feed is passed on to the
-    specified python function.
-    In order to adjust the behaviour to the rest of the Executable objects,
-    the return value is written to the specified file
+    """An Executable which is actually a python function.
+
+    File descriptors for stdin, stdout and stderr are passed to the function.
     """
     def __init__(self, f=None):
         self.f = f
@@ -285,7 +283,7 @@ class InternalPython(Executable):
 
     def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
             stderr=None, dependencies=[]):
-        # TODO: treat stderr and dependencies specially?
+        # TODO: treat dependencies specially?
         kwargs = kwargs.copy()
         if stdin is not None:
             stdin = open(stdin, "r")
@@ -295,6 +293,9 @@ class InternalPython(Executable):
         if stdout is not None:
             stdout = open(stdout, "w")
             kwargs["stdout"] = stdout
+        if stderr is not None:
+            stderr = open(stderr, "w")
+            kwargs["stderr"] = stderr
         self.f(*args, **kwargs)
         if stdin is not None:
             stdin.close()
