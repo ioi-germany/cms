@@ -1006,6 +1006,18 @@ class TaskConfig(CommonConfig, Scope):
         ZipRule(self.rules, zipname, contents).ensure()
         self.attachment(zipname, "%s.zip" % self.name)
 
+    def _makeallzip(self):
+        """
+        Create and add an attachment containing all test cases.
+        """
+        zipname = os.path.join(self.wdir, "allcases.zip")
+        contents = {}
+        for i, c in enumerate(self.cases):
+            contents["%d.in" % (i+1)] = c.infile
+            contents["%d.out" % (i+1)] = c.outfile
+        ZipRule(self.rules, zipname, contents).ensure()
+        self.attachment(zipname, "%s_all.zip" % self.name)
+
     def _makeinputzip(self):
         """
         Create and add an attachment containing the input files (mostly
@@ -1047,6 +1059,8 @@ class TaskConfig(CommonConfig, Scope):
         """
         # Automatically make a ZIP file containing the save test cases
         self._makesavedzip()
+        if self.contest._analysis:
+            self._makeallzip()
         if self.tasktype == "OutputOnly":
             self._makeinputzip()
         self.file_cacher = file_cacher
@@ -1055,6 +1069,8 @@ class TaskConfig(CommonConfig, Scope):
         tdb = Task(name=self.name,
                    title=self._title,
                    num=self.num)
+        if self.contest._analysis:
+            self.infinite_tokens()
         self._set_tokens(tdb)
         tdb.max_submission_number = self.max_submission_number
         tdb.min_submission_interval = self.min_submission_interval
