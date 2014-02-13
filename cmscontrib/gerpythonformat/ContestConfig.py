@@ -97,6 +97,8 @@ class ContestConfig(CommonConfig):
         self.submission_limits(None, None)
         self.user_test_limits(None, None)
 
+        self._analysis = False
+
         # a standard tokenwise comparator (specified here so that it has to be
         # compiled at most once per contest)
         shutil.copy(os.path.join(self._get_ready_dir(), "tokens.cpp"),
@@ -273,6 +275,24 @@ class ContestConfig(CommonConfig):
         """
         self._mytestuser = u
 
+    @exported_function
+    def analysis(self):
+        """
+        Activate analysis mode for all users (subject to the start and end
+        times specified for the corresponding user groups).
+        This has the following consequences:
+         a) The token modes for the contest and for all tasks are set to
+            'infinite'.
+         b) All test cases are offered for download.
+
+        WARNING: Be careful with user groups: Users that shall not be allowed
+        to participate in the analysis mode must not be able to log in! Set
+        their start and end time to a point in the far future.
+
+        WARNING: Export the scores before activating the analysis mode!
+        """
+        self._analysis = True
+
     def short_path(self, f):
         """
         Return a (possibly) shorter name for a file (which can be relative
@@ -296,6 +316,8 @@ class ContestConfig(CommonConfig):
             raise Exception("You have to specify a default group")
         cdb = Contest(name=self.contestname, description=self._description)
         cdb.timezone = self._timezone
+        if self._analysis:
+            self.infinite_tokens()
         self._set_tokens(cdb)
         cdb.max_submission_number = self.max_submission_number
         cdb.min_submission_interval = self.min_submission_interval
