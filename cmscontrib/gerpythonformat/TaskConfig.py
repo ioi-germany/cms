@@ -1362,10 +1362,10 @@ class TaskConfig(CommonConfig, Scope):
         print_msg("Public score: %.1f" % public_score)
         expected_score = float(additional_info["expected_score"])
         expected_public_score = float(additional_info["expected_public_score"])
-        if score != expected_score:
+        if abs(score-expected_score) > 0.0001:
             print_msg("Wrong score (expected {}, got {})"
                       .format(expected_score, score), error=True)
-        if public_score != expected_public_score:
+        if abs(public_score-expected_public_score) > 0.0001:
             print_msg("Wrong public score (expected {}, got {})"
                       .format(expected_public_score, public_score), error=True)
 
