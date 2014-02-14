@@ -152,8 +152,8 @@ class ParamsExecutable(Executable):
     def __str__(self):
         return "{} with additional arguments {}" \
             .format(self.parent.__str__(),
-                    ", ".join(list(self.args) +
-                              [a + "=" + b
+                    ", ".join(map(str, self.args) +
+                              [str(a) + "=" + str(b)
                                for a, b in self.kwargs.iteritems()]))
 
 
