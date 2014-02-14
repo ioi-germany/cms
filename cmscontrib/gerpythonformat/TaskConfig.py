@@ -279,7 +279,10 @@ class MyGroup(Scope):
 
         """
         self.task.current_group = self
-        for i, checker in enumerate(self._get_checkers()):
+        checkers = self._get_checkers()
+        if len(checkers) == 0:
+            self.task.everything_checked = False
+        for i, checker in enumerate(checkers):
             self.task._check(checker, case.infile, case.outfile,
                              case.codename, i+1)
         self.task.current_group = None
@@ -511,6 +514,8 @@ class TaskConfig(CommonConfig, Scope):
         self.managers = {}
         self.tasktype = None
         self.saved = []
+
+        self.everything_checked = True
 
         self.weak_time_limit = 2
         self.strong_time_limit = 0.5
@@ -993,6 +998,8 @@ class TaskConfig(CommonConfig, Scope):
                       .format(self.short_path(self._statement)))
             print_msg("Number of subtasks: {}".format(len(self.subtasks)))
             print_msg("Number of test cases: {}".format(len(self.cases)))
+            if not self.everything_checked:
+                print_msg("Not every test case has been checked", error=True)
 
     def _makesavedzip(self):
         """
