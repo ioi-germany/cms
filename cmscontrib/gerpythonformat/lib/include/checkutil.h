@@ -94,10 +94,6 @@ string nice_whitespace(const string &s) {
     return r;
 }
 
-/* Standard error messages */
-#define STD_EOF_THROW throw (string)("End of token stream reached too early")
-#define STD_WHITESPACE_THROW throw "Incorrected whitespace token. Expected '" + nice_whitespace(expected_whitespace) + "', but got '" + nice_whitespace(read_whitespace) + "'"
-
 /* Provides the ability to simply scan a file token by token */
 class token_stream {
 public:
@@ -130,8 +126,10 @@ public:
         if (expected_whitespace == "")
             return t;
         string read_whitespace = next_or_fail();
-        if (read_whitespace != expected_whitespace)
-            STD_WHITESPACE_THROW;
+        if (read_whitespace != expected_whitespace) {
+            cerr << "Incorrect whitespace token. Expected '" << nice_whitespace(expected_whitespace) << "', but got '" << nice_whitespace(read_whitespace) << "'" << endl;
+            exit(1);
+        }
         return t;
     }
 
