@@ -30,10 +30,11 @@ import pytz
 
 
 class MyGroup(object):
-    def __init__(self, name, start, stop):
+    def __init__(self, name, start, stop, per_user_time):
         self.name = name
         self.start = start
         self.stop = stop
+        self.per_user_time = per_user_time
 
 
 class MyUser(object):
@@ -168,7 +169,7 @@ class ContestConfig(CommonConfig):
         self._timezone = s
 
     @exported_function
-    def user_group(self, s, start, stop):
+    def user_group(self, s, start, stop, per_user_time=None):
         """
         Create a user group.
 
@@ -180,12 +181,19 @@ class ContestConfig(CommonConfig):
 
         stop (string): stop time (should be created via a call to time())
 
+        per_user_time (timedelta): enable USACO mode with this time per user;
+            see :ref:`configuringacontest_usaco-like-contests`
+
         return (MyGroup): object representing the created group
 
         """
-        print_msg("Creating user group {} (working from {} to {})"
-                  .format(s, start, stop), headerdepth=10)
-        r = MyGroup(s, start, stop)
+        usaco_mode_str = ""
+        if per_user_time is not None:
+            usaco_mode_str = \
+                " in USACO mode with time {}".format(per_user_time)
+        print_msg("Creating user group {} (working from {} to {}{})"
+                  .format(s, start, stop, usaco_mode_str), headerdepth=10)
+        r = MyGroup(s, start, stop, per_user_time)
         self.groups.append(r)
         if s == "main":
             self.defaultgroup = r
@@ -330,6 +338,7 @@ class ContestConfig(CommonConfig):
             gdb = Group(name=g.name)
             gdb.start = g.start
             gdb.stop = g.stop
+            gdb.per_user_time = g.per_user_time
             self.groupsdb[g.name] = gdb
             cdb.groups.append(gdb)
 
