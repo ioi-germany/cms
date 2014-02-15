@@ -92,8 +92,7 @@ class ContestConfig(CommonConfig):
         # Export contest variable
         self.exported["contest"] = self
 
-        # Default token settings and submission limits
-        self.infinite_tokens()
+        # Default submission limits
         self.submission_limits(None, None)
         self.user_test_limits(None, None)
 
