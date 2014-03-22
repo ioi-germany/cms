@@ -30,6 +30,10 @@ These are our requirements (in particular we highlight those that are not usuall
 
 * `a2ps <https://www.gnu.org/software/a2ps/>`_ (only for printing).
 
+* `asymptote <http://asymptote.sourceforge.net/>`_ (for german task format)
+
+* `latexmk <http://www.ctan.org/pkg/latexmk/>`_ (for german task format)
+
 You will also require a Linux kernel with support for control groups and namespaces. Support has been in the Linux kernel since 2.6.32. Other distributions, or systems with custom kernels, may not have support enabled. At a minimum, you will need to enable the following Linux kernel options: ``CONFIG_CGROUPS``, ``CONFIG_CGROUP_CPUACCT``, ``CONFIG_MEMCG`` (previously called as ``CONFIG_CGROUP_MEM_RES_CTLR``), ``CONFIG_CPUSETS``, ``CONFIG_PID_NS``, ``CONFIG_IPC_NS``, ``CONFIG_NET_NS``. It is anyway suggested to use Linux kernel version at least 3.8.
 
 Then you require the compilation and execution environments for the languages you will use in your contest:
@@ -223,7 +227,8 @@ To install CMS and its Python dependencies on Ubuntu, you can issue:
          python-chardet patool python-ipaddress
 
     # Optional.
-    # sudo apt-get install python-yaml python-sphinx python-cups python-pypdf2
+    # sudo apt-get install python-yaml python-sphinx python-cups python-pypdf2 \
+    #      asymptote latexmk
 
 Method 4: Using ``pacman`` on Arch Linux
 ----------------------------------------
@@ -248,7 +253,8 @@ To install CMS python dependencies on Arch Linux (again: assuming you did not us
     # https://aur.archlinux.org/packages/patool/
 
     # Optional.
-    # sudo pacman -S --needed python2-yaml python-sphinx python2-pycups
+    # sudo pacman -S --needed python2-yaml python-sphinx python2-pycups \
+    #      asymptote texlive-core
     # Optionally install the following from AUR.
     # https://aur.archlinux.org/packages/python2-pypdf2/
 
