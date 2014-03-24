@@ -19,7 +19,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from Messenger import print_msg, print_block, header
-from Executable import CPPProgram, InternalPython, ExternalScript, keyword_list
+from Executable import CPPProgram, InternalPython, ExternalScript, ExternalPython, keyword_list
 from cms.rules.Rule import LaTeXRule, CommandRule
 from Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
 import inspect
@@ -379,6 +379,13 @@ class CommonConfig(object):
         See ExternalScript.
         """
         return ExternalScript(self.rules, *args, **kwargs)
+
+    @exported_function
+    def ext_python(self, *args, **kwargs):
+        """
+        See ExternalPython
+        """
+        return ExternalPython(*args, **kwargs)
 
     # Tokens
 

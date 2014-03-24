@@ -21,6 +21,7 @@
 import os.path
 from Messenger import print_block, header
 from cms.rules.Rule import CommandRule, GCCRule
+import imp
 
 
 class Executable(object):
@@ -306,8 +307,34 @@ class InternalPython(Executable):
         return "<internal>"
 
 
-interpreter_table = {".py": "python2", ".rb": "ruby", ".pl": "perl"}
+class ExternalPython(Executable):
+    """ An executable which is actually a python script containing a
+    function gen
+    On each call of run the module is loaded and gen is performed
+    """
+    def __init__(self, name=None):
+        self.name = "ext-python" + name
+        self.path = os.path.abspath(name)
+        
+    # TODO Somehow use rules?
+    def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
+            stderr=None, dependencies=[]):
+        m = imp.load_source(self.name, self.path);
+        
+        if str(stdout) == stdout: 
+            stdout = open(stdout, "w") 
+        kwargs["stdout"] = stdout
+        
+        r = m.gen(*args, **kwargs)
+        
+        try: stdout.close()
+        except: pass
+    
+    def __str__(self):
+        return "<external>"
 
+
+interpreter_table = {".py": "python2", ".rb": "ruby", ".pl": "perl"}
 
 class ExternalScript(Executable):
     """An Executable which is actually a script file. The interpreter is
