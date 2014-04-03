@@ -5,6 +5,7 @@
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
+# Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,6 +22,7 @@
 
 from __future__ import print_function
 
+import ast
 import os
 import sys
 import mechanize
@@ -212,23 +214,22 @@ class RandomActor(Actor):
         # Then keep forever stumbling across user pages
         while True:
             choice = random.random()
+            task = random.choice(self.tasks)
             if choice < 0.1 and self.submissions_path is not None:
-                task = random.choice(self.tasks)
                 self.do_step(SubmitRandomRequest(
                     self.browser,
                     task,
                     base_url=self.base_url,
                     submissions_path=self.submissions_path))
-            elif choice < 0.5:
-                task = random.choice(self.tasks)
-                self.do_step(TaskRequest(self.browser,
-                                         task[0],
-                                         base_url=self.base_url))
-            else:
-                task = random.choice(self.tasks)
+            elif choice < 0.6 and task[2] != []:
                 self.do_step(TaskStatementRequest(self.browser,
-                                                  task[0],
+                                                  task[1],
+                                                  random.choice(task[2]),
                                                   base_url=self.base_url))
+            else:
+                self.do_step(TaskRequest(self.browser,
+                                         task[1],
+                                         base_url=self.base_url))
 
 
 def harvest_contest_data(contest_id):
@@ -248,7 +249,7 @@ def harvest_contest_data(contest_id):
         for user in contest.users:
             users[user.username] = {'password': user.password}
         for task in contest.tasks:
-            tasks.append((task.id, task.name))
+            tasks.append((task.id, task.name, task.statements.keys()))
     return users, tasks
 
 
@@ -274,9 +275,38 @@ def main():
     parser.add_option("-S", "--submissions-path",
                       help="base path for submission to send",
                       action="store", default=None, dest="submissions_path")
+    parser.add_option("-p", "--prepare-path",
+                      help="file to put contest info to",
+                      action="store", default=None, dest="prepare_path")
+    parser.add_option("-r", "--read-from",
+                      help="file to read contest info from",
+                      action="store", default=None, dest="read_from")
     options = parser.parse_args()[0]
 
-    users, tasks = harvest_contest_data(options.contest_id)
+    # If prepare_path is specified we only need to save some useful
+    # contest data and exit.
+    if options.prepare_path is not None:
+        users, tasks = harvest_contest_data(options.contest_id)
+        contest_data = dict()
+        contest_data['users'] = users
+        contest_data['tasks'] = tasks
+        with open(options.prepare_path, "w") as file_:
+            file_.write(str(contest_data))
+        return
+
+    users = []
+    tasks = []
+
+    # If read_from is not specified, read contest data from database
+    # if it is specified - read contest data from the file
+    if options.read_from is None:
+        users, tasks = harvest_contest_data(options.contest_id)
+    else:
+        with open(options.read_from, "r") as file_:
+            contest_data = ast.literal_eval(file_.read())
+        users = contest_data['users']
+        tasks = contest_data['tasks']
+
     if options.actor_num is not None:
         user_items = users.items()
         if options.sort_actors:

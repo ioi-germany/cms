@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
+# Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2013 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
+# Copyright © 2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,6 +20,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import logging
 import os
 import re
@@ -72,7 +74,7 @@ def pretty_print_cmdline(cmdline):
     spaces.
 
     """
-    return " ".join(["'%s'" % (x) for x in cmdline])
+    return " ".join(["'%s'" % (x.replace("'", "'\"'\"'")) for x in cmdline])
 
 
 def wait_without_std(procs):
@@ -121,20 +123,71 @@ def wait_without_std(procs):
     return [process.wait() for process in procs]
 
 
-def my_truncate(ff, size):
-    """Truncate file-like object ff at specified size. If file is
-    shorter than size, it is not modified (this is different from
-    using ff.truncate(), which doesn't mandate any specific behavior
-    in this case).
+class Truncator(io.RawIOBase):
+    """Wrap a file-like object to simulate truncation.
 
-    After truncations, the file position is reset to 0.
+    This file-like object provides read-only access to a limited prefix
+    of a wrapped file-like object. It provides a truncated version of
+    the file without ever touching the object on the filesystem.
+
+    This class is only able to wrap binary streams as it relies on the
+    readinto method which isn't provided by text (unicode) streams.
 
     """
-    ff.seek(0, os.SEEK_END)
-    cur_size = ff.tell()
-    if cur_size > size:
-        ff.truncate(size)
-    ff.seek(0, os.SEEK_SET)
+    def __init__(self, fobj, size):
+        """Wrap fobj and give access to its first size bytes.
+
+        fobj (fileobj): a file-like object to wrap.
+        size (int): the number of bytes that will be accessible.
+
+        """
+        self.fobj = fobj
+        self.size = size
+
+    def close(self):
+        """See io.IOBase.close."""
+        self.fobj.close()
+
+    @property
+    def closed(self):
+        """See io.IOBase.closed."""
+        return self.fobj.closed
+
+    def readable(self):
+        """See io.IOBase.readable."""
+        return True
+
+    def seekable(self):
+        """See io.IOBase.seekable."""
+        return True
+
+    def readinto(self, b):
+        """See io.RawIOBase.readinto."""
+        # This is the main "trick": we clip (i.e. mask, reduce, slice)
+        # the given buffer so that it doesn't overflow into the area we
+        # want to hide (that is, out of the prefix) and then we forward
+        # it to the wrapped file-like object.
+        b = memoryview(b)[:max(0, self.size - self.fobj.tell())]
+        return self.fobj.readinto(b)
+
+    def seek(self, offset, whence=io.SEEK_SET):
+        """See io.IOBase.seek."""
+        # We have to catch seeks relative to the end of the file and
+        # adjust them to the new "imposed" size.
+        if whence == io.SEEK_END:
+            if self.fobj.seek(0, io.SEEK_END) > self.size:
+                self.fobj.seek(self.size, io.SEEK_SET)
+            return self.fobj.seek(offset, io.SEEK_CUR)
+        else:
+            return self.fobj.seek(offset, whence)
+
+    def tell(self):
+        """See io.IOBase.tell."""
+        return self.fobj.tell()
+
+    def write(self, b):
+        """See io.RawIOBase.write."""
+        raise io.UnsupportedOperation('write')
 
 
 class SandboxBase(object):
@@ -223,7 +276,6 @@ class SandboxBase(object):
         """
         return os.path.join(self.get_root_path(), path)
 
-    # TODO - Rewrite it as context manager
     def create_file(self, path, executable=False):
         """Create an empty file in the sandbox and open it in write
         binary mode.
@@ -238,7 +290,7 @@ class SandboxBase(object):
         else:
             logger.debug("Creating plain file %s in sandbox." % path)
         real_path = self.relative_path(path)
-        file_ = open(real_path, "wb")
+        file_ = io.open(real_path, "wb")
         mod = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
         if executable:
             mod |= stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
@@ -282,7 +334,6 @@ class SandboxBase(object):
         copyfileobj(file_obj, dest)
         dest.close()
 
-    # TODO - Rewrite it as context manager
     def get_file(self, path, trunc_len=None):
         """Open a file in the sandbox given its relative path.
 
@@ -295,11 +346,9 @@ class SandboxBase(object):
         """
         logger.debug("Retrieving file %s from sandbox" % (path))
         real_path = self.relative_path(path)
+        file_ = io.open(real_path, "rb")
         if trunc_len is not None:
-            file_ = open(real_path, "ab")
-            my_truncate(file_, trunc_len)
-            file_.close()
-        file_ = open(real_path, "rb")
+            file_ = Truncator(file_, trunc_len)
         return file_
 
     def get_file_to_string(self, path, maxlen=1024):
@@ -421,6 +470,11 @@ class StupidSandbox(SandboxBase):
         self.max_processes = 1
         self.verbosity = 0
 
+        # Set common environment variables.
+        # Specifically needed by Python, that searches the home for
+        # packages.
+        self.set_env["HOME"] = "./"
+
     # TODO - It returns wall clock time, because I have no way to
     # check CPU time (libev doesn't have wait4() support)
     def get_execution_time(self):
@@ -531,7 +585,7 @@ class StupidSandbox(SandboxBase):
         self.log = None
         logger.debug("Executing program in sandbox with command: %s" %
                      " ".join(command))
-        with open(self.relative_path(self.cmd_file), 'a') as commands:
+        with io.open(self.relative_path(self.cmd_file), 'at') as commands:
             commands.write("%s\n" % (pretty_print_cmdline(command)))
         try:
             p = subprocess.Popen(command,
@@ -756,9 +810,14 @@ class IsolateSandbox(SandboxBase):
         self.wallclock_timeout = None  # -w
         self.extra_timeout = None      # -x
 
+        # Set common environment variables.
+        # Specifically needed by Python, that searches the home for
+        # packages.
+        self.set_env["HOME"] = "./"
+
         # Tell isolate to get the sandbox ready.
         box_cmd = [self.box_exec] + (["--cg"] if self.cgroup else []) \
-            + ["-b", str(self.box_id)] + ["--init"]
+            + ["--box-id=%d" % self.box_id] + ["--init"]
         ret = subprocess.call(box_cmd)
         if ret != 0:
             raise SandboxInterfaceException(
@@ -809,47 +868,47 @@ class IsolateSandbox(SandboxBase):
         """
         res = list()
         if self.box_id is not None:
-            res += ["-b", str(self.box_id)]
+            res += ["--box-id=%d" % self.box_id]
         if self.cgroup:
             res += ["--cg"]
         if self.chdir is not None:
-            res += ["-c", self.chdir]
+            res += ["--chdir=%s" % self.chdir]
         for in_name, out_name, options in self.dirs:
             s = in_name
             if out_name is not None:
                 s += "=" + out_name
             if options is not None:
                 s += ":" + options
-            res += ["-d", s]
+            res += ["--dir=%s" % s]
         if self.preserve_env:
-            res += ["-e"]
+            res += ["--full-env"]
         for var in self.inherit_env:
-            res += ["-E", var]
+            res += ["--env=%s" % var]
         for var, value in self.set_env.items():
-            res += ["-E", "%s=%s" % (var, value)]
+            res += ["--env=%s=%s" % (var, value)]
         if self.stdin_file is not None:
-            res += ["-i", self.inner_absolute_path(self.stdin_file)]
+            res += ["--stdin=%s" % self.inner_absolute_path(self.stdin_file)]
         if self.stack_space is not None:
-            res += ["-k", str(self.stack_space)]
+            res += ["--stack=%d" % self.stack_space]
         if self.address_space is not None:
-            res += ["-m", str(self.address_space)]
+            res += ["--mem=%d" % self.address_space]
         if self.stdout_file is not None:
-            res += ["-o", self.inner_absolute_path(self.stdout_file)]
+            res += ["--stdout=%s" % self.inner_absolute_path(self.stdout_file)]
         if self.max_processes is not None:
-            res += ["-p=%d" % self.max_processes]
+            res += ["--processes=%d" % self.max_processes]
         else:
-            res += ["-p="]
+            res += ["--processes"]
         if self.stderr_file is not None:
-            res += ["-r", self.inner_absolute_path(self.stderr_file)]
+            res += ["--stderr=%s" % self.inner_absolute_path(self.stderr_file)]
         if self.timeout is not None:
-            res += ["-t", str(self.timeout)]
-        res += ["-v"] * self.verbosity
+            res += ["--time=%g" % self.timeout]
+        res += ["--verbose"] * self.verbosity
         if self.wallclock_timeout is not None:
-            res += ["-w", str(self.wallclock_timeout)]
+            res += ["--wall-time=%g" % self.wallclock_timeout]
         if self.extra_timeout is not None:
-            res += ["-x", str(self.extra_timeout)]
-        res += ["-M", self.relative_path("%s.%d" %
-                                         (self.info_basename, self.exec_num))]
+            res += ["--extra-time=%g" % self.extra_timeout]
+        res += ["--meta=%s" % self.relative_path("%s.%d" % (self.info_basename,
+                                                            self.exec_num))]
         res += ["--run"]
         return res
 
@@ -1065,7 +1124,7 @@ class IsolateSandbox(SandboxBase):
         args = [self.box_exec] + self.build_box_options() + ["--"] + command
         logger.debug("Executing program in sandbox with command: %s" %
                      pretty_print_cmdline(args))
-        with open(self.relative_path(self.cmd_file), 'a') as commands:
+        with io.open(self.relative_path(self.cmd_file), 'at') as commands:
             commands.write("%s\n" % (pretty_print_cmdline(args)))
         return self.translate_box_exitcode(subprocess.call(args))
 
@@ -1091,7 +1150,7 @@ class IsolateSandbox(SandboxBase):
         args = [self.box_exec] + self.build_box_options() + ["--"] + command
         logger.debug("Executing program in sandbox with command: %s" %
                      pretty_print_cmdline(args))
-        with open(self.relative_path(self.cmd_file), 'a') as commands:
+        with io.open(self.relative_path(self.cmd_file), 'at') as commands:
             commands.write("%s\n" % (pretty_print_cmdline(args)))
         try:
             p = subprocess.Popen(args,
@@ -1162,7 +1221,7 @@ class IsolateSandbox(SandboxBase):
 
         # Tell isolate to cleanup the sandbox.
         box_cmd = [self.box_exec] + (["--cg"] if self.cgroup else []) \
-            + ["-b", str(self.box_id)]
+            + ["--box-id=%d" % self.box_id]
         subprocess.call(box_cmd + ["--cleanup"])
 
         # Delete the working directory.

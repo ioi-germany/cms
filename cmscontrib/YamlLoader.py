@@ -191,6 +191,7 @@ class YamlLoader(Loader):
 
         load(conf, group_args, ["start", "inizio"], conv=make_datetime)
         load(conf, group_args, ["stop", "fine"], conv=make_datetime)
+        load(conf, args, ["per_user_time"], conv=make_timedelta)
 
         load(conf, args, "max_submission_number")
         load(conf, args, "max_user_test_number")
@@ -220,11 +221,16 @@ class YamlLoader(Loader):
         """See docstring in class Loader
 
         """
-
-        conf = yaml.safe_load(
-            io.open(os.path.join(self.path, name + ".yaml"),
-                    "rt", encoding="utf-8"))
         path = os.path.realpath(os.path.join(self.path, name))
+
+        try:
+            conf = yaml.safe_load(
+                io.open(os.path.join(path, "task.yaml"),
+                        "rt", encoding="utf-8"))
+        except IOError:
+            conf = yaml.safe_load(
+                io.open(os.path.join(self.path, name + ".yaml"),
+                        "rt", encoding="utf-8"))
 
         # If there is no .itime file, we assume that the task has changed
         if not os.path.exists(os.path.join(path, ".itime")):
@@ -260,7 +266,8 @@ class YamlLoader(Loader):
         files.append(os.path.join(path, "cor", "correttore"))
         files.append(os.path.join(path, "check", "manager"))
         files.append(os.path.join(path, "cor", "manager"))
-        if not conf.get('output_only', False):
+        if not conf.get('output_only', False) and \
+                os.path.isdir(os.path.join(path, "sol")):
             for lang in LANGUAGES:
                 files.append(os.path.join(path, "sol", "grader.%s" % lang))
             for other_filename in os.listdir(os.path.join(path, "sol")):
@@ -269,6 +276,7 @@ class YamlLoader(Loader):
                     files.append(os.path.join(path, "sol", other_filename))
 
         # Yaml
+        files.append(os.path.join(path, "task.yaml"))
         files.append(os.path.join(self.path, name + ".yaml"))
 
         # Check is any of the files have changed
@@ -325,10 +333,18 @@ class YamlLoader(Loader):
         except AttributeError:
             num = 1
 
-        conf = yaml.safe_load(
-            io.open(os.path.join(self.path, name + ".yaml"),
-                    "rt", encoding="utf-8"))
         task_path = os.path.join(self.path, name)
+
+        # We first look for the yaml file inside the task folder,
+        # and eventually fallback to a yaml file in its parent folder.
+        try:
+            conf = yaml.safe_load(
+                io.open(os.path.join(task_path, "task.yaml"),
+                        "rt", encoding="utf-8"))
+        except IOError:
+            conf = yaml.safe_load(
+                io.open(os.path.join(self.path, name + ".yaml"),
+                        "rt", encoding="utf-8"))
 
         logger.info("Loading parameters for task %s." % name)
 

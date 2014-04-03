@@ -6,6 +6,7 @@
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2014 Luca Versari <veluca93@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -32,7 +33,7 @@ import shutil
 import tempfile
 import yaml
 
-from cms.grading import get_compilation_command
+from cms.grading import get_compilation_commands
 from cmstaskenv.Test import test_testcases, clean_test_env
 
 
@@ -111,11 +112,20 @@ def detect_task_name(base_dir):
 
 def parse_task_yaml(base_dir):
     parent_dir = os.path.split(os.path.realpath(base_dir))[0]
-    yaml_path = os.path.join(parent_dir, "%s.yaml" %
-                             (detect_task_name(base_dir)))
 
-    with open(yaml_path) as yaml_file:
-        conf = yaml.load(yaml_file)
+    # We first look for the yaml file inside the task folder,
+    # and eventually fallback to a yaml file in its parent folder.
+    yaml_path = os.path.join(base_dir, "task.yaml")
+
+    try:
+        with open(yaml_path) as yaml_file:
+            conf = yaml.load(yaml_file)
+    except IOError:
+        yaml_path = os.path.join(parent_dir, "%s.yaml" %
+                                 (detect_task_name(base_dir)))
+
+        with open(yaml_path) as yaml_file:
+            conf = yaml.load(yaml_file)
     return conf
 
 
@@ -177,7 +187,7 @@ def build_sols_list(base_dir, task_type, in_out_files, yaml_conf):
 
         srcs = []
         # The grader, when present, must be in the first position of
-        # srcs; see docstring of get_compilation_command().
+        # srcs; see docstring of get_compilation_commands().
         if task_type == ['Batch', 'Grad'] or \
                 task_type == ['Batch', 'GradComp']:
             srcs.append(os.path.join(SOL_DIRNAME,
@@ -192,11 +202,13 @@ def build_sols_list(base_dir, task_type, in_out_files, yaml_conf):
 
         def compile_src(srcs, exe, for_evaluation, lang, assume=None):
             if lang != 'pas' or len(srcs) == 1:
-                call(base_dir, get_compilation_command(
+                compilation_commands = get_compilation_commands(
                     lang,
                     srcs,
                     exe,
-                    for_evaluation=for_evaluation))
+                    for_evaluation=for_evaluation)
+                for command in compilation_commands:
+                    call(base_dir, command)
 
             # When using Pascal with graders, file naming conventions
             # require us to do a bit of trickery, i.e., performing the
@@ -215,11 +227,13 @@ def build_sols_list(base_dir, task_type, in_out_files, yaml_conf):
                 if os.path.exists(os.path.join(SOL_DIRNAME, lib_filename)):
                     shutil.copyfile(os.path.join(SOL_DIRNAME, lib_filename),
                                     os.path.join(tempdir, lib_filename))
-                call(tempdir, get_compilation_command(
+                compilation_commands = get_compilation_commands(
                     lang,
                     new_srcs,
                     new_exe,
-                    for_evaluation=for_evaluation))
+                    for_evaluation=for_evaluation)
+                for command in compilation_commands:
+                    call(tempdir, command)
                 shutil.copyfile(os.path.join(tempdir, new_exe),
                                 os.path.join(base_dir, exe))
                 shutil.copymode(os.path.join(tempdir, new_exe),
@@ -267,7 +281,9 @@ def build_checker_list(base_dir, task_type):
             lang = lang[1:]
 
             def compile_check(src, exe, assume=None):
-                call(base_dir, get_compilation_command(lang, [src], exe))
+                commands = get_compilation_commands(lang, [src], exe)
+                for command in commands:
+                    call(base_dir, command)
 
             actions.append(([src], [exe],
                             functools.partial(compile_check, src, exe),
@@ -295,11 +311,14 @@ def build_text_list(base_dir, task_type):
     return actions
 
 
-def iter_file(name):
+def iter_GEN(name):
+    st = 0
     for l in open(name, "r"):
+        if l[:4] == "#ST:":
+            st += 1
         l = (" " + l).split("#")[0][1:].strip("\n")
         if l != "":
-            yield l
+            yield (l, st)
 
 
 def build_gen_list(base_dir, task_type):
@@ -331,13 +350,15 @@ def build_gen_list(base_dir, task_type):
 
     # Count non-trivial lines in GEN
     testcase_num = 0
-    for line in iter_file(os.path.join(base_dir, gen_GEN)):
+    for line in iter_GEN(os.path.join(base_dir, gen_GEN)):
         testcase_num += 1
 
     def compile_src(src, exe, lang, assume=None):
         if lang in ['cpp', 'c', 'pas']:
-            call(base_dir, get_compilation_command(lang, [src], exe,
-                                                   for_evaluation=False))
+            commands = get_compilation_commands(lang, [src], exe,
+                                                for_evaluation=False)
+            for command in commands:
+                call(base_dir, command)
         elif lang in ['py', 'sh']:
             os.symlink(os.path.basename(src), exe)
         else:
@@ -357,16 +378,18 @@ def build_gen_list(base_dir, task_type):
             os.makedirs(input_dir)
         except OSError:
             pass
-        for line in iter_file(os.path.join(base_dir, gen_GEN)):
+        for (line, st) in iter_GEN(os.path.join(base_dir, gen_GEN)):
             print("Generating input # %d" % (n), file=sys.stderr)
             with open(os.path.join(input_dir,
                                    'input%d.txt' % (n)), 'w') as fout:
                 call(base_dir,
                      [gen_exe] + line.split(),
                      stdout=fout)
-            call(base_dir,
-                 [validator_exe, os.path.join(input_dir,
-                                              'input%d.txt' % (n))])
+            command = [validator_exe, os.path.join(input_dir,
+                                                   'input%d.txt' % (n))]
+            if st != 0:
+                command.append(str(st))
+            call(base_dir, command)
             n += 1
 
     def make_output(n, assume=None):
