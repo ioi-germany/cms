@@ -144,6 +144,8 @@
 
     "_section": "PrintingService",
 
+    "_help": "Maximum size of a print job in bytes.",
+    "max_print_length": 10000000,
     "_help": "Printer name (if null, printing is disabled)",
     "printer": null,
     "max_pages_per_job": 10,
