@@ -178,38 +178,42 @@ class PrintingService(Service):
             with open(source, "wb") as f:
                 self.file_cacher.get_file_to_fobj(printjob.digest, f)
 
-            # Convert text to ps
-            source_ps = os.path.join(directory, "source.ps")
-            cmd = ["a2ps",
-                   source,
-                   "--output="+source_ps,
-                   "--medium=A4",
-                   "--portrait",
-                   "--columns=1",
-                   "--rows=1",
-                   "--pages=1-%d" % (config.max_pages_per_job+1),
-                   "--header=",
-                   "--footer=",
-                   "--left-footer=",
-                   "--right-footer=",
-                   "--center-title="+filename,
-                   "--left-title="+timestr]
-            ret = subprocess.call(cmd, cwd=directory)
-            if ret != 0:
-                raise Exception(
-                    "Failed to convert text file to ps with command: %s"
-                    "(error %d)" % (pretty_print_cmdline(cmd), ret))
+            if filename.endswith(".pdf"):
+                source_pdf = source
+            else:
+                # Convert text to ps
+                source_ps = os.path.join(directory, "source.ps")
+                cmd = ["a2ps",
+                       source,
+                       "--delegate=no",
+                       "--output="+source_ps,
+                       "--medium=A4",
+                       "--portrait",
+                       "--columns=1",
+                       "--rows=1",
+                       "--pages=1-%d" % (config.max_pages_per_job+1),
+                       "--header=",
+                       "--footer=",
+                       "--left-footer=",
+                       "--right-footer=",
+                       "--center-title="+filename,
+                       "--left-title="+timestr]
+                ret = subprocess.call(cmd, cwd=directory)
+                if ret != 0:
+                    raise Exception(
+                        "Failed to convert text file to ps with command: %s"
+                        "(error %d)" % (pretty_print_cmdline(cmd), ret))
 
-            # Convert ps to pdf
-            source_pdf = os.path.join(directory, "source.pdf")
-            cmd = ["ps2pdf",
-                   "-sPAPERSIZE=a4",
-                   source_ps]
-            ret = subprocess.call(cmd, cwd=directory)
-            if ret != 0:
-                raise Exception(
-                    "Failed to convert ps file to pdf with command: %s"
-                    "(error %d)" % (pretty_print_cmdline(cmd), ret))
+                # Convert ps to pdf
+                source_pdf = os.path.join(directory, "source.pdf")
+                cmd = ["ps2pdf",
+                       "-sPAPERSIZE=a4",
+                       source_ps]
+                ret = subprocess.call(cmd, cwd=directory)
+                if ret != 0:
+                    raise Exception(
+                        "Failed to convert ps file to pdf with command: %s"
+                        "(error %d)" % (pretty_print_cmdline(cmd), ret))
 
             # Find out number of pages
             with open(source_pdf, "rb") as f:
