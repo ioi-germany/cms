@@ -297,7 +297,6 @@ class BaseHandler(CommonRequestHandler):
         ret["timestamp"] = self.timestamp
         ret["contest"] = self.contest
         ret["url_root"] = get_url_root(self.request.path)
-        ret["cookie"] = str(self.cookies)  # FIXME really needed?
 
         if self.current_user is None:
             ret["phase"] = self.contest.main_group.phase(self.timestamp)
@@ -832,7 +831,7 @@ class NotificationsHandler(BaseHandler):
         prev_unread_count = self.get_secure_cookie("unread_count")
         next_unread_count = len(res) + (
             int(prev_unread_count) if prev_unread_count is not None else 0)
-        self.set_secure_cookie("unread_count", str(next_unread_count))
+        self.set_secure_cookie("unread_count", "%d" % next_unread_count)
 
         # Simple notifications
         notifications = self.application.service.notifications
@@ -1130,7 +1129,7 @@ class SubmitHandler(BaseHandler):
                 # therefore we open the file in binary mode.
                 with io.open(
                         os.path.join(path,
-                                     str(int(make_timestamp(self.timestamp)))),
+                                     "%d" % make_timestamp(self.timestamp)),
                         "wb") as file_:
                     pickle.dump((self.contest.id,
                                  self.current_user.id,
@@ -1652,7 +1651,7 @@ class UserTestHandler(BaseHandler):
                 # therefore we open the file in binary mode.
                 with io.open(
                         os.path.join(path,
-                                     str(int(make_timestamp(self.timestamp)))),
+                                     "%d" % make_timestamp(self.timestamp)),
                         "wb") as file_:
                     pickle.dump((self.contest.id,
                                  self.current_user.id,
