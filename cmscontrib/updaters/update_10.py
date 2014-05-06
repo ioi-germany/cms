@@ -41,7 +41,7 @@ class Updater(object):
         for k, v in self.objs.iteritems():
             if k.startswith("_"):
                 continue
-            if v["_class"] == "Contest":
+            if v["_class"] == "Group":
                 if v["start"] is None:
                     # make_timestamp(datetime(2000, 01, 01))
                     v["start"] = 946684800.0

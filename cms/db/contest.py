@@ -29,7 +29,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from sqlalchemy.schema import Column, ForeignKey, CheckConstraint
 from sqlalchemy.types import Integer, Unicode, DateTime, Interval, Enum
@@ -133,8 +133,6 @@ class Contest(Base):
         CheckConstraint("token_gen_max > 0"),
         nullable=True)
 
-        default=datetime(2000, 01, 01))
-        default=datetime(2100, 01, 01))
     # Timezone for the contest. All timestamps in CWS will be shown
     # using the timezone associated to the logged-in user or (if it's
     # None or an invalid string) the timezone associated to the

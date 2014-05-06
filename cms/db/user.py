@@ -28,7 +28,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy.schema import Column, ForeignKey, UniqueConstraint, \
     CheckConstraint
@@ -67,10 +67,12 @@ class Group(Base):
     # Beginning and ending of the contest.
     start = Column(
         DateTime,
-        nullable=True)
+        nullable=False,
+        default=datetime(2000, 01, 01))
     stop = Column(
         DateTime,
-        nullable=True)
+        nullable=False,
+        default=datetime(2100, 01, 01))
 
     # Max contest time for each user in seconds.
     per_user_time = Column(
