@@ -1,13 +1,14 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-# Programming contest management system
-# Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
+# Contest Management System - http://cms-dev.github.io/
+# Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2013 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2012-2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -35,6 +36,10 @@
 - query the test interface.
 
 """
+
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import base64
 import gettext
@@ -181,20 +186,51 @@ class BaseHandler(CommonRequestHandler):
         return user
 
     def get_user_locale(self):
-        if config.installed:
-            localization_dir = os.path.join(
-                "/", "usr", "local", "share", "locale")
-        else:
-            localization_dir = os.path.join(os.path.dirname(__file__), "mo")
+        self.langs = self.application.service.langs
 
-        # Retrieve the available translations.
-        langs = ["en-US"] + [
-            path.split("/")[-3].replace("_", "-") for path in glob.glob(
-                os.path.join(localization_dir, "*", "LC_MESSAGES", "cms.mo"))]
+        if self.contest.allowed_localizations:
+            # We just check if a prefix of each language is allowed
+            # because this way one can just type "en" to include also
+            # "en-US" (and similar cases with other languages). It's
+            # the same approach promoted by HTTP in its Accept header
+            # parsing rules.
+            # TODO Be more fussy with prefix checking: validate strings
+            # (match with "[A-Za-z]+(-[A-Za-z]+)*") and verify that the
+            # prefix is on the dashes.
+            self.langs = [lang for lang in self.langs if any(
+                lang.startswith(prefix)
+                for prefix in self.contest.allowed_localizations)]
+
+        if not self.langs:
+            logger.warning("No allowed localization matches any installed one."
+                           "Resorting to en-US.")
+            self.langs = ["en-US"]
+        else:
+            # TODO Be more fussy with prefix checking: validate strings
+            # (match with "[A-Za-z]+(-[A-Za-z]+)*") and verify that the
+            # prefix is on the dashes.
+            useless = [
+                prefix for prefix in self.contest.allowed_localizations
+                if not any(lang.startswith(prefix) for lang in self.langs)]
+            if useless:
+                logger.warning("The following allowed localizations don't "
+                               "match any installed one: %s" %
+                               ",".join(useless))
+
+        # TODO We fallback on any available language if none matches:
+        # we could return 406 Not Acceptable instead.
         # Select the one the user likes most.
-        lang = parse_accept_header(
+        self.browser_lang = parse_accept_header(
             self.request.headers.get("Accept-Language", ""),
-            LanguageAccept).best_match(langs, "en-US")
+            LanguageAccept).best_match(self.langs, self.langs[0])
+
+        self.cookie_lang = self.get_cookie("language", None)
+
+        if self.cookie_lang in self.langs:
+            lang = self.cookie_lang
+        else:
+            lang = self.browser_lang
+
         self.set_header("Content-Language", lang)
         lang = lang.replace("-", "_")
 
@@ -216,7 +252,7 @@ class BaseHandler(CommonRequestHandler):
             fallback=True)
         cms_locale = gettext.translation(
             "cms",
-            localization_dir,
+            self.application.service.localization_dir,
             [lang],
             fallback=True)
         cms_locale.add_fallback(iso_639_locale)
@@ -351,6 +387,24 @@ class BaseHandler(CommonRequestHandler):
         else:
             ret["tokens_tasks"] = 1  # all finite or mixed
 
+        ret["langs"] = self.langs
+
+        # TODO Now all language names are shown in the active language.
+        # It would be better to show them in the corresponding one.
+        ret["lang_names"] = {}
+        for lang in self.langs:
+            language_name = None
+            try:
+                language_name = translate_language_country_code(
+                    lang.replace("-", "_"), self.locale)
+            except ValueError:
+                language_name = translate_language_code(
+                    lang.replace("-", "_"), self.locale)
+            ret["lang_names"][lang] = language_name
+
+        ret["cookie_lang"] = self.cookie_lang
+        ret["browser_lang"] = self.browser_lang
+
         return ret
 
     def finish(self, *args, **kwds):
@@ -428,6 +482,18 @@ class ContestWebServer(WebService):
         # that are handled by the db. Each username points to a list
         # of tuples (timestamp, subject, text).
         self.notifications = {}
+
+        # Retrieve the available translations.
+        if config.installed:
+            self.localization_dir = os.path.join(
+                "/", "usr", "local", "share", "locale")
+        else:
+            self.localization_dir = os.path.join(
+                os.path.dirname(__file__), "mo")
+        self.langs = ["en-US"] + [
+            path.split("/")[-3].replace("_", "-") for path in glob.glob(
+                os.path.join(self.localization_dir,
+                             "*", "LC_MESSAGES", "cms.mo"))]
 
         self.file_cacher = FileCacher(self)
         self.evaluation_service = self.connect_to(

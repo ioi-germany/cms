@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-# Programming contest management system
+# Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2013 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
@@ -26,9 +26,10 @@
 """
 
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy.schema import Column, ForeignKey, CheckConstraint
 from sqlalchemy.types import Integer, Unicode, DateTime, Interval, Enum
@@ -63,6 +64,13 @@ class Contest(Base):
     description = Column(
         Unicode,
         nullable=False)
+
+    # The list of language codes of the localizations that contestants
+    # are allowed to use.
+    allowed_localizations = Column(
+        RepeatedUnicode(),
+        nullable=False,
+        default=[])
 
     # The list of languages shorthand allowed in the contest,
     # e.g. cpp. The codes must be the same as those in cms.LANGUAGES.
@@ -125,6 +133,8 @@ class Contest(Base):
         CheckConstraint("token_gen_max > 0"),
         nullable=True)
 
+        default=datetime(2000, 01, 01))
+        default=datetime(2100, 01, 01))
     # Timezone for the contest. All timestamps in CWS will be shown
     # using the timezone associated to the logged-in user or (if it's
     # None or an invalid string) the timezone associated to the
@@ -194,7 +204,10 @@ class Contest(Base):
         """Return the first task in the contest with the given name.
 
         task_name (string): the name of the task we are interested in.
-        return (Task): the corresponding task object, or KeyError.
+
+        return (Task): the corresponding task object.
+
+        raise (KeyError): if no tasks with the given name are found.
 
         """
         for task in self.tasks:
@@ -208,8 +221,10 @@ class Contest(Base):
         given name.
 
         task_name (string): the name of the task we are interested in.
-        return (int): the index of the corresponding task, or
-                      KeyError.
+
+        return (int): the index of the corresponding task.
+
+        raise (KeyError): if no tasks with the given name are found.
 
         """
         for idx, task in enumerate(self.tasks):
@@ -222,7 +237,10 @@ class Contest(Base):
         """Return the first user in the contest with the given name.
 
         username (string): the name of the user we are interested in.
-        return (User): the corresponding user object, or KeyError.
+
+        return (User): the corresponding user object.
+
+        raise (KeyError): if no users with the given name are found.
 
         """
         for user in self.users:

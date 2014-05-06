@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-# Contest Management System
+# Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,9 @@ entity that has been deleted in the DB without any downtime.
 
 """
 
+from __future__ import absolute_import
 from __future__ import unicode_literals
+from __future__ import print_function
 
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)

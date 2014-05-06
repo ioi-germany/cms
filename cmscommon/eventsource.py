@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-# Contest Management System
+# Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals
 from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import re
 import time
@@ -184,7 +185,7 @@ class Subscriber(object):
         return ([objects]): the items put in the publisher, in order
             (actually, returns a generator, not a list).
 
-        raise (OutdatedError) if some of the messages it's supposed to
+        raise (OutdatedError): if some of the messages it's supposed to
             retrieve have already been removed from the cache.
 
         """
@@ -346,7 +347,7 @@ class EventSource(object):
         last_event_id = request.headers.get(b"Last-Event-ID",
                                             type=lambda x: x.decode('utf-8'))
         if last_event_id is None:
-            last_event_id = request.args.get(b"last-event-id",
+            last_event_id = request.args.get(b"last_event_id",
                                              type=lambda x: x.decode('utf-8'))
 
         # We subscribe to the publisher to receive events.

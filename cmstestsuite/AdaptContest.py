@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-# Programming contest management system
+# Contest Management System - http://cms-dev.github.io/
 # Copyright © 2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -37,6 +37,7 @@ The zip file contains all files submitted.
 
 """
 
+from __future__ import absolute_import
 from __future__ import print_function
 
 import os

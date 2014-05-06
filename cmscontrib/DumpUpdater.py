@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-# Contest Management System
+# Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 #
@@ -25,6 +25,9 @@ created by ContestExporter) of the Contest Management System from any
 of the old supported versions to the current one.
 
 """
+
+from __future__ import absolute_import
+from __future__ import print_function
 
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)

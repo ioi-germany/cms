@@ -1,11 +1,33 @@
+/* Contest Management System
+ * Copyright © 2012-2014 Stefano Maggiolo <s.maggiolo@gmail.com>
+ * Copyright © 2012-2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+ * Copyright © 2013 Vittorio Gambaletta <VittGam@VittGam.net>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+"use strict";
+
 /**
  * Utility functions needed by CWS front-end.
  */
 
 var CMS = CMS || {};
 
-CMS.CWSUtils = function(timestamp,
+CMS.CWSUtils = function(url_root, timestamp,
                         current_phase_begin, current_phase_end, phase) {
+    this.url_root = url_root;
     this.last_notification = timestamp;
     this.server_timestamp = timestamp;
     this.client_timestamp = $.now() / 1000;
@@ -20,7 +42,7 @@ CMS.CWSUtils = function(timestamp,
 CMS.CWSUtils.prototype.update_notifications = function() {
     var self = this;
     $.get(
-        url_root + "/notifications",
+        this.url_root + "/notifications",
         {"last_notification": this.last_notification},
         function(data) {
             var counter = 0;
@@ -157,7 +179,7 @@ CMS.CWSUtils.prototype.update_time = function() {
     case -2:
         // Contest hasn't started yet.
         if (server_time >= this.current_phase_end) {
-            window.location.href = url_root + "/";
+            window.location.href = this.url_root + "/";
         }
         $("#countdown_label").text(
             $("#translation_until_contest_starts").text());
@@ -175,7 +197,7 @@ CMS.CWSUtils.prototype.update_time = function() {
     case 0:
         // Contest is currently running.
         if (server_time >= this.current_phase_end) {
-            window.location.href = url_root + "/";
+            window.location.href = this.url_root + "/";
         }
         $("#countdown_label").text($("#translation_time_left").text());
         $("#countdown").text(
@@ -185,7 +207,7 @@ CMS.CWSUtils.prototype.update_time = function() {
         // User has already finished its time but contest hasn't
         // finished yet.
         if (server_time >= this.current_phase_end) {
-            window.location.href = url_root + "/";
+            window.location.href = this.url_root + "/";
         }
         $("#countdown_label").text(
             $("#translation_until_contest_ends").text());
@@ -199,3 +221,15 @@ CMS.CWSUtils.prototype.update_time = function() {
     }
 };
 
+CMS.CWSUtils.switch_lang = function() {
+    var lang = $("#lang").val();
+    if (lang === "") {
+        document.cookie = "language=; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    } else {
+        var expires = new Date();
+        expires.setFullYear(expires.getFullYear() + 1);
+        document.cookie = "language=" + lang
+            + "; expires=" + expires.toUTCString();
+    }
+    location.reload();
+};

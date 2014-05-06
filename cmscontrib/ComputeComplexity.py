@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-# Programming contest management system.
+# Contest Management System - http://cms-dev.github.io/.
 # Copyright © 2012 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2010-2011 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2011 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -33,6 +33,7 @@ the dimensions of the testcases.
 
 """
 
+from __future__ import absolute_import
 from __future__ import print_function
 
 import argparse

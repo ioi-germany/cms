@@ -1,9 +1,9 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-# Programming contest management system
+# Contest Management System - http://cms-dev.github.io/
 # Copyright © 2012 Bernard Blackham <bernard@largestprime.net>
-# Copyright © 2013 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2013-2014 Stefano Maggiolo <s.maggiolo@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
 from __future__ import print_function
 
 import os
@@ -50,7 +51,9 @@ def start_generic_services():
     start_service("ResourceService")
     start_service("Checker")
     start_service("Worker")
+    start_service("ScoringService")
     start_server("AdminWebServer")
+    # Just to verify it starts successfully.
     start_ranking_web_server()
 
 
@@ -79,9 +82,10 @@ def create_contest():
 
 
 def start_contest(contest_id):
-    start_service("ScoringService", contest=contest_id)
     start_service("EvaluationService", contest=contest_id)
     start_server("ContestWebServer", contest=contest_id)
+    # Just to verify it starts successfully.
+    start_service("ProxyService", contest=contest_id)
 
 
 global num_users
@@ -178,9 +182,9 @@ def get_task_id(contest_id, user_id, task_module):
 
     info("Created task %s as id %d" % (name, task_id))
 
-    # We need to restart ScoringService to ensure it has picked up the
-    # new task.
-    restart_service("ScoringService", contest=contest_id)
+    # We need to restart ProxyService to ensure it reinitializes,
+    # picking up the new task and sending it to RWS.
+    restart_service("ProxyService", contest=contest_id)
 
     return task_id
 

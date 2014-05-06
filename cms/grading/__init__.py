@@ -1,9 +1,9 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-# Programming contest management system
+# Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2013 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2014 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -22,7 +22,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import codecs
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import io
 import json
 import logging
 import os
@@ -129,12 +133,10 @@ def get_compilation_commands(language, source_filenames, executable_filename,
         command = ["/bin/cp", source_filenames[0], executable_filename]
         commands.append(command)
     elif language == LANG_JAVA:
-        class_name = "Task"  # Submitted java class must be called Task.
-        mv_command = ["/bin/mv", source_filenames[0], "%s.java" % class_name]
-        gcj_command = ["/usr/bin/gcj", "--main=%s" % class_name, "-O3", "-o",
-                       executable_filename, "%s.java" % class_name]
-        commands.append(mv_command)
-        commands.append(gcj_command)
+        class_name = os.path.splitext(source_filenames[0])[0]
+        command = ["/usr/bin/gcj", "--main=%s" % class_name, "-O3", "-o",
+                   executable_filename] + source_filenames
+        commands.append(command)
     else:
         raise ValueError("Unknown language %s." % language)
     return commands
@@ -583,8 +585,8 @@ def extract_outcome_and_text(sandbox):
     """
     stdout = sandbox.relative_path(sandbox.stdout_file)
     stderr = sandbox.relative_path(sandbox.stderr_file)
-    with codecs.open(stdout, "r", "utf-8") as stdout_file:
-        with codecs.open(stderr, "r", "utf-8") as stderr_file:
+    with io.open(stdout, "r", encoding="utf-8") as stdout_file:
+        with io.open(stderr, "r", encoding="utf-8") as stderr_file:
             try:
                 outcome = stdout_file.readline().strip()
             except UnicodeDecodeError as error:
@@ -609,7 +611,10 @@ def extract_outcome_and_text(sandbox):
 
 ## Automatic white diff. ##
 
-WHITES = " \t\n\r"
+# We take as definition of whitespaces the intersection between ASCII
+# and Unicode White_Space characters (see
+# http://www.unicode.org/Public/6.3.0/ucd/PropList.txt)
+WHITES = b' \t\n\x0b\x0c\r'
 
 
 def white_diff_canonicalize(string):

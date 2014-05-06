@@ -1,10 +1,35 @@
+/* Contest Management System
+ * Copyright © 2012-2014 Stefano Maggiolo <s.maggiolo@gmail.com>
+ * Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+ * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+ * Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+"use strict";
+
 /**
  * Utility functions needed by AWS front-end.
  */
 
 var CMS = CMS || {};
 
-CMS.AWSUtils = function(timestamp, contest_start, contest_stop, phase) {
+CMS.AWSUtils = function(url_root, timestamp,
+                        contest_start, contest_stop, phase) {
+    this.url_root = url_root;
+    this.first_date = new Date();
     this.last_notification = timestamp;
     this.timestamp = timestamp;
     this.contest_start = contest_start;
@@ -48,8 +73,8 @@ CMS.AWSUtils.prototype.hide_subpage = function() {
  *     successful.
  */
 CMS.AWSUtils.prototype.file_received = function(response, error) {
-    file_name = this.file_asked_name;
-    url = this.file_asked_url;
+    var file_name = this.file_asked_name;
+    var url = this.file_asked_url;
     var elements = [];
     if (error != null) {
         alert("File request failed.");
@@ -57,7 +82,7 @@ CMS.AWSUtils.prototype.file_received = function(response, error) {
         if (response.length > 100000) {
             elements.push($('<h1>').text(file_name));
             elements.push($('<a>').text("Download").prop("href", url));
-            utils.display_subpage(elements);
+            this.display_subpage(elements);
             return;
         }
         var pre_class = "";
@@ -72,7 +97,7 @@ CMS.AWSUtils.prototype.file_received = function(response, error) {
         elements.push($('<pre>').text(response).prop("id", "source_container")
                       .prop("class", pre_class));
 
-        utils.display_subpage(elements);
+        this.display_subpage(elements);
         SyntaxHighlighter.highlight()
     }
 };
@@ -129,7 +154,7 @@ CMS.AWSUtils.prototype.display_notification = function(type, timestamp,
         subject_string = $("<span>").text("Reply to your question. ");
     } else if (type == "new_question") {
         subject_string = $("<a>").text("New question: ")
-            .prop("href", url_root + '/questions/' + contest_id);
+            .prop("href", this.url_root + '/questions/' + contest_id);
     }
 
     var self = this;
@@ -177,7 +202,7 @@ CMS.AWSUtils.prototype.update_unread_counts = function(delta_public, delta_priva
         }
     }
     if (unread_private) {
-        msg_private = parseInt(unread_private.text());
+        var msg_private = parseInt(unread_private.text());
         msgs_private += delta_private;
         unread_private.text(msgs_private);
         if (msgs_private > 0) {
@@ -197,7 +222,7 @@ CMS.AWSUtils.prototype.update_notifications = function() {
     var display_notification = this.bind_func(this, this.display_notification);
     var update_unread_counts = this.bind_func(this, this.update_unread_counts);
     this.ajax_request(
-        url_root + "/notifications",
+        this.url_root + "/notifications",
         "last_notification=" + this.last_notification,
         function(response, error) {
             if (error == null) {
@@ -270,11 +295,11 @@ CMS.AWSUtils.prototype.update_remaining_time = function() {
     }
 
     var now = new Date();
-    var nowsec_to_end = sec_to_end - (now - firstDate) / 1000;
-    var nowsec_to_start = sec_to_start - (now - firstDate) / 1000;
+    var nowsec_to_end = sec_to_end - (now - this.first_date) / 1000;
+    var nowsec_to_start = sec_to_start - (now - this.first_date) / 1000;
     if ((nowsec_to_end <= 0 && this.phase == 0 ) ||
         (nowsec_to_start <= 0 && this.phase == -1 )) {
-        window.location.href = url_root + "/";
+        window.location.href = this.url_root + "/";
     }
 
     var countdown = nowsec_to_end;
@@ -317,6 +342,7 @@ CMS.AWSUtils.prototype.redirect_if_ok = function(url, response) {
  */
 CMS.AWSUtils.prototype.repr_job = function(job) {
     var job_type = "???";
+    var object_type = "???";
     if (job == null) {
         return "N/A";
     } else if (job == "disabled") {
@@ -339,14 +365,14 @@ CMS.AWSUtils.prototype.repr_job = function(job) {
     }
 
     if (object_type == 'submission') {
-        return job_type + ' the <a href="' + url_root + '/submission/'
-            + job[1] + '/' + job[2] + '">result</a> of <a href="' + url_root
+        return job_type + ' the <a href="' + this.url_root + '/submission/'
+            + job[1] + '/' + job[2] + '">result</a> of <a href="' + this.url_root
             + '/submission/' + job[1] + '">submission ' + job[1]
-            + '</a> on <a href="' + url_root + '/dataset/' + job[2]
+            + '</a> on <a href="' + this.url_root + '/dataset/' + job[2]
             + '">dataset ' + job[2] + '</a>';
     } else {
         return job_type + ' the result of user_test ' + job[1]
-            + ' on <a href="' + url_root + '/dataset/' + job[2]
+            + ' on <a href="' + this.url_root + '/dataset/' + job[2]
             + '">dataset ' + job[2] + '</a>';
     }
 };
@@ -363,7 +389,7 @@ CMS.AWSUtils.prototype.repr_time_ago = function(time) {
     if (time == null) {
         return "N/A";
     }
-    var diff = datetime = parseInt((new Date()).getTime() / 1000 - time);
+    var diff = parseInt((new Date()).getTime() / 1000 - time);
     var res = "";
 
     var s = diff % 60;
@@ -398,7 +424,7 @@ CMS.AWSUtils.prototype.repr_time_ago_short = function(time) {
     if (time == null) {
         return "N/A";
     }
-    var diff = datetime = parseInt((new Date()).getTime() / 1000 - time);
+    var diff = parseInt((new Date()).getTime() / 1000 - time);
     var res = "";
 
     var s = diff % 60;
@@ -520,9 +546,9 @@ CMS.AWSUtils.prototype.standard_response = function(response) {
 CMS.AWSUtils.prototype.switch_contest = function() {
     var value = $("#contest_selection_select").val()
     if (value == "null") {
-        window.location = url_root + "/";
+        window.location = this.url_root + "/";
     } else {
-        window.location = url_root + "/contest/" + value;
+        window.location = this.url_root + "/contest/" + value;
     }
 };
 
@@ -580,38 +606,21 @@ CMS.AWSUtils.prototype.bind_func = function(object, method) {
 
 
 /**
- * Perform an AJAX request.
+ * Perform an AJAX GET request.
  *
- * url (string): the url of the resource
- * par (string): the arguments already encoded
- * cb (function): the function to call with the response
- * method (string) : the HTTP method (default GET)
+ * url (string): the url of the resource.
+ * args (string|null): the arguments already encoded.
+ * callback (function): the function to call with the response.
  */
-CMS.AWSUtils.prototype.ajax_request = function(url, par, cb, method) {
-    // TODO: rewrite this using jquery's ajax functions.
-    var xmlhttp;
-    if (window.XMLHttpRequest) {
-        xmlhttp=new XMLHttpRequest();
-    } else if (window.ActiveXObject) {
-        xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
-    } else {
-        alert("Your browser does not support XMLHTTP!");
+CMS.AWSUtils.prototype.ajax_request = function(url, args, callback) {
+    if (args != null) {
+        url = url + "?" + args;
     }
-    xmlhttp.onreadystatechange = function() {
-        if (xmlhttp.readyState == 4) {
-            if (xmlhttp.status == 200) {
-                cb(xmlhttp.responseText, null);
-            } else {
-                cb(null, xmlhttp.status);
-            }
-        }
-    }
-    if (method == "POST") {
-        xmlhttp.open("POST", url, true);
-        xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded")
-        xmlhttp.send(par);
-    } else {
-        xmlhttp.open("GET", url + "?" + par, true);
-        xmlhttp.send();
-    }
+    var jqxhr = $.get(url);
+    jqxhr.done(function(data) {
+        callback(data, null);
+    });
+    jqxhr.fail(function() {
+        callback(null, jqxhr.status);
+    });
 };

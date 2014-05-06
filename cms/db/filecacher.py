@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-# Programming contest management system
+# Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
@@ -25,6 +25,7 @@
 """
 
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import hashlib
@@ -46,6 +47,9 @@ logger = logging.getLogger(__name__)
 
 
 class FileCacherBackend(object):
+    """Abstract base class for all FileCacher backends.
+
+    """
 
     def get_file(self, digest):
         """Retrieve a file from the storage.
@@ -118,7 +122,6 @@ class FileCacherBackend(object):
 
 
 class FSBackend(FileCacherBackend):
-
     """This class implements a backend for FileCacher that keeps all
     the files in a file system directory, named after their digest. Of
     course this directory can be shared, for example with NFS, acting
@@ -210,7 +213,6 @@ class FSBackend(FileCacherBackend):
 
 
 class DBBackend(FileCacherBackend):
-
     """This class implements an actual backend for FileCacher that
     stores the files as lobjects (encapsuled in a FSObject) into a
     PostgreSQL database.
@@ -336,7 +338,6 @@ class DBBackend(FileCacherBackend):
 
 
 class NullBackend(FileCacherBackend):
-
     """This backend is always empty, it just drops each file that
     receives. It looks mostly like /dev/null. It is useful when you
     want to just rely on the caching capabilities of FileCacher for
@@ -364,7 +365,6 @@ class NullBackend(FileCacherBackend):
 
 
 class FileCacher(object):
-
     """This class implement a local cache for files stored as FSObject
     in the database.
 

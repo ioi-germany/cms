@@ -56,18 +56,19 @@ particular we are aware of the following.
     - [AIIO 2012](http://orac.amt.edu.au/aiio/aiio12results.html)
       (Australian Invitational Informatics Olympiad), February 2012;
     - Croatian high school programming contest 2013, March 2013;
-    - Festival of Innovative Technologies 2013 (national high school
+    - FIT 2013 (Festival of Innovative Technologies; national high school
       programming contest), Slovenia, April 2013;
+    - FIT 2014, Slovenia, April 2014;
     - OCI 2013 (Chilean Olympiads in Informatics), May 2013;
     - Slovenian Invitational Informatics Olympiad, May 2013;
     - [JOI Open Contest 2013]
       (http://cms.ioi-jp.org/open-2013/index.html), Japan, June 2013;
-    - Argentine Olympiad in Informatic, October 2013;
     - Taiwan High School Programming Contest, December 2013;
     - beOI 2014 ([Belgian Olympiad in Informatics]
       (http://www.be-oi.be/fr/)), Belgium, February 2014;
     - TOP'2014 (Tunisian Olympiad in Programming), March 2014.
-    - LMIO 2014 (Lithuanian Olympiad in Informatics), March 2014.
+    - LMIO 2014 (Lithuanian Olympiad in Informatics), March 2014;
+    - Argentinian IOI Selection Contest, April 2014.
 - Local competitions:
     - Taipei High School Programming Contest, Taiwan, October 2012;
     - ABC 2013 (Algoritmi Bergamo Contest), Bergamo, Italy, May
@@ -75,8 +76,7 @@ particular we are aware of the following.
     - Taipei High School Programming Contest, Taiwan, November 2013.
 - Training:
     - training camps for the selections of the national IOI teams of
-      Argentina, Australia, India, Italy, Japan, Latvia, Serbia and
-      Taiwan.
+      Australia, India, Italy, Japan, Latvia, Serbia and Taiwan.
 - Other:
     - laboratory exercises and exams of the course "Algorithms and
       data structures" at University of Trento, Italy (year
