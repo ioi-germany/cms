@@ -304,6 +304,11 @@ you can use the following code::
 
 Test submissions are evaluated with increased (weak) time and memory limits. In the end, the used time (or memory) is compared to the weak and (lower) strong limits. The purpose of this is to ensure some "safety margin" (e.g.: the correct test submissions should only need the allowed time; the slow test submissions should need at least twice the allowed time). If the time or memory is between the strong and the weak limits, the result (which can be used in the :samp:`expected` dictionary) is :samp:`time?` or :samp:`memory?`. You can pass the weak and strong limits to :py:meth:`.test_submission` every time or use :py:meth:`.test_submission_limits` to specify them for the whole task (before calling :py:meth:`.test_submission`).
 
+Ranking data directory
+----------------------
+
+:file:`cmsGerMake` generates a directory :file:`build/ranking_conf` containing files to copy to :file:`/var/local/lib/cms/ranking`. To make this useful, create a file :file:`logo.png` in the contest directory, for each user a file :file:`face-USERNAME.png` and for each team a file :file:`flag-TEAM.png` and call :samp:`team()` once per team and add a :samp:`team=` parameter when calling :samp:`user()`. For image files, you can also use the formats jpg, gif and bmp instead of png.
+
 .. _CommonConfig:
 
 CommonConfig

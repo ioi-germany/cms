@@ -38,9 +38,15 @@ class MyGroup(object):
         self.per_user_time = per_user_time
 
 
+class MyTeam(object):
+    def __init__(self, shortname, longname):
+        self.shortname = shortname
+        self.longname = longname
+
+
 class MyUser(object):
     def __init__(self, username, password, group, firstname, lastname,
-                 ip, hidden, timezone, primary_statements):
+                 ip, hidden, timezone, primary_statements, team):
         self.username = username
         self.password = password
         self.group = group
@@ -50,6 +56,7 @@ class MyUser(object):
         self.hidden = hidden
         self.timezone = timezone
         self.primary_statements = primary_statements
+        self.team = team
 
 
 class ContestConfig(CommonConfig):
@@ -92,6 +99,7 @@ class ContestConfig(CommonConfig):
 
         self.groups = []
         self.defaultgroup = None
+        self.teams = {}
         self.users = []
 
         # Export contest variable
@@ -120,6 +128,7 @@ class ContestConfig(CommonConfig):
     def _readconfig(self, filename):
         print_msg("Loading contest {}".format(self.contestname), headerdepth=1)
         super(ContestConfig, self)._readconfig(filename)
+        self._initialize_ranking()
 
     @exported_function
     def ontask(self, f):
@@ -215,8 +224,25 @@ class ContestConfig(CommonConfig):
         return r
 
     @exported_function
+    def team(self, shortname, longname):
+        """
+        Add a team (currently only used to generate a RWS directory).
+
+        shortname (unicode): a short name (used to find the flag)
+
+        longname (unicode): a longer name (displayed in RWS)
+
+        return (MyTeam): object representing the created team
+
+        """
+        team = MyTeam(shortname, longname)
+        self.teams[shortname] = team
+        return team
+
+    @exported_function
     def user(self, username, password, firstname, lastname, group=None,
-             ip=None, hidden=False, timezone=None, primary_statements=[]):
+             ip=None, hidden=False, timezone=None, primary_statements=[],
+             team=None):
         """
         Add a user.
 
@@ -244,6 +270,8 @@ class ContestConfig(CommonConfig):
             languages (it is assumed that all tasks have a translation for
             this language) or a dictionary mapping task names to language names
 
+        team (string or MyTeam): (name of) the team the user belongs to
+
         return (MyUser): object representing the created user
 
         """
@@ -251,11 +279,14 @@ class ContestConfig(CommonConfig):
             if self.defaultgroup is None:
                 raise Exception("You have to specify a group")
             group = self.defaultgroup
+        if team is not None and not isinstance(team, MyTeam):
+            team = self.teams[team]
         print_msg("Adding user {} to group {}".format(username, group.name),
                   headerdepth=10)
         self.users.append(MyUser(username, password, group,
                                  firstname, lastname,
-                                 ip, hidden, timezone, primary_statements))
+                                 ip, hidden, timezone, primary_statements,
+                                 team))
         return self.users[-1]
 
     @exported_function
@@ -433,3 +464,43 @@ class ContestConfig(CommonConfig):
                 tdb = task._makedataset(file_cacher)
                 return tdb
         raise KeyError
+
+    def _initialize_ranking(self):
+        directory = os.path.join(self.wdir, "ranking_conf")
+        if os.path.exists(directory):
+            shutil.rmtree(directory)
+        os.mkdir(directory)
+        for d in ["teams", "users", "flags", "faces"]:
+            dd = os.path.join(directory, d)
+            os.mkdir(dd)
+
+        def copy_ranking_file(basename, target_basename):
+            for ext in [".png", ".jpg", ".gif", ".bmp"]:
+                origin = os.path.join(self.wdir, basename+ext)
+                target = os.path.join(directory, target_basename+ext)
+                if os.path.exists(origin):
+                    shutil.copyfile(origin, target)
+                    return
+
+        def save_json(basename, data):
+            file_ = os.path.join(directory, basename+".json")
+            with open(file_, 'wb') as f:
+                json.dump(data, f)
+
+        copy_ranking_file("logo", "logo")
+
+        for team in self.teams.values():
+            save_json(os.path.join("teams", team.shortname),
+                      {"name": team.longname})
+            copy_ranking_file("flag-"+team.shortname,
+                              os.path.join("flags", team.shortname))
+
+        for user in self.users:
+            if not user.hidden:
+                copy_ranking_file("face-"+user.username,
+                                  os.path.join("faces", user.username))
+                save_json(os.path.join("users", user.username),
+                          {"f_name": user.firstname,
+                           "l_name": user.lastname,
+                           "team": user.team.shortname
+                           if user.team is not None else None})
