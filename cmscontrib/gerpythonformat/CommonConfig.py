@@ -28,6 +28,7 @@ import os
 from collections import defaultdict
 import copy
 from datetime import timedelta
+import shutil
 
 
 def exported_function(f):
@@ -269,6 +270,10 @@ class CommonConfig(object):
         """
         Use latexmk to compile basename.tex to basename.pdf .
 
+        This command also creates a directory basename.kit containing all the
+        files necessary to compile the tex source. This can be useful for
+        translation sessions.
+
         basename (string): base of the tex and pdf file names
 
         return (string): file name of the generated pdf file
@@ -290,6 +295,23 @@ class CommonConfig(object):
             print_block(r.err)
             if r.code != 0:
                 raise Exception("Compilation failed")
+
+            # Create "translation kit" containing all important dependencies
+            kit_directory = basename+".kit"
+            if os.path.exists(kit_directory):
+                shutil.rmtree(kit_directory)
+            for dep in r.dependencies:
+                depabs = os.path.abspath(dep)
+                wdirpath = os.path.abspath(self.wdir)+'/'
+                # We don't want to include global latex style files, etc.
+                if depabs.startswith(wdirpath):
+                    basefile = depabs[len(wdirpath):]
+                    basefiledir = os.path.join(kit_directory,
+                                               os.path.dirname(basefile))
+                    if not os.path.exists(basefiledir):
+                        os.makedirs(basefiledir)
+                    shutil.copy(depabs, os.path.join(kit_directory, basefile))
+
         return output
 
     @exported_function
