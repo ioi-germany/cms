@@ -465,6 +465,12 @@ class MySubmission(object):
                        for f in self.filenames)
 
 
+class MyStatement(object):
+    def __init__(self, file_, primary):
+        self.file_ = file_
+        self.primary = primary
+
+
 class TaskConfig(CommonConfig, Scope):
     """
     Class for task configuration files.
@@ -516,6 +522,8 @@ class TaskConfig(CommonConfig, Scope):
         self.saved = []
 
         self.everything_checked = True
+
+        self._statements = {}
 
         self.weak_time_limit = 2
         self.strong_time_limit = 0.5
@@ -599,14 +607,21 @@ class TaskConfig(CommonConfig, Scope):
         return "{}$\,$MB".format(self._memorylimit)
 
     @exported_function
-    def statement(self, s):
+    def statement(self, s, language="en", primary=None):
         """
-        Set the task statement.
+        Add a task statement in a specific language.
 
         s (string): file name of the (compiled) task statement
 
+        language (string): the language code of this language
+
+        primary (bool): whether this is a primary statement for this task;
+                        by default, the first statement added is primary
+
         """
-        self._statement = os.path.abspath(s)
+        if primary is None:
+            primary = (len(self._statements) == 0)
+        self._statements[language] = MyStatement(os.path.abspath(s), primary)
 
     @exported_function
     def attachment(self, localname, publicname):
@@ -994,8 +1009,10 @@ class TaskConfig(CommonConfig, Scope):
     def _printresult(self):
         with header("Statistics", depth=3):
             print_msg("Taskname: {}".format(self.name))
-            print_msg("Task statement in file {}"
-                      .format(self.short_path(self._statement)))
+            sts = ["{} {}{}".format(l, self.short_path(s.file_),
+                                    " (primary)" if s.primary else "")
+                   for l, s in self._statements.iteritems()]
+            print_msg("Task statements: {}".format(", ".join(sts)))
             print_msg("Number of subtasks: {}".format(len(self.subtasks)))
             print_msg("Number of test cases: {}".format(len(self.cases)))
             if not self.everything_checked:
@@ -1091,13 +1108,21 @@ class TaskConfig(CommonConfig, Scope):
         else:
             tdb.submission_format = [
                 SubmissionFormatElement("%s.%%l" % self.name)]
-        tdb.primary_statements = "[\"\"]"
         tdb.attachments = []
         tdb.statements = []
-        digest = file_cacher.put_file_from_path(
-            self._statement,
-            "Statement task %s" % (self.name))
-        tdb.statements[""] = Statement(language="", digest=digest)
+        primary_statements = []
+
+        # Add statements
+        for language, statement in self._statements.iteritems():
+            digest = file_cacher.put_file_from_path(
+                statement.file_,
+                "Statement task %s in language %s" % (self.name, language))
+            tdb.statements[language] = Statement(language=language,
+                                                 digest=digest)
+            if statement.primary:
+                primary_statements.append(language)
+
+        tdb.primary_statements = json.dumps(primary_statements)
 
         # Add attachments
         for name, file in self.attachments.iteritems():

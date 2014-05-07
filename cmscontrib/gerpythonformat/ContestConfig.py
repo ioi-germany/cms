@@ -27,6 +27,7 @@ import os
 import shutil
 from datetime import datetime
 import pytz
+import json
 
 
 class MyGroup(object):
@@ -39,7 +40,7 @@ class MyGroup(object):
 
 class MyUser(object):
     def __init__(self, username, password, group, firstname, lastname,
-                 ip, hidden, timezone):
+                 ip, hidden, timezone, primary_statements):
         self.username = username
         self.password = password
         self.group = group
@@ -48,6 +49,7 @@ class MyUser(object):
         self.ip = ip
         self.hidden = hidden
         self.timezone = timezone
+        self.primary_statements = primary_statements
 
 
 class ContestConfig(CommonConfig):
@@ -201,7 +203,7 @@ class ContestConfig(CommonConfig):
 
     @exported_function
     def user(self, username, password, firstname, lastname, group=None,
-             ip=None, hidden=False, timezone=None):
+             ip=None, hidden=False, timezone=None, primary_statements=[]):
         """
         Add a user.
 
@@ -225,6 +227,10 @@ class ContestConfig(CommonConfig):
         timezone (unicode): time zone for this user (if different from contest
                             time zone)
 
+        primary_statements (string[] or {string: string[]}): either a list of
+            languages (it is assumed that all tasks have a translation for
+            this language) or a dictionary mapping task names to language names
+
         return (MyUser): object representing the created user
 
         """
@@ -236,7 +242,7 @@ class ContestConfig(CommonConfig):
                   headerdepth=10)
         self.users.append(MyUser(username, password, group,
                                  firstname, lastname,
-                                 ip, hidden, timezone))
+                                 ip, hidden, timezone, primary_statements))
         return self.users[-1]
 
     @exported_function
@@ -369,6 +375,11 @@ class ContestConfig(CommonConfig):
 
         for user in self.users:  # FIXME This could be done faster...
             if user.username == username:
+                if isinstance(user.primary_statements, list):
+                    primary_statements = {t.name: user.primary_statements
+                                          for t in self.tasks}
+                else:
+                    primary_statements = user.primary_statements
                 udb = User(username=user.username,
                            password=user.password,
                            first_name=user.firstname,
@@ -376,7 +387,8 @@ class ContestConfig(CommonConfig):
                            ip=user.ip,
                            hidden=user.hidden,
                            group=self.groupsdb[user.group.name],
-                           timezone=user.timezone)
+                           timezone=user.timezone,
+                           primary_statements=json.dumps(primary_statements))
                 self.usersdb[username] = udb
                 return udb
         raise KeyError
