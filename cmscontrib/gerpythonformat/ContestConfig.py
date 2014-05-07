@@ -86,6 +86,8 @@ class ContestConfig(CommonConfig):
 
         self.contestname = name
 
+        self._allowed_localizations = []
+
         self.tasks = []
 
         self.groups = []
@@ -169,6 +171,17 @@ class ContestConfig(CommonConfig):
         """
         print_msg("Setting timezone to {}".format(s), headerdepth=10)
         self._timezone = s
+
+    @exported_function
+    def allowed_localizations(self, localizations):
+        """
+        Set the allowed web interface localizations. By default, all
+        localizations are allowed.
+
+        localizations (string[]): list of localization names
+
+        """
+        self._allowed_localizations = localizations
 
     @exported_function
     def user_group(self, s, start, stop, per_user_time=None):
@@ -329,6 +342,7 @@ class ContestConfig(CommonConfig):
             raise Exception("You have to specify a default group")
         cdb = Contest(name=self.contestname, description=self._description)
         cdb.timezone = self._timezone
+        cdb.allowed_localizations = self._allowed_localizations
         if self._analysis:
             self.infinite_tokens()
         self._set_tokens(cdb)
