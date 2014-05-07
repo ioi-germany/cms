@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -42,21 +42,19 @@ class LgTemplate(PlainTemplate):
         """
         super(LgTemplate, self).ontask(task)
         # Register contestheader.tex as \taskheader
-        task.supply("latex",
-                    def_latex("taskheader",
-                              input_latex(
-                                  os.path.join(os.path.dirname(__file__),
-                                               "contestheader.tex"))))
+        shutil.copy(os.path.join(os.path.dirname(__file__),
+                                 "contestheader.tex"),
+                    os.path.join(task.wdir, "taskheader.tex"))
+        task.supply("latex", def_latex("taskheader",
+                                       input_latex("taskheader.tex")))
         # Tell Latex where logopng can be found
-        task.supply("latex",
-                    def_latex("logopng",
-                              os.path.join(os.path.dirname(__file__),
-                                           "logo.png")))
+        shutil.copy(os.path.join(os.path.dirname(__file__), "logo.png"),
+                    os.path.join(task.wdir, "logo.png"))
+        task.supply("latex", def_latex("logopng", "logo.png"))
         # Tell Latex where bar.pdf can be found
-        task.supply("latex",
-                    def_latex("barpdf",
-                              os.path.join(self.contest.wdir,
-                                           "bar.pdf")))
+        shutil.copy(os.path.join(self.contest.wdir, "bar.pdf"),
+                    os.path.join(task.wdir, "bar.pdf"))
+        task.supply("latex", def_latex("barpdf", "bar.pdf"))
         self.mktestcasetable(task)
 
     def mktestcasetable(self, task):

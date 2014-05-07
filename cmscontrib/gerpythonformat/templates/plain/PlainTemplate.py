@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -26,6 +26,7 @@ from cmscontrib.gerpythonformat.Supplement import def_latex, input_latex
 
 import functools
 import os
+import shutil
 
 
 class PlainTemplate(Template):
@@ -41,8 +42,10 @@ class PlainTemplate(Template):
             outmacro = "\\def\\tcout#1{\\ifcase#1"
             for c in task.saved:
                 # I'm sure about the leading "\or"
-                inmacro += "\\or\\verbatiminput{" + c.infile + "}"
-                outmacro += "\\or\\verbatiminput{" + c.outfile + "}"
+                inmacro += "\\or\\verbatiminput{" + \
+                    os.path.relpath(c.infile) + "}"
+                outmacro += "\\or\\verbatiminput{" + \
+                    os.path.relpath(c.outfile) + "}"
             inmacro += "\\else\\fi}"
             outmacro += "\\else\\fi}"
 
@@ -58,11 +61,10 @@ class PlainTemplate(Template):
         super(PlainTemplate, self).ontask(task)
         self.supply_cases(task)
         task.supplement_file("latex", "taskinfo.tex")
-        task.supply("latex",
-                    def_latex("basicheader",
-                              input_latex(
-                                  os.path.join(os.path.dirname(__file__),
-                                               "header.tex"))))
+        shutil.copy(os.path.join(os.path.dirname(__file__), "header.tex"),
+                    os.path.join(task.wdir, "header.tex"))
+        task.supply("latex", def_latex("basicheader",
+                                       input_latex("header.tex")))
         task.supply_latex("taskname", task.simple_query("name"))
         task.supply_latex("contestname",
                           task.contest.simple_query("_description"))
