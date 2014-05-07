@@ -425,7 +425,7 @@ class MySubmission(object):
             try:
                 float(k)
             except:
-                if not k in ["time", "memory", "time?", "memory?", "any"]:
+                if k not in ["time", "memory", "time?", "memory?", "any"]:
                     raise Exception("Unknown expected result '{}'".format(k))
 
         # Convert the given lists of expected events to something more
@@ -1116,8 +1116,8 @@ class TaskConfig(CommonConfig, Scope):
                                         # are referenced through the user
                                         # object
             sdb = self._makesubmission(s, self.upstream.testuser, tdb)
-            sdb.task_id = 0  # dummy id, the correct value is inserted by
-                             # GerImporter.py
+            # dummy id, the correct value is inserted by GerImporter.py
+            sdb.task_id = 0
 
             if s._should_test(local_test):
                 sdb.id = 1
