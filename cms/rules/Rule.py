@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -475,6 +475,11 @@ class LaTeXRule(CommandRule):
     def post_run(self):
         self.result.add_dependency(self.source)  # Should not be necessary
         readmakefile(".deps", self.result, True)
+        # Re-encode output as latexmk seems to output latin_1 instead of utf8
+        self.result.log['out'] = self.result.log['out'] \
+            .decode('latin_1').encode('utf8')
+        self.result.log['err'] = self.result.log['err'] \
+            .decode('latin_1').encode('utf8')
 
 
 class JobRule(Rule):
