@@ -69,15 +69,15 @@ type_map &linebreak_omitting() {
  * The type of a character is retrieved from the type map. It is assumed to be 0 for characters not
  * in the map.
  */
-vector<string> tokenize(const string &s, const type_map &type_map) {
+vector<string> tokenize(const string &s, const type_map &tm) {
     vector<string> r;
     string token;
     int token_type = 0;
     for (int i = 0; i < (int)s.length(); i++) {
         char ch = s[i];
         int type = 0;
-        if (type_map.find(ch) != type_map.end())
-            type = type_map.find(ch)->second;
+        if (tm.find(ch) != tm.end())
+            type = tm.find(ch)->second;
         if (!token.empty() && token_type != type) {
             if (token_type >= 0)
                 r.push_back(token);

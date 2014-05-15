@@ -98,19 +98,24 @@ string nice_whitespace(const string &s) {
 class token_stream {
 public:
     token_stream() : cursor(0) {}
-    token_stream(FILE *fin, type_map &t = whitespace_including()) : cursor(0) {
-        data = tokenize(peek_whole(fin), t);
+    token_stream(const string &_s, type_map &t = whitespace_including()) : cursor(0), s(_s), tm(t) {
     }
-    token_stream(vector<string> _data) : data(_data), cursor(0) {}
+    token_stream(FILE *fin, type_map &t = whitespace_including()) : cursor(0), tm(t) {
+        s = peek_whole(fin);
+    }
     string next_or_fail() {
-        if (finished()) {
+        string token = next_token();
+        if (token.empty()) {
             cerr << "Missing token" << endl;
             exit(1);
         }
-        return data.at(cursor++);
+        return token;
     }
     bool finished() {
-        return cursor >= (int)data.size();
+        int cursor_before = cursor;
+        string token = next_token();
+        cursor = cursor_before;
+        return token.empty();
     }
     void rewind() {
         cursor = 0;
@@ -151,15 +156,31 @@ public:
         return parse_and_check(name, constraint.first, constraint.second, expected_whitespace);
     }
 
-    void print() {
-        for (int i = 0; i < (int) data.size(); ++i)
-            cout << "[" << nice_whitespace(data[i]) << "] ";
-        cout << endl;
-    }
-
 private:
-    vector<string> data;
     int cursor;
+    string s;
+    type_map tm;
+
+    string next_token() {
+        string token;
+        int token_type = 0;
+        for (; cursor < (int)s.length(); cursor++) {
+            char ch = s[cursor];
+            int type = 0;
+            if (tm.find(ch) != tm.end())
+                type = tm.find(ch)->second;
+            if (!token.empty() && token_type != type) {
+                if (token_type >= 0)
+                    return token;
+                token.clear();
+            }
+            token.push_back(ch);
+            token_type = type;
+        }
+        if (!token.empty() && token_type >= 0)
+            return token;
+        return "";
+    }
 };
 
 #endif
