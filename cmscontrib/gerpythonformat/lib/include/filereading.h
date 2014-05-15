@@ -67,6 +67,7 @@ string generic_read(FILE *f, bool rewind_me, bool restore_cursor) {
     if (restore_cursor) fsetpos(f, &old_pos);
 
     string s(buffer);
+    delete[] buffer;
     return s;
 }
 
