@@ -63,6 +63,7 @@ class GerMake:
             for t in contestconfig.tasks:
                 contestconfig._maketask(filecacher, t.name,
                                         local_test=self.local_test)
+        filecacher.destroy_cache()
 
 
 def main():
