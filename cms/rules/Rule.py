@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import hashlib
+import imp
 import json
 import os
 import subprocess
@@ -554,3 +555,75 @@ class ZipRule(Rule):
                 zf.write(fn, arcname=an)
                 self.result.add_dependency(fn)
         self.result.add_output(self.zipname)
+
+
+class PythonFunctionRule(Rule):
+    def __init__(self, rulesdir, source, name, function, args, kwargs,
+                 stdout, dependencies=[], outputs=[]):
+        """A rule running the given function from the given python source file.
+        The return value is saved to result.return_value.
+
+        rulesdir (string): directory used for persistent data
+
+        source (string): the file name of the python source file
+
+        name (string): the name to assign to the loaded module
+
+        function (string): name of the python function to call
+
+        args (list): list of arguments to pass to the function
+
+        kwargs (dict): keyword arguments to pass to the function
+
+        stdout (string): if specified, open this file and pass the file
+                         descriptor it as an argument called stdout
+
+        dependencies (list): additional dependencies (apart from the python
+                             source file)
+
+        outputs (list): additional outputs (apart from stdout)
+
+        """
+        super(PythonFunctionRule, self).__init__(rulesdir)
+        self.source = source
+        self.name = name
+        self.function = function
+        self.args = args
+        self.kwargs = kwargs
+        self.stdout = stdout
+        self.dependencies = dependencies
+        self.outputs = outputs
+
+    def mission(self):
+        return {'cwd': os.getcwd(),
+                'type': 'python_function',
+                'source': self.source,
+                'name': self.name,
+                'function': self.function,
+                'args': self.args,
+                'kwargs': self.kwargs,
+                'stdout': self.stdout,
+                'dependencies': self.dependencies,
+                'outputs': self.outputs}
+
+    def run(self):
+        module = imp.load_source(self.name, self.source)
+
+        kwargs = dict(self.kwargs)
+
+        if self.stdout is not None:
+            stdout = open(self.stdout, "w")
+            kwargs["stdout"] = stdout
+
+        self.result.log['return_value'] = module.gen(*self.args, **kwargs)
+
+        if self.stdout is not None:
+            stdout.close()
+
+        for f in self.dependencies:
+            self.result.add_dependency(f)
+        self.result.add_dependency(self.source)
+        for f in self.outputs:
+            self.result.add_output(f)
+        if self.stdout is not None:
+            self.result.add_output(self.stdout)

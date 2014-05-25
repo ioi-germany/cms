@@ -408,7 +408,7 @@ class CommonConfig(object):
         """
         See ExternalPython
         """
-        return ExternalPython(*args, **kwargs)
+        return ExternalPython(self.rules, *args, **kwargs)
 
     # Tokens
 

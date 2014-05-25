@@ -20,8 +20,7 @@
 
 import os.path
 from Messenger import print_block, header
-from cms.rules.Rule import CommandRule, GCCRule
-import imp
+from cms.rules.Rule import CommandRule, GCCRule, PythonFunctionRule
 
 
 class Executable(object):
@@ -309,27 +308,45 @@ class InternalPython(Executable):
 
 class ExternalPython(Executable):
     """ An executable which is actually a python script containing a
-    function gen
-    On each call of run the module is loaded and gen is performed
+    specific function.
+    On each call of run the module is loaded and gen is performed if necessary.
+    Other imported python modules that might change MUST be specified in the
+    dependencies array or the function will not be re-run when they change.
     """
-    def __init__(self, name=None):
-        self.name = "ext-python" + name
-        self.path = os.path.abspath(name)
-        
-    # TODO Somehow use rules?
+    def __init__(self, rulesdir, source, function="gen"):
+        """Initialize.
+
+        rulesdir (string): directory used for persistent data (for Rule)
+
+        source (string): file name of the python script (should be in the
+                         current working directory)
+
+        function (string): name of the function to call ("gen" by default)
+
+        """
+        self.rulesdir = rulesdir
+        if not source.endswith(".py"):
+            raise Exception(
+                "Python source file name '{}' doesn't end with '.py'.")
+        self.name = "ext-python-" + source[:-3]
+        self.path = os.path.abspath(source)
+        self.function = function
+
     def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
             stderr=None, dependencies=[]):
-        m = imp.load_source(self.name, self.path);
-        
-        if str(stdout) == stdout: 
-            stdout = open(stdout, "w") 
-        kwargs["stdout"] = stdout
-        
-        r = m.gen(*args, **kwargs)
-        
-        try: stdout.close()
-        except: pass
-    
+        if stdin is not None or stdinstring is not None or stderr is not None:
+            raise ExitCodeException(
+                "Stdin, stdinstring and stderr are not implemented "
+                "for ext_script.")
+        PythonFunctionRule(self.rulesdir,
+                           self.path,
+                           self.name,
+                           self.function,
+                           args,
+                           kwargs,
+                           stdout=stdout,
+                           dependencies=dependencies).ensure()
+
     def __str__(self):
         return "<external>"
 
