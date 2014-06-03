@@ -351,7 +351,9 @@ class ExternalPython(Executable):
         return "<external>"
 
 
-interpreter_table = {".py": "python2", ".rb": "ruby", ".pl": "perl"}
+interpreter_table = {".py": "python2", ".rb": "ruby", ".pl": "perl",
+                     ".sh": "/bin/bash"}
+
 
 class ExternalScript(Executable):
     """An Executable which is actually a script file. The interpreter is
