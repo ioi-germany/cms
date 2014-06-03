@@ -296,7 +296,7 @@ class MyGroup(Scope):
         setattr(self, name, case)
 
         linkname = os.path.join(self.directory, name)
-        if os.path.exists(linkname):
+        if os.path.lexists(linkname):
             os.remove(linkname)
         os.symlink(case.directory, linkname)
 
