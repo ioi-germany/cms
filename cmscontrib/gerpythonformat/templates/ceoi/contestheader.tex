@@ -1,0 +1,29 @@
+\basicheader
+\usepackage[sc]{mathpazo}
+\linespread{1.05} 
+\definecolor{bgblue}{RGB}{214,217,255}
+\definecolor{textblue}{RGB}{0,18,98}
+\color{textblue}
+\usepackage{colortbl}
+
+\translationheader
+
+\def\empty{}
+\newbox\ceoibox
+\newbox\daybox
+\newbox\taskbox
+\setbox\ceoibox=\hbox{\sffamily\bfseries CEOI 2014}
+\setbox\daybox=\hbox{\null\kern.5em\sffamily \ifx\contestday\empty \tPracticeSession\else\tDay\ \contestday\fi}
+\setbox\taskbox=\hbox{\null\kern1em\sffamily \tTask: \bfseries \taskname}
+
+\newdimen\bw
+\bw=\wd\taskbox
+\ifdim\wd\daybox>\bw \bw=\wd\daybox\fi
+
+\lhead{\hskip-3in\vbox to \headh{\vskip-3.25in\includegraphics[height=11\headh]{\watermark}}}
+\rhead{\vskip-18pt\vbox to \headh{\vbox to 0pt{\vskip-2.35in\hbox to 0pt{\hskip\hsize\hskip-20pt\hskip-\bw\hskip-12pt\includegraphics{\barpdf}}}\vskip-.55in
+{\vbox to  \headh{\unhcopy\ceoibox \\ \unhcopy\daybox\\ \unhcopy\taskbox\vss}}}}
+
+
+\cfoot{}
+\lfoot{\vbox to 12pt{\vskip-.1in\leavevmode\hskip-2.5in\includegraphics{\barpdf}\vskip-2.5in\sffamily\bfseries\thepage/\pageref{LastPage}}}
