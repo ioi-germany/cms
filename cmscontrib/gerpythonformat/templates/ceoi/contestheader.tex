@@ -8,6 +8,19 @@
 
 \translationheader
 
+\let\oldshowcases=\showcases
+\def\showcases{\section*{\tSample} \oldshowcases}
+\def\showlimits{\section*{\tLimits} \tTimeLimit: \timelimit \\
+\TMemoryLimit: \memlimit}
+
+\def\sthelper#1#2{{\sffamily\bfseries\tSubtask\ #1 (#2 \tPoints).\enspace}}
+\setbox0=\hbox{\sthelper{9}{99}}
+\newdimen\stwidth
+\stwidth=\wd0
+\newcount\stcount
+\stcount=0
+\def\st#1{\global\advance\stcount by 1 \removelastskip\smallskip\noindent\hangindent=\stwidth \hangafter=1 \hbox to \stwidth{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}
+
 \def\empty{}
 \newbox\ceoibox
 \newbox\daybox
