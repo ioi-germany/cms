@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013-2014 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -33,53 +33,41 @@ class CEOITemplate(PlainTemplate):
         # Compile bar.asy
         shutil.copyfile(os.path.join(os.path.dirname(__file__), "bar.asy"),
                         "bar.asy")
-        
-        contest.supply("latex", def_latex("contestday", contest.simple_query("day"))) 
+
+        contest.supply("latex", def_latex("contestday",
+                                          contest.simple_query("day")))
         contest.supplement_file("asy", "info.asy")
         contest.compile("bar.asy")
-        
-        shutil.copyfile(os.path.join(os.path.dirname(__file__), "contestheader.tex"),
-                        "contestheader.tex")
-        shutil.copyfile(os.path.join(os.path.dirname(__file__), "translation.tex"),
-                        "translation.tex")
 
     def ontask(self, task):
         """ Some additional supplies for the latex format
         """
         super(CEOITemplate, self).ontask(task)
         # Register contestheader.tex as \taskheader
-        task.supply("latex",
-                    def_latex("taskheader",
-                              input_latex(
-                                  os.path.join(os.path.dirname(__file__),
-                                               "contestheader.tex"))))
-                                               
+        shutil.copyfile(os.path.join(os.path.dirname(__file__),
+                                     "contestheader.tex"),
+                        os.path.join(task.wdir, "contestheader.tex"))
+        task.supply("latex", def_latex("taskheader",
+                                       input_latex("contestheader.tex")))
+
         # Register translation.tex as \translationheader
-        task.supply("latex",
-                    def_latex("translationheader",
-                              input_latex(
-                                  os.path.join(os.path.dirname(__file__),
-                                               "translation.tex"))))
-                                               
-                                                                                      
-                                               
-        # Tell Latex where logopng can be found
-        task.supply("latex",
-                    def_latex("logopng",
-                              os.path.join(os.path.dirname(__file__),
-                                           "ceoi1.png")))
-                                           
+        shutil.copyfile(os.path.join(os.path.dirname(__file__),
+                                     "translation.tex"),
+                        os.path.join(task.wdir, "translation.tex"))
+        task.supply("latex", def_latex("translationheader",
+                                       input_latex("translation.tex")))
+
         # Tell LaTeX where watermark can be found
-        task.supply("latex",
-                    def_latex("watermark",
-                              os.path.join(os.path.dirname(__file__),
-                                           "ceoi-watermark.png")))                                   
-                                           
+        shutil.copyfile(os.path.join(os.path.dirname(__file__),
+                                     "ceoi-watermark.png"),
+                        os.path.join(task.wdir, "ceoi-watermark.png"))
+        task.supply("latex", def_latex("watermark", "ceoi-watermark.png"))
+
         # Tell Latex where bar.pdf can be found
-        task.supply("latex",
-                    def_latex("barpdf",
-                              os.path.join(self.contest.wdir,
-                                           "bar.pdf")))
+        shutil.copy(os.path.join(self.contest.wdir, "bar.pdf"),
+                    os.path.join(task.wdir, "bar.pdf"))
+        task.supply("latex", def_latex("barpdf", "bar.pdf"))
+
         self.mktestcasetable(task)
 
     def mktestcasetable(self, task):
