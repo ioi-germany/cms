@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2014 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -33,9 +33,15 @@ class CEOITemplate(PlainTemplate):
         # Compile bar.asy
         shutil.copyfile(os.path.join(os.path.dirname(__file__), "bar.asy"),
                         "bar.asy")
+        
         contest.supply("latex", def_latex("contestday", contest.simple_query("day"))) 
         contest.supplement_file("asy", "info.asy")
         contest.compile("bar.asy")
+        
+        shutil.copyfile(os.path.join(os.path.dirname(__file__), "contestheader.tex"),
+                        "contestheader.tex")
+        shutil.copyfile(os.path.join(os.path.dirname(__file__), "translation.tex"),
+                        "translation.tex")
 
     def ontask(self, task):
         """ Some additional supplies for the latex format
