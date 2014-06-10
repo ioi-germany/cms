@@ -14,8 +14,10 @@ pair W = 5cm*(-V.y, V.x);
 pair C = .5P + .5W;
 path rect = (0,0)--P--(P+W)--(W)--cycle;
 
-pen lightor = (188/255)*red + (209/255)*green + (228/255)*blue;
-pen orange = (82/255)*red + (151/255)*green + (192/255)*blue;
+pen lightor = (244/255)+red + (159/255)*green + (102/255)*blue;
+pen orange = (234/255)*red + (96/255)*green + (21/255)*blue;
+// pen lightor = (188/255)*red + (209/255)*green + (228/255)*blue;
+// pen orange = (82/255)*red + (151/255)*green + (192/255)*blue;
 
 real f(real x, real y) { return (length((x,y)-C))**.75; }
 pen []pal = Gradient(NColors=700 ... new pen[]{white,lightor,orange,orange});
