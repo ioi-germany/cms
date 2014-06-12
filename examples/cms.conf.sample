@@ -110,7 +110,6 @@
     "_help": "client_max_body_size in nginx.conf too.",
     "max_submission_length": 100000,
     "max_input_length": 5000000,
-    "max_print_length": 10000000,
 
     "_help": "STL documentation path in the system (exposed in CWS).",
     "stl_path": "/usr/share/doc/stl-manual/html/",
