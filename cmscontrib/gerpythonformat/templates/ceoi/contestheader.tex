@@ -11,27 +11,25 @@
 \let\oldshowcases=\showcases
 \def\showcases{\subsection*{\tSample} \oldshowcases}
 \def\showlimits{\subsection*{\tLimits} \tTimeLimit: \timelimit \\
-\TMemoryLimit: \memlimit}
+\tMemoryLimit: \memlimit}
 
 \def\sthelper#1#2{{\sffamily\bfseries\tSubtask\ #1 (#2 \tPoints).\enspace}}
-\setbox0=\hbox{\sthelper{9}{99}}
-\newdimen\stwidth
-\stwidth=\wd0
 \newcount\stcount
 \stcount=0
-\def\st#1{\global\advance\stcount by 1 \removelastskip\smallskip\noindent\hangindent=\stwidth \hangafter=1 \hbox to \stwidth{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}
+\def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \removelastskip\smallskip\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}
 
 \def\empty{}
 \newbox\ceoibox
 \newbox\daybox
 \newbox\taskbox
-\setbox\ceoibox=\hbox{\sffamily\bfseries CEOI 2014}
-\setbox\daybox=\hbox{\null\kern.5em\sffamily \ifx\contestday\empty \tPracticeSession\else\tDay\ \contestday\fi}
-\setbox\taskbox=\hbox{\null\kern1em\sffamily \tTask: \bfseries \taskname}
-
 \newdimen\bw
-\bw=\wd\taskbox
-\ifdim\wd\daybox>\bw \bw=\wd\daybox\fi
+
+\AtBeginDocument{%
+\setbox\ceoibox=\hbox{\sffamily\bfseries CEOI 2014}%
+\setbox\daybox=\hbox{\null\kern.5em\sffamily \ifx\contestday\empty \tPracticeSession\else\tDay\ \contestday\fi}%
+\setbox\taskbox=\hbox{\null\kern1em\sffamily \tTask: \bfseries \taskname}%
+\bw=\wd\taskbox%
+\ifdim\wd\daybox>\bw \bw=\wd\daybox\fi}
 
 \lhead{\hskip-3in\vbox to \headh{\vskip-3.25in\includegraphics[height=11\headh]{\watermark}}}
 \rhead{\vskip-18pt\vbox to \headh{\vbox to 0pt{\vskip-2.35in\hbox to 0pt{\hskip\hsize\hskip-20pt\hskip-\bw\hskip-12pt\includegraphics{\barpdf}}}\vskip-.55in
