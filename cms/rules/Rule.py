@@ -413,7 +413,7 @@ class GCCRule(CommandRule):
 
         """
         command = ["g++", "-O2", "-std=gnu++0x", "-Wall", "-o", output,
-                   "-MMD", "-MF", ".deps"]
+                   "-MMD", "-MF", ".deps", "-static"]
         for l in libdirs:
             command += ["-I", l]
         command += sources
