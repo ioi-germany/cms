@@ -532,6 +532,10 @@ class TaskConfig(CommonConfig, Scope):
 
         self.exported["task"] = self
 
+        # Default submission limits
+        self.submission_limits(None, None)
+        self.user_test_limits(None, None)
+
         # utils
         self.exported["token_equ"] = self.upstream.token_equ_fp
 
