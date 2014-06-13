@@ -197,7 +197,7 @@ class MySubtask(Scope):
         with self.task.subtask(description, name=name, public=True) as s:
             with s.group(points) as g:
                 for case in self.feedbackcases:
-                    g.add_testcase(case)
+                    g.add_testcase(case, must_still_be_checked=False)
 
     def _get_cases(self):
         """
@@ -257,7 +257,8 @@ class MyGroup(Scope):
         return res
 
     @exported_function
-    def add_testcase(self, case, feedback=False, save=False, name=None):
+    def add_testcase(self, case, feedback=False, save=False, name=None,
+                     must_still_be_checked=True):
         """
         Add a previously generated test case to the current test case group.
         The testcase will be checked with the current test case checkers.
@@ -280,7 +281,7 @@ class MyGroup(Scope):
         """
         self.task.current_group = self
         checkers = self._get_checkers()
-        if len(checkers) == 0:
+        if len(checkers) == 0 and must_still_be_checked:
             self.task.everything_checked = False
         for i, checker in enumerate(checkers):
             self.task._check(checker, case.infile, case.outfile,
