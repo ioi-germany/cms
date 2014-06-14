@@ -68,6 +68,10 @@ class CEOITemplate(PlainTemplate):
                     os.path.join(task.wdir, "bar.pdf"))
         task.supply("latex", def_latex("barpdf", "bar.pdf"))
 
+        shutil.copyfile(os.path.join(os.path.dirname(__file__),
+                                     "ceoistyle.asy"),
+                        os.path.join(task.wdir, "ceoistyle.asy"))
+
         self.mktestcasetable(task)
 
     def mktestcasetable(self, task):
