@@ -24,9 +24,12 @@
 \newbox\taskbox
 \newdimen\bw
 
+\newif\ifspoiler
+\spoilerfalse
+
 \AtBeginDocument{%
 \setbox\ceoibox=\hbox{\sffamily\bfseries CEOI 2014}%
-\setbox\daybox=\hbox{\null\kern.5em\sffamily \ifx\contestday\empty \tPracticeSession\else\tDay\ \contestday\fi}%
+\setbox\daybox=\hbox{\null\sffamily\kern.5em\ifspoiler Spoiler\else \ifx\contestday\empty \tPracticeSession\else\tDay\ \contestday\fi\fi}%
 \setbox\taskbox=\hbox{\null\kern1em\sffamily \tTask: \bfseries \taskname}%
 \bw=\wd\taskbox%
 \ifdim\wd\daybox>\bw \bw=\wd\daybox\fi}
