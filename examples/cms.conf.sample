@@ -149,6 +149,7 @@
     "printer": null,
     "max_pages_per_job": 10,
     "max_jobs_per_user": 10,
+    "pdf_printing_allowed": false,
 
 
 

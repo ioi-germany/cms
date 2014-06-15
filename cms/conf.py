@@ -111,6 +111,7 @@ class Config(object):
         self.printer = None
         self.max_pages_per_job = 10
         self.max_jobs_per_user = 10
+        self.pdf_printing_allowed = False
 
         # Installed or from source?
         self.installed = sys.argv[0].startswith("/usr/") and \
