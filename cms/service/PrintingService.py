@@ -191,7 +191,7 @@ class PrintingService(Service):
                        "--portrait",
                        "--columns=1",
                        "--rows=1",
-                       "--pages=1-%d" % (config.max_pages_per_job+1),
+                       "--pages=1-%d" % (config.max_pages_per_job),
                        "--header=",
                        "--footer=",
                        "--left-footer=",
