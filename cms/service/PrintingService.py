@@ -178,7 +178,7 @@ class PrintingService(Service):
             with open(source, "wb") as f:
                 self.file_cacher.get_file_to_fobj(printjob.digest, f)
 
-            if filename.endswith(".pdf"):
+            if filename.endswith(".pdf") and config.pdf_printing_allowed:
                 source_pdf = source
             else:
                 # Convert text to ps
