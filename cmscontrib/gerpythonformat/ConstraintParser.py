@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2014 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -31,13 +31,24 @@ class Constraint(object):
     def latex(self):
         s = "$"
         if self.max is None:
-            s += ", ".join(self.variables) + r"\ge {}".format(self.min)
+            s += ", ".join(self.variables) + r"\ge {}".format(self.pretty(self.min))
         else:
             if self.min is not None:
                 s += r"{}\le ".format(self.min)
-            s += ", ".join(self.variables) + r"\le {}".format(self.max)
+            s += ", ".join(self.variables) + r"\le {}".format(self.pretty(self.max))
         s += "$"
         return s
+        
+    def pretty(self, a):
+        s = "{}".format(a)
+        m = len(s) % 3
+        
+        t = ""
+        for i in range(0, len(s)):
+            if (i + 3 - m) % 3 == 0 and i != 0:
+                t += "\,"
+            t += s[i]
+        return t
 
 
 class ConstraintList(object):
