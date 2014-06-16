@@ -22,6 +22,7 @@ from Messenger import print_msg
 from CommonConfig import exported_function, CommonConfig
 from TaskConfig import TaskConfig
 from LocationStack import chdir
+from cms import DEFAULT_LANGUAGES
 from cms.db import Contest, User, Group
 import os
 import shutil
@@ -94,6 +95,7 @@ class ContestConfig(CommonConfig):
         self.contestname = name
 
         self._allowed_localizations = []
+        self._languages = DEFAULT_LANGUAGES
 
         self.tasks = []
 
@@ -191,6 +193,15 @@ class ContestConfig(CommonConfig):
 
         """
         self._allowed_localizations = localizations
+
+    @exported_function
+    def languages(self, languages):
+        """
+        Set the allowed programming languages.
+
+        languages (string[]): list of languages
+        """
+        self._languages = languages
 
     @exported_function
     def user_group(self, s, start, stop, per_user_time=None):
@@ -374,6 +385,7 @@ class ContestConfig(CommonConfig):
         cdb = Contest(name=self.contestname, description=self._description)
         cdb.timezone = self._timezone
         cdb.allowed_localizations = self._allowed_localizations
+        cdb.languages = self._languages
         if self._analysis:
             self.infinite_tokens()
         self._set_tokens(cdb)
