@@ -107,12 +107,14 @@ class MySubtask(Scope):
     :ivar public: Whether this subtask is public
     :ivar groups: Groups contained in this subtask
     """
-    def __init__(self, task, description, name, public):
+    def __init__(self, task, description, name, public, for_public_score, for_private_score):
         super(MySubtask, self).__init__(task)
         self.task = task
         self.description = description
         self.name = name
         self.public = public
+        self.for_public_score = for_public_score
+        self.for_private_score = for_private_score
         self.groups = []
         self.feedbackcases = []
         self.checkers = []
@@ -790,7 +792,7 @@ class TaskConfig(CommonConfig, Scope):
         return self.encapsulate(f)
 
     @exported_function
-    def subtask(self, description, name=None, public=False):
+    def subtask(self, description, name=None, public=False, counts_for_public = None, counts_for_private = None):
         """
         Specify the start of a new subtask. The number of points awarded
         for a subtask is the sum of the numbers of points awarded for each
@@ -815,14 +817,23 @@ class TaskConfig(CommonConfig, Scope):
                        contestant during the contest without token usage);
                        detailed feedback subtasks should usually be marked
                        public
+                       
+        counts_for_public (bool): whether the subtask counts toward public score
+                       if the value is None this is set to public
+                       
+        counts for private (bool): whether the subtask counts toward private score
+                       if the value is None this is set to not public
 
         return (MySubtask): object representing the created subtask
 
         """
+        if counts_for_public is None:  counts_for_public = public
+        if counts_for_private is None: counts_for_private = not public
+        
         if name is None:
             name = "s" + str(len(self.subtasks))
 
-        subtask = MySubtask(self, description, name, public)
+        subtask = MySubtask(self, description, name, public, counts_for_public, counts_for_private)
 
         self.subtasks.append(subtask)
 
@@ -936,8 +947,8 @@ class TaskConfig(CommonConfig, Scope):
         return 0
 
     @exported_function
-    def generate_feedback(self, description_suffix=" (Detailed Feedback)",
-                          name_suffix="_feedback", points = []):
+    def generate_feedback(self, description_suffix=" (Partial Feedback)",
+                          name_suffix="_feedback"):
         """
         Generate detailed feedback subtasks for all subtasks generated
         so far (that contain at least one test case marked for detailed
@@ -953,12 +964,9 @@ class TaskConfig(CommonConfig, Scope):
                               name of the detailed feedback subtask
 
         """
-        for (i,s) in enumerate(self.subtasks):
-            p = None
-            if i <= len(points) and i > 0: p = points[i - 1]
-        
+        for s in self.subtasks:        
             s.put_feedback(s.description + description_suffix,
-                           s.name + name_suffix, p)
+                           s.name + name_suffix)
 
     @exported_function
     def test_submission_limits(self,
@@ -1170,6 +1178,8 @@ class TaskConfig(CommonConfig, Scope):
                       score_type_parameters=json.dumps(
                           [{'name': s.description,
                             'public': s.public,
+                            'for_public_score': s.for_public_score,
+                            'for_private_score': s.for_private_score,
                             'groups': [{'points': g.points,
                                         'cases': [c.codename for c in g.cases]}
                                        for g in s.groups]}
