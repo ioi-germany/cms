@@ -736,6 +736,7 @@ class StupidSandbox(SandboxBase):
 
 
 class IsolateSandbox(SandboxBase):
+    next_free_id = 0
     """This class creates, deletes and manages the interaction with a
     sandbox. The sandbox doesn't support concurrent operation, not
     even for reading.
@@ -759,15 +760,9 @@ class IsolateSandbox(SandboxBase):
         """
         SandboxBase.__init__(self, file_cacher)
 
-        # Get our shard number, to use as a unique identifier for the
-        # sandbox on this machine. FIXME This is the only use of
-        # FileCacher.service, and it's an improper use! Avoid it!
-        if file_cacher is not None and file_cacher.service is not None:
-            # We add 1 to avoid conflicting with console users of the
-            # sandbox who use the default box id of 0.
-            box_id = file_cacher.service.shard + 1
-        else:
-            box_id = 0
+        # Isolate only accepts ids between 0 and 99.
+        box_id = IsolateSandbox.next_free_id % 100
+        IsolateSandbox.next_free_id += 1
 
         # We create a directory "tmp" inside the outer temporary directory,
         # because the sandbox will bind-mount the inner one. The sandbox also
@@ -1230,6 +1225,8 @@ class IsolateSandbox(SandboxBase):
 
         # Delete the working directory.
         rmtree(self.outer_temp_dir)
+
+        IsolateSandbox.next_free_id -= 1
 
 
 Sandbox = {
