@@ -937,7 +937,7 @@ class TaskConfig(CommonConfig, Scope):
 
     @exported_function
     def generate_feedback(self, description_suffix=" (Detailed Feedback)",
-                          name_suffix="_feedback"):
+                          name_suffix="_feedback", points = []):
         """
         Generate detailed feedback subtasks for all subtasks generated
         so far (that contain at least one test case marked for detailed
@@ -953,9 +953,12 @@ class TaskConfig(CommonConfig, Scope):
                               name of the detailed feedback subtask
 
         """
-        for s in self.subtasks:
+        for (i,s) in enumerate(self.subtasks):
+            p = None
+            if i <= len(points) and i > 0: p = points[i - 1]
+        
             s.put_feedback(s.description + description_suffix,
-                           s.name + name_suffix)
+                           s.name + name_suffix, p)
 
     @exported_function
     def test_submission_limits(self,
