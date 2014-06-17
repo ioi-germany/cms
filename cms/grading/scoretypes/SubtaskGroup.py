@@ -48,6 +48,7 @@ class SubtaskGroup(ScoreType):
     TEMPLATE = """\
 {% from cms.grading import format_status_text %}
 {% from cms.server import format_size %}
+{% import json %}
 {% for st in details %}
     {% if "score" in st and "max_score" in st %}
         {% if st["score"] >= st["max_score"] %}
@@ -66,7 +67,17 @@ class SubtaskGroup(ScoreType):
         </span>
     {% if "score" in st and "max_score" in st %}
         <span class="score">
-            {{ '%g' % round(st["score"], 2) }} / {{ st["max_score"] }}
+            {% if st["public"] and not st["for_public_score"] %}
+                {% if st["score"] >= st["max_score"] %}
+                    OKAY
+                {% elif st["score"] <= 0.0 %}
+                    FAILED
+                {% else %}
+                    PARTIALLY
+                {% end %}
+            {% else %}
+                {{ '%g' % round(st["score"], 2) }} / {{ st["max_score"] }}
+            {% end %}
         </span>
     {% else %}
         <span class="score">
@@ -142,9 +153,9 @@ class SubtaskGroup(ScoreType):
             st_score = 0
             for group in subtask["groups"]:
                 st_score += group["points"]
-            if subtask["public"]:
+            if subtask["for_public_score"]:
                 public_score += st_score
-            else:
+            if subtask["for_private_score"]:
                 private_score += st_score
             headers += ["%s (%g)" % (subtask["name"], st_score)]
 
@@ -172,7 +183,7 @@ class SubtaskGroup(ScoreType):
             ranking_details = []
 
         for subtask in self.parameters:
-            if subtask["public"] or not public:
+            if subtask["public"] or not public: # Shakespeare has been here
                 st_score = 0
                 st_maxscore = 0
                 testcases = []
@@ -198,9 +209,12 @@ class SubtaskGroup(ScoreType):
                             tc["grouplen"] = len(group["cases"])
 
                         testcases.append(tc)
-                if public == subtask["public"]:
+                if (public and subtask["for_public_score"]) or (not public and subtask["for_private_score"]):
                     score += st_score
                 subtasks.append({
+                    "public": subtask["public"], # TODO von public abhaengig?
+                    "for_public_score": subtask["for_public_score"],
+                    "for_private_score": subtask["for_private_score"],
                     "name": subtask["name"],
                     "score": st_score,
                     "max_score": st_maxscore,
