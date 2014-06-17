@@ -212,7 +212,8 @@ class Communication(TaskType):
             job.managers[manager_filename].digest
             }
         manager_files_to_get = {
-            "input.txt": job.input
+            "input.txt": job.input,
+            "res.txt": job.output
             }
         manager_allow_dirs = fifo_dir
         for filename, digest in manager_executables_to_get.iteritems():

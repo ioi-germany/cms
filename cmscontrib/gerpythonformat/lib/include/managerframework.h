@@ -45,6 +45,7 @@ FILE *fin; // The input file
 FILE *fcommout; // The file to send messages to the submission through
 FILE *fcommin; // The file to receive messages from the submission through
 FILE *fout; // Contestant output file (the manager should write some stuff to it)
+FILE *fok; // Reference output file
 
 void check(); // You have to write this function yourself!
 
@@ -55,6 +56,7 @@ int main(int argc, char **argv) {
     fout = fopen("output.txt", "w");
     fcommout = fopen(argv[1], "w");
     fcommin = fopen(argv[2], "r");
+    fok = fopen("res.txt", "r");
     check();
     return 1;
 }
