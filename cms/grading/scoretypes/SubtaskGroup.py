@@ -6,7 +6,7 @@
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2014 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -58,7 +58,7 @@ class SubtaskGroup(ScoreType):
 <div class="subtask partiallycorrect">
         {% end %}
     {% else %}
-<div class="subtask undefined">
+<div style="height:0px;display:none;">
     {% end %}
     <div class="subtask-head">
         <span class="title">
