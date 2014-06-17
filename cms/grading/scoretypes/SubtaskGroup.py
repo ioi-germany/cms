@@ -48,7 +48,6 @@ class SubtaskGroup(ScoreType):
     TEMPLATE = """\
 {% from cms.grading import format_status_text %}
 {% from cms.server import format_size %}
-{% import json %}
 {% for st in details %}
     {% if "score" in st and "max_score" in st %}
         {% if st["score"] >= st["max_score"] %}
