@@ -30,30 +30,49 @@
 
 float STD_FAILURE_SCORE = 0.0; // Score if the comparator fails for unknown reasons
 
+FILE *fin; // The input file
+FILE *fcommout; // The file to send messages to the submission through
+FILE *fcommin; // The file to receive messages from the submission through
+FILE *fout; // Contestant output file (the manager should write some stuff to it)
+FILE *fok; // Reference output file
+FILE *fquitter; // Tell the cms to kill the submission
+FILE *fquittingresponse; // Waiting for the response
+
 void __attribute__((noreturn)) __attribute__((format(printf, 2, 3)))
 result(float points, const char *msg, ...) {
+    if(fquitter != 0) {
+        fprintf(fquitter, "<3");
+        fclose(fquitter);
+    }
+
     va_list args;
     va_start(args, msg);
     vfprintf(stderr, msg, args);
     fprintf(stderr, "\n");
     va_end(args);
     fprintf(stdout, "%f", points);
+
+    if (fquittingresponse != 0) {
+        char x;
+        fread(&x, 1, 1, fquittingresponse);
+    }
+
     exit(0);
 }
-
-FILE *fin; // The input file
-FILE *fcommout; // The file to send messages to the submission through
-FILE *fcommin; // The file to receive messages from the submission through
-FILE *fout; // Contestant output file (the manager should write some stuff to it)
-FILE *fok; // Reference output file
 
 void check(); // You have to write this function yourself!
 
 int main(int argc, char **argv) {
     std::ios_base::sync_with_stdio();
-    assert(argc == 3);
+    assert(argc == 3 || argc == 5);
     fin = fopen("input.txt", "r");
     fout = fopen("output.txt", "w");
+    if(argc == 5) {
+        fquitter = fopen(argv[3], "w");
+        fquittingresponse = fopen(argv[4], "r");
+    } else {
+        fquitter = fquittingresponse = 0;
+    }
     fcommout = fopen(argv[1], "w");
     fcommin = fopen(argv[2], "r");
     fok = fopen("res.txt", "r");

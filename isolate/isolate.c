@@ -982,6 +982,13 @@ signal_int(int unused UNUSED)
   err("SG: Interrupted");
 }
 
+static void
+signal_usr2(int unused UNUSED)
+{
+  // Everything is okay.
+  box_exit(0);
+}
+
 #define PROC_BUF_SIZE 4096
 static void
 read_proc_file(char *buf, char *name, int *fdp)
@@ -1078,6 +1085,8 @@ box_keeper(void)
   bzero(&sa, sizeof(sa));
   sa.sa_handler = signal_int;
   sigaction(SIGINT, &sa, NULL);
+  sa.sa_handler = signal_usr2;
+  sigaction(SIGUSR2, &sa, NULL);
 
   gettimeofday(&start_time, NULL);
   ticks_per_sec = sysconf(_SC_CLK_TCK);
