@@ -291,3 +291,4 @@ class Communication(TaskType):
         delete_sandbox(sandbox_mgr)
         delete_sandbox(sandbox_user)
         rmtree(fifo_dir)
+        rmtree(abortion_control_fifo_dir)
