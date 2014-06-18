@@ -204,6 +204,15 @@ class PrintingService(Service):
                         "Failed to convert text file to ps with command: %s"
                         "(error %d)" % (pretty_print_cmdline(cmd), ret))
 
+                if not os.path.exists(source_ps):
+                    logger.info("Invalid print file.")
+                    printjob.done = True
+                    printjob.status = json.dumps([
+                        N_("Invalid file")])
+                    session.commit()
+                    rmtree(directory)
+                    return
+
                 # Convert ps to pdf
                 source_pdf = os.path.join(directory, "source.pdf")
                 cmd = ["ps2pdf",
