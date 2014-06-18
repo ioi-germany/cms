@@ -22,6 +22,7 @@
 \newbox\ceoibox
 \newbox\daybox
 \newbox\taskbox
+\newbox\langbox
 \newdimen\bw
 
 \newif\ifspoiler
@@ -31,12 +32,15 @@
 \setbox\ceoibox=\hbox{\sffamily\bfseries CEOI 2014}%
 \setbox\daybox=\hbox{\null\sffamily\kern.5em\ifspoiler Spoiler\else \ifx\contestday\empty \tPracticeSession\else\tDay\ \contestday\fi\fi}%
 \setbox\taskbox=\hbox{\null\kern1em\sffamily \tTask: \bfseries \taskname}%
+\setbox\langbox=\hbox{\null\kern1.5em\sffamily\tLanguage: \bfseries\myLanguage}
 \bw=\wd\taskbox%
-\ifdim\wd\daybox>\bw \bw=\wd\daybox\fi}
+\ifdim\wd\daybox>\bw \bw=\wd\daybox\fi
+\ifdim\wd\langbox>\bw \bw=\wd\langbox\fi
+}
 
 \lhead{\hskip-3in\vbox to \headh{\vskip-3.25in\includegraphics[height=11\headh]{\watermark}}}
-\rhead{\vskip-18pt\vbox to \headh{\vbox to 0pt{\vskip-2.35in\hbox to 0pt{\hskip\hsize\hskip-20pt\hskip-\bw\hskip-12pt\includegraphics{\barpdf}}}\vskip-.55in
-{\vbox to  \headh{\unhcopy\ceoibox \\ \unhcopy\daybox\\ \unhcopy\taskbox\vss}}}}
+\rhead{\vskip-18pt\vbox to \headh{\vbox to 0pt{\vskip14pt\vskip-2.35in\hbox to 0pt{\hskip\hsize\hskip-20pt\hskip-\bw\hskip-12pt\includegraphics{\barpdf}}}\vskip-.55in
+{\vbox to  \headh{\unhcopy\ceoibox\\ \unhcopy\daybox \\ \unhcopy\taskbox\\ \unhcopy\langbox\vss}}}}
 
 
 \cfoot{}
