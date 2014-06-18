@@ -48,22 +48,25 @@ class GerMake:
         copyrecusivelyifnecessary(self.odir, self.wdir, set([self.wdir]))
         self.wdir = os.path.abspath(self.wdir)
         filecacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
-        with chdir(self.wdir):
-            contestconfig = ContestConfig(os.path.join(self.wdir, ".rules"),
-                                          os.path.basename(self.odir),
-                                          ignore_latex=self.no_latex,
-                                          onlytask=self.task)
-            contestconfig._readconfig("contest-config.py")
-            if self.task is not None and \
-                    not any(True for t in contestconfig.tasks):
-                raise Exception("Task {} not found".format(self.task))
-            contestconfig._makecontest()
-            for u in contestconfig.users:
-                contestconfig._makeuser(u.username)
-            for t in contestconfig.tasks:
-                contestconfig._maketask(filecacher, t.name,
-                                        local_test=self.local_test)
-        filecacher.destroy_cache()
+        try:
+            with chdir(self.wdir):
+                contestconfig = ContestConfig(
+                    os.path.join(self.wdir, ".rules"),
+                    os.path.basename(self.odir),
+                    ignore_latex=self.no_latex,
+                    onlytask=self.task)
+                contestconfig._readconfig("contest-config.py")
+                if self.task is not None and \
+                        not any(True for t in contestconfig.tasks):
+                    raise Exception("Task {} not found".format(self.task))
+                contestconfig._makecontest()
+                for u in contestconfig.users:
+                    contestconfig._makeuser(u.username)
+                for t in contestconfig.tasks:
+                    contestconfig._maketask(filecacher, t.name,
+                                            local_test=self.local_test)
+        finally:
+            filecacher.destroy_cache()
 
 
 def main():
