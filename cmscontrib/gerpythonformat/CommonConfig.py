@@ -334,7 +334,7 @@ class CommonConfig(object):
         if output is None:
             output = basename + ".pdf"
 
-        with header("Compile {} to {} using Asympote"
+        with header("Compile {} to {} using Asymptote"
                     .format(self.short_path(source), self.short_path(output)),
                     depth=10):
             self._build_supplements("asy")
