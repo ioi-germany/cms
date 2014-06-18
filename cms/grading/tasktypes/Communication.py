@@ -344,3 +344,4 @@ class Communication(TaskType):
         if not config.keep_sandbox:
             for d in fifo_dir:
                 rmtree(d)
+            rmtree(abortion_control_fifo_dir)
