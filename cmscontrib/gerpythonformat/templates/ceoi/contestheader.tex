@@ -30,9 +30,9 @@
 
 \AtBeginDocument{%
 \setbox\ceoibox=\hbox{\sffamily\bfseries CEOI 2014}%
-\setbox\daybox=\hbox{\null\sffamily\kern.5em\ifspoiler Spoiler\else \ifx\contestday\empty \tPracticeSession\else\tDay\ \contestday\fi\fi}%
+\setbox\daybox=\hbox{\null\sffamily\kern.5em \ifx\contestday\empty \tPracticeSession\else\tDay\ \contestday\fi}%
 \setbox\taskbox=\hbox{\null\kern1em\sffamily \tTask: \bfseries \taskname}%
-\setbox\langbox=\hbox{\null\kern1.5em\sffamily\tLanguage: \bfseries\myLanguage}
+\setbox\langbox=\hbox{\null\kern1.5em\sffamily\ifspoiler\bfseries Spoiler\else\tLanguage: \bfseries\myLanguage\fi}
 \bw=\wd\taskbox%
 \ifdim\wd\daybox>\bw \bw=\wd\daybox\fi
 \ifdim\wd\langbox>\bw \bw=\wd\langbox\fi
