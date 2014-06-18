@@ -243,7 +243,7 @@ class Communication(TaskType):
 
         # Manager still running but wants to quit
         if solution_quitter.read() == "<3":
-            process.send_signal(signal.SIGUSR2)  # Kill user
+            process.send_signal(signal.SIGINT)  # Kill user
             manager_quitter.close()
 
         # Consume output.
