@@ -947,6 +947,17 @@ class TaskConfig(CommonConfig, Scope):
         return 0
 
     @exported_function
+    def full_feedback(self):
+        """
+        Call this after all testcases have been added
+        """
+        for s in self.subtasks:
+            if not s.public:
+                s.public = True
+                s.for_private_score = True
+                s.for_public_score = True
+
+    @exported_function
     def generate_feedback(self, description_suffix=" (Partial Feedback)",
                           name_suffix="_feedback"):
         """
