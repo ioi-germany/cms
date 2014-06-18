@@ -28,6 +28,7 @@ from __future__ import unicode_literals
 
 import logging
 import os
+import signal
 import tempfile
 
 from cms import config
@@ -192,14 +193,22 @@ class Communication(TaskType):
         sandbox_user = [create_sandbox(file_cacher, job.multithreaded_sandbox)
                         for i in indices]
         fifo_dir = [tempfile.mkdtemp(dir=config.temp_dir) for i in indices]
+        abortion_control_fifo_dir = tempfile.mkdtemp(dir=config.temp_dir)
         fifo_in = [os.path.join(fifo_dir[i], "in%d" % i) for i in indices]
         fifo_out = [os.path.join(fifo_dir[i], "out%d" % i) for i in indices]
+        fifo_solution_quitter = os.path.join(abortion_control_fifo_dir, "sq")
+        fifo_manager_quitter = os.path.join(abortion_control_fifo_dir, "mq")
         for i in indices:
             os.mkfifo(fifo_in[i])
             os.mkfifo(fifo_out[i])
             os.chmod(fifo_dir[i], 0o755)
             os.chmod(fifo_in[i], 0o666)
             os.chmod(fifo_out[i], 0o666)
+        os.mkfifo(fifo_solution_quitter)
+        os.mkfifo(fifo_manager_quitter)
+        os.chmod(abortion_control_fifo_dir, 0o755)
+        os.chmod(fifo_solution_quitter, 0o666)
+        os.chmod(fifo_manager_quitter, 0o666)
 
         # First step: prepare the manager.
         manager_filename = "manager"
@@ -207,6 +216,8 @@ class Communication(TaskType):
         for i in indices:
             manager_command.append(fifo_in[i])
             manager_command.append(fifo_out[i])
+        manager_command.append(fifo_solution_quitter)
+        manager_command.append(fifo_manager_quitter)
         manager_executables_to_get = {
             manager_filename:
             job.managers[manager_filename].digest
@@ -215,7 +226,7 @@ class Communication(TaskType):
             "input.txt": job.input,
             "res.txt": job.output
             }
-        manager_allow_dirs = fifo_dir
+        manager_allow_dirs = fifo_dir + [abortion_control_fifo_dir]
         for filename, digest in manager_executables_to_get.iteritems():
             sandbox_mgr.create_file_from_storage(
                 filename, digest, executable=True)
@@ -245,6 +256,9 @@ class Communication(TaskType):
             writable_files=["output.txt"],
             stdin_redirect="input.txt")
 
+        solution_quitter = open(fifo_solution_quitter, "r")
+        manager_quitter = open(fifo_manager_quitter, "w")
+
         # Fourth step: start the user submissions compiled with the stub.
         language = get_language(job.language)
         processes = [None for i in indices]
@@ -270,6 +284,12 @@ class Communication(TaskType):
                 allow_dirs=user_allow_dirs,
                 stdin_redirect=fifo_in,
                 stdout_redirect=fifo_out)
+
+        # Manager still running but wants to quit
+        if solution_quitter.read() == "<3":
+            for i in indices:
+                processes[i].send_signal(signal.SIGUSR2)  # Kill user
+            manager_quitter.close()
 
         # Consume output.
         wait_without_std(processes + [manager])
