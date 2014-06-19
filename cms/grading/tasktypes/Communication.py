@@ -252,7 +252,7 @@ class Communication(TaskType):
         manager = evaluation_step_before_run(
             sandbox_mgr,
             manager_command,
-            num_processes * max(15, job.time_limit),
+            num_processes * max(60, job.time_limit),
             0,
             allow_dirs=manager_allow_dirs,
             writable_files=["output.txt"],
