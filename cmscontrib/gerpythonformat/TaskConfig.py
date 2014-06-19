@@ -952,7 +952,9 @@ class TaskConfig(CommonConfig, Scope):
         Call this after all testcases have been added
         """
         for s in self.subtasks:
-            if not s.public:
+            if s.public:
+                s.for_public_score = False
+            else:
                 s.public = True
                 s.for_private_score = True
                 s.for_public_score = True
@@ -978,6 +980,8 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         for s in self.subtasks:        
+            if s.public:
+                s.for_public_score = False
             s.put_feedback(s.description + description_suffix,
                            s.name + name_suffix)
 
