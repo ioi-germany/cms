@@ -61,7 +61,7 @@ class SubtaskGroup(ScoreType):
 <div style="height:0px;display:none;">
     {% end %}
     <div class="subtask-head">
-        <span class="title">
+        <span class="title" style="margin-top:-2px;">
             {{ st["name"] }}
         </span>
     {% if "score" in st and "max_score" in st %}
@@ -138,6 +138,13 @@ class SubtaskGroup(ScoreType):
 </div>
 {% end %}"""
 
+    def __init__(self, parameters, public_testcases):
+        self._feedback = parameters['feedback']
+        super(SubtaskGroup, self).__init__(parameters['tcinfo'], public_testcases)
+        
+    def feedback(self):
+        return self._feedback    
+        
     def max_scores(self):
         """Compute the maximum score of a submission.
 
