@@ -214,7 +214,7 @@ class Communication(TaskType):
         manager = evaluation_step_before_run(
             sandbox_mgr,
             manager_command,
-            15,
+            60,
             0,
             allow_dirs=manager_allow_dirs,
             stdin_redirect="input.txt")
