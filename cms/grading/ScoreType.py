@@ -125,6 +125,11 @@ class ScoreType(object):
         logger.error("Unimplemented method compute_score.")
         raise NotImplementedError("Please subclass this class.")
 
+    def feedback(self):
+        """
+        You might want to override this
+        """
+        return "token"
 
 class ScoreTypeAlone(ScoreType):
     """Intermediate class to manage tasks where the score of a

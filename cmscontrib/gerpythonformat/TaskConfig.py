@@ -547,6 +547,9 @@ class TaskConfig(CommonConfig, Scope):
         self.inheriting = True
         self.bequeathing = False
 
+        # Feedback
+        self.feedback = None
+
     def _readconfig(self, filename):
         with header("Loading task {}".format(self.name), depth=2):
             super(TaskConfig, self)._readconfig(filename)
@@ -950,8 +953,10 @@ class TaskConfig(CommonConfig, Scope):
     @exported_function
     def full_feedback(self):
         """
-        Call this after all testcases have been added
+        Call this only after all testcases have been added
         """
+        self.feedback = "full"
+        
         for s in self.subtasks:
             if s.public:
                 s.for_public_score = False
@@ -959,6 +964,7 @@ class TaskConfig(CommonConfig, Scope):
                 s.public = True
                 s.for_private_score = True
                 s.for_public_score = True
+
                 for g in s.groups:
                     for c in g.cases:
                         c.public = True
@@ -983,9 +989,10 @@ class TaskConfig(CommonConfig, Scope):
                               name of the detailed feedback subtask
 
         """
-        for s in self.subtasks:
+        for s in self.subtasks:        
             if s.public:
                 s.for_public_score = False
+
         for s in self.subtasks:
             s.put_feedback(s.description + description_suffix,
                            s.name + name_suffix)
@@ -1121,6 +1128,10 @@ class TaskConfig(CommonConfig, Scope):
         return (Task): database object for the task
 
         """
+        # If we are allowed to use tokens, set the feedback mode
+        if self.token_mode != "disabled" and self.upstream.token_mode != "disabled":
+            self.feedback = "token"
+        
         # Automatically make a ZIP file containing the save test cases
         self._makesavedzip()
         if self.contest._analysis:
@@ -1200,6 +1211,8 @@ class TaskConfig(CommonConfig, Scope):
                       task_type_parameters=self.tasktypeparameters,
                       score_type="SubtaskGroup",
                       score_type_parameters=json.dumps(
+                         {'feedback': self.feedback,
+                          'tcinfo':
                           [{'name': s.description,
                             'public': s.public,
                             'for_public_score': s.for_public_score,
@@ -1207,7 +1220,7 @@ class TaskConfig(CommonConfig, Scope):
                             'groups': [{'points': g.points,
                                         'cases': [c.codename for c in g.cases]}
                                        for g in s.groups]}
-                           for s in self.subtasks]),
+                           for s in self.subtasks]}),
                       time_limit=float(self._timelimit),
                       memory_limit=self._memorylimit
                       )
