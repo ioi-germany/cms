@@ -18,6 +18,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
 from cmscontrib.gerpythonformat.templates.plain.PlainTemplate \
     import PlainTemplate
 from cmscontrib.gerpythonformat.Supplement import def_latex, input_latex

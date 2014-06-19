@@ -18,13 +18,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import os
 import os.path
 
 from cmscontrib.BaseLoader import Loader
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
-from LocationStack import chdir
-from ContestConfig import ContestConfig
+from .LocationStack import chdir
+from .ContestConfig import ContestConfig
 
 
 class GerLoader(Loader):
@@ -56,9 +60,8 @@ class GerLoader(Loader):
         """See docstring in class Loader.
 
         """
-        self.buildpath = os.path.join(os.path.dirname(self.path),
-                                      os.path.basename(self.path), "build")
-        copyrecursivelyifnecessary(self.path, self.buildpath,
+        self.buildpath = os.path.join(self.path, "build")
+        copyrecursivelyifnecessary(unicode(self.path), self.buildpath,
                                    set([self.buildpath]))
         with chdir(self.buildpath):
             rules = ".rules"

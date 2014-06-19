@@ -70,7 +70,11 @@
           Evaluating...
           {% elif sr.scored() %}
             {% try %}
-              {% set max_score = st.max_score %}
+              {% if s.is_unit_test() %}
+                {% set max_score = st.unit_test_expected_scores(s.additional_info)[1] %}
+              {% else %}
+                {% set max_score = st.max_score %}
+              {% end %}
             {% except %}
               {% set max_score = "[Cannot get score type - see logs]" %}
             {% end %}
@@ -144,8 +148,10 @@
 
   {% if sr is not None and sr.evaluated() %}
 
-<h2 id="title_evaluation_admin" class="toggling_on">Evaluation (as seen by the admin)</h2>
-<div id="evaluation_admin">
+<h2 id="title_evaluation_admin" class="{{"toggling_off" if s.is_unit_test() else "toggling_on"}}">
+    Evaluation (as seen by the admin)
+</h2>
+<div id="evaluation_admin" style="{{"display:none;" if s.is_unit_test() else ""}}">
 
   <table class="bordered">
     <thead>

@@ -173,6 +173,10 @@ class ScoringService(Service):
                     submission_result.score_details, \
                     submission_result.ranking_score_details = \
                     score_type.compute_score(submission_result, False)
+                submission_result.unit_test_score_details = \
+                    score_type.compute_unit_test_score(submission_result,
+                                                       submission.
+                                                       additional_info)
 
             # Store it.
             session.commit()

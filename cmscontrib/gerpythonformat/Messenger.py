@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2014 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,62 +18,67 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from sys import platform
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import codecs
+from functools import wraps
+import os
+import sys
 
 
-class MyColors:
-    """ Class for coloring output to stdout
-    Currently only linux is supported
-    """
-    red_code = "\033[91m"
-    green_code = "\033[92m"
-    yellow_code = "\033[93m"
-    blue_code = "\033[94m"
-    bold_code = "\033[1m"
-    end_code = "\033[0m"
+sys.stdout = codecs.getwriter("utf8")(sys.stdout)
+sys.stderr = codecs.getwriter("utf8")(sys.stderr)
 
-    @classmethod
-    def colors_enabled(cls):
-        return platform == "linux" or platform == "linux2"
 
-    @classmethod
-    def red(cls, s):
-        if cls.colors_enabled():
-            return cls.red_code + s + cls.end_code
-        else:
-            return s
+def get_terminal_line_length():
+    try:
+        return int(os.popen('stty size', 'r').read().split()[1])
+    except:
+        return 1000000000
 
-    @classmethod
-    def green(cls, s):
-        if cls.colors_enabled():
-            return cls.green_code + s + cls.end_code
-        else:
-            return s
 
-    @classmethod
-    def yellow(cls, s):
-        if cls.colors_enabled():
-            return cls.yellow_code + s + cls.end_code
-        else:
-            return s
+line_length = min(get_terminal_line_length(), 140)
 
-    @classmethod
-    def blue(cls, s):
-        if cls.colors_enabled():
-            return cls.blue_code + s + cls.end_code
-        else:
-            return s
 
-    @classmethod
-    def bold(cls, s):
-        if cls.colors_enabled():
-            return cls.bold_code + s + cls.end_code
-        else:
-            return s
+# Coloring output to stdout:
+# Currently only linux is supported
 
-    @classmethod
-    def ellipsis(cls):
-        return cls.blue(cls.bold("..."))
+red_code = "\033[91m"
+green_code = "\033[92m"
+yellow_code = "\033[93m"
+blue_code = "\033[94m"
+bold_code = "\033[1m"
+end_code = "\033[0m"
+
+
+def colors_enabled():
+    return sys.platform == "linux" or sys.platform == "linux2"
+
+
+def color_function(start):
+    def f(string):
+        if not colors_enabled():
+            return string
+        r = ""
+        # Split the string to make nested formatting commands behave as
+        # expected.
+        for t in string.split(end_code):
+            r += start + t + end_code
+        return r
+    return f
+
+
+red = color_function(red_code)
+green = color_function(green_code)
+yellow = color_function(yellow_code)
+blue = color_function(blue_code)
+bold = color_function(bold_code)
+
+
+def ellipsis():
+    return blue(bold("..."))
 
 
 class IndentManager(object):
@@ -92,32 +97,323 @@ class IndentManager(object):
         self.stop()
 
 
+def remaining_line_length():
+    return line_length - IndentManager.indent * 2
+
+
+def estimate_len(s):
+    """Estimate the length of a string when displayed in a terminal.
+    The basic ANSI formatting commands are skipped (but for example \n and \t
+    are counted as one character).
+
+    s (unicode): the string
+
+    return (int): its length
+
+    """
+    r = 0
+    skip = False
+
+    for c in s:
+        if c == '\033':
+            skip = True
+
+        if not skip:
+            r += 1
+
+        if c == 'm':
+            skip = False
+
+    return r
+
+
+def apply_to_lines(func):
+    """Returns a function that applies func to each line of the first input
+    parameter.
+    """
+    @wraps(func)
+    def f(string, *args, **kwargs):
+        res = [func(l, *args, **kwargs) for l in string.split("\n")]
+        return "\n".join(res)
+    return f
+
+
+@apply_to_lines
+def pad_center(string, length, filler=' '):
+    """In each line, adds the filler on both ends to make the string of the
+    specified length.
+    If the string is already longer than the specified length, it is returned
+    unchanged.
+
+    string (unicode): the string to pad
+    length (int): the length the string is supposed to have
+    filler (unicode): the character to fill the space with
+
+    return (unicode): the padded string
+
+    """
+    r = length - estimate_len(string)
+    if r < 0:
+        return string
+    return filler*(r/2) + string + filler*((r+1)/2)
+
+
+@apply_to_lines
+def pad_left(string, length, filler=' '):
+    """In each line, adds the filler on the left to make the string of the
+    specified length.
+    If the string is already longer than the specified length, it is returned
+    unchanged.
+
+    string (unicode): the string to pad
+    length (int): the length the string is supposed to have
+    filler (unicode): the character to fill the space with
+
+    return (unicode): the padded string
+
+    """
+    r = length - estimate_len(string)
+    if r < 0:
+        return string
+    return filler*r + string
+
+
+@apply_to_lines
+def pad_right(string, length, filler=' '):
+    """In each line, adds the filler on the right to make the string of the
+    specified length.
+    If the string is already longer than the specified length, it is returned
+    unchanged.
+
+    string (unicode): the string to pad
+    length (int): the length the string is supposed to have
+    filler (unicode): the character to fill the space with
+
+    return (unicode): the padded string
+
+    """
+    r = length - estimate_len(string)
+    if r < 0:
+        return string
+    return string + filler*r
+
+
+@apply_to_lines
+def add_left(string, filler=' '):
+    """In each line, adds the filler on the left.
+
+    string (unicode): the string to modify
+    filler (unicode): the string to add
+
+    return (unicode): the modified string
+
+    """
+    return filler + string
+
+
+@apply_to_lines
+def add_right(string, filler=' '):
+    """In each line, adds the filler on the right.
+
+    string (unicode): the string to modify
+    filler (unicode): the string to add
+
+    return (unicode): the modified string
+
+    """
+    return string + filler
+
+
+@apply_to_lines
+def indent(string, filler=' '):
+    """Indent each line of the string according to the current indentation
+    level.
+
+    string (unicode): the string to indent
+    filler (unicode): the character to fill the space with
+
+    return (unicode): the indented string
+
+    """
+    return filler * (IndentManager.indent*2) + string
+
+
+def center_line(l, filler=' ', outer=None, make_bold=False):
+    if outer is None:
+        outer = filler
+
+    r = line_length - 2*estimate_len(outer)
+    s = outer + pad_center(l, r, filler) + outer
+
+    if make_bold:
+        s = bold(s)
+
+    print(s)
+
+
+def box(title, content):
+    """Prints a box with title on the top border and content in the interior.
+    +------title-------+
+    |     content      |
+    +------------------+
+
+    title (unicode):
+    content (unicode):
+
+    """
+    center_line(title, '-', '+', True)
+    center_line(content, ' ', '|', True)
+    center_line("", "-", '+', True)
+
+
+def side_by_side(strings, offsets):
+    """Puts the lines of the given strings in a table-like layout.
+
+    For example,
+    side_by_side(["Column 1", "Column 2\nwith line\nbreaks","Column 3"],
+                 [0,12,24]))
+    returns:
+    Column 1    Column 2    Column 3
+                with line
+                breaks
+
+    strings ([unicode]): the columns of the table
+    offsets ([int]): the positions of the left edges of the columns
+
+    return (unicode): the table
+
+    """
+    lines = [s.split("\n") for s in strings]
+    num_lines = max(map(len, lines))
+    res = []
+    for iline in xrange(num_lines):
+        line = ""
+        for istring, o in zip(xrange(len(strings)), offsets):
+            if len(line) > 0:
+                line += " "
+            line += " "*max(o-estimate_len(line), 0)
+            if iline < len(lines[istring]):
+                line += lines[istring][iline]
+        res.append(line)
+    return "\n".join(res)
+
+
+def add_line_breaks(l, length, hanging_indent=0):
+    """Add appropriate line breaks to a string.
+
+    l (unicode): the input string (may already consist of multiple lines)
+    length (int): the maximum allowed line length
+    hanging_indent (int): how much to indent all lines after the first one
+
+    return (unicode): the string with appropriate line breaks
+
+    """
+    result = []
+
+    class data:  # workaround to be able to assign to variables in flush_line()
+        indent = 0
+        rem_width = length
+        curr_line = ""
+
+    next_indent = hanging_indent
+
+    # We officially give up
+    if length - next_indent <= 10:
+        return l
+
+    def flush_line():
+        result.append(" "*data.indent + data.curr_line.rstrip())
+        data.indent = next_indent
+        data.rem_width = length - data.indent
+        data.curr_line = ""
+
+    def add_word(s):
+        l = estimate_len(s)
+        if l <= data.rem_width:
+            data.curr_line += s
+            data.rem_width -= l
+        # Also too long for the next line?
+        elif l > length - next_indent:
+            data.curr_line += s[:data.rem_width]
+            flush_line()
+            add_word(s[data.rem_width:])
+        else:
+            flush_line()
+            add_word(s)
+
+    def add_whitespace(s):
+        l = estimate_len(s)
+        if l <= data.rem_width:
+            data.curr_line += s
+            data.rem_width -= l
+        else:
+            flush_line()
+
+    def add_newline(s):
+        flush_line()
+
+    def classify(c):
+        if c == " ":
+            return add_whitespace
+        elif c == "\n":
+            return add_newline
+        else:
+            return add_word
+
+    part = ""
+    for c in l:
+        if len(part) > 0 and (c == "\n" or
+                                   classify(part[0]) != classify(c)):
+            classify(part[0])(part)
+            part = ""
+        part += c
+    if len(part) > 0:
+        classify(part[0])(part)
+    if len(data.curr_line) > 0:
+        flush_line()
+
+    return "\n".join(result)
+
+
 def print_msg(message, headerdepth=None,
-              error=False, warning=False, success=False):
+              error=False, warning=False, success=False,
+              hanging_indent=0, fill_character=' '):
+    if estimate_len(message) == 0:
+        return
     symbols = {1: "#", 2: "#", 3: "=", 4: "-"}
+
+    left = ""
     if headerdepth in symbols:
         s = symbols[headerdepth]
-        rl = max(0, 75-len(message)-IndentManager.indent*2)
-        message = s*3 + " " + message + " " + s*rl
-    message = " "*(IndentManager.indent*2) + message
+        left = s * 3 + " "
+        fill_character = s
+    rem_length = remaining_line_length() - estimate_len(left)
+
+    res = add_line_breaks(message, rem_length-1, hanging_indent)
+    res = add_right(res, " ")
+    res = pad_right(res, rem_length, fill_character)
+    res = add_left(res, left)
+
     if headerdepth == 1:
-        message = "#"*80 + "\n" + message + "\n" + "#"*80
+        wrapper = "#" * remaining_line_length()
+        res = wrapper + "\n" + res + "\n" + wrapper
+
+    res = indent(res)
+
     if headerdepth is not None:
-        message = MyColors.bold(message)
+        res = bold(res)
     if error:
-        message = MyColors.red(message)
+        res = red(res)
     if warning:
-        message = MyColors.yellow(message)
+        res = yellow(res)
     if success:
-        message = MyColors.green(message)
-    print message
+        res = green(res)
+
+    print(res)
 
 
-def print_block(message):
-    message = message.strip()
-    if len(message) > 0:
-        for l in message.split("\n"):
-            print " "*(IndentManager.indent*2) + l
+def print_block(msg):
+    print_msg(msg)
 
 
 def header(message, depth):
