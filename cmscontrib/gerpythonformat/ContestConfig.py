@@ -18,10 +18,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from Messenger import print_msg
-from CommonConfig import exported_function, CommonConfig
-from TaskConfig import TaskConfig
-from LocationStack import chdir
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
+from .Messenger import print_msg
+from .CommonConfig import exported_function, CommonConfig
+from .TaskConfig import TaskConfig
+from .LocationStack import chdir
 from cms import DEFAULT_LANGUAGES
 from cms.db import Contest, User, Group
 import os

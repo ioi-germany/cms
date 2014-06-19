@@ -7,9 +7,10 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
-# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
+# Copyright © 2014-2015 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -213,51 +214,107 @@ class JobException(Exception):
         return "JobException(\"%s\")" % (repr(self.msg))
 
 
-def unit_test_compare(limits, expected, evaluation):
-    result = []
+def get_compilation_commands(language, source_filenames, executable_filename,
+                             for_evaluation=True):
+    """Return the compilation commands.
 
-    def check(val, weak, strong):
-        if val > weak:
-            return -1
-        if val < strong:
-            return 1
-        else:
-            return 0
+    The compilation commands are for the specified language, source
+    filenames and executable filename. Each command is a list of
+    strings, suitable to be passed to the methods in subprocess
+    package.
 
-    # check time constraints
-    if evaluation.execution_time is not None:  # TODO What if this is None?
-        timeverdict = check(float(evaluation.execution_time),
-                            float(limits["weak_time_limit"]),
-                            float(limits["strong_time_limit"]))
-        if timeverdict == -1:
-            result.append("time")
-        elif timeverdict == 0:
-            result.append("time?")
+    language (string): one of the recognized languages.
+    source_filenames ([string]): a list of the string that are the
+        filenames of the source files to compile; the order is
+        relevant: the first file must be the one that contains the
+        program entry point (with some langages, e.g. Pascal, only the
+        main file must be passed to the compiler).
+    executable_filename (string): the output file.
+    for_evaluation (bool): if True, define EVAL during the compilation;
+        defaults to True.
 
-    # check memory constraints
-    if evaluation.execution_memory is not None:  # TODO What if this is None?
-        memverdict = check(float(evaluation.execution_memory) / 2**20,
-                           float(limits["weak_mem_limit"]),
-                           float(limits["strong_mem_limit"]))
-        if "violating memory limits" in json.loads(evaluation.text)[0]:
-            memverdict = -1
-        if memverdict == -1:
-            result.append("memory")
-        elif memverdict == 0:
-            result.append("memory?")
+    return ([[string]]): a list of commands, each a list of strings to
+        be passed to subprocess.
 
-    # check solution (if possible)
-    if float(evaluation.outcome) > 0:
-        result.append(evaluation.outcome)
-    elif len(result) == 0:
-        result.append(evaluation.outcome)
-
-    if expected in result or expected == "any":
-        accepted = True
+    """
+    commands = []
+    if language == LANG_C:
+        command = ["/usr/bin/gcc"]
+        if for_evaluation:
+            command += ["-DEVAL"]
+        command += ["-static", "-O2", "-o", executable_filename]
+        command += source_filenames
+        command += ["-lm"]
+        commands.append(command)
+    elif language == LANG_CPP:
+        command = ["/usr/bin/g++"]
+        if for_evaluation:
+            command += ["-DEVAL"]
+        command += ["-static", "-O2", "-std=c++11",
+                    "-o", executable_filename]
+        command += source_filenames
+        commands.append(command)
+    elif language == LANG_PASCAL:
+        command = ["/usr/bin/fpc"]
+        if for_evaluation:
+            command += ["-dEVAL"]
+        command += ["-XS", "-O2", "-o%s" % executable_filename]
+        command += [source_filenames[0]]
+        commands.append(command)
+    elif language == LANG_PYTHON:
+        # The executable name is fixed, and there is no way to specify
+        # the name of the pyc, so we need to bundle together two
+        # commands (compilation and rename).
+        # In order to use Python 3 change them to:
+        # /usr/bin/python3 -m py_compile %s
+        # mv __pycache__/%s.*.pyc %s
+        py_command = ["/usr/bin/python2", "-m", "py_compile",
+                      source_filenames[0]]
+        mv_command = ["/bin/mv", "%s.pyc" % os.path.splitext(os.path.basename(
+                      source_filenames[0]))[0], executable_filename]
+        commands.append(py_command)
+        commands.append(mv_command)
+    elif language == LANG_PHP:
+        command = ["/bin/cp", source_filenames[0], executable_filename]
+        commands.append(command)
+    elif language == LANG_JAVA:
+        class_name = os.path.splitext(source_filenames[0])[0]
+        command = ["/usr/bin/gcj", "--main=%s" % class_name, "-O3", "-o",
+                   executable_filename] + source_filenames
+        commands.append(command)
     else:
-        accepted = False
+        raise ValueError("Unknown language %s." % language)
+    return commands
 
-    return accepted, result
+
+def get_evaluation_commands(language, executable_filename):
+    """Return the evaluation commands.
+
+    The evaluation commands are for the given language and executable
+    filename. Each command is a list of strings, suitable to be passed
+    to the methods in subprocess package.
+
+    language (string): one of the recognized languages.
+    executable_filename (string): the name of the executable.
+
+    return ([[string]]): a list of string to be passed to subprocess.
+
+    """
+    commands = []
+    if language in (LANG_C, LANG_CPP, LANG_PASCAL, LANG_JAVA):
+        command = [os.path.join(".", executable_filename)]
+        commands.append(command)
+    elif language == LANG_PYTHON:
+        # In order to use Python 3 change it to:
+        # /usr/bin/python3 %s
+        command = ["/usr/bin/python2", executable_filename]
+        commands.append(command)
+    elif language == LANG_PHP:
+        command = ["/usr/bin/php5", executable_filename]
+        commands.append(command)
+    else:
+        raise ValueError("Unknown language %s." % language)
+    return commands
 
 
 def format_status_text(status, translator=None):
@@ -979,3 +1036,189 @@ def task_score(participation, task):
         score = max(last_score, max_tokened_score)
 
     return score, partial
+
+
+class UnitTest:
+    """Functions for basic unit tests
+    """
+    @staticmethod
+    def get_result(limits, evaluation):
+        """Collect information about the evaluation.
+
+        limits (dict): a dictionary with entries weak_time_limit and
+                       strong_time_limit
+        evaluation (Evaluation): the Evaluation object to study
+
+        return ([unicode]): a list of reasons of failure:
+                            time, time?, memory, memory? and possibly a
+                            score < 1 (if the weak time and memory limits have
+                            been satisfied)
+
+        """
+        result = []
+
+        def check(val, weak, strong):
+            if val > weak:
+                return -1
+            if val < strong:
+                return 1
+            else:
+                return 0
+
+        # check time constraints
+        # TODO What if this is None?
+        if evaluation.execution_time is not None:
+            timeverdict = check(float(evaluation.execution_time),
+                                float(limits["weak_time_limit"]),
+                                float(limits["strong_time_limit"]))
+            if timeverdict == -1:
+                result.append("time")
+            elif timeverdict == 0:
+                result.append("time?")
+
+        # check memory constraints
+        # TODO What if this is None?
+        if evaluation.execution_memory is not None:
+            memverdict = check(float(evaluation.execution_memory) / 2**20,
+                               float(limits["weak_mem_limit"]),
+                               float(limits["strong_mem_limit"]))
+            if "violating memory limits" in json.loads(evaluation.text)[0]:
+                memverdict = -1
+            if memverdict == -1:
+                result.append("memory")
+            elif memverdict == 0:
+                result.append("memory?")
+
+        # check solution (if possible)
+        if float(evaluation.outcome) < 1 and UnitTest.meaningful_score(result):
+            result.append(evaluation.outcome)
+
+        return result
+
+    @staticmethod
+    def ignore(x, l):
+        try:
+            return float(x) >= UnitTest.score(l)
+        except ValueError:
+            pass
+
+        if "time" in l and x == "time?":
+            return True
+        if "memory" in l and x == "memory?":
+            return True
+        return False
+
+    @staticmethod
+    def score(results):
+        """Get the minimum score of a list of results.
+
+        results ([unicode]): list of results
+                             (time, time?, memory, memory? or a score)
+
+        return (float): minimum score (1.0 if no score is present)
+
+        """
+        s = 1.0
+
+        for r in results:
+            try:
+                s = min(s, float(r))
+            except ValueError:
+                pass
+
+        return s
+
+    @staticmethod
+    def meaningful_score(results):
+        """Test whether the score actually makes sense
+        """
+        return not('time' in results or 'memory' in results)
+
+    @staticmethod
+    def case_line(results, mandatory, optional, c=['✓', '≈', '✗', '―']):
+        """Information about a single testcase as part of a group
+           This function returns a list of pairs, where the first entry
+           visualises the respective result and the second one is >0
+           iff the result is as expected
+        """
+        optional = optional + mandatory
+
+        def badness(key, r):
+            if key in r:
+                return 2
+            if key + '?' in r:
+                return 1
+            else:
+                return 0
+
+        def get_int(b):
+            if b:
+                return 1
+            else:
+                return -1
+
+        L = []
+
+        for x in ['time', 'memory']:
+            L.append((c[badness(x, results)],
+                      get_int((x in results or x not in mandatory) and
+                              badness(x, results) <= badness(x, optional))))
+
+        if UnitTest.meaningful_score(results):
+            L.append((UnitTest.score(results),
+                      get_int(UnitTest.score(optional) <=
+                              UnitTest.score(results) <=
+                              UnitTest.score(mandatory))))
+        else:
+            L.append((c[-1], 0))
+
+        return L
+
+    @staticmethod
+    def judge_group(results, extended_results, mandatory, optional):
+        """Judge a whole group given a concatenated list of the results of
+           the individual cases
+           extended_results contains results of testcases with explicit
+           expectations
+        """
+        optional = optional + mandatory
+        extended_results = results + extended_results
+
+        if any(x not in optional for x in results
+               if not UnitTest.ignore(x, optional + ['time', 'memory'])):
+            return (-2, "failed", "The submission failed for a reason "
+                    "you did not expect (or score too low).")
+
+        if any(x.endswith("?") for x in results
+               if not UnitTest.ignore(x, optional)):
+            return (0, "ambiguous", "It is not clear whether the submission "
+                       "respects the limits.")
+
+        if len(mandatory) == 0 or any(x in extended_results
+                                      for x in mandatory):
+            return (1, "okay", "... all shall be well.")
+
+        return (-1, "failed",
+                "You expected the submission to fail but it didn't "
+                "(or score too high).")
+
+    @staticmethod
+    def is_score(x):
+        try:
+            float(x)
+            return True
+        except:
+            return False
+
+    @staticmethod
+    def remove_scores(l):
+        return [x for x in l if not UnitTest.is_score(x)]
+
+    @staticmethod
+    def judge_case(results, mandatory, optional):
+        """Judge a single testcase
+        """
+        optional = UnitTest.remove_scores(optional)
+
+        a, b, c = UnitTest.judge_group(results, [], mandatory, optional)
+        return a, c

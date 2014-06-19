@@ -7,6 +7,8 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013-2016 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2015 wafrelka <wafrelka@gmail.com>
+# Copyright © 2014-2015 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2014 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -151,6 +153,19 @@ class ScoreType(object):
         """
         logger.error("Unimplemented method compute_score.")
         raise NotImplementedError("Please subclass this class.")
+
+    def compute_unit_test_score(self, submission_result,
+                                submission_info):
+        """
+        You might want to override this
+        """
+        return json.dumps({})
+
+    def feedback(self):
+        """
+        You might want to override this
+        """
+        return "token"
 
 
 class ScoreTypeAlone(ScoreType):

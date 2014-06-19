@@ -7,6 +7,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2015 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
+# Copyright © 2013-2014 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
@@ -43,6 +44,8 @@ from . import Base, Participation, Task, Dataset, Testcase, \
     FilenameConstraint, DigestConstraint
 
 from cmscommon.datetime import make_datetime
+
+import json
 
 
 class Submission(Base):
@@ -166,12 +169,19 @@ class Submission(Base):
         return submission_result
 
     def tokened(self):
-        """Return if the user played a token against the submission.
+        """Return if the submission should be treated as tokened submission
 
         return (bool): True if tokened, False otherwise.
 
         """
-        return self.token is not None
+        return self.token is not None or self.is_unit_test()
+
+    def is_unit_test(self):
+        if self.additional_info is None:
+            return False
+
+        ai = json.loads(self.additional_info)
+        return ai.get("unit_test", False)
 
 
 class File(Base):
@@ -380,6 +390,10 @@ class SubmissionResult(Base):
         String,
         nullable=True)
 
+    unit_test_score_details = Column(
+        String,
+        nullable=True)
+
     # Ranking score details. It is a list of strings that are going to
     # be shown in a single row in the table of submission in RWS. JSON
     # encoded.
@@ -575,6 +589,7 @@ class SubmissionResult(Base):
         self.public_score = None
         self.public_score_details = None
         self.ranking_score_details = None
+        self.unit_test_score_details = None
 
     def set_compilation_outcome(self, success):
         """Set the compilation outcome based on the success.

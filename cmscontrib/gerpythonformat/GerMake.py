@@ -18,8 +18,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from ContestConfig import ContestConfig
-from LocationStack import chdir
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
+from .ContestConfig import ContestConfig
+from .LocationStack import chdir
+from cms import utf8_decoder
 from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 import argparse
@@ -76,15 +81,18 @@ def main():
                     "test submissions, ...)",
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("import_directory",
-                        help="source directory")
+                        help="source directory",
+                        type=utf8_decoder)
     parser.add_argument("-t", "--task", action="store",
-                        help="omit all tasks except this one")
+                        help="omit all tasks except this one",
+                        type=utf8_decoder)
     testgroup = parser.add_mutually_exclusive_group()
     testgroup.add_argument("-nt", "--no-test", action="store_true",
                            help="do not run test submissions")
     testgroup.add_argument("-s", "--submission",
                            help="only test submissions whose file names all"
-                           "contain this string")
+                           "contain this string",
+                           type=utf8_decoder)
     parser.add_argument("-nl", "--no-latex", action="store_true",
                         help="do not compile latex documents")
     parser.add_argument("-c", "--clean", action="store_true",

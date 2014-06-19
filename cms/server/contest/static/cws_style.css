@@ -446,19 +446,24 @@ td.token_rules p:last-child {
 /*** Submissions table */
 
 #submission_list colgroup col.time,
-#submission_list colgroup col.datetime {
+#submission_list colgroup col.datetime,
+#unit_test_list colgroup col.time,
+#unit_test_list colgroup col.datetime {
     width: 1%;
 }
 
-#submission_list colgroup col.status {
+#submission_list colgroup col.status,
+#unit_test_list colgroup col.status {
     width: 20%;
 }
 
-#submission_list colgroup col.public_score {
+#submission_list colgroup col.public_score,
+#unit_test_list colgroup col.public_score {
     width: 20%;
 }
 
-#submission_list colgroup col.total_score {
+#submission_list colgroup col.total_score,
+#unit_test_list colgroup col.total_score {
     width: 20%;
 }
 
@@ -476,11 +481,15 @@ td.token_rules p:last-child {
 }
 
 #submission_list tbody tr td.time,
-#submission_list tbody tr td.datetime {
+#submission_list tbody tr td.datetime,
+#unit_test_list tbody tr td.time,
+#unit_test_list tbody tr td.datetime,
+#unit_test_list tbody tr td.verdict {
     white-space: nowrap;
 }
 
-#submission_list tbody tr td.status .details {
+#submission_list tbody tr td.status .details,
+#unit_test_list tbody tr td.status .details {
     float: right;
     cursor: pointer;
 }
@@ -498,20 +507,26 @@ td.token_rules p:last-child {
     white-space: nowrap;
 }
 
-#submission_list tbody tr td.token form {
+#submission_list tbody tr td.token form,
+#unit_test_list tbody tr td.token form  {
     display: inline;
 }
 
-#submission_list td.public_score.undefined {
+#submission_list td.public_score.undefined,
+#unit_test_list td.public_score.undefined {
     color: #AAA;
 }
 
-#submission_list td.public_score.score_0 {
-    background-color: hsla(0, 100%, 50%, 0.4);
+#submission_list td.public_score.score_0,
+#unit_test_list tr.score_0 > td,
+td.unit_test_failed {
+    background-color: hsla(0, 100%, 50%, 0.4) !important;
 }
 
-#submission_list tr:hover td.public_score.score_0 {
-    background-color: hsla(0, 100%, 50%, 0.5);
+#submission_list tr:hover td.public_score.score_0,
+#unit_test_list tr:hover.score_0 > td
+tr:hover > td.unit_test_failed {
+    background-color: hsla(0, 100%, 50%, 0.5) !important;
 }
 
 #submission_list td.public_score.score_0_100 {
@@ -522,16 +537,32 @@ td.token_rules p:last-child {
     background-color: hsla(60, 100%, 50%, 0.5);
 }
 
-#submission_list td.public_score.score_100 {
-    background-color: hsla(120, 100%, 50%, 0.4);
+#submission_list td.public_score.score_100,
+#unit_test_list tr.score_100 > td,
+td.unit_test_ok {
+    background-color: hsla(120, 100%, 50%, 0.4) !important;
 }
 
-#submission_list tr:hover td.public_score.score_100 {
-    background-color: hsla(120, 100%, 50%, 0.5);
+#submission_list tr:hover td.public_score.score_100,
+#unit_test_list tr:hover.score_100 td,
+tr:hover td.unit_test_ok {
+    background-color: hsla(120, 100%, 50%, 0.5) !important;
 }
 
-#submission_list td.total_score.undefined {
+#submission_list td.total_score.undefined,
+#unit_test_list td.total_score.undefined,
+td.no_expectations {
     color: #AAA;
+}
+
+col.short {
+    width:4%;
+    text-align:center;
+}
+
+td.short,
+th.short {
+    text-align:center;
 }
 
 #submission_list td.total_score.score_0 {
