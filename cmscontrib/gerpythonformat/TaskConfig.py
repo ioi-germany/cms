@@ -982,6 +982,7 @@ class TaskConfig(CommonConfig, Scope):
         for s in self.subtasks:        
             if s.public:
                 s.for_public_score = False
+        for s in self.subtasks:        
             s.put_feedback(s.description + description_suffix,
                            s.name + name_suffix)
 
