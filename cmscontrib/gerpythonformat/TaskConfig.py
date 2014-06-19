@@ -817,10 +817,10 @@ class TaskConfig(CommonConfig, Scope):
                        contestant during the contest without token usage);
                        detailed feedback subtasks should usually be marked
                        public
-                       
+
         counts_for_public (bool): whether the subtask counts toward public score
                        if the value is None this is set to public
-                       
+
         counts for private (bool): whether the subtask counts toward private score
                        if the value is None this is set to not public
 
@@ -829,7 +829,7 @@ class TaskConfig(CommonConfig, Scope):
         """
         if counts_for_public is None:  counts_for_public = public
         if counts_for_private is None: counts_for_private = not public
-        
+
         if name is None:
             name = "s" + str(len(self.subtasks))
 
@@ -945,7 +945,7 @@ class TaskConfig(CommonConfig, Scope):
 
     def _level(self):
         return 0
-        
+
     @exported_function
     def full_feedback(self):
         """
@@ -958,6 +958,9 @@ class TaskConfig(CommonConfig, Scope):
                 s.public = True
                 s.for_private_score = True
                 s.for_public_score = True
+                for g in s.groups:
+                    for c in g.cases:
+                        c.public = True
 
         self.supply("latex", "\\def\\feedback{full}\n")
 
@@ -979,10 +982,10 @@ class TaskConfig(CommonConfig, Scope):
                               name of the detailed feedback subtask
 
         """
-        for s in self.subtasks:        
+        for s in self.subtasks:
             if s.public:
                 s.for_public_score = False
-        for s in self.subtasks:        
+        for s in self.subtasks:
             s.put_feedback(s.description + description_suffix,
                            s.name + name_suffix)
 
