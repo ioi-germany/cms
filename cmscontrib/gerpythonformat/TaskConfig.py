@@ -945,7 +945,7 @@ class TaskConfig(CommonConfig, Scope):
 
     def _level(self):
         return 0
-
+        
     @exported_function
     def full_feedback(self):
         """
@@ -957,8 +957,10 @@ class TaskConfig(CommonConfig, Scope):
                 s.for_private_score = True
                 s.for_public_score = True
 
+        self.supply("latex", "\\def\\feedback{full}\n")
+
     @exported_function
-    def generate_feedback(self, description_suffix=" (Partial Feedback)",
+    def partial_feedback(self, description_suffix=" (Partial Feedback)",
                           name_suffix="_feedback"):
         """
         Generate detailed feedback subtasks for all subtasks generated
@@ -978,6 +980,8 @@ class TaskConfig(CommonConfig, Scope):
         for s in self.subtasks:        
             s.put_feedback(s.description + description_suffix,
                            s.name + name_suffix)
+
+        self.supply("latex", "\\def\\feedback{partial}")
 
     @exported_function
     def test_submission_limits(self,

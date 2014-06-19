@@ -44,4 +44,14 @@
 
 
 \cfoot{}
-\lfoot{\vbox to 12pt{\vskip-.1in\leavevmode\hskip-2.5in\includegraphics{\barpdf}\vskip-2.5in\sffamily\bfseries\thepage/\pageref{LastPage}}}
+\lfoot{\vskip-1.5\baselineskip\vbox to 12pt{\vskip-.1in\leavevmode\hskip-2.5in\includegraphics{\barpdf}\vskip-2.5in%\vskip-.5\baselineskip
+\sffamily\bfseries\thepage/\pageref{LastPage}}}
+
+\def\fullfeedback{full}
+\def\partialfeedback{partial}
+\def\showfeedback{\subsection*{\tFeedback}
+\ifx\feedback\fullfeedback \tFullFeedback\else%
+\ifx\feedback\partialfeedback \tPartialFeedback\else%
+\tNoFeedback\fi\fi}
+
+\advance\vsize-\baselineskip
