@@ -1888,7 +1888,7 @@ class PrintingHandler(BaseHandler):
             return
 
         printjobs = self.sql_session.query(PrintJob)\
-            .filter(Submission.user == self.current_user).all()
+            .filter(PrintJob.user == self.current_user).all()
 
         remaining_jobs = max(0, config.max_jobs_per_user-len(printjobs))
 
@@ -1911,7 +1911,7 @@ class PrintHandler(BaseHandler):
             return
 
         printjobs = self.sql_session.query(PrintJob)\
-            .filter(Submission.user == self.current_user).all()
+            .filter(PrintJob.user == self.current_user).all()
         old_count = len(printjobs)
         if config.max_jobs_per_user <= old_count:
             self.application.service.add_notification(

@@ -78,6 +78,8 @@ class Communication(TaskType):
 
     ACCEPTED_PARAMETERS = [_COMPILATION]
 
+    testable = False
+
     def get_compilation_commands(self, submission_format):
         """See TaskType.get_compilation_commands."""
         res = dict()
