@@ -132,6 +132,41 @@ JobQueueEntry = namedtuple('JobQueueEntry',
                            ['job_type', 'object_id', 'dataset_id'])
 
 
+def jqe_check(jqe):
+    """
+    Check that a JobQueueEntry object is actually to be enqueued.
+
+    I.e., check that the associated action has not been performed
+    yet. It is used in cases when the status of the underlying object
+    may have changed since last check.
+
+    jqe (JobQueueEntry): the queue entry to test.
+
+    return (bool): True if jqe is still to be performed.
+
+    """
+    with SessionGen() as session:
+        dataset = Dataset.get_from_id(jqe.dataset_id, session)
+        if jqe.job_type == EvaluationService.JOB_TYPE_COMPILATION:
+            submission = Submission.get_from_id(jqe.object_id, session)
+            submission_result = submission.get_result_or_create(dataset)
+            return to_compile(submission_result)
+        elif jqe.job_type == EvaluationService.JOB_TYPE_EVALUATION:
+            submission = Submission.get_from_id(jqe.object_id, session)
+            submission_result = submission.get_result_or_create(dataset)
+            return to_evaluate(submission_result)
+        elif jqe.job_type == EvaluationService.JOB_TYPE_TEST_COMPILATION:
+            user_test = UserTest.get_from_id(jqe.object_id, session)
+            user_test_result = user_test.get_result_or_create(dataset)
+            return user_test_to_compile(user_test_result)
+        elif jqe.job_type == EvaluationService.JOB_TYPE_TEST_EVALUATION:
+            user_test = UserTest.get_from_id(jqe.object_id, session)
+            user_test_result = user_test.get_result_or_create(dataset)
+            return user_test_to_evaluate(user_test_result)
+
+    raise Exception("Should never arrive here")
+
+
 class JobQueue(object):
     """An instance of this class will contains the (unique) priority
     queue of jobs (compilations, evaluations, ...) that the ES needs
@@ -746,7 +781,8 @@ class EvaluationService(Service):
                                     submission.id,
                                     dataset.id),
                                 EvaluationService.JOB_PRIORITY_HIGH,
-                                submission.timestamp):
+                                submission.timestamp,
+                                check_again=True):
                             new_jobs += 1
                     elif to_evaluate_public(submission_result):
                         if self.push_in_queue(
@@ -764,7 +800,8 @@ class EvaluationService(Service):
                                     submission.id,
                                     dataset.id),
                                 EvaluationService.JOB_PRIORITY_MEDIUM,
-                                submission.timestamp):
+                                submission.timestamp,
+                                check_again=True):
                             new_jobs += 1
 
             # The same for user tests
@@ -780,7 +817,8 @@ class EvaluationService(Service):
                                     user_test.id,
                                     dataset.id),
                                 EvaluationService.JOB_PRIORITY_HIGH,
-                                user_test.timestamp):
+                                user_test.timestamp,
+                                check_again=True):
                             new_jobs += 1
                     elif user_test_to_evaluate(user_test_result):
                         if self.push_in_queue(
@@ -789,7 +827,8 @@ class EvaluationService(Service):
                                     user_test.id,
                                     dataset.id),
                                 EvaluationService.JOB_PRIORITY_MEDIUM,
-                                user_test.timestamp):
+                                user_test.timestamp,
+                                check_again=True):
                             new_jobs += 1
 
             session.commit()
@@ -977,7 +1016,6 @@ class EvaluationService(Service):
         ]
         return any([job in self.queue or job in self.pool for job in jobs])
 
-    @with_post_finish_lock
     def job_busy(self, job):
         """Check the entity (submission or user test) related to a job
         has other related jobs in the queue or assigned to a worker.
@@ -995,16 +1033,26 @@ class EvaluationService(Service):
         else:
             raise Exception("Wrong job type %s" % job_type)
 
-    def push_in_queue(self, job, priority, timestamp):
-        """Push a job in the job queue if the submission is not
-        already in the queue or assigned to a worker.
+    @with_post_finish_lock
+    def push_in_queue(self, job, priority, timestamp, check_again=False):
+        """Check a job and push it in the queue.
+
+        Push a job in the job queue if the submission is not already
+        in the queue or assigned to a worker. Optionally check that
+        the job is actually still to be performed by running
+        jqe_check() on it.
 
         job (JobQueueEntry): the job to put in the queue.
+        priority (int): the priority of the job.
+        timestamp (datetime): the time of the submission.
+        check_again (bool): whether or not to run jqe_check() on the job.
 
         return (bool): True if pushed, False if not.
 
         """
         if self.job_busy(job):
+            return False
+        elif check_again and not jqe_check(job):
             return False
         else:
             self.queue.push(job, priority, timestamp)
