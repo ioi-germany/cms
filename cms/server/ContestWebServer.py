@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2013 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2014 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
@@ -414,11 +414,11 @@ class ContestWebServer(WebService):
             "is_proxy_used": config.is_proxy_used,
         }
         super(ContestWebServer, self).__init__(
-            config.contest_listen_port[shard],
+            listen_port,
             _cws_handlers,
             parameters,
             shard=shard,
-            listen_address=config.contest_listen_address[shard])
+            listen_address=listen_address)
 
         self.contest = contest
 
@@ -446,10 +446,16 @@ class ContestWebServer(WebService):
             ServiceCoord("EvaluationService", 0))
         self.scoring_service = self.connect_to(
             ServiceCoord("ScoringService", 0))
+
+        ranking_enabled = len(config.rankings) > 0
         self.proxy_service = self.connect_to(
-            ServiceCoord("ProxyService", 0))
+            ServiceCoord("ProxyService", 0),
+            must_be_present=ranking_enabled)
+
+        printing_enabled = config.printer is not None
         self.printing_service = self.connect_to(
-            ServiceCoord("PrintingService", 0))
+            ServiceCoord("PrintingService", 0),
+            must_be_present=printing_enabled)
 
     NOTIFICATION_ERROR = "error"
     NOTIFICATION_WARNING = "warning"
@@ -1199,7 +1205,7 @@ class UseTokenHandler(BaseHandler):
             self.redirect("/tasks/%s/submissions" % quote(task.name, safe=''))
             return
 
-        # Inform ScoringService and eventually the ranking that the
+        # Inform ProxyService and eventually the ranking that the
         # token has been played.
         self.application.service.proxy_service.submission_tokened(
             submission_id=submission.id)
@@ -1207,7 +1213,7 @@ class UseTokenHandler(BaseHandler):
         logger.info("Token played by user %s on task %s."
                     % (self.current_user.username, task.name))
 
-        # Add "All ok" notification
+        # Add "All ok" notification.
         self.application.service.add_notification(
             self.current_user.username,
             self.timestamp,
