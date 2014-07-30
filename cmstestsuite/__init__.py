@@ -21,9 +21,11 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import atexit
 import errno
+import io
 import json
 import mechanize
 import os
@@ -111,7 +113,8 @@ class RemoteService(object):
 
 def read_cms_config():
     global cms_config
-    cms_config = json.load(open("%(CONFIG_PATH)s" % CONFIG))
+    cms_config = json.load(io.open("%(CONFIG_PATH)s" % CONFIG,
+                                   "rt", encoding="utf-8"))
 
 
 def get_cms_config():
@@ -162,7 +165,7 @@ def spawn(cmdline):
         stdout = None
         stderr = None
     else:
-        stdout = open('/dev/null', 'w')
+        stdout = io.open(os.devnull, 'wb')
         stderr = stdout
     job = subprocess.Popen(cmdline, stdout=stdout, stderr=stderr)
     atexit.register(lambda: kill(job))
@@ -182,7 +185,8 @@ def configure_cms(options):
     options (dict): mapping from parameter to textual JSON argument.
 
     """
-    f = open("%(TEST_DIR)s/examples/cms.conf.sample" % CONFIG)
+    f = io.open("%(TEST_DIR)s/examples/cms.conf.sample" % CONFIG,
+                "rt", encoding="utf-8")
     lines = f.readlines()
     unset = set(options.keys())
     for i, line in enumerate(lines):
@@ -193,7 +197,7 @@ def configure_cms(options):
                 lines[i] = '%s"%s": %s,\n' % (whitespace, key, options[key])
                 unset.remove(key)
 
-    out_file = open("%(CONFIG_PATH)s" % CONFIG, "w")
+    out_file = io.open("%(CONFIG_PATH)s" % CONFIG, "wt", encoding="utf-8")
     for l in lines:
         out_file.write(l)
     out_file.close()
@@ -210,9 +214,9 @@ def start_prog(path, shard=0, contest=None):
     """Execute a CMS process."""
     args = [path]
     if shard is not None:
-        args.append(str(shard))
+        args.append("%s" % shard)
     if contest is not None:
-        args += ['-c', str(contest)]
+        args += ['-c', "%s" % contest]
     return spawn(args)
 
 
@@ -463,7 +467,7 @@ def add_testcase(task_id, num, input_file, output_file, public):
         ('output', output_file),
     ]
     args = {}
-    args["codename"] = str(num)
+    args["codename"] = "%03d" % num
     if public:
         args['public'] = '1'
     dataset_id = get_task_active_dataset_id(task_id)

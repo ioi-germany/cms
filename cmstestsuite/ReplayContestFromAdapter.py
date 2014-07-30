@@ -41,7 +41,9 @@ TODO: currently only works with tasks with one file per submission
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import unicode_literals
 
+import io
 import sys
 import time
 
@@ -49,6 +51,7 @@ from argparse import ArgumentParser
 from mechanize import Browser
 from threading import Thread
 
+from cms import utf8_decoder
 from cmstestsuite.web.CWSRequests import \
     LoginRequest, SubmitRequest, TokenRequest
 
@@ -154,7 +157,8 @@ def replay(base_url, source="./source.txt", start_from=None):
     """
     global start, speed, old_speed
 
-    content = [x.strip().split() for x in open(source).readlines()]
+    content = [x.strip().split() for x in
+               io.open(source, "rt", encoding="utf-8").readlines()]
     events = len(content)
     index = 0
     if start_from is not None:
@@ -202,10 +206,12 @@ def main():
     global start, speed, old_speed
 
     parser = ArgumentParser(description="Replay a contest.")
-    parser.add_argument("address", type=str, help="http address of CWS",
-                        default="http://127.0.0.1:8888")
-    parser.add_argument("source", type=str, help="events file")
-    parser.add_argument("-r", "--resume", type=str,
+    parser.add_argument("address", action="store", type=utf8_decoder,
+                        default="http://127.0.0.1:8888",
+                        help="http address of CWS")
+    parser.add_argument("source", action="store", type=utf8_decoder,
+                        help="events file")
+    parser.add_argument("-r", "--resume", action="store", type=utf8_decoder,
                         help="start from (%%H:%%M:%%S)")
     args = parser.parse_args()
     start_from = None

@@ -28,6 +28,7 @@ idempotent.
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import unicode_literals
 
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
@@ -45,6 +46,7 @@ import tempfile
 from sqlalchemy.types import \
     Boolean, Integer, Float, String, Unicode, DateTime, Interval, Enum
 
+from cms import utf8_decoder
 from cms.db import version as model_version
 from cms.db import SessionGen, Contest, ask_for_contest, \
     Submission, UserTest, SubmissionResult, UserTestResult, \
@@ -224,7 +226,7 @@ class ContestExporter(object):
         obj_key = obj.sa_identity_key
         if obj_key not in self.ids:
             # We use strings because they'll be the keys of a JSON object
-            self.ids[obj_key] = str(len(self.ids))
+            self.ids[obj_key] = "%d" % len(self.ids)
             self.queue.append(obj)
 
         return self.ids[obj_key]
@@ -367,7 +369,8 @@ def main():
                         help="don't export submissions")
     parser.add_argument("-U", "--no-user-tests", action="store_true",
                         help="don't export user tests")
-    parser.add_argument("export_target", nargs='?', default="",
+    parser.add_argument("export_target", action="store",
+                        type=utf8_decoder, nargs='?', default="",
                         help="target directory or archive for export")
 
     args = parser.parse_args()

@@ -29,6 +29,7 @@ again should be idempotent.
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import unicode_literals
 
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
@@ -50,6 +51,7 @@ from sqlalchemy.types import \
 
 import cms.db as class_hook
 
+from cms import utf8_decoder
 from cms.db import version as model_version
 from cms.db import SessionGen, init_db, drop_db, Submission, UserTest, \
     SubmissionResult, UserTestResult, RepeatedUnicode
@@ -312,7 +314,7 @@ class ContestImporter(object):
 
         if contest_id is not None:
             logger.info("Import finished (contest id: %s)." %
-                        ", ".join(str(id_) for id_ in contest_id))
+                        ", ".join("%d" % id_ for id_ in contest_id))
         else:
             logger.info("Import finished.")
 
@@ -471,7 +473,7 @@ def main():
                         help="don't import submissions")
     parser.add_argument("-U", "--no-user-tests", action="store_true",
                         help="don't import user tests")
-    parser.add_argument("import_source",
+    parser.add_argument("import_source", action="store", type=utf8_decoder,
                         help="source directory or compressed file")
 
     args = parser.parse_args()

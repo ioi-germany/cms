@@ -76,10 +76,11 @@ class ScoreType(object):
         """Return an HTML string representing the score details of a
         submission.
 
-        score_details (dict): the data saved by the score type itself
-                              in the database; can be public or
-                              private.
-        translator (function): the function to localize strings.
+        score_details (unicode): the data saved by the score type
+            itself in the database; can be public or private.
+        translator (function|None): the function to localize strings,
+            or None to use the identity.
+
         return (string): an HTML string representing score_details.
 
         """

@@ -8,6 +8,7 @@
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
+# Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -67,13 +68,13 @@ from werkzeug.datastructures import LanguageAccept
 from cms import SOURCE_EXT_TO_LANGUAGE_MAP, config, ServiceCoord
 from cms.io import WebService
 from cms.db import Session, Contest, User, Task, Question, Submission, Token, \
-    File, UserTest, UserTestFile, UserTestManager
+    File, UserTest, UserTestFile, UserTestManager, PrintJob
 from cms.db.filecacher import FileCacher
 from cms.grading.tasktypes import get_task_type
 from cms.grading.scoretypes import get_score_type
 from cms.server import file_handler_gen, extract_archive, \
     actual_phase_required, get_url_root, filter_ascii, \
-    CommonRequestHandler, format_size
+    CommonRequestHandler, format_size, compute_actual_phase
 from cmscommon.isocodes import is_language_code, translate_language_code, \
     is_country_code, translate_country_code, \
     is_language_country_code, translate_language_country_code
@@ -97,7 +98,7 @@ def check_ip(client, wanted):
     """
     wanted, sep, subnet = wanted.partition('/')
     subnet = 32 if sep == "" else int(subnet)
-    snmask = 2**32 - 2**(32 - subnet)
+    snmask = 2 ** 32 - 2 ** (32 - subnet)
     wanted = struct.unpack(">I", socket.inet_aton(wanted))[0]
     client = struct.unpack(">I", socket.inet_aton(client))[0]
     return (wanted & snmask) == (client & snmask)
@@ -297,78 +298,26 @@ class BaseHandler(CommonRequestHandler):
         ret["timestamp"] = self.timestamp
         ret["contest"] = self.contest
         ret["url_root"] = get_url_root(self.request.path)
-        ret["cookie"] = str(self.cookies)  # FIXME really needed?
 
         if self.current_user is None:
             ret["phase"] = self.contest.main_group.phase(self.timestamp)
         else:
             ret["phase"] = self.current_user.group.phase(self.timestamp)
 
+        ret["printing_enabled"] = (config.printer is not None)
+
         if self.current_user is not None:
-            # "adjust" the phase, considering the per_user_time
-            ret["actual_phase"] = 2 * ret["phase"]
+            res = compute_actual_phase(
+                self.timestamp, self.current_user.group.start, self.current_user.group.stop,
+                self.current_user.group.per_user_time, self.current_user.starting_time,
+                self.current_user.delay_time, self.current_user.extra_time)
 
-            if ret["phase"] == -1:
-                # pre-contest phase
-                ret["current_phase_begin"] = None
-                ret["current_phase_end"] = self.current_user.group.start
-            elif ret["phase"] == 0:
-                # contest phase
-                if self.current_user.group.per_user_time is None:
-                    # "traditional" contest: every user can compete for
-                    # the whole contest time
-                    ret["current_phase_begin"] = self.current_user.group.start
-                    ret["current_phase_end"] = self.current_user.group.stop
-                else:
-                    # "USACO-like" contest: every user can compete only
-                    # for a limited time frame during the contest time
-                    if self.current_user.starting_time is None:
-                        ret["actual_phase"] = -1
-                        ret["current_phase_begin"] = self.current_user.group.start
-                        ret["current_phase_end"] = self.current_user.group.stop
-                    else:
-                        user_end_time = min(
-                            self.current_user.starting_time +
-                            self.current_user.group.per_user_time,
-                            self.current_user.group.stop)
-                        if self.timestamp <= user_end_time:
-                            ret["current_phase_begin"] = \
-                                self.current_user.starting_time
-                            ret["current_phase_end"] = user_end_time
-                        else:
-                            ret["actual_phase"] = +1
-                            ret["current_phase_begin"] = user_end_time
-                            ret["current_phase_end"] = self.current_user.group.stop
-            else:  # ret["phase"] == 1
-                # post-contest phase
-                ret["current_phase_begin"] = self.current_user.group.stop
-                ret["current_phase_end"] = None
+            ret["actual_phase"], ret["current_phase_begin"], \
+                ret["current_phase_end"], ret["valid_phase_begin"], \
+                ret["valid_phase_end"] = res
 
-            # compute valid_phase_begin and valid_phase_end (that is,
-            # the time at which actual_phase started/will start and
-            # stopped/will stop being zero, or None if unknown).
-            ret["valid_phase_begin"] = None
-            ret["valid_phase_end"] = None
-            if self.current_user.group.per_user_time is None:
-                ret["valid_phase_begin"] = self.current_user.group.start
-                ret["valid_phase_end"] = self.current_user.group.stop
-            elif self.current_user.starting_time is not None:
-                ret["valid_phase_begin"] = self.current_user.starting_time
-                ret["valid_phase_end"] = min(
-                    self.current_user.starting_time +
-                    self.current_user.group.per_user_time,
-                    self.current_user.group.stop)
-
-            # consider the extra time
-            if ret["valid_phase_end"] is not None:
-                ret["valid_phase_end"] += self.current_user.extra_time
-                if ret["valid_phase_begin"] <= \
-                        self.timestamp <= \
-                        ret["valid_phase_end"]:
-                    ret["phase"] = 0
-                    ret["actual_phase"] = 0
-                    ret["current_phase_begin"] = ret["valid_phase_begin"]
-                    ret["current_phase_end"] = ret["valid_phase_end"]
+            if ret["actual_phase"] == 0:
+                ret["phase"] = 0
 
             # set the timezone used to format timestamps
             ret["timezone"] = get_timezone(self.current_user, self.contest)
@@ -499,6 +448,8 @@ class ContestWebServer(WebService):
             ServiceCoord("ScoringService", 0))
         self.proxy_service = self.connect_to(
             ServiceCoord("ProxyService", 0))
+        self.printing_service = self.connect_to(
+            ServiceCoord("PrintingService", 0))
 
     NOTIFICATION_ERROR = "error"
     NOTIFICATION_WARNING = "warning"
@@ -832,7 +783,7 @@ class NotificationsHandler(BaseHandler):
         prev_unread_count = self.get_secure_cookie("unread_count")
         next_unread_count = len(res) + (
             int(prev_unread_count) if prev_unread_count is not None else 0)
-        self.set_secure_cookie("unread_count", str(next_unread_count))
+        self.set_secure_cookie("unread_count", "%d" % next_unread_count)
 
         # Simple notifications
         notifications = self.application.service.notifications
@@ -1130,7 +1081,7 @@ class SubmitHandler(BaseHandler):
                 # therefore we open the file in binary mode.
                 with io.open(
                         os.path.join(path,
-                                     str(int(make_timestamp(self.timestamp)))),
+                                     "%d" % make_timestamp(self.timestamp)),
                         "wb") as file_:
                     pickle.dump((self.contest.id,
                                  self.current_user.id,
@@ -1652,7 +1603,7 @@ class UserTestHandler(BaseHandler):
                 # therefore we open the file in binary mode.
                 with io.open(
                         os.path.join(path,
-                                     str(int(make_timestamp(self.timestamp)))),
+                                     "%d" % make_timestamp(self.timestamp)),
                         "wb") as file_:
                     pickle.dump((self.contest.id,
                                  self.current_user.id,
@@ -1871,6 +1822,121 @@ class UserTestFileHandler(FileHandler):
         self.fetch(digest, mimetype, real_filename)
 
 
+class PrintingHandler(BaseHandler):
+    """Serve the interface to print and handle submitted print jobs.
+
+    """
+    @tornado.web.authenticated
+    @actual_phase_required(0)
+    def get(self):
+        if not self.r_params["printing_enabled"]:
+            self.redirect("/")
+            return
+
+        printjobs = self.sql_session.query(PrintJob)\
+            .filter(PrintJob.user == self.current_user).all()
+
+        remaining_jobs = max(0, config.max_jobs_per_user - len(printjobs))
+
+        self.render("printing.html",
+                    printjobs=printjobs,
+                    remaining_jobs=remaining_jobs,
+                    max_pages=config.max_pages_per_job,
+                    pdf_printing_allowed=config.pdf_printing_allowed,
+                    **self.r_params)
+
+    @tornado.web.authenticated
+    @actual_phase_required(0)
+    def post(self):
+        if not self.r_params["printing_enabled"]:
+            self.redirect("/")
+            return
+
+        printjobs = self.sql_session.query(PrintJob)\
+            .filter(PrintJob.user == self.current_user).all()
+        old_count = len(printjobs)
+        if config.max_jobs_per_user <= old_count:
+            self.application.service.add_notification(
+                self.current_user.username,
+                self.timestamp,
+                self._("Too many print jobs!"),
+                self._("You have reached the maximum limit of "
+                       "at most %d print jobs.") % config.max_jobs_per_user,
+                ContestWebServer.NOTIFICATION_ERROR)
+            self.redirect("/printing")
+            return
+
+        # Ensure that the user did not submit multiple files with the
+        # same name and that the user sent exactly one file.
+        if any(len(filename) != 1
+               for filename in self.request.files.values()) \
+                or set(self.request.files.keys()) != set(["file"]):
+            self.application.service.add_notification(
+                self.current_user.username,
+                self.timestamp,
+                self._("Invalid format!"),
+                self._("Please select the correct files."),
+                ContestWebServer.NOTIFICATION_ERROR)
+            self.redirect("/printing")
+            return
+
+        filename = self.request.files["file"][0]["filename"]
+        data = self.request.files["file"][0]["body"]
+
+        # Check if submitted file is small enough.
+        if len(data) > config.max_print_length:
+            self.application.service.add_notification(
+                self.current_user.username,
+                self.timestamp,
+                self._("File too big!"),
+                self._("Each file must be at most %d bytes long.") %
+                config.max_print_length,
+                ContestWebServer.NOTIFICATION_ERROR)
+            self.redirect("/printing")
+            return
+
+        # We now have to send the file to the destination...
+        try:
+            digest = self.application.service.file_cacher.put_file_content(
+                data,
+                "Print job sent by %s at %d." % (
+                    self.current_user.username,
+                    make_timestamp(self.timestamp)))
+
+        # In case of error, the server aborts
+        except Exception as error:
+            logger.error("Storage failed! %s" % error)
+            self.application.service.add_notification(
+                self.current_user.username,
+                self.timestamp,
+                self._("Print job storage failed!"),
+                self._("Please try again."),
+                ContestWebServer.NOTIFICATION_ERROR)
+            self.redirect("/printing")
+            return
+
+        # The file is stored, ready to submit!
+        logger.info("File stored for print job sent by %s" %
+                    self.current_user.username)
+
+        printjob = PrintJob(timestamp=self.timestamp,
+                            user=self.current_user,
+                            filename=filename,
+                            digest=digest)
+
+        self.sql_session.add(printjob)
+        self.sql_session.commit()
+        self.application.service.printing_service.new_printjob(
+            printjob_id=printjob.id)
+        self.application.service.add_notification(
+            self.current_user.username,
+            self.timestamp,
+            self._("Print job received"),
+            self._("Your print job has been received."),
+            ContestWebServer.NOTIFICATION_SUCCESS)
+        self.redirect("/printing")
+
+
 class StaticFileGzHandler(tornado.web.StaticFileHandler):
     """Handle files which may be gzip-compressed on the filesystem."""
     def get(self, path, *args, **kwargs):
@@ -1918,5 +1984,6 @@ _cws_handlers = [
     (r"/notifications", NotificationsHandler),
     (r"/question", QuestionHandler),
     (r"/testing", UserTestInterfaceHandler),
+    (r"/printing", PrintingHandler),
     (r"/stl/(.*)", StaticFileGzHandler, {"path": config.stl_path}),
 ]

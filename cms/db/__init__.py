@@ -63,6 +63,8 @@ __all__ = [
     # usertest
     "UserTest", "UserTestFile", "UserTestManager", "UserTestResult",
     "UserTestExecutable",
+    # printjob
+    "PrintJob",
     # fsobject
     "FSObject",
     # init
@@ -76,7 +78,7 @@ __all__ = [
 
 # Instantiate or import these objects.
 
-version = 11
+version = 12
 
 
 engine = create_engine(config.database, echo=config.database_debug,
@@ -96,6 +98,7 @@ from .submission import Submission, File, Token, SubmissionResult, \
     Executable, Evaluation
 from .usertest import UserTest, UserTestFile, UserTestManager, \
     UserTestResult, UserTestExecutable
+from .printjob import PrintJob
 from .fsobject import FSObject
 
 from .init import init_db

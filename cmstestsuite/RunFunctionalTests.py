@@ -20,7 +20,9 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import unicode_literals
 
+import io
 import os
 import sys
 import subprocess
@@ -29,7 +31,7 @@ import re
 
 from argparse import ArgumentParser
 
-from cms import LANGUAGES
+from cms import LANGUAGES, utf8_decoder
 from cmstestsuite import get_cms_config, CONFIG, info, sh
 from cmstestsuite import add_contest, add_existing_user, add_existing_task, \
     add_user, add_task, add_testcase, add_manager, combine_coverage, \
@@ -176,7 +178,7 @@ def get_task_id(contest_id, user_id, task_module):
             in enumerate(task_module.test_cases):
         ipath = os.path.join(data_path, input_file)
         opath = os.path.join(data_path, output_file)
-        add_testcase(task_id, str(num), ipath, opath, public)
+        add_testcase(task_id, num, ipath, opath, public)
 
     task_id_map[name] = (task_id, task_module)
 
@@ -208,7 +210,7 @@ def load_test_list_from_file(filename):
     if not os.path.exists(filename):
         return []
     try:
-        with open(filename) as f:
+        with io.open(filename, "rt", encoding="utf-8") as f:
             lines = f.readlines()
     except (IOError, OSError) as e:
         print("Failed to read test list. %s." % (e))
@@ -282,7 +284,7 @@ def filter_testcases(orig_test_list, regexes, languages):
 
 
 def write_test_case_list(test_list, filename):
-    with open(filename, 'w') as f:
+    with io.open(filename, 'wt', encoding="utf-8") as f:
         for test, lang in test_list:
             f.write('%s %s\n' % (test.name, lang))
 
@@ -361,15 +363,13 @@ def config_is_usable(cms_config):
 def main():
     parser = ArgumentParser(description="Runs the CMS functional test suite.")
     parser.add_argument(
-        "regex", metavar="regex",
-        type=str, nargs='*',
+        "regex", action="store", type=utf8_decoder, nargs='*', metavar="regex",
         help="a regex to match to run a subset of tests")
     parser.add_argument(
-        "-l", "--languages",
-        type=str, action="store", default="",
+        "-l", "--languages", action="store", type=utf8_decoder, default="",
         help="a comma-separated list of languages to test")
     parser.add_argument(
-        "-c", "--contest", action="store",
+        "-c", "--contest", action="store", type=utf8_decoder,
         help="use an existing contest (and the tasks in it)")
     parser.add_argument(
         "-r", "--retry-failed", action="store_true",
@@ -415,7 +415,7 @@ def main():
     try:
         git_root = subprocess.check_output(
             "git rev-parse --show-toplevel", shell=True,
-            stderr=open(os.devnull, "w")).strip()
+            stderr=io.open(os.devnull, "wb")).strip()
     except subprocess.CalledProcessError:
         git_root = None
     CONFIG["TEST_DIR"] = git_root

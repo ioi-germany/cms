@@ -7,7 +7,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -30,6 +30,7 @@ import io
 import json
 import logging
 import os
+import six
 
 from collections import namedtuple
 
@@ -105,7 +106,8 @@ def get_compilation_commands(language, source_filenames, executable_filename,
         command = ["/usr/bin/g++"]
         if for_evaluation:
             command += ["-DEVAL"]
-        command += ["-static", "-O2", "-o", executable_filename]
+        command += ["-static", "-O2", "-std=c++11",
+                    "-o", executable_filename]
         command += source_filenames
         commands.append(command)
     elif language == LANG_PASCAL:
@@ -231,8 +233,9 @@ def format_status_text(status, translator=None):
     returned.
 
     status ([unicode]|unicode): a status, as described above.
-    translator (function): a function expecting a string and returning
-        that same string translated in some language.
+    translator (function|None): a function expecting a string and
+        returning that same string translated in some language, or
+        None to apply the identity.
 
     """
     # Mark strings for localization.
@@ -242,8 +245,10 @@ def format_status_text(status, translator=None):
         translator = lambda x: x
 
     try:
-        if isinstance(status, (str, unicode)):
+        if isinstance(status, six.text_type):
             status = json.loads(status)
+        elif not isinstance(status, list):
+            raise TypeError("Invalid type: %r" % type(status))
 
         return translator(status[0]) % tuple(status[1:])
     except:
@@ -700,8 +705,8 @@ def white_diff_step(sandbox, output_filename,
         sandbox.
     correct_output_filename (string): the same with reference output.
 
-    return ((float, [str])): the outcome as above and a description
-        text.
+    return ((float, [unicode])): the outcome as above and a
+        description text.
 
     """
     if sandbox.file_exists(output_filename):

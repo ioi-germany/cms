@@ -35,12 +35,15 @@ the dimensions of the testcases.
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import argparse
 import imp
+import io
 import numpy
 import sys
 
+from cms import utf8_decoder
 from cms.db import SessionGen, Task
 from cms.db.filecacher import FileCacher
 
@@ -216,7 +219,8 @@ def extract_complexity_submission(testcases_lengths, submission):
     result[0] = submission.score
     result[1] = best_idxs
 
-    with open("sub_%s.info" % submission.id, "wt") as info:
+    with io.open("sub_%s.info" % submission.id,
+                 "wt", encoding="utf-8") as info:
         for i in xrange(MAXP + 1):
             for j in xrange(MAXL + 1):
                 for k in xrange(MAXE + 1):
@@ -239,7 +243,7 @@ def extract_complexity_submission(testcases_lengths, submission):
         computed_y.append(ijk_to_func(i, j, k)(point_x) *
                           res[ijk_to_idx(i, j, k)])
 
-    with open("sub_%s.dat" % submission.id, "wt") as dat:
+    with io.open("sub_%s.dat" % submission.id, "wt", encoding="utf-8") as dat:
         for point_x, point_y, computed_y in zip(points_x, points_y,
                                                 computed_y):
             dat.write("%15.8lf %+15.8lf %+15.8lf\n" % (point_x * x_scale,
@@ -273,7 +277,7 @@ def extract_complexity(task_id, file_lengther=None):
         file_cacher.purge_cache()
 
         # Compute the complexity of the solutions.
-        with open("task_%s.info" % task_id, "wt") as info:
+        with io.open("task_%s.info" % task_id, "wt", encoding="utf-8") as info:
             for submission in task.contest.get_submissions():
                 if submission.task_id == task_id and \
                         submission.evaluated():
@@ -302,9 +306,9 @@ def main():
     """
     parser = argparse.ArgumentParser(
         description="Extract the complexity of submissions of a task.")
-    parser.add_argument("task_id",
+    parser.add_argument("task_id", action="store", type=int,
                         help="id of the task in the DB")
-    parser.add_argument("-l", "--lengther",
+    parser.add_argument("-l", "--lengther", action="store", type=utf8_decoder,
                         help="filename of a Python source "
                         "with a FileLengther class")
     args = parser.parse_args()
@@ -325,7 +329,7 @@ def main():
             print("Module %s must have a class named FileLengther." %
                   args.lengther)
 
-    return extract_complexity(int(args.task_id), file_lengther=file_lengther)
+    return extract_complexity(args.task_id, file_lengther=file_lengther)
 
 
 if __name__ == "__main__":

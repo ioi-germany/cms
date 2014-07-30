@@ -26,6 +26,7 @@ Italian IOI repository for storing the results of a contest.
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import unicode_literals
 
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
@@ -38,6 +39,7 @@ import logging
 import os
 import time
 
+from cms import utf8_decoder
 from cms.db import SessionGen, Contest, ask_for_contest
 from cms.db.filecacher import FileCacher
 from cms.grading.scoretypes import get_score_type
@@ -284,9 +286,9 @@ def main():
     """
     parser = argparse.ArgumentParser(
         description="Exporter for the Italian repository for CMS.")
-    parser.add_argument("-c", "--contest-id", help="id of contest to export",
-                        action="store", type=int)
-    parser.add_argument("export_directory",
+    parser.add_argument("-c", "--contest-id", action="store", type=int,
+                        help="id of contest to export")
+    parser.add_argument("export_directory", action="store", type=utf8_decoder,
                         help="target directory where to export")
     args = parser.parse_args()
 

@@ -28,6 +28,7 @@ losing no data in the process).
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import hashlib
 import io
@@ -43,10 +44,10 @@ def sha1sum(path):
 
     """
     buffer_length = 8192
-    with open(path, 'rb') as fin:
+    with io.open(path, 'rb') as fin:
         hasher = hashlib.new("sha1")
         buf = fin.read(buffer_length)
-        while buf != '':
+        while buf != b'':
             hasher.update(buf)
             buf = fin.read(buffer_length)
         return hasher.hexdigest()

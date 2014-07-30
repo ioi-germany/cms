@@ -23,6 +23,7 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import logging
 import unittest
@@ -67,7 +68,7 @@ class TestLogService(unittest.TestCase):
                               TestLogService.MSG + severity)
             self.assertEquals(last_message["coord"],
                               TestLogService.SERVICE_NAME + severity +
-                              "," + str(TestLogService.SERVICE_SHARD))
+                              "," + ("%d" % TestLogService.SERVICE_SHARD))
             self.assertEquals(last_message["operation"],
                               TestLogService.OPERATION + severity)
             self.assertEquals(last_message["severity"],

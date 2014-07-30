@@ -23,6 +23,7 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import unicode_literals
 
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
@@ -116,10 +117,10 @@ class TestScoringService(unittest.TestCase):
     def new_score_info():
         return (
             random.randint(1, 1000),
-            str(random.randint(1, 1000)),
+            "%d" % random.randint(1, 1000),
             random.randint(1, 1000),
-            str(random.randint(1, 1000)),
-            [str(random.randint(1, 1000)), str(random.randint(1, 1000))]
+            "%d" % random.randint(1, 1000),
+            ["%d" % random.randint(1, 1000), "%d" % random.randint(1, 1000)]
         )
 
     @staticmethod

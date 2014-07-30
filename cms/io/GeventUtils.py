@@ -44,6 +44,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import io
 import os
 import stat
 import sys
@@ -91,8 +92,8 @@ def copyfile(src, dst):
             if stat.S_ISFIFO(st.st_mode):
                 raise SpecialFileError("`%s` is a named pipe" % fn)
 
-    with open(src, 'rb') as fsrc:
-        with open(dst, 'wb') as fdst:
+    with io.open(src, 'rb') as fsrc:
+        with io.open(dst, 'wb') as fdst:
             copyfileobj(fsrc, fdst)
 
 
@@ -174,7 +175,7 @@ def copytree(src, dst, symlinks=False, ignore=None):
         except Error, err:
             errors.extend(err.args[0])
         except EnvironmentError, why:
-            errors.append((srcname, dstname, str(why)))
+            errors.append((srcname, dstname, "%s" % why))
     try:
         copystat(src, dst)
     except OSError, why:
@@ -182,7 +183,7 @@ def copytree(src, dst, symlinks=False, ignore=None):
             # Copying file access times may fail on Windows
             pass
         else:
-            errors.extend((src, dst, str(why)))
+            errors.append((src, dst, "%s" % why))
     if errors:
         raise Error(errors)
 
