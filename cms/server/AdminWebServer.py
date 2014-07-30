@@ -1818,8 +1818,8 @@ class AddUserHandler(SimpleContestHandler("add_user.html")):
             assert attrs.get("username") is not None, \
                 "No username specified."
 
-            attrs["group"] = \
-                self.safe_get_item(Group, self.get_argument("group", ""))
+            attrs["group"] = self.safe_get_item(Group, self.get_argument(
+                "group", self.contest.main_group_id))
 
             self.get_ip_address_or_subnet(attrs, "ip")
 
