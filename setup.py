@@ -60,9 +60,6 @@ def do_setup():
             os.path.join("templates", "admin", "*.*"),
             os.path.join("templates", "ranking", "*.*"),
         ],
-        "cms.service": [
-            os.path.join("templates", "printing", "*.*"),
-        ],
         "cmsranking": [
             os.path.join("static", "img", "*.*"),
             os.path.join("static", "lib", "*.*"),
@@ -135,7 +132,6 @@ def do_setup():
                    "scripts/cmsContestWebServer",
                    "scripts/cmsAdminWebServer",
                    "scripts/cmsProxyService",
-                   "scripts/cmsPrintingService",
 
                    "scripts/cmsRankingWebServer",
 

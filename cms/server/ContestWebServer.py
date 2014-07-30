@@ -7,7 +7,6 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
-# Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -68,7 +67,7 @@ from werkzeug.datastructures import LanguageAccept
 from cms import SOURCE_EXT_TO_LANGUAGE_MAP, config, ServiceCoord
 from cms.io import WebService
 from cms.db import Session, Contest, User, Task, Question, Submission, Token, \
-    File, UserTest, UserTestFile, UserTestManager, PrintJob
+    File, UserTest, UserTestFile, UserTestManager
 from cms.db.filecacher import FileCacher
 from cms.grading.tasktypes import get_task_type
 from cms.grading.scoretypes import get_score_type
@@ -305,8 +304,6 @@ class BaseHandler(CommonRequestHandler):
         else:
             ret["phase"] = self.current_user.group.phase(self.timestamp)
 
-        ret["printing_enabled"] = (config.printer is not None)
-
         if self.current_user is not None:
             # "adjust" the phase, considering the per_user_time
             ret["actual_phase"] = 2 * ret["phase"]
@@ -502,8 +499,6 @@ class ContestWebServer(WebService):
             ServiceCoord("ScoringService", 0))
         self.proxy_service = self.connect_to(
             ServiceCoord("ProxyService", 0))
-        self.printing_service = self.connect_to(
-            ServiceCoord("PrintingService", 0))
 
     NOTIFICATION_ERROR = "error"
     NOTIFICATION_WARNING = "warning"
@@ -1876,134 +1871,6 @@ class UserTestFileHandler(FileHandler):
         self.fetch(digest, mimetype, real_filename)
 
 
-class PrintingHandler(BaseHandler):
-    """Serve the interface to print.
-
-    """
-    @tornado.web.authenticated
-    @actual_phase_required(0)
-    def get(self):
-        if not self.r_params["printing_enabled"]:
-            self.redirect("/")
-            return
-
-        printjobs = self.sql_session.query(PrintJob)\
-            .filter(PrintJob.user == self.current_user).all()
-
-        remaining_jobs = max(0, config.max_jobs_per_user-len(printjobs))
-
-        self.render("printing.html",
-                    printjobs=printjobs,
-                    remaining_jobs=remaining_jobs,
-                    max_pages=config.max_pages_per_job,
-                    **self.r_params)
-
-
-class PrintHandler(BaseHandler):
-    """Handles the received print job.
-
-    """
-    @tornado.web.authenticated
-    @actual_phase_required(0)
-    def post(self):
-        if not self.r_params["printing_enabled"]:
-            self.redirect("/")
-            return
-
-        printjobs = self.sql_session.query(PrintJob)\
-            .filter(PrintJob.user == self.current_user).all()
-        old_count = len(printjobs)
-        if config.max_jobs_per_user <= old_count:
-            self.application.service.add_notification(
-                self.current_user.username,
-                self.timestamp,
-                self._("Too many print jobs!"),
-                self._("You have reached the maximum limit of "
-                       "at most %d print jobs.") % config.max_jobs_per_user,
-                ContestWebServer.NOTIFICATION_ERROR)
-            self.redirect("/printing")
-            return
-
-        # Ensure that the user did not submit multiple files with the
-        # same name.
-        if any(len(filename) != 1 for filename in self.request.files.values()):
-            self.application.service.add_notification(
-                self.current_user.username,
-                self.timestamp,
-                self._("Invalid format!"),
-                self._("Please select the correct files."),
-                ContestWebServer.NOTIFICATION_ERROR)
-            self.redirect("/printing")
-            return
-
-        # This ensure that the user sent exactly one file.
-        if set(self.request.files.keys()) != set(["file"]):
-            self.application.service.add_notification(
-                self.current_user.username,
-                self.timestamp,
-                self._("Invalid format!"),
-                self._("Please select the correct files."),
-                ContestWebServer.NOTIFICATION_ERROR)
-            self.redirect("/printing")
-            return
-
-        filename = self.request.files["file"][0]["filename"]
-        data = self.request.files["file"][0]["body"]
-
-        # Check if submitted files are small enough.
-        if len(data) > config.max_print_length:
-            self.application.service.add_notification(
-                self.current_user.username,
-                self.timestamp,
-                self._("File too big!"),
-                self._("Each file be at most %d bytes long.") %
-                config.max_print_length,
-                ContestWebServer.NOTIFICATION_ERROR)
-            self.redirect("/printing")
-            return
-
-        # We now have to send all the files to the destination...
-        try:
-            digest = self.application.service.file_cacher.put_file_content(
-                data,
-                "Print job sent by %s at %d." % (
-                    self.current_user.username,
-                    make_timestamp(self.timestamp)))
-
-        # In case of error, the server aborts
-        except Exception as error:
-            logger.error("Storage failed! %s" % error)
-            self.application.service.add_notification(
-                self.current_user.username,
-                self.timestamp,
-                self._("Print job storage failed!"),
-                self._("Please try again."),
-                ContestWebServer.NOTIFICATION_ERROR)
-            self.redirect("/printing")
-            return
-
-        # All the files are stored, ready to submit!
-        logger.info("All files stored for print job sent by %s" %
-                    self.current_user.username)
-
-        printjob = PrintJob(timestamp=self.timestamp,
-                            user=self.current_user,
-                            filename=filename,
-                            digest=digest)
-
-        self.sql_session.add(printjob)
-        self.sql_session.commit()
-        self.application.service.printing_service.search_jobs_not_done()
-        self.application.service.add_notification(
-            self.current_user.username,
-            self.timestamp,
-            self._("Print job received"),
-            self._("Your print job has been received."),
-            ContestWebServer.NOTIFICATION_SUCCESS)
-        self.redirect("/printing")
-        return
-
-
 class StaticFileGzHandler(tornado.web.StaticFileHandler):
     """Handle files which may be gzip-compressed on the filesystem."""
     def get(self, path, *args, **kwargs):
@@ -2051,7 +1918,5 @@ _cws_handlers = [
     (r"/notifications", NotificationsHandler),
     (r"/question", QuestionHandler),
     (r"/testing", UserTestInterfaceHandler),
-    (r"/printing", PrintingHandler),
-    (r"/print", PrintHandler),
     (r"/stl/(.*)", StaticFileGzHandler, {"path": config.stl_path}),
 ]
