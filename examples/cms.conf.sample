@@ -25,8 +25,7 @@
         "Worker":            [["localhost", 26000], ["localhost", 26001]],
         "ContestWebServer":  [["localhost", 21000]],
         "AdminWebServer":    [["localhost", 21100]],
-        "ProxyService":      [["localhost", 28600]],
-        "PrintingService":   [["localhost", 25123]]
+        "ProxyService":      [["localhost", 28600]]
         },
 
     "other_services":
@@ -138,18 +137,6 @@
     "_help": "you trust.",
     "rankings": ["http://usern4me:passw0rd@localhost:8890/"],
     "https_certfile": null,
-
-
-
-    "_section": "PrintingService",
-
-    "_help": "Maximum size of a print job in bytes.",
-    "max_print_length": 10000000,
-    "_help": "Printer name (if null, printing is disabled)",
-    "printer": null,
-    "max_pages_per_job": 10,
-    "max_jobs_per_user": 10,
-    "pdf_printing_allowed": false,
 
 
 

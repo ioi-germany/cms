@@ -106,13 +106,6 @@ class Config(object):
         self.rankings = ["http://usern4me:passw0rd@localhost:8890/"]
         self.https_certfile = None
 
-        # PrintingService
-        self.max_print_length = 10000000
-        self.printer = None
-        self.max_pages_per_job = 10
-        self.max_jobs_per_user = 10
-        self.pdf_printing_allowed = False
-
         # Installed or from source?
         self.installed = sys.argv[0].startswith("/usr/") and \
             sys.argv[0] != '/usr/bin/ipython' and \
