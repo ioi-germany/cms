@@ -3,6 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -39,6 +40,15 @@ import cms.service.ScoringService
 from cms.service.ScoringService import ScoringService
 
 
+def cs(score_info):
+    def f(submission_result, public):
+        if public:
+            return (score_info[2], score_info[3])
+        else:
+            return (score_info[0], score_info[1], score_info[4])
+    return f
+
+
 class TestScoringService(unittest.TestCase):
 
     def setUp(self):
@@ -53,14 +63,15 @@ class TestScoringService(unittest.TestCase):
         score_info = self.new_score_info()
         sr = TestScoringService.new_sr_to_score()
         score_type = Mock()
-        score_type.compute_score.return_value = score_info
+        score_type.compute_score.side_effect = cs(score_info)
         TestScoringService.set_up_db([sr], score_type)
 
         self.service.new_evaluation(123, 456)
 
         gevent.sleep(0)  # Needed to trigger the score loop.
         # Asserts that compute_score was called.
-        assert score_type.compute_score.mock_calls == [call(sr)]
+        assert score_type.compute_score.mock_calls == [call(sr, True),
+                                                       call(sr, False)]
         assert (sr.score,
                 sr.score_details,
                 sr.public_score,
@@ -72,7 +83,7 @@ class TestScoringService(unittest.TestCase):
 
         """
         score_type = Mock()
-        score_type.compute_score.return_value = (1, "1", 2, "2", ["1", "2"])
+        score_type.compute_score.side_effect = cs((1, "1", 2, "2", ["1", "2"]))
         sr_a = TestScoringService.new_sr_to_score()
         sr_b = TestScoringService.new_sr_to_score()
         TestScoringService.set_up_db([sr_a, sr_b], score_type)
@@ -82,7 +93,10 @@ class TestScoringService(unittest.TestCase):
 
         gevent.sleep(0)  # Needed to trigger the score loop.
         # Asserts that compute_score was called.
-        assert score_type.compute_score.mock_calls == [call(sr_a), call(sr_b)]
+        assert score_type.compute_score.mock_calls == [call(sr_a, True),
+                                                       call(sr_a, False),
+                                                       call(sr_b, True),
+                                                       call(sr_b, False)]
 
     def test_new_evaluation_already_scored(self):
         """One submission is not re-scored if already scored.
@@ -90,26 +104,29 @@ class TestScoringService(unittest.TestCase):
         """
         sr = TestScoringService.new_sr_scored()
         score_type = Mock()
-        score_type.compute_score.return_value = (1, "1", 2, "2", ["1", "2"])
+        score_type.compute_score.side_effect = cs((1, "1", 2, "2", ["1", "2"]))
         TestScoringService.set_up_db([sr], score_type)
 
         self.service.new_evaluation(123, 456)
 
         gevent.sleep(0)  # Needed to trigger the score loop.
         # Asserts that compute_score was called.
+        print(score_type.compute_score.mock_calls)
         assert score_type.compute_score.mock_calls == []
 
     @staticmethod
     def new_sr_to_score():
         sr = Mock()
-        sr.needs_scoring.return_value = True
+        sr.needs_public_scoring.return_value = True
+        sr.needs_private_scoring.return_value = True
         sr.scored.return_value = False
         return sr
 
     @staticmethod
     def new_sr_scored():
         sr = Mock()
-        sr.needs_scoring.return_value = False
+        sr.needs_public_scoring.return_value = False
+        sr.needs_private_scoring.return_value = False
         sr.scored.return_value = True
         return sr
 
