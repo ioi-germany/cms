@@ -36,6 +36,7 @@ from datetime import datetime
 import json
 import os
 import shutil
+import six
 
 
 def mem_human(mem):
@@ -1397,7 +1398,8 @@ class TaskConfig(CommonConfig, Scope):
                                 self.cases_by_codename[ev.testcase.codename]),
                             depth=4):
                     outcome = float(ev.outcome)
-                    verdict = format_status_text(ev.text).strip()
+                    verdict = format_status_text(
+                        six.text_type(ev.text)).strip()
                     if self.tasktype == "OutputOnly":
                         print_msg("Outcome: %.1f   Verdict: %s" %
                                   (outcome,
