@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,19 +17,31 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""A class to update a dump created by CMS.
+
+Used by ContestImporter and DumpUpdater.
+
+This adapts the dump to some changes in the model introduced in the
+commit that created this same file.
+
+"""
+
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import unicode_literals
-
-# We enable monkey patching to make many libraries gevent-friendly
-# (for instance, urllib3, used by requests)
-import gevent.monkey
-gevent.monkey.patch_all()
-
-import sys
-
-from cmsranking.RankingWebServer import main
+from __future__ import print_function
 
 
-if __name__ == "__main__":
-    sys.exit(0 if main() is True else 1)
+class Updater(object):
+
+    def __init__(self, data):
+        assert data["_version"] == 12
+        self.objs = data
+
+    def run(self):
+        for k, v in self.objs.iteritems():
+            if k.startswith("_"):
+                continue
+            if v["_class"] == "Submission":
+                v["comment"] = ""
+
+        return self.objs
