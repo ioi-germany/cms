@@ -291,6 +291,7 @@ class Communication(TaskType):
         if solution_quitter.read() == "<3":
             for i in indices:
                 processes[i].send_signal(signal.SIGINT)  # Kill user
+            wait_without_std(processes)
             manager_quitter.close()
 
         # Consume output.
