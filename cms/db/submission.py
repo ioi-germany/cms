@@ -8,7 +8,6 @@
 # Copyright © 2012-2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -88,21 +87,6 @@ class Submission(Base):
     language = Column(
         String,
         nullable=True)
-
-    # Comment from the administrator on this submission
-    comment = Column(
-        Unicode,
-        nullable=False,
-        default="")
-
-    @property
-    def short_comment(self):
-        """The first line of the comment
-        """
-        lines = self.comment.split("\n")
-        if len(lines) == 0:
-            return ""
-        return lines[0]
 
     # Additional parameters
     additional_info = Column(
