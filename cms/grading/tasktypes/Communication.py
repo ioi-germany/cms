@@ -255,6 +255,7 @@ class Communication(TaskType):
         # Manager still running but wants to quit
         if solution_quitter.read() == "<3":
             process.send_signal(signal.SIGINT)  # Kill user
+            wait_without_std([process])
             manager_quitter.close()
 
         # Consume output.
