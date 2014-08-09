@@ -30,7 +30,36 @@ def N_(message):
     return message
 
 
-class SubtaskGroup(ScoreType):
+class ScoreTypeWithUnitTest(ScoreType):
+    """Basic methods for score types that can handle unit tests
+    """
+    USER_TEMPLATE = ""
+    UNIT_TEST_TEMPLATE = ""
+
+    def __init__(self, parameters, public_testcases, info = None):
+        super(ScoreTypeWithUnitTest, self).__init__(parameters['tcinfo'], public_testcases, info)
+        if info is not None: self.set_submission_info(info)
+        
+    def set_submission_info(self, info):
+        self.submission_info = json.loads(info)
+        self._unit_test = self.submission_info["unit_test"]
+        self.TEMPLATE = self.USER_TEMPLATE if not self.is_unit_test() else self.UNIT_TEST_TEMPLATE
+        
+    def get_html_details(self, score_details, translator=None):
+        sd = json.loads(score_details)        
+        self.retrieve_submission_info(sd)
+        return ScoreType.get_html_details(self, score_details, translator)
+    
+    def retrieve_submission_info(self, sd):
+        """You may want to override this depending on your choise how to save
+        submission information
+        """
+        self.set_submission_info(json.dumps(sd["info"]))
+    
+    def is_unit_test(self):
+        return self._unit_test
+
+class SubtaskGroup(ScoreTypeWithUnitTest):
     """The testcases are divided into subtasks, which themselves consist of
     groups. The score of a group is the minimum score among the contained
     test cases multiplied with a parameter of the group. The score of a subtask
@@ -45,10 +74,11 @@ class SubtaskGroup(ScoreType):
     N_("Execution time")
     N_("Memory used")
     N_("N/A")
-    TEMPLATE = """\
+    USER_TEMPLATE = """\
 {% from cms.grading import format_status_text %}
 {% from cms.server import format_size %}
-{% for st in details %}
+{{ details["info"] }}
+{% for st in details["subtasks"] %}
     {% if "score" in st and "max_score" in st %}
         {% if st["score"] >= st["max_score"] %}
 <div class="subtask correct">
@@ -138,9 +168,103 @@ class SubtaskGroup(ScoreType):
 </div>
 {% end %}"""
 
-    def __init__(self, parameters, public_testcases):
+    UNIT_TEST_TEMPLATE = """\
+{% from cms.grading import format_status_text %}
+{% from cms.server import format_size %}
+{{ details["info"] }}
+{% for st in details["subtasks"] %}
+    {% if "score" in st and "max_score" in st %}
+        {% if st["score"] >= st["max_score"] %}
+<div class="subtask correct">
+        {% elif st["score"] <= 0.0 %}
+<div class="subtask notcorrect">
+        {% else %}
+<div class="subtask partiallycorrect">
+        {% end %}
+    {% else %}
+<div style="height:0px;display:none;">
+    {% end %}
+    <div class="subtask-head">
+        <span class="title" style="margin-top:-2px;">
+            {{ st["name"] }}
+        </span>
+    {% if "score" in st and "max_score" in st %}
+        <span class="score">
+            {% if st["public"] and not st["for_public_score"] %}
+                {% if st["score"] >= st["max_score"] %}
+                    OKAY
+                {% elif st["score"] <= 0.0 %}
+                    FAILED
+                {% else %}
+                    PARTIALLY
+                {% end %}
+            {% else %}
+                {{ '%g' % round(st["score"], 2) }} / {{ st["max_score"] }}
+            {% end %}
+        </span>
+    {% else %}
+        <span class="score">
+            {{ _("N/A") }}
+        </span>
+    {% end %}
+    </div>
+    <div class="subtask-body">
+        <table class="testcase-list">
+            <thead>
+                <tr>
+                    <th>{{ _("Outcome") }}</th>
+                    <th>{{ _("Details") }}</th>
+                    <th>{{ _("Execution time") }}</th>
+                    <th>{{ _("Memory used") }}</th>
+                    <th>{{ _("Group") }}</th>
+                </tr>
+            </thead>
+            <tbody>
+    {% for tc in st["testcases"] %}
+        {% if "outcome" in tc and "text" in tc %}
+            {% if tc["outcome"] == "Correct" %}
+                <tr class="correct">
+            {% elif tc["outcome"] == "Not correct" %}
+                <tr class="notcorrect">
+            {% else %}
+                <tr class="partiallycorrect">
+            {% end %}
+                    <td>{{ _(tc["outcome"]) }}</td>
+                    <td>{{ format_status_text(tc["text"], _) }}</td>
+                    <td>
+            {% if "time" in tc and tc["time"] is not None %}
+                        {{ "%(seconds)0.3f s" % {'seconds': tc["time"]} }}
+            {% else %}
+                        {{ _("N/A") }}
+            {% end %}
+                    </td>
+                    <td>
+            {% if "memory" in tc and tc["memory"] is not None %}
+                        {{ format_size(tc["memory"]) }}
+            {% else %}
+                        {{ _("N/A") }}
+            {% end %}
+                    </td>
+            {% if "grouplen" in tc %}
+                    <td rowspan="{{ tc["grouplen"] }}">{{ tc["groupnr"] }}</td>
+            {% end %}
+        {% else %}
+                <tr class="undefined">
+                    <td colspan="5">
+                        {{ _("N/A") }}
+                    </td>
+                </tr>
+        {% end %}
+    {% end %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% end %}"""
+
+    def __init__(self, parameters, public_testcases, info = None):
         self._feedback = parameters['feedback']
-        super(SubtaskGroup, self).__init__(parameters['tcinfo'], public_testcases)
+        super(SubtaskGroup, self).__init__(parameters, public_testcases, info)
         
     def feedback(self):
         return self._feedback    
@@ -234,10 +358,12 @@ class SubtaskGroup(ScoreType):
                     "testcases": [],
                     })
 
+        details = { "subtasks" : subtasks, "info" : self.submission_info }
+
         if public:
-            return score, json.dumps(subtasks)
+            return score, json.dumps(details)
         else:
-            return score, json.dumps(subtasks), \
+            return score, json.dumps(details), \
                 json.dumps(ranking_details)
 
     def get_public_outcome(self, outcome):
