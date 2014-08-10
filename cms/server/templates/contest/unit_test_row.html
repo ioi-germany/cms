@@ -1,0 +1,83 @@
+{% if show_date %}
+    {% set col1 = "<td class=\"datetime\">%s</td>" % format_datetime(s.timestamp, timezone, locale=locale) %}
+{% else %}
+    {% set col1 = "<td class=\"time\">%s</td>" % format_time(s.timestamp, timezone, locale=locale) %}
+{% end %}
+
+{% if sr is None or not sr.compiled() %}
+<tr data-submission="{{ s_idx }}" data-status="1">
+    {% raw col1 %}
+    <td class="status">
+        {{ _("Compiling...") }}
+    </td>
+    {% if score_type is not None %}
+    <td class="public_score undefined">{{ _("N/A") }}</td>
+    <td class="total_score undefined">{{ _("N/A") }}</td>
+    {% end %}
+    <td class="datetime"> {{ _("pending...") }} </td>
+{% elif sr.compilation_outcome == "fail" %}
+<tr data-submission="{{ s_idx }}" data-status="2">
+    {% raw col1 %}
+    <td class="status">
+        {{ _("Compilation failed") }}
+        <a class="details">{{ _("details") }}</a>
+    </td>
+    {% if score_type is not None %}
+    <td class="public_score undefined">{{ _("N/A") }}</td>
+    <td class="total_score undefined">{{ _("N/A") }}</td>
+    {% end %}
+    {% comment TODO %}
+    <td class="datetime"> {{ _("oops") }} </td>
+{% elif not sr.evaluated(False) %}
+<tr data-submission="{{ s_idx }}" data-status="3">
+    {% raw col1 %}
+    <td class="status">
+        {{ _("Evaluating...") }}
+    </td>
+    {% if score_type is not None %}
+    <td class="public_score undefined">{{ _("N/A") }}</td>
+    <td class="total_score undefined">{{ _("N/A") }}</td>
+    {% end %}
+    <td class="datetime">{{ _("pending...") }} </td>
+{% elif not sr.scored(False) %}
+<tr data-submission="{{ s_idx }}" data-status="4">
+    {% raw col1 %}
+    <td class="status">
+        {{ _("Scoring...") }}
+    </td>
+    {% if score_type is not None %}
+    <td class="public_score undefined">{{ _("N/A") }}</td>
+    <td class="total_score undefined">{{ _("N/A") }}</td>
+    {% end %}
+    <td class="datetime">{{ _("pending...") }} </td>
+{% else %}
+<tr data-submission="{{ s_idx }}" data-status="5">
+    {% raw col1 %}
+    <td class="status">
+        {{ _("Evaluated") }}
+        <a class="details">{{ _("details") }}</a>
+    </td>
+
+    {% if score_type is not None %}
+    <td class="public_score {{ get_score_class(sr.public_score, score_type.max_public_score) }}">
+            {{ "%g" % round(sr.public_score, task.score_precision) }} / {{ "%g" % round(score_type.max_public_score, task.score_precision) }}
+    </td>
+        {% if True %}
+            {% if score_type is not None and score_type.max_score != 0 %}
+        <td class="total_score {{ get_score_class(sr.score, score_type.max_score) }}">
+                {{ "%g" % round(sr.score, task.score_precision) }} / {{ "%g" % round(score_type.max_score, task.score_precision) }}
+        </td>
+            {% else %}
+        <td class="total_score">
+                {{ "%g" % round(sr.score, task.score_precision) }}
+        </td>
+            {% end %}
+        {% else %}
+        <td class="total_score undefined">
+            {{ _("N/A") }}
+        </td>
+        {% end %}
+    {% end %}
+    <td class="datetime"> ??? </td>
+{% end %}
+</tr>

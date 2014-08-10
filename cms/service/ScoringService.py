@@ -35,11 +35,12 @@ import logging
 import gevent
 from gevent.queue import JoinableQueue
 from gevent.event import Event
+import json
 
 from cms import ServiceCoord, config
 from cms.io import Service, rpc_method
 from cms.db import SessionGen, Submission, Dataset
-from cms.grading.scoretypes import get_score_type
+from cms.grading.scoretypes import  
 from cms.service import get_submission_results
 from cmscommon.datetime import monotonic_time
 
@@ -161,10 +162,8 @@ class ScoringService(Service):
                                      (submission_id, dataset_id))
 
             # Instantiate the score type.
-            score_type = get_score_type(dataset=dataset, info=submission.additional_info)
-            logger.info(score_type)
-            
-            #score_type.set_submission_info(submission.additional_info)
+            score_type = get_score_type(dataset=dataset, info=json.dumps({"unit_test" : False}) if submission.additional_info is None \
+                                                              else submission.additional_info)
 
             # Compute score and fill it in the database.
             if submission_result.needs_public_scoring():

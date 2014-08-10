@@ -38,27 +38,22 @@ class ScoreTypeWithUnitTest(ScoreType):
 
     def __init__(self, parameters, public_testcases, info = None):
         super(ScoreTypeWithUnitTest, self).__init__(parameters['tcinfo'], public_testcases, info)
-        if info is not None: self.set_submission_info(info)
+        self.set_submission_info(info)
         
     def set_submission_info(self, info):
-        self.submission_info = json.loads(info)
-        self._unit_test = self.submission_info["unit_test"]
-        self.TEMPLATE = self.USER_TEMPLATE if not self.is_unit_test() else self.UNIT_TEST_TEMPLATE
+        if info is None:
+            self.submission_info = None
+            self._unit_test = False
+        else:
+            self.submission_info = json.loads(info)
+            self._unit_test = self.submission_info["unit_test"]
         
-    def get_html_details(self, score_details, translator=None):
-        sd = json.loads(score_details)        
-        self.retrieve_submission_info(sd)
-        return ScoreType.get_html_details(self, score_details, translator)
-    
-    def retrieve_submission_info(self, sd):
-        """You may want to override this depending on your choise how to save
-        submission information
-        """
-        self.set_submission_info(json.dumps(sd["info"]))
+        self.TEMPLATE = self.USER_TEMPLATE if not self.is_unit_test() else self.UNIT_TEST_TEMPLATE
     
     def is_unit_test(self):
-        return self._unit_test
-
+        try:    return self._unit_test
+        except: return False
+        
 class SubtaskGroup(ScoreTypeWithUnitTest):
     """The testcases are divided into subtasks, which themselves consist of
     groups. The score of a group is the minimum score among the contained
@@ -77,7 +72,6 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
     USER_TEMPLATE = """\
 {% from cms.grading import format_status_text %}
 {% from cms.server import format_size %}
-{{ details["info"] }}
 {% for st in details["subtasks"] %}
     {% if "score" in st and "max_score" in st %}
         {% if st["score"] >= st["max_score"] %}
