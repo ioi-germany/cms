@@ -1256,7 +1256,7 @@ class SubmissionStatusHandler(BaseHandler):
             raise tornado.web.HTTPError(404)
 
         sr = submission.get_result(task.active_dataset)
-        score_type = get_score_type(dataset=task.active_dataset)
+        score_type = get_score_type(dataset=task.active_dataset, info=submission.additional_info)
 
         # TODO: use some kind of constants to refer to the status.
         data = dict()
@@ -1314,7 +1314,7 @@ class SubmissionDetailsHandler(BaseHandler):
             raise tornado.web.HTTPError(404)
 
         sr = submission.get_result(task.active_dataset)
-        score_type = get_score_type(dataset=task.active_dataset)
+        score_type = get_score_type(dataset=task.active_dataset, info=submission.additional_info)
 
         details = None
         if sr is not None:

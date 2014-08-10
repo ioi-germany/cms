@@ -1,7 +1,11 @@
-{% if show_date %}
-    {% set col1 = "<td class=\"datetime\">%s</td>" % format_datetime(s.timestamp, timezone, locale=locale) %}
+{% if score_type is not None and score_type.is_unit_test() %}
+    {% set col1 = "<td class=\"datetime\"> <b> UNIT TEST </b> </td>" %}
 {% else %}
-    {% set col1 = "<td class=\"time\">%s</td>" % format_time(s.timestamp, timezone, locale=locale) %}
+    {% if show_date %}
+        {% set col1 = "<td class=\"datetime\">%s</td>" % format_datetime(s.timestamp, timezone, locale=locale) %}
+    {% else %}
+        {% set col1 = "<td class=\"time\">%s</td>" % format_time(s.timestamp, timezone, locale=locale) %}
+    {% end %}
 {% end %}
 {% if sr is None or not sr.compiled() %}
 <tr data-submission="{{ s_idx }}" data-status="1">

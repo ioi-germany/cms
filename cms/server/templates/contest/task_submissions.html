@@ -142,6 +142,68 @@ $(document).ready(function () {
     {% set score_type = None %}
 {% end %}
 
+
+{% from cmscommon.datetime import utc %}
+{% set show_date = any(s.timestamp.replace(tzinfo=utc).astimezone(timezone).date() != datetime.datetime.utcnow().replace(tzinfo=utc).astimezone(timezone).date() for s in submissions) %}
+
+
+{% comment Separate unit tests %}
+{% set unit_tests = [] %}
+{% set user_submissions = [] %}
+{% for s_idx, s in enumerate(sorted(submissions, key=lambda s: s.timestamp, reverse=True)) %}
+    {% set s_idx = len(submissions) - s_idx %}
+    {% set sr = s.get_result(s.task.active_dataset) %}
+    {% set st = get_score_type(dataset=s.task.active_dataset, info=s.additional_info) %}
+    {% if st.is_unit_test() %}
+        {% comment This is awkward (and most probably quadratic), but seems to be the only %}
+        {% comment way thanks to Tornado %}
+        {% set unit_tests = unit_tests + [(s_idx, s)] %}
+    {% else %}
+        {% set user_submissions = user_submissions + [(s_idx, s)] %}
+    {% end %}
+{% end %}
+
+{% if len(unit_tests) != 0 %}
+    <h2 style="margin:40px 0 10px">{{ _("Unit Tests") }}</h2>
+    <table id="unit_test_list" class="table table-bordered table-striped">
+    <colgroup>
+    {% if show_date %}
+            <col class="datetime"/>
+    {% else %}
+            <col class="time"/>
+    {% end %}
+            <col class="status"/>
+    {% if score_type is not None %}
+            <col class="public_score"/>
+            <col class="total_score"/>
+    {% end %}
+        </colgroup>
+        <thead>
+            <tr>
+    {% if show_date %}
+                <th class="datetime">{{ _("Date and time") }}</th>
+    {% else %}
+                <th class="time">{{ _("Time") }}</th>
+    {% end %}
+                <th class="status">{{ _("Status") }}</th>
+    {% if score_type is not None %}
+                <th class="public_score">{{ _("Public score") }}</th>
+                <th class="total_score">{{ _("Total score") }}</th>
+    {% end %}
+                <th class="time"> {{ _("Verdict") }}</th>
+            </tr>
+        </thead>
+        <tbody>
+    {% for s_idx, s in unit_tests %}
+        {% set sr = s.get_result(s.task.active_dataset) %}
+        {% set score_type = get_score_type(dataset=s.task.active_dataset, info=s.additional_info) %}
+        {% include unit_test_row.html %}
+    {% end %}
+        </tbody>
+    </table>
+{% end %}
+
+
 <h2 style="margin: 40px 0 10px">{{ _("Previous submissions") }}</h2>
 
 {% if score_type is not None and score_type.feedback() == "token" %}
@@ -184,10 +246,6 @@ $(document).ready(function () {
 {% end %}
 
 
-{% from cmscommon.datetime import utc %}
-{% set show_date = any(s.timestamp.replace(tzinfo=utc).astimezone(timezone).date() != datetime.datetime.utcnow().replace(tzinfo=utc).astimezone(timezone).date() for s in submissions) %}
-
-
 <table id="submission_list" class="table table-bordered table-striped">
     <colgroup>
 {% if show_date %}
@@ -228,7 +286,7 @@ $(document).ready(function () {
         </tr>
     </thead>
     <tbody>
-    {% if len(submissions) == 0 %}
+    {% if len(user_submissions) == 0 %}
         <tr>
         {% if tokens_contest != 0 and tokens_tasks != 0 %}
             <td colspan="6" class="no_submissions">{{ _("no submissions yet") }}</td>
@@ -237,9 +295,9 @@ $(document).ready(function () {
         {% end %}
         </tr>
     {% else %}
-        {% for s_idx, s in enumerate(sorted(submissions, key=lambda s: s.timestamp, reverse=True)) %}
-            {% set s_idx = len(submissions) - s_idx %}
+        {% for s_idx, s in user_submissions %}
             {% set sr = s.get_result(s.task.active_dataset) %}
+            {% set score_type = get_score_type(dataset=s.task.active_dataset, info=s.additional_info) %}
             {% include submission_row.html %}
         {% end %}
     {% end %}
