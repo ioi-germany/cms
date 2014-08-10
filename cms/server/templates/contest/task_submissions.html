@@ -2,30 +2,32 @@
 
 {% block js %}
 
-$(document).on("click", "#submission_list tbody tr td.status .details", function (event) {
-    var submission_id = $(this).parent().parent().attr("data-submission");
-    var modal = $("#submission_detail");
-    var modal_body = modal.children(".modal-body");
-    modal_body.html('<div class="loading"><img src="{{ url_root }}/static/loading.gif"/>{{ _("loading...") }}</div>');
-    modal_body.load("{{ url_root }}/tasks/{{ encode_for_url(task.name) }}/submissions/" + submission_id + "/details", function() {
-        $(".score_details .subtask .subtask-head").each(function () {
-            $(this).prepend("<i class=\"icon-chevron-right\"></i>");
+{% for x in ["submission_list", "unit_test_list"] %}
+    $(document).on("click", "#{{x}} tbody tr td.status .details", function (event) {
+        var submission_id = $(this).parent().parent().attr("data-submission");
+        var modal = $("#submission_detail");
+        var modal_body = modal.children(".modal-body");
+        modal_body.html('<div class="loading"><img src="{{ url_root }}/static/loading.gif"/>{{ _("loading...") }}</div>');
+        modal_body.load("{{ url_root }}/tasks/{{ encode_for_url(task.name) }}/submissions/" + submission_id + "/details", function() {
+            $(".score_details .subtask .subtask-head").each(function () {
+                $(this).prepend("<i class=\"icon-chevron-right\"></i>");
+            });
+            $(".score_details .subtask .subtask-head").click(function () {
+                $(this).parent().toggleClass("open");
+                if ($(this).parent().hasClass("open")) {
+                    $(this).children("i").removeClass("icon-chevron-right").addClass("icon-chevron-down");
+                } else {
+                    $(this).children("i").removeClass("icon-chevron-down").addClass("icon-chevron-right");
+                }
+            });
+            $(".score_details table.testcase-list").addClass("table table-bordered table-striped");
+            $(".score_details table.testcase-list tbody tr:not(.undefined) td:nth-child(1)").each(function () {
+                $(this).html("<span class=\"outcome\">" + $(this).text() + "</span>");
+            });
         });
-        $(".score_details .subtask .subtask-head").click(function () {
-            $(this).parent().toggleClass("open");
-            if ($(this).parent().hasClass("open")) {
-                $(this).children("i").removeClass("icon-chevron-right").addClass("icon-chevron-down");
-            } else {
-                $(this).children("i").removeClass("icon-chevron-down").addClass("icon-chevron-right");
-            }
-        });
-        $(".score_details table.testcase-list").addClass("table table-bordered table-striped");
-        $(".score_details table.testcase-list tbody tr:not(.undefined) td:nth-child(1)").each(function () {
-            $(this).html("<span class=\"outcome\">" + $(this).text() + "</span>");
-        });
+        modal.modal("show");
     });
-    modal.modal("show");
-});
+{% end %}
 
 function get_score_class (score, max_score) {
     if (score <= 0) {
@@ -37,8 +39,8 @@ function get_score_class (score, max_score) {
     }
 }
 
-update_submission_row = function (submission_id, data) {
-    var row = $("#submission_list tbody tr[data-submission=\"" + submission_id + "\"]");
+update_submission_row = function (x, submission_id, data) {
+    var row = $("#" + x + " tbody tr[data-submission=\"" + submission_id + "\"]");
     row.attr("data-status", data["status"]);
     row.children("td.status").html(data["status_text"]);
     if (data["status"] == 5) {
@@ -58,23 +60,36 @@ update_submission_row = function (submission_id, data) {
             }
             row.children("td.total_score").removeClass("undefined").html(score);
         }
+        if(data["verdict"] != undefined) {
+            var short_verdict = data["verdict"][0];
+            var verdict_details = data["verdict"][1];
+            row.children("td.verdict").html(verdict_details);
+            
+            if(short_verdict == 0)
+                row.addClass("score_0");
+            else
+                row.addClass("score_100");
+        }
+        
     } else if (data["status"] != 2) {
-        schedule_update_submission_row(submission_id);
+        schedule_update_submission_row(x, submission_id);
     }
 }
 
-schedule_update_submission_row = function (submission_id) {
+schedule_update_submission_row = function (x, submission_id) {
     setTimeout(function () {
         $.get("{{ url_root }}/tasks/{{ encode_for_url(task.name) }}/submissions/" + submission_id, function (data) {
-            update_submission_row(submission_id, data);
+            update_submission_row(x, submission_id, data);
         });
     }, 2000);
 }
 
 $(document).ready(function () {
-    $('#submission_list tbody tr[data-status][data-status!="2"][data-status!="5"]').each(function (idx, elem) {
-        schedule_update_submission_row($(this).attr("data-submission"));
-    });
+    {% for x in ["submission_list", "unit_test_list"] %}
+        $('#{{x}} tbody tr[data-status][data-status!="2"][data-status!="5"]').each(function (idx, elem) {
+            schedule_update_submission_row("{{x}}", $(this).attr("data-submission"));
+        });
+    {% end %}
 });
 
 {% end %}
