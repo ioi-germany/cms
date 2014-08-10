@@ -41,6 +41,7 @@ from .smartmappedcollection import smart_mapped_collection
 
 from cmscommon.datetime import make_datetime
 
+import json
 
 class Submission(Base):
     """Class to store a submission.
@@ -155,13 +156,19 @@ class Submission(Base):
         return submission_result
 
     def tokened(self):
-        """Return if the user played a token against the submission.
+        """Return if the submission should be treated as tokened submission
 
         return (bool): True if tokened, False otherwise.
 
         """
-        return self.token is not None
+        return self.token is not None or self.is_unit_test()
 
+
+    def is_unit_test(self):
+        if self.additional_info is None: return False
+        
+        ai = json.loads(self.additional_info)
+        return "unit_test" in ai and ai["unit_test"]
 
 class File(Base):
     """Class to store information about one file submitted within a

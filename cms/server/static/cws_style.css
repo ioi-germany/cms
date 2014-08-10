@@ -476,7 +476,10 @@ td.token_rules p:last-child {
 }
 
 #submission_list tbody tr td.time,
-#submission_list tbody tr td.datetime {
+#submission_list tbody tr td.datetime,
+#unit_test_list tbody tr td.time,
+#unit_test_list tbody tr td.datetime,
+#unit_test_list tbody tr td.verdict {
     white-space: nowrap;
 }
 
