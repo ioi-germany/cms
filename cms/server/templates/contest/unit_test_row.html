@@ -51,11 +51,13 @@
     {% end %}
     <td class="datetime">{{ _("pending...") }} </td>
 {% else %}
-<tr data-submission="{{ s_idx }}" data-status="5">
+    {% set bgc = "class=\"%s\"" % ("score_100" if score_type.verdict()[0] == 1 else "score_0") %}
+<tr data-submission="{{ s_idx }}" data-status="5" 
+    {% raw bgc %}>
     {% raw col1 %}
     <td class="status">
         {{ _("Evaluated") }}
-        <a class="details" style="float:right;cursor:pointer;">{{ _("details") }}</a>
+        <a class="details">{{ _("details") }}</a>
     </td>
 
     {% if score_type is not None %}
