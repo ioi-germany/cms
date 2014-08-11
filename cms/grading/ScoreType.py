@@ -133,9 +133,6 @@ class ScoreType(object):
 
     def is_unit_test(self):
         return False
-        
-    def verdict(self):
-        return 0, None
 
 class ScoreTypeAlone(ScoreType):
     """Intermediate class to manage tasks where the score of a
