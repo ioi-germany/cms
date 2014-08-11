@@ -54,6 +54,21 @@ class ScoreTypeWithUnitTest(ScoreType):
         try:    return self._unit_test
         except: return False
         
+    def user_max_scores(self):
+        raise NotImplementedError    
+        
+    def max_scores(self):
+        public, private, headers = self.user_max_scores()
+            
+        if self.is_unit_test():
+            try: public = self.submission_info["expected_public_score"]
+            except: pass
+            
+            try: private = self.submission_info["expected_score"]
+            except: pass
+        
+        return public, private, headers
+        
 class SubtaskGroup(ScoreTypeWithUnitTest):
     """The testcases are divided into subtasks, which themselves consist of
     groups. The score of a group is the minimum score among the contained
@@ -263,7 +278,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
     def feedback(self):
         return self._feedback    
         
-    def max_scores(self):
+    def user_max_scores(self):
         """Compute the maximum score of a submission.
 
         See the same method in ScoreType for details.
@@ -352,7 +367,16 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
                     "testcases": [],
                     })
 
-        details = { "subtasks" : subtasks, "info" : self.submission_info }
+        details = { "subtasks" : subtasks, "info" : self.submission_info, "verdict" : (1, "Okay") }
+
+        # This is exceptionally awful
+        if not public:
+            public_score, dummy = self.compute_score(submission_result, True)
+            
+            wanted_public, wanted_private, dummy = self.max_scores()
+            
+            okay = (score == wanted_private and public_score == wanted_public)
+            details["verdict"] = (1, "Okay") if okay else (0, "Failed")
 
         if public:
             return score, json.dumps(details)
