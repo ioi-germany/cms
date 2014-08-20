@@ -518,13 +518,15 @@ td.token_rules p:last-child {
 }
 
 #submission_list td.public_score.score_0,
-#unit_test_list tr.score_0 > td {
-    background-color: hsla(0, 100%, 50%, 0.4);
+#unit_test_list tr.score_0 > td,
+td.unit_test_failed {
+    background-color: hsla(0, 100%, 50%, 0.4) !important;
 }
 
 #submission_list tr:hover td.public_score.score_0,
-#unit_test_list tr:hover.score_0 > td {
-    background-color: hsla(0, 100%, 50%, 0.5);
+#unit_test_list tr:hover.score_0 > td
+tr:hover > td.unit_test_failed {
+    background-color: hsla(0, 100%, 50%, 0.5) !important;
 }
 
 #submission_list td.public_score.score_0_100 {
@@ -536,17 +538,31 @@ td.token_rules p:last-child {
 }
 
 #submission_list td.public_score.score_100,
-#unit_test_list tr.score_100 > td {
-    background-color: hsla(120, 100%, 50%, 0.4);
+#unit_test_list tr.score_100 > td,
+td.unit_test_ok {
+    background-color: hsla(120, 100%, 50%, 0.4) !important;
 }
 
 #submission_list tr:hover td.public_score.score_100,
-#unit_test_list tr:hover.score_100 td {
-    background-color: hsla(120, 100%, 50%, 0.5);
+#unit_test_list tr:hover.score_100 td,
+tr:hover td.unit_test_ok {
+    background-color: hsla(120, 100%, 50%, 0.5) !important;
 }
 
-#submission_list td.total_score.undefined {
+#submission_list td.total_score.undefined,
+#unit_test_list td.total_score.undefined,
+td.no_expectations {
     color: #AAA;
+}
+
+col.short {
+    width:4%;
+    text-align:center;
+}
+
+td.short,
+th.short {
+    text-align:center;
 }
 
 #submission_list td.total_score.score_0 {
