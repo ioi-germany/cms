@@ -158,8 +158,6 @@ The following are optional keys that must be present for some task type or score
 
 - ``primary_language`` (string): the statement will be imported with this language code; defaults to ``it`` (Italian), in order to ensure backward compatibility.
 
-.. _externalcontestformats_task-directory:
-
 
 
 German import format

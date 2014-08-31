@@ -30,8 +30,8 @@ from __future__ import unicode_literals
 
 from datetime import datetime, timedelta
 
-from sqlalchemy.schema import Column, ForeignKey, UniqueConstraint, \
-    CheckConstraint
+from sqlalchemy.schema import Column, ForeignKey, CheckConstraint, \
+    UniqueConstraint
 from sqlalchemy.types import Boolean, Integer, String, Unicode, DateTime, \
     Interval
 from sqlalchemy.orm import relationship, backref
@@ -77,6 +77,7 @@ class Group(Base):
     # Max contest time for each user in seconds.
     per_user_time = Column(
         Interval,
+        CheckConstraint("per_user_time >= '0 seconds'"),
         nullable=True)
 
     # Contest (id and object) to which this user group belongs.
@@ -84,7 +85,7 @@ class Group(Base):
         Integer,
         ForeignKey(Contest.id,
                    onupdate="CASCADE", ondelete="CASCADE"),
-        index=True) # nullable=True does not work due to a circular dependency
+        index=True)  # nullable=True does not work due to a circular dependency
     contest = relationship(
         Contest,
         backref=backref('groups',

@@ -43,6 +43,7 @@ from cmscommon.datetime import make_datetime
 
 import json
 
+
 class Submission(Base):
     """Class to store a submission.
 
@@ -90,11 +91,6 @@ class Submission(Base):
         String,
         nullable=True)
 
-    # Additional parameters
-    additional_info = Column(
-        String,
-        nullable=True)
-        
     # Comment from the administrator on the submission.
     comment = Column(
         Unicode,
@@ -105,6 +101,11 @@ class Submission(Base):
     def short_comment(self):
         """The first line of the comment."""
         return self.comment.split("\n", 1)[0]
+
+    # Additional parameters
+    additional_info = Column(
+        String,
+        nullable=True)
 
     # Follows the description of the fields automatically added by
     # SQLAlchemy.
@@ -163,12 +164,13 @@ class Submission(Base):
         """
         return self.token is not None or self.is_unit_test()
 
-
     def is_unit_test(self):
-        if self.additional_info is None: return False
-        
+        if self.additional_info is None:
+            return False
+
         ai = json.loads(self.additional_info)
         return "unit_test" in ai and ai["unit_test"]
+
 
 class File(Base):
     """Class to store information about one file submitted within a

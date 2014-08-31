@@ -308,8 +308,10 @@ class BaseHandler(CommonRequestHandler):
 
         if self.current_user is not None:
             res = compute_actual_phase(
-                self.timestamp, self.contest.start, self.contest.stop,
-                self.contest.per_user_time, self.current_user.starting_time,
+                self.timestamp, self.current_user.group.start,
+                self.current_user.group.stop,
+                self.current_user.group.per_user_time,
+                self.current_user.starting_time,
                 self.current_user.delay_time, self.current_user.extra_time)
 
             ret["actual_phase"], ret["current_phase_begin"], \
@@ -1256,7 +1258,8 @@ class SubmissionStatusHandler(BaseHandler):
             raise tornado.web.HTTPError(404)
 
         sr = submission.get_result(task.active_dataset)
-        score_type = get_score_type(dataset=task.active_dataset, info=submission.additional_info)
+        score_type = get_score_type(dataset=task.active_dataset,
+                                    info=submission.additional_info)
 
         # TODO: use some kind of constants to refer to the status.
         data = dict()
@@ -1291,7 +1294,7 @@ class SubmissionStatusHandler(BaseHandler):
                         round(mprivs, task.score_precision)
                 data["score"] = "%g" % \
                     round(sr.score, task.score_precision)
-            if submission.is_unit_test():                
+            if submission.is_unit_test():
                 try:
                     data["verdict"] = json.loads(sr.score_details)["verdict"]
                 except:
@@ -1321,7 +1324,8 @@ class SubmissionDetailsHandler(BaseHandler):
             raise tornado.web.HTTPError(404)
 
         sr = submission.get_result(task.active_dataset)
-        score_type = get_score_type(dataset=task.active_dataset, info=submission.additional_info)
+        score_type = get_score_type(dataset=task.active_dataset,
+                                    info=submission.additional_info)
 
         details = None
         if sr is not None:
