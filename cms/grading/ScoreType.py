@@ -56,7 +56,7 @@ class ScoreType(object):
     """
     TEMPLATE = ""
 
-    def __init__(self, parameters, public_testcases):
+    def __init__(self, parameters, public_testcases, info = None):
         """Initializer.
 
         parameters (object): format is specified in the subclasses.
@@ -125,6 +125,14 @@ class ScoreType(object):
         logger.error("Unimplemented method compute_score.")
         raise NotImplementedError("Please subclass this class.")
 
+    def feedback(self):
+        """
+        You might want to override this
+        """
+        return "token"
+
+    def is_unit_test(self):
+        return False
 
 class ScoreTypeAlone(ScoreType):
     """Intermediate class to manage tasks where the score of a

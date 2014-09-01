@@ -160,8 +160,6 @@ The following are optional keys that must be present for some task type or score
 
 
 
-
-
 German import format
 =====================
 

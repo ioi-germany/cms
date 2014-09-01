@@ -308,8 +308,10 @@ class BaseHandler(CommonRequestHandler):
 
         if self.current_user is not None:
             res = compute_actual_phase(
-                self.timestamp, self.current_user.group.start, self.current_user.group.stop,
-                self.current_user.group.per_user_time, self.current_user.starting_time,
+                self.timestamp, self.current_user.group.start,
+                self.current_user.group.stop,
+                self.current_user.group.per_user_time,
+                self.current_user.starting_time,
                 self.current_user.delay_time, self.current_user.extra_time)
 
             ret["actual_phase"], ret["current_phase_begin"], \
@@ -1256,7 +1258,8 @@ class SubmissionStatusHandler(BaseHandler):
             raise tornado.web.HTTPError(404)
 
         sr = submission.get_result(task.active_dataset)
-        score_type = get_score_type(dataset=task.active_dataset)
+        score_type = get_score_type(dataset=task.active_dataset,
+                                    info=submission.additional_info)
 
         # TODO: use some kind of constants to refer to the status.
         data = dict()
@@ -1278,17 +1281,24 @@ class SubmissionStatusHandler(BaseHandler):
             data["status_text"] = "%s <a class=\"details\">%s</a>" % (
                 self._("Evaluated"), self._("details"))
 
+            mpubs, mprivs, dummy = score_type.max_scores()
+
             if score_type is not None and score_type.max_public_score != 0:
                 data["max_public_score"] = "%g" % \
-                    round(score_type.max_public_score, task.score_precision)
+                    round(mpubs, task.score_precision)
             data["public_score"] = "%g" % \
                 round(sr.public_score, task.score_precision)
-            if submission.token is not None:
+            if submission.tokened():
                 if score_type is not None and score_type.max_score != 0:
                     data["max_score"] = "%g" % \
-                        round(score_type.max_score, task.score_precision)
+                        round(mprivs, task.score_precision)
                 data["score"] = "%g" % \
                     round(sr.score, task.score_precision)
+            if submission.is_unit_test():
+                try:
+                    data["verdict"] = json.loads(sr.score_details)["verdict"]
+                except:
+                    pass
 
         self.write(data)
 
@@ -1314,7 +1324,8 @@ class SubmissionDetailsHandler(BaseHandler):
             raise tornado.web.HTTPError(404)
 
         sr = submission.get_result(task.active_dataset)
-        score_type = get_score_type(dataset=task.active_dataset)
+        score_type = get_score_type(dataset=task.active_dataset,
+                                    info=submission.additional_info)
 
         details = None
         if sr is not None:

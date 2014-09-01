@@ -2,30 +2,32 @@
 
 {% block js %}
 
-$(document).on("click", "#submission_list tbody tr td.status .details", function (event) {
-    var submission_id = $(this).parent().parent().attr("data-submission");
-    var modal = $("#submission_detail");
-    var modal_body = modal.children(".modal-body");
-    modal_body.html('<div class="loading"><img src="{{ url_root }}/static/loading.gif"/>{{ _("loading...") }}</div>');
-    modal_body.load("{{ url_root }}/tasks/{{ encode_for_url(task.name) }}/submissions/" + submission_id + "/details", function() {
-        $(".score_details .subtask .subtask-head").each(function () {
-            $(this).prepend("<i class=\"icon-chevron-right\"></i>");
+{% for x in ["submission_list", "unit_test_list"] %}
+    $(document).on("click", "#{{x}} tbody tr td.status .details", function (event) {
+        var submission_id = $(this).parent().parent().attr("data-submission");
+        var modal = $("#submission_detail");
+        var modal_body = modal.children(".modal-body");
+        modal_body.html('<div class="loading"><img src="{{ url_root }}/static/loading.gif"/>{{ _("loading...") }}</div>');
+        modal_body.load("{{ url_root }}/tasks/{{ encode_for_url(task.name) }}/submissions/" + submission_id + "/details", function() {
+            $(".score_details .subtask .subtask-head").each(function () {
+                $(this).prepend("<i class=\"icon-chevron-right\"></i>");
+            });
+            $(".score_details .subtask .subtask-head").click(function () {
+                $(this).parent().toggleClass("open");
+                if ($(this).parent().hasClass("open")) {
+                    $(this).children("i").removeClass("icon-chevron-right").addClass("icon-chevron-down");
+                } else {
+                    $(this).children("i").removeClass("icon-chevron-down").addClass("icon-chevron-right");
+                }
+            });
+            $(".score_details table.testcase-list").addClass("table table-bordered table-striped");
+            $(".score_details table.testcase-list tbody tr:not(.undefined) td:nth-child(1)").each(function () {
+                $(this).html("<span class=\"outcome\">" + $(this).text() + "</span>");
+            });
         });
-        $(".score_details .subtask .subtask-head").click(function () {
-            $(this).parent().toggleClass("open");
-            if ($(this).parent().hasClass("open")) {
-                $(this).children("i").removeClass("icon-chevron-right").addClass("icon-chevron-down");
-            } else {
-                $(this).children("i").removeClass("icon-chevron-down").addClass("icon-chevron-right");
-            }
-        });
-        $(".score_details table.testcase-list").addClass("table table-bordered table-striped");
-        $(".score_details table.testcase-list tbody tr:not(.undefined) td:nth-child(1)").each(function () {
-            $(this).html("<span class=\"outcome\">" + $(this).text() + "</span>");
-        });
+        modal.modal("show");
     });
-    modal.modal("show");
-});
+{% end %}
 
 function get_score_class (score, max_score) {
     if (score <= 0) {
@@ -37,8 +39,8 @@ function get_score_class (score, max_score) {
     }
 }
 
-update_submission_row = function (submission_id, data) {
-    var row = $("#submission_list tbody tr[data-submission=\"" + submission_id + "\"]");
+update_submission_row = function (x, submission_id, data) {
+    var row = $("#" + x + " tbody tr[data-submission=\"" + submission_id + "\"]");
     row.attr("data-status", data["status"]);
     row.children("td.status").html(data["status_text"]);
     if (data["status"] == 5) {
@@ -58,23 +60,36 @@ update_submission_row = function (submission_id, data) {
             }
             row.children("td.total_score").removeClass("undefined").html(score);
         }
+        if(data["verdict"] != undefined) {
+            var short_verdict = data["verdict"][0];
+            var verdict_details = data["verdict"][1];
+            row.children("td.verdict").html(verdict_details);
+            
+            if(short_verdict == 0)
+                row.addClass("score_0");
+            else
+                row.addClass("score_100");
+        }
+        
     } else if (data["status"] != 2) {
-        schedule_update_submission_row(submission_id);
+        schedule_update_submission_row(x, submission_id);
     }
 }
 
-schedule_update_submission_row = function (submission_id) {
+schedule_update_submission_row = function (x, submission_id) {
     setTimeout(function () {
         $.get("{{ url_root }}/tasks/{{ encode_for_url(task.name) }}/submissions/" + submission_id, function (data) {
-            update_submission_row(submission_id, data);
+            update_submission_row(x, submission_id, data);
         });
     }, 2000);
 }
 
 $(document).ready(function () {
-    $('#submission_list tbody tr[data-status][data-status!="2"][data-status!="5"]').each(function (idx, elem) {
-        schedule_update_submission_row($(this).attr("data-submission"));
-    });
+    {% for x in ["submission_list", "unit_test_list"] %}
+        $('#{{x}} tbody tr[data-status][data-status!="2"][data-status!="5"]').each(function (idx, elem) {
+            schedule_update_submission_row("{{x}}", $(this).attr("data-submission"));
+        });
+    {% end %}
 });
 
 {% end %}
@@ -135,10 +150,78 @@ $(document).ready(function () {
 {% end %}
 </div>
 
+{% from cms.grading.scoretypes import get_score_type %}
+{% try %}
+    {% set score_type = get_score_type(dataset=task.active_dataset) %}
+{% except %}
+    {% set score_type = None %}
+{% end %}
+
+
+{% from cmscommon.datetime import utc %}
+{% set show_date = any(s.timestamp.replace(tzinfo=utc).astimezone(timezone).date() != datetime.datetime.utcnow().replace(tzinfo=utc).astimezone(timezone).date() for s in submissions) %}
+
+
+{% comment Separate unit tests %}
+{% set unit_tests = [] %}
+{% set user_submissions = [] %}
+{% for s_idx, s in enumerate(sorted(submissions, key=lambda s: s.timestamp, reverse=True)) %}
+    {% set s_idx = len(submissions) - s_idx %}
+    {% set sr = s.get_result(s.task.active_dataset) %}
+    {% set st = get_score_type(dataset=s.task.active_dataset, info=s.additional_info) %}
+    {% if st.is_unit_test() %}
+        {% comment This is awkward (and most probably quadratic), but seems to be the only %}
+        {% comment way thanks to Tornado %}
+        {% set unit_tests = unit_tests + [(s_idx, s)] %}
+    {% else %}
+        {% set user_submissions = user_submissions + [(s_idx, s)] %}
+    {% end %}
+{% end %}
+
+{% if len(unit_tests) != 0 %}
+    <h2 style="margin:40px 0 10px">{{ _("Unit Tests") }}</h2>
+    <table id="unit_test_list" class="table table-bordered table-striped">
+    <colgroup>
+    {% if show_date %}
+            <col class="datetime"/>
+    {% else %}
+            <col class="time"/>
+    {% end %}
+            <col class="status"/>
+    {% if score_type is not None %}
+            <col class="public_score"/>
+            <col class="total_score"/>
+    {% end %}
+        </colgroup>
+        <thead>
+            <tr>
+    {% if show_date %}
+                <th class="datetime">{{ _("Date and time") }}</th>
+    {% else %}
+                <th class="time">{{ _("Time") }}</th>
+    {% end %}
+                <th class="status">{{ _("Status") }}</th>
+    {% if score_type is not None %}
+                <th class="public_score">{{ _("Public score") }}</th>
+                <th class="total_score">{{ _("Total score") }}</th>
+    {% end %}
+                <th class="time"> {{ _("Verdict") }}</th>
+            </tr>
+        </thead>
+        <tbody>
+    {% for s_idx, s in unit_tests %}
+        {% set sr = s.get_result(s.task.active_dataset) %}
+        {% set score_type = get_score_type(dataset=s.task.active_dataset, info=s.additional_info) %}
+        {% include unit_test_row.html %}
+    {% end %}
+        </tbody>
+    </table>
+{% end %}
+
 
 <h2 style="margin: 40px 0 10px">{{ _("Previous submissions") }}</h2>
 
-{% if tokens_contest != 0 and tokens_tasks != 0 %}
+{% if score_type is not None and score_type.feedback() == "token" %}
 <div style="padding-bottom:10px">
     {% set tokens_info = contest.tokens_available(current_user.username, task.name, timestamp) %}
     {% set can_play_token = tokens_info[0] > 0 or tokens_info[0] == -1 %}
@@ -178,17 +261,6 @@ $(document).ready(function () {
 {% end %}
 
 
-{% from cms.grading.scoretypes import get_score_type %}
-{% try %}
-    {% set score_type = get_score_type(dataset=task.active_dataset) %}
-{% except %}
-    {% set score_type = None %}
-{% end %}
-
-{% from cmscommon.datetime import utc %}
-{% set show_date = any(s.timestamp.replace(tzinfo=utc).astimezone(timezone).date() != datetime.datetime.utcnow().replace(tzinfo=utc).astimezone(timezone).date() for s in submissions) %}
-
-
 <table id="submission_list" class="table table-bordered table-striped">
     <colgroup>
 {% if show_date %}
@@ -197,14 +269,14 @@ $(document).ready(function () {
         <col class="time"/>
 {% end %}
         <col class="status"/>
-{% if score_type is not None and score_type.max_public_score != 0 %}
+{% if score_type is not None %}
         <col class="public_score"/>
-        <col class="total_score"/>
-{% else %}
+{% end %}
+{% if score_type is None or score_type.feedback() == "token" %}
         <col class="total_score"/>
 {% end %}
         <col class="files"/>
-{% if tokens_contest != 0 and tokens_tasks != 0 %}
+{% if score_type is not None and score_type.feedback() == "token" %}
         <col class="token"/>
 {% end %}
     </colgroup>
@@ -216,20 +288,20 @@ $(document).ready(function () {
             <th class="time">{{ _("Time") }}</th>
 {% end %}
             <th class="status">{{ _("Status") }}</th>
-{% if score_type is not None and score_type.max_public_score != 0 %}
+{% if score_type is not None and score_type.feedback() == "token" %}
             <th class="public_score">{{ _("Public score") }}</th>
             <th class="total_score">{{ _("Total score") }}</th>
 {% else %}
-            <th class="total_score">{{ _("Score") }}</th>
+            <th class="public_score">{{ _("{} score").format(_("Total") if score_type.feedback() == "full" else _("Public")) }}</th>
 {% end %}
             <th class="files">{{ _("Files") }}</th>
-{% if tokens_contest != 0 and tokens_tasks != 0 %}
+{% if score_type is not None and score_type.feedback() == "token" %}
             <th class="token">{{ _("Token") }}</th>
 {% end %}
         </tr>
     </thead>
     <tbody>
-    {% if len(submissions) == 0 %}
+    {% if len(user_submissions) == 0 %}
         <tr>
         {% if tokens_contest != 0 and tokens_tasks != 0 %}
             <td colspan="6" class="no_submissions">{{ _("no submissions yet") }}</td>
@@ -238,9 +310,9 @@ $(document).ready(function () {
         {% end %}
         </tr>
     {% else %}
-        {% for s_idx, s in enumerate(sorted(submissions, key=lambda s: s.timestamp, reverse=True)) %}
-            {% set s_idx = len(submissions) - s_idx %}
+        {% for s_idx, s in user_submissions %}
             {% set sr = s.get_result(s.task.active_dataset) %}
+            {% set score_type = get_score_type(dataset=s.task.active_dataset, info=s.additional_info) %}
             {% include submission_row.html %}
         {% end %}
     {% end %}

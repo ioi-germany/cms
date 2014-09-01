@@ -41,7 +41,7 @@ def get_score_type_class(name):
 
 
 def get_score_type(name=None, parameters=None, public_testcases=None,
-                   dataset=None):
+                   dataset=None, info=None):
     """Construct the ScoreType specified by parameters.
 
     Load the ScoreType class named "name" and instantiate it with the
@@ -79,4 +79,4 @@ def get_score_type(name=None, parameters=None, public_testcases=None,
         logger.error("Cannot decode score type parameters.\n%r." % error)
         raise
 
-    return class_(parameters, public_testcases)
+    return class_(parameters, public_testcases, info)

@@ -8,6 +8,7 @@
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2014 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -171,54 +172,6 @@ def get_evaluation_commands(language, executable_filename):
     else:
         raise ValueError("Unknown language %s." % language)
     return commands
-
-
-def unit_test_compare(limits, expected, evaluation):
-    result = []
-
-    def check(val, weak, strong):
-        if val > weak:
-            return -1
-        if val < strong:
-            return 1
-        else:
-            return 0
-
-    # check time constraints
-    if evaluation.execution_time is not None:  # TODO What if this is None?
-        timeverdict = check(float(evaluation.execution_time),
-                            float(limits["weak_time_limit"]),
-                            float(limits["strong_time_limit"]))
-        if timeverdict == -1:
-            result.append("time")
-        elif timeverdict == 0:
-            result.append("time?")
-
-    # check memory constraints
-    if evaluation.execution_memory is not None:  # TODO What if this is None?
-        memverdict = check(float(evaluation.execution_memory) / 2**20,
-                           float(limits["weak_mem_limit"]),
-                           float(limits["strong_mem_limit"]))
-        if "violating memory limits" in json.loads(evaluation.text)[0]:
-            memverdict = -1
-        if memverdict == -1:
-            result.append("memory")
-        elif memverdict == 0:
-            result.append("memory?")
-
-    # check solution (if possible)
-    if float(evaluation.outcome) > 0:
-        result.append(evaluation.outcome)
-    elif len(result) == 0:
-        result.append(evaluation.outcome)
-
-    if expected in result or expected == "any":
-        accepted = True
-    else:
-        accepted = False
-
-    return accepted, result
-
 
 def format_status_text(status, translator=None):
     """Format the given status text in the given locale.
@@ -833,3 +786,144 @@ def task_score(user, task):
                 partial = True
 
     return max(last_score, max_tokened_score), partial
+    
+class UnitTest:
+    """Functions for basic unit tests
+    """
+    @staticmethod
+    def get_result(limits, evaluation):    
+        def get(x):
+            try:    return evaluation[x]
+            except: return getattr(evaluation, x)
+    
+        """Collect information about the evaluation
+        """
+        result = []
+
+        def check(val, weak, strong):
+            if val > weak:
+                return -1
+            if val < strong:
+                return 1
+            else:
+                return 0
+
+        # check time constraints
+        if get("execution_time") is not None:  # TODO What if this is None?
+            timeverdict = check(float(get("execution_time")),
+                                float(limits["weak_time_limit"]),
+                                float(limits["strong_time_limit"]))
+            if timeverdict == -1:
+                result.append("time")
+            elif timeverdict == 0:
+                result.append("time?")
+
+        # check memory constraints
+        if get("execution_memory") is not None:  # TODO What if this is None?
+            memverdict = check(float(get("execution_memory")) / 2**20,
+                               float(limits["weak_mem_limit"]),
+                               float(limits["strong_mem_limit"]))
+            if "violating memory limits" in json.loads(evaluation.text)[0]:
+                memverdict = -1
+            if memverdict == -1:
+                result.append("memory")
+            elif memverdict == 0:
+                result.append("memory?")
+
+        # check solution (if possible)
+        if float(get("outcome")) < 1 and UnitTest.meaningful_score(result):
+            result.append(evaluation.outcome)
+
+        return result
+
+    @staticmethod
+    def ignore(x, l):
+        try:    return float(x) >= UnitTest.score(l)
+        except: pass
+    
+        if "time" in l and x == "time?":     return True
+        if "memory" in l and x == "memory?": return True
+        return False
+
+    @staticmethod
+    def score(results):
+        """Get score of testcase or group
+        """
+        s = 1.0
+        
+        for r in results:
+            try:    s = min(s, float(r))
+            except: pass
+            
+        return s
+
+    @staticmethod
+    def score_specified(l):
+        """Test whether a score has been specified
+        """
+        for x in l:
+            try:
+                float(x)
+                return True
+            except:
+                pass
+                
+        return False
+
+    @staticmethod
+    def meaningful_score(results):
+        """Test whether the score actually makes sense
+        """
+        return not('time' in results or 'memory' in results)
+
+    @staticmethod
+    def case_line(results, mandatory, optional, c = ['o', '~', 'x', '--']):
+        """Information about a single testcase as part of a group
+           This function returns a list of tuples, where the first entry
+           visualises the respective result and the second one is >0
+           iff the result is as expected
+        """
+        def badness(key, r):
+            if key in r:       return 2
+            if key + '?' in r: return 1
+            else:              return 0
+    
+        def get_int(b):
+            if b: return  1
+            else: return -1
+    
+        L = []
+
+        for x in ['time', 'memory']:
+            L.append((c[badness(x, results)],
+                      get_int((x in results or not x in mandatory) and badness(x, results) <= badness(x, optional))))
+
+        meaningful = UnitTest.meaningful_score(results)
+        L.append((UnitTest.score(results) if meaningful else c[-1], 
+                  0 if not meaningful else get_int(UnitTest.score(results) >= UnitTest.score(optional))))
+        return L
+
+    @staticmethod
+    def judge_group(results, mandatory, optional = None):
+        """Judge a whole group given a concatenated list of the results of
+           the individual cases
+        """
+        if optional is None: optional = mandatory
+    
+        if any(x not in optional for x in results if not UnitTest.ignore(x, optional + ['time', 'memory'])):
+            return (-2, "failed", "The submission failed for a reason you did not expect.")
+
+        if any(x.endswith("?") for x in results if not UnitTest.ignore(x, optional)):
+            return (0, "ambiguous", "It is not clear whether the submission respects the limits.")
+
+        if len(mandatory) == 0 or any(x in results for x in mandatory):
+            return (1, "okay", "... all shall be well.")
+        
+        return (-1, "failed", "You expected the submission to fail but it didn't.")
+        
+    @staticmethod
+    def judge_case(results, mandatory, optional):
+        """Judge a single testcase
+        """
+        a, b, c = UnitTest.judge_group(results, mandatory, optional)
+        return a, c

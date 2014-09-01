@@ -74,6 +74,14 @@ These are our requirements (in particular we highlight those that are not usuall
 
 * `latexmk <http://www.ctan.org/pkg/latexmk/>`_ (for german task format)
 
+* `TeX Live <https://www.tug.org/texlive/>`_ (only for printing)
+
+* `pycups <http://pypi.python.org/pypi/pycups>`_ (only for printing)
+
+* `a2ps <https://www.gnu.org/software/a2ps/>`_ (only for printing)
+
+* `PyPDF2 <https://pypi.python.org/pypi/PyPDF2>`_ (only for printing)
+
 * `asymptote <http://asymptote.sourceforge.net/>`_ (for german task format)
 
 You will also require a Linux kernel with support for control groups and namespaces. Support has been in the Linux kernel since 2.6.32, and is provided by Ubuntu 12.04 and later. Other distributions, or systems with custom kernels, may not have support enabled. At a minimum, you will need to enable the following Linux kernel options: ``CONFIG_CGROUPS``, ``CONFIG_CGROUP_CPUACCT``, ``CONFIG_MEMCG`` (previously called as ``CONFIG_CGROUP_MEM_RES_CTLR``), ``CONFIG_CPUSETS``, ``CONFIG_PID_NS``, ``CONFIG_IPC_NS``, ``CONFIG_NET_NS``. It is anyway suggested to use Linux kernel version at least 3.8.

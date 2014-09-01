@@ -22,6 +22,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from cms.grading.ScoreType import ScoreType
+from cms.grading import UnitTest
 import json
 
 
@@ -30,7 +31,67 @@ def N_(message):
     return message
 
 
-class SubtaskGroup(ScoreType):
+class ScoreTypeWithUnitTest(ScoreType):
+    """Basic methods for score types that can handle unit tests
+    """
+    USER_TEMPLATE = ""
+    UNIT_TEST_TEMPLATE = ""
+
+    def __init__(self, parameters, public_testcases, info=None):
+        super(ScoreTypeWithUnitTest, self).\
+            __init__(parameters['tcinfo'], public_testcases, info)
+        self.set_submission_info(info)
+
+    def set_submission_info(self, info):
+        if info is None:
+            self.submission_info = None
+            self._unit_test = False
+        else:
+            self.submission_info = json.loads(info)
+            self._unit_test = self.submission_info["unit_test"]
+
+        self.TEMPLATE = self.USER_TEMPLATE if not self.is_unit_test() \
+            else self.UNIT_TEST_TEMPLATE
+
+    def is_unit_test(self):
+        try:
+            return self._unit_test
+        except:
+            return False
+
+    def user_max_scores(self):
+        raise NotImplementedError
+
+    def max_scores(self):
+        public, private, headers = self.user_max_scores()
+
+        if self.is_unit_test():
+            try:
+                public = self.submission_info["expected_public_score"]
+            except:
+                pass
+
+            try:
+                private = self.submission_info["expected_score"]
+            except:
+                pass
+
+        return public, private, headers
+
+    def user_compute_score(self, submission_result, public):
+        raise NotImplementedError
+
+    def unit_test_compute_score(self, submission_result, public):
+        raise NotImplementedError
+
+    def compute_score(self, submission_result, public):
+        if self.is_unit_test():
+            return self.unit_test_compute_score(submission_result, public)
+        else:
+            return self.user_compute_score(submission_result, public)
+
+
+class SubtaskGroup(ScoreTypeWithUnitTest):
     """The testcases are divided into subtasks, which themselves consist of
     groups. The score of a group is the minimum score among the contained
     test cases multiplied with a parameter of the group. The score of a subtask
@@ -45,10 +106,10 @@ class SubtaskGroup(ScoreType):
     N_("Execution time")
     N_("Memory used")
     N_("N/A")
-    TEMPLATE = """\
+    USER_TEMPLATE = """\
 {% from cms.grading import format_status_text %}
 {% from cms.server import format_size %}
-{% for st in details %}
+{% for st in details["subtasks"] %}
     {% if "score" in st and "max_score" in st %}
         {% if st["score"] >= st["max_score"] %}
 <div class="subtask correct">
@@ -61,7 +122,7 @@ class SubtaskGroup(ScoreType):
 <div style="height:0px;display:none;">
     {% end %}
     <div class="subtask-head">
-        <span class="title">
+        <span class="title" style="margin-top:-2px;">
             {{ st["name"] }}
         </span>
     {% if "score" in st and "max_score" in st %}
@@ -138,7 +199,93 @@ class SubtaskGroup(ScoreType):
 </div>
 {% end %}"""
 
-    def max_scores(self):
+    UNIT_TEST_TEMPLATE = """\
+{% from cms.grading import format_status_text %}
+{% from cms.server import format_size %}
+{% for st in details["subtasks"] %}
+    {% if st["status"][0] > 0 %}
+<div class="subtask correct">
+    {% else %}
+<div class="subtask notcorrect">
+    {% end %}
+    <div class="subtask-head">
+        <span class="title" style="margin-top:-2px;">
+            {{ st["name"] }}
+        </span>
+        <span class="score">
+            {{st["status"][1].upper()}}
+        </span>
+    </div>
+    <div class="subtask-body">
+        <table class="table table-bordered table-striped">
+            <col class="short">
+            <col class="short">
+            <col class="short">
+            <col style="width:44%;">
+            <col style="width:44%;">
+            <thead>
+                <tr>
+                    <th class="short">{{ _("T") }}</th>
+                    <th class="short">{{ _("M") }}</th>
+                    <th class="short">{{ _("A") }}</th>
+                    <th>{{ _("Testcase verdict") }}</th>
+                    <th>{{ _("Group verdict") }}</th>
+                </tr>
+            </thead>
+            <tbody>
+    {% for i, g in enumerate(st["groups"]) %}
+        {% set first = True %}
+        {% for c in g["cases"] %}
+                <tr>
+                    <td class="{{"unit_test_ok" if c["line"][0][1] > 0 else \
+                                 "unit_test_failed" if c["line"][0][1] < 0 \
+                                 else ""}} short">
+                        {{c["line"][0][0]}}
+                    </td>
+                    <td class="{{"unit_test_ok" if c["line"][1][1] > 0 else \
+                                 "unit_test_failed" if c["line"][1][1] < 0 \
+                                 else ""}} short">
+                        {{c["line"][1][0]}}
+                    </td>
+                    <td class="{{"unit_test_ok" if c["line"][2][1] > 0 else \
+                                 "unit_test_failed" if c["line"][2][1] < 0 \
+                                 else ""}} short">
+                        {{c["line"][2][0]}}
+                    </td>
+            {% if c["verdict"][0] != 42 %}
+                    <td class="{{"unit_test_ok" if c["verdict"][0] > 0 else \
+                                 "unit_test_failed"}}">
+                        {{c["verdict"][1]}}
+                    </td>
+            {% else %}
+                    <td class="no_expectations"> {{c["verdict"][1]}} </td>
+            {% end %}
+            {% if first %}
+                    <td rowspan={{g["grouplen"]}} class="{{"unit_test_ok" if \
+                                  g["verdict"][0] > 0 else \
+                                  "unit_test_failed"}}">
+                        {% raw g["verdict"][1] %}
+                    </td>
+            {% end %}
+            {% set first = False %}
+                </tr>
+        {% end %}
+    {% end %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% end %}
+"""
+
+    def __init__(self, parameters, public_testcases, info=None):
+        self._feedback = parameters['feedback']
+        super(SubtaskGroup, self).__init__(parameters, public_testcases, info)
+
+    def feedback(self):
+        return self._feedback
+
+    def user_max_scores(self):
         """Compute the maximum score of a submission.
 
         See the same method in ScoreType for details.
@@ -160,8 +307,141 @@ class SubtaskGroup(ScoreType):
 
         return private_score, public_score, headers
 
-    def compute_score(self, submission_result, public):
-        """Compute the score of a submission.
+    def unit_test_compute_score(self, submission_result, public):
+        """Compute the score of a unit test.
+
+        See the same method in ScoreType for details.
+
+        """
+        # Actually, this means it didn't even compile!
+        if not submission_result.evaluated(public):
+            D = {'subtasks': [], 'info': self.submission_info}
+
+            if public:
+                return 0.0, json.dumps(D)
+            else:
+                return 0.0, json.dumps(D), \
+                    json.dumps(["%lg" % 0.0 for _ in self.parameters])
+
+        evaluations = dict((ev.codename, ev)
+                           for ev in submission_result.evaluations)
+        subtasks = []
+        public_score = 0
+        private_score = 0
+
+        expectations = {tuple(json.loads(key)): val for key, val
+                        in self.submission_info["expected"].iteritems()}
+        possible_task = [x for key, val in expectations.iteritems()
+                         if key[0] == 0 for x in val]
+        possible_subtask = []
+        possible_group = []
+        extra = []
+        case_results = []
+        subtasks_failed = False
+
+        symbol_table = [u'\u2713', u'\u2248', u'\u2717', u'\u2015']
+
+        for subtask in self.parameters:
+            subtasks.append({"name": subtask["name"], "status": (0, "okay"),
+                             "groups": []})
+            possible_subtask = expectations[(1, subtask["key"])]
+
+            group_score = 0
+
+            worst_group = (1, "okay")
+
+            for i, g in enumerate(subtask["groups"]):
+                possible_group = expectations[(2, g["key"])]
+                possible = possible_task + possible_subtask + possible_group
+
+                subtasks[-1]["groups"].append({"verdict": (42, ""),
+                                               "cases": [],
+                                               "grouplen": 0})
+                min_f = 1.0
+                extra = []
+
+                cases_failed = False
+                worst_case = (2, "")
+
+                for idx in g["cases"]:
+                    subtasks[-1]["groups"][-1]["grouplen"] += 1
+                    r = UnitTest.get_result(self.submission_info["limits"],
+                                            evaluations[idx])
+                    min_f = min(min_f, UnitTest.score(r) if
+                                UnitTest.meaningful_score(r) else 0)
+
+                    mandatory = expectations[(3, idx)]
+
+                    l = UnitTest.case_line(r, mandatory,
+                                           possible + mandatory,
+                                           symbol_table)
+                    v = (42, "No explicit expectations given for "
+                             "this testcase.")
+
+                    subtasks[-1]["groups"][-1]["cases"].\
+                        append({"line": l, "verdict": v})
+
+                    accepted, desc = \
+                        UnitTest.judge_case(r, mandatory, mandatory + possible)
+
+                    if len(mandatory) == 0:
+                        worst_case = min(worst_case, (accepted, desc))
+                    else:
+                        subtasks[-1]["groups"][-1]["cases"][-1]["verdict"] = \
+                            (accepted, desc)
+                        if accepted <= 0:
+                            cases_failed = True
+
+                group_score += min_f * g["points"]
+                case_results += r
+                extra += mandatory
+
+                status, short, desc = \
+                    UnitTest.judge_group(case_results, possible,
+                                         possible + extra)
+                c_st = "failed" if worst_case[0] < 0 else \
+                       "ambiguous" if worst_case[0] == 0 else "okay"
+                status, short, desc = min((status, short, desc),
+                                          (worst_case[0], c_st, worst_case[1]))
+
+                if cases_failed:
+                    if status > 0:
+                        desc = ""
+                    else:
+                        desc += "<br><br>"
+
+                    status = -1
+                    desc += "At least one testcase did not behave as " \
+                            "expected, cf. the \"test verdict\" column."
+
+                subtasks[-1]["groups"][-1]["verdict"] = (status, desc)
+                worst_group = min(worst_group, (status, short))
+
+            if subtask["for_public_score"]:
+                public_score += group_score
+            if subtask["for_private_score"]:
+                private_score += group_score
+
+            subtasks[-1]["status"] = worst_group
+
+            if subtasks[-1]["status"][0] <= 0:
+                subtasks_failed = True
+
+        details = {"subtasks": subtasks, "info": self.submission_info,
+                   "more": self.parameters, "verdict": (1, "Okay")}
+
+        wanted_public, wanted_private, dummy = self.max_scores()
+        okay = (private_score == wanted_private and
+                public_score == wanted_public) and not subtasks_failed
+        details["verdict"] = (1, "Okay") if okay else (0, "Failed")
+
+        if public:
+            return public_score, json.dumps(details)
+        else:
+            return private_score, json.dumps(details), json.dumps([])
+
+    def user_compute_score(self, submission_result, public):
+        """Compute the score of a normal submission.
 
         See the same method in ScoreType for details.
 
@@ -182,7 +462,7 @@ class SubtaskGroup(ScoreType):
             ranking_details = []
 
         for subtask in self.parameters:
-            if subtask["public"] or not public: # Shakespeare has been here
+            if subtask["public"] or not public:  # Shakespeare has been here
                 st_score = 0
                 st_maxscore = 0
                 testcases = []
@@ -208,10 +488,11 @@ class SubtaskGroup(ScoreType):
                             tc["grouplen"] = len(group["cases"])
 
                         testcases.append(tc)
-                if (public and subtask["for_public_score"]) or (not public and subtask["for_private_score"]):
+                if (public and subtask["for_public_score"]) or \
+                   (not public and subtask["for_private_score"]):
                     score += st_score
                 subtasks.append({
-                    "public": subtask["public"], # TODO von public abhaengig?
+                    "public": subtask["public"],  # TODO depends on public?
                     "for_public_score": subtask["for_public_score"],
                     "for_private_score": subtask["for_private_score"],
                     "name": subtask["name"],
@@ -227,10 +508,12 @@ class SubtaskGroup(ScoreType):
                     "testcases": [],
                     })
 
+        details = {"subtasks": subtasks}
+
         if public:
-            return score, json.dumps(subtasks)
+            return score, json.dumps(details)
         else:
-            return score, json.dumps(subtasks), \
+            return score, json.dumps(details), \
                 json.dumps(ranking_details)
 
     def get_public_outcome(self, outcome):
