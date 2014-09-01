@@ -237,23 +237,23 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
         {% set first = True %}
         {% for c in g["cases"] %}
                 <tr>
-                    <td class="{{"unit_test_ok" if c["line"][0][1] > 0 else
-                                 "unit_test_failed" if c["line"][0][1] < 0 else
-                                 ""}} short">
+                    <td class="{{"unit_test_ok" if c["line"][0][1] > 0 else \
+                                 "unit_test_failed" if c["line"][0][1] < 0 \
+                                 else ""}} short">
                         {{c["line"][0][0]}}
                     </td>
-                    <td class="{{"unit_test_ok" if c["line"][1][1] > 0 else
-                                 "unit_test_failed" if c["line"][1][1] < 0 else
-                                 ""}} short">
+                    <td class="{{"unit_test_ok" if c["line"][1][1] > 0 else \
+                                 "unit_test_failed" if c["line"][1][1] < 0 \
+                                 else ""}} short">
                         {{c["line"][1][0]}}
                     </td>
-                    <td class="{{"unit_test_ok" if c["line"][2][1] > 0 else
-                                 "unit_test_failed" if c["line"][2][1] < 0 else
-                                 ""}} short">
+                    <td class="{{"unit_test_ok" if c["line"][2][1] > 0 else \
+                                 "unit_test_failed" if c["line"][2][1] < 0 \
+                                 else ""}} short">
                         {{c["line"][2][0]}}
                     </td>
             {% if c["verdict"][0] != 42 %}
-                    <td class="{{"unit_test_ok" if c["verdict"][0] > 0 else
+                    <td class="{{"unit_test_ok" if c["verdict"][0] > 0 else \
                                  "unit_test_failed"}}">
                         {{c["verdict"][1]}}
                     </td>
@@ -261,8 +261,8 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
                     <td class="no_expectations"> {{c["verdict"][1]}} </td>
             {% end %}
             {% if first %}
-                    <td rowspan={{g["grouplen"]}} class="{{"unit_test_ok" if
-                                  g["verdict"][0] > 0 else
+                    <td rowspan={{g["grouplen"]}} class="{{"unit_test_ok" if \
+                                  g["verdict"][0] > 0 else \
                                   "unit_test_failed"}}">
                         {% raw g["verdict"][1] %}
                     </td>
@@ -320,41 +320,43 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
             if public:
                 return 0.0, json.dumps(D)
             else:
-                return 0.0, json.dumps(D),
-                       json.dumps(["%lg" % 0.0 for _ in self.parameters])
+                return 0.0, json.dumps(D), \
+                    json.dumps(["%lg" % 0.0 for _ in self.parameters])
 
         evaluations = dict((ev.codename, ev)
                            for ev in submission_result.evaluations)
         subtasks = []
         public_score = 0
         private_score = 0
-        if not public: ranking_details = []
 
-        expectations = { tuple(json.loads(key)) : val for key,val in self.submission_info["expected"].iteritems() }     
-        possible_task = [x for key,val in expectations.iteritems() if key[0] == 0 for x in val ]
+        expectations = {tuple(json.loads(key)): val for key, val
+                        in self.submission_info["expected"].iteritems()}
+        possible_task = [x for key, val in expectations.iteritems()
+                         if key[0] == 0 for x in val]
         possible_subtask = []
         possible_group = []
-        extra = [] 
-
+        extra = []
         case_results = []
+        subtasks_failed = False
 
         symbol_table = [u'\u2713', u'\u2248', u'\u2717', u'\u2015']
 
-        subtasks_failed = False
-
         for subtask in self.parameters:
-            subtasks.append({"name" : subtask["name"], "status" : (0, "okay"), "groups" : []})
+            subtasks.append({"name": subtask["name"], "status": (0, "okay"),
+                             "groups": []})
             possible_subtask = expectations[(1, subtask["key"])]
 
             group_score = 0
 
             worst_group = (1, "okay")
 
-            for i,g in enumerate(subtask["groups"]):
+            for i, g in enumerate(subtask["groups"]):
                 possible_group = expectations[(2, g["key"])]
                 possible = possible_task + possible_subtask + possible_group
 
-                subtasks[-1]["groups"].append({"verdict": (42, ""), "cases" : [], "grouplen" : 0})
+                subtasks[-1]["groups"].append({"verdict": (42, ""),
+                                               "cases": [],
+                                               "grouplen": 0})
                 min_f = 1.0
                 extra = []
 
@@ -363,58 +365,80 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
 
                 for idx in g["cases"]:
                     subtasks[-1]["groups"][-1]["grouplen"] += 1
-                    r = UnitTest.get_result(self.submission_info["limits"], evaluations[idx])
-                    min_f = min(min_f, UnitTest.score(r) if UnitTest.meaningful_score(r) else 0)
+                    r = UnitTest.get_result(self.submission_info["limits"],
+                                            evaluations[idx])
+                    min_f = min(min_f, UnitTest.score(r) if
+                                UnitTest.meaningful_score(r) else 0)
 
-                    mandatory = expectations[(3,idx)]
+                    mandatory = expectations[(3, idx)]
 
-                    subtasks[-1]["groups"][-1]["cases"].append({"line" : UnitTest.case_line(r, mandatory, 
-                                                                                            possible + mandatory, symbol_table),
-                                                                "verdict": (42, "No explicit expectations given for this testcase.")})          
+                    l = UnitTest.case_line(r, mandatory,
+                                           possible + mandatory,
+                                           symbol_table)
+                    v = (42, "No explicit expectations given for "
+                             "this testcase.")
 
-                    accepted, desc = UnitTest.judge_case(r, mandatory, mandatory + possible)              
+                    subtasks[-1]["groups"][-1]["cases"].\
+                        append({"line": l, "verdict": v})
+
+                    accepted, desc = \
+                        UnitTest.judge_case(r, mandatory, mandatory + possible)
 
                     if len(mandatory) == 0:
-                        worst_case = min(worst_case, (accepted, desc))    
+                        worst_case = min(worst_case, (accepted, desc))
                     else:
-                        subtasks[-1]["groups"][-1]["cases"][-1]["verdict"] = (accepted, desc)
-                        if accepted <= 0: cases_failed = True
+                        subtasks[-1]["groups"][-1]["cases"][-1]["verdict"] = \
+                            (accepted, desc)
+                        if accepted <= 0:
+                            cases_failed = True
 
                 group_score += min_f * g["points"]
                 case_results += r
                 extra += mandatory
 
-                status, short, desc = UnitTest.judge_group(case_results, possible, possible + extra)
-                c_st = "failed" if worst_case[0] < 0 else "ambiguous" if worst_case[0] == 0 else "okay"
-                status, short, desc = min((status, short, desc), (worst_case[0], c_st, worst_case[1]))
+                status, short, desc = \
+                    UnitTest.judge_group(case_results, possible,
+                                         possible + extra)
+                c_st = "failed" if worst_case[0] < 0 else \
+                       "ambiguous" if worst_case[0] == 0 else "okay"
+                status, short, desc = min((status, short, desc),
+                                          (worst_case[0], c_st, worst_case[1]))
 
                 if cases_failed:
-                    if status > 0: desc = ""
-                    else: desc += "<br><br>"
+                    if status > 0:
+                        desc = ""
+                    else:
+                        desc += "<br><br>"
 
                     status = -1
-                    desc += "At least one testcase did not behave as expected, cf. the \"test verdict\" column."
+                    desc += "At least one testcase did not behave as " \
+                            "expected, cf. the \"test verdict\" column."
 
                 subtasks[-1]["groups"][-1]["verdict"] = (status, desc)
                 worst_group = min(worst_group, (status, short))
 
-            if subtask["for_public_score"]:  public_score  += group_score
-            if subtask["for_private_score"]: private_score += group_score
+            if subtask["for_public_score"]:
+                public_score += group_score
+            if subtask["for_private_score"]:
+                private_score += group_score
 
             subtasks[-1]["status"] = worst_group
-            if subtasks[-1]["status"][0] <= 0: subtasks_failed = True
 
-        details = { "subtasks" : subtasks, "info" : self.submission_info, "more" : self.parameters, "verdict" : (1, "Okay") }
+            if subtasks[-1]["status"][0] <= 0:
+                subtasks_failed = True
+
+        details = {"subtasks": subtasks, "info": self.submission_info,
+                   "more": self.parameters, "verdict": (1, "Okay")}
 
         wanted_public, wanted_private, dummy = self.max_scores()
-        okay = (private_score == wanted_private and public_score == wanted_public) and not subtasks_failed
+        okay = (private_score == wanted_private and
+                public_score == wanted_public) and not subtasks_failed
         details["verdict"] = (1, "Okay") if okay else (0, "Failed")
 
         if public:
             return public_score, json.dumps(details)
         else:
             return private_score, json.dumps(details), json.dumps([])
-
 
     def user_compute_score(self, submission_result, public):
         """Compute the score of a normal submission.
@@ -438,7 +462,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
             ranking_details = []
 
         for subtask in self.parameters:
-            if subtask["public"] or not public: # Shakespeare has been here
+            if subtask["public"] or not public:  # Shakespeare has been here
                 st_score = 0
                 st_maxscore = 0
                 testcases = []
@@ -464,10 +488,11 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
                             tc["grouplen"] = len(group["cases"])
 
                         testcases.append(tc)
-                if (public and subtask["for_public_score"]) or (not public and subtask["for_private_score"]):
+                if (public and subtask["for_public_score"]) or \
+                   (not public and subtask["for_private_score"]):
                     score += st_score
                 subtasks.append({
-                    "public": subtask["public"], # TODO von public abhaengig?
+                    "public": subtask["public"],  # TODO depends on public?
                     "for_public_score": subtask["for_public_score"],
                     "for_private_score": subtask["for_private_score"],
                     "name": subtask["name"],
@@ -483,7 +508,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
                     "testcases": [],
                     })
 
-        details = { "subtasks" : subtasks }
+        details = {"subtasks": subtasks}
 
         if public:
             return score, json.dumps(details)
