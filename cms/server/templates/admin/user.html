@@ -29,7 +29,6 @@ function update_additional_answer(element, invoker)
 
 {% block core %}
 {% from cms.grading.scoretypes import get_score_type %}
-{% set score_types = {} %}
 
 <h1>{{ selected_user.first_name }} {{ selected_user.last_name }} ({{ selected_user.username }})</h1>
 
@@ -56,12 +55,7 @@ function update_additional_answer(element, invoker)
       {% for s in sorted(submissions, key=lambda s: s.timestamp, reverse=True) %}
         {% set dataset = s.task.active_dataset %}
         {% set sr = s.get_result(dataset) %}
-        {% if s.task.name in score_types %}
-          {% set score_type = score_types[s.task.name] %}
-        {% else %}
-          {% set score_type = get_score_type(dataset=dataset) %}
-          {% set score_types[s.task.name] = score_type %}
-        {% end %}
+        {% set score_type = get_score_type(dataset=dataset, info=s.additional_info) %}
       <tr>
         <td><a href="{{ url_root }}/submission/{{ s.id }}">{{ str(s.timestamp) }}</a></td>
         <td><a href="{{ url_root }}/task/{{ s.task.id }}">{{ s.task.name }}</a></td>
