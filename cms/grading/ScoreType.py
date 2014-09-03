@@ -134,6 +134,7 @@ class ScoreType(object):
     def is_unit_test(self):
         return False
 
+
 class ScoreTypeAlone(ScoreType):
     """Intermediate class to manage tasks where the score of a
     submission depends only on the submission itself and not on the
