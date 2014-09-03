@@ -56,7 +56,7 @@ class ScoreType(object):
     """
     TEMPLATE = ""
 
-    def __init__(self, parameters, public_testcases, info = None):
+    def __init__(self, parameters, public_testcases, info):
         """Initializer.
 
         parameters (object): format is specified in the subclasses.

@@ -162,8 +162,8 @@ class ScoringService(Service):
                                      (submission_id, dataset_id))
 
             # Instantiate the score type.
-            score_type = get_score_type(dataset=dataset, info=json.dumps({"unit_test" : False}) if submission.additional_info is None \
-                                                              else submission.additional_info)
+            score_type = get_score_type(dataset=dataset,
+                                        info=submission.additional_info)
 
             # Compute score and fill it in the database.
             if submission_result.needs_public_scoring():

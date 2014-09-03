@@ -37,7 +37,7 @@ class ScoreTypeWithUnitTest(ScoreType):
     USER_TEMPLATE = ""
     UNIT_TEST_TEMPLATE = ""
 
-    def __init__(self, parameters, public_testcases, info=None):
+    def __init__(self, parameters, public_testcases, info):
         super(ScoreTypeWithUnitTest, self).\
             __init__(parameters['tcinfo'], public_testcases, info)
         self.set_submission_info(info)
@@ -278,7 +278,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
 {% end %}
 """
 
-    def __init__(self, parameters, public_testcases, info=None):
+    def __init__(self, parameters, public_testcases, info):
         self._feedback = parameters['feedback']
         super(SubtaskGroup, self).__init__(parameters, public_testcases, info)
 
