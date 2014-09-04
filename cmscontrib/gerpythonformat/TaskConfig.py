@@ -26,7 +26,7 @@ from cms import SOURCE_EXT_TO_LANGUAGE_MAP
 from cms.db import Task, Statement, Testcase, Dataset, \
     SubmissionFormatElement, Attachment, Manager, Submission, File, \
     SubmissionResult
-from cms.grading import format_status_text, UnitTest
+from cms.grading import UnitTest
 from cms.grading.scoretypes import get_score_type
 from cms.grading.tasktypes import get_task_type
 from cms.grading.Job import JobGroup
@@ -36,19 +36,6 @@ from datetime import datetime
 import json
 import os
 import shutil
-import six
-
-
-def mem_human(mem):
-    if mem is None:
-        return "None"
-    if mem > 2 ** 30:
-        return "%4.3gG" % (float(mem) / (2 ** 30))
-    if mem > 2 ** 20:
-        return "%4.3gM" % (float(mem) / (2 ** 20))
-    if mem > 2 ** 10:
-        return "%4dK" % (mem / (2 ** 10))
-    return "%4d" % mem
 
 
 class Scope(object):
@@ -108,7 +95,8 @@ class MySubtask(Scope):
     :ivar public: Whether this subtask is public
     :ivar groups: Groups contained in this subtask
     """
-    def __init__(self, task, description, name, public, for_public_score, for_private_score):
+    def __init__(self, task, description, name, public,
+                 for_public_score, for_private_score):
         super(MySubtask, self).__init__(task)
         self.task = task
         self.description = description
@@ -425,36 +413,40 @@ class MySubmission(object):
         self.expected = expected
 
         # Check if the expected make sense
-        for k in self.expected:        
+        for k in self.expected:
             try:
                 float(k)
             except:
                 if k not in ["time", "memory", "time?", "memory?", "wrong"]:
                     raise Exception("Unknown expected result '{}'".format(k))
 
-        self.expectations = {(0, self.get_name(self.task)) : []}
-                
+        self.expectations = {(0, self.get_name(self.task)): []}
+
         for s in self.task.subtasks:
             self.expectations[(1, self.get_name(s))] = []
-            
+
             for g in s.groups:
                 self.expectations[(2, self.get_name(g))] = []
-                
+
                 for c in g.cases:
                     self.expectations[(3, self.get_name(c))] = []
-            
+
         # Convert the given lists of expected events to something more
         # readable for ScoreTypes
         for key, items in self.expected.iteritems():
             for item in items:
-                self.expectations[(item._level(), self.get_name(item))].append(key if key != "wrong" else "0.0")
- 
-        self.expectations = { json.dumps(key) : val for key,val in self.expectations.iteritems() }
-                
+                self.expectations[(item._level(), self.get_name(item))].\
+                    append(key if key != "wrong" else "0.0")
+
+        self.expectations = {json.dumps(key): val for key, val
+                             in self.expectations.iteritems()}
+
     def get_name(self, item):
-        try:    return item.name
-        except: return item.codename            
-                
+        try:
+            return item.name
+        except:
+            return item.codename
+
     def _should_test(self, local_test):
         """
         Finds out whether this submission should be tested, given the
@@ -803,7 +795,8 @@ class TaskConfig(CommonConfig, Scope):
         return self.encapsulate(f)
 
     @exported_function
-    def subtask(self, description, name=None, public=False, counts_for_public = None, counts_for_private = None):
+    def subtask(self, description, name=None, public=False,
+                counts_for_public=None, counts_for_private=None):
         """
         Specify the start of a new subtask. The number of points awarded
         for a subtask is the sum of the numbers of points awarded for each
@@ -829,22 +822,27 @@ class TaskConfig(CommonConfig, Scope):
                        detailed feedback subtasks should usually be marked
                        public
 
-        counts_for_public (bool): whether the subtask counts toward public score
+        counts_for_public (bool): whether the subtask counts toward public
+                       score
                        if the value is None this is set to public
 
-        counts for private (bool): whether the subtask counts toward private score
+        counts for private (bool): whether the subtask counts toward private
+                       score
                        if the value is None this is set to not public
 
         return (MySubtask): object representing the created subtask
 
         """
-        if counts_for_public is None:  counts_for_public = public
-        if counts_for_private is None: counts_for_private = not public
+        if counts_for_public is None:
+            counts_for_public = public
+        if counts_for_private is None:
+            counts_for_private = not public
 
         if name is None:
             name = "s" + str(len(self.subtasks))
 
-        subtask = MySubtask(self, description, name, public, counts_for_public, counts_for_private)
+        subtask = MySubtask(self, description, name, public,
+                            counts_for_public, counts_for_private)
 
         self.subtasks.append(subtask)
 
@@ -963,7 +961,7 @@ class TaskConfig(CommonConfig, Scope):
         Call this only after all testcases have been added
         """
         self.feedback = "full"
-        
+
         for s in self.subtasks:
             if s.public:
                 s.for_public_score = False
@@ -980,7 +978,7 @@ class TaskConfig(CommonConfig, Scope):
 
     @exported_function
     def partial_feedback(self, description_suffix=" (Partial Feedback)",
-                          name_suffix="_feedback"):
+                         name_suffix="_feedback"):
         """
         Generate detailed feedback subtasks for all subtasks generated
         so far (that contain at least one test case marked for detailed
@@ -996,7 +994,7 @@ class TaskConfig(CommonConfig, Scope):
                               name of the detailed feedback subtask
 
         """
-        for s in self.subtasks:        
+        for s in self.subtasks:
             if s.public:
                 s.for_public_score = False
 
@@ -1135,10 +1133,11 @@ class TaskConfig(CommonConfig, Scope):
         return (Task): database object for the task
 
         """
-        # If we are allowed to use tokens, set the feedback mode
-        if self.token_mode != "disabled" and self.upstream.token_mode != "disabled":
+        # Are we allowed to use tokens?
+        if self.token_mode != "disabled" and \
+           self.upstream.token_mode != "disabled":
             self.feedback = "token"
-        
+
         # Automatically make a ZIP file containing the save test cases
         self._makesavedzip()
         if self.contest._analysis:
@@ -1218,18 +1217,19 @@ class TaskConfig(CommonConfig, Scope):
                       task_type_parameters=self.tasktypeparameters,
                       score_type="SubtaskGroup",
                       score_type_parameters=json.dumps(
-                         {'feedback': self.feedback,
-                          'tcinfo':
-                          [{'name': s.description,
-                            'key': s.name,
-                            'public': s.public,
-                            'for_public_score': s.for_public_score,
-                            'for_private_score': s.for_private_score,
-                            'groups': [{'points': g.points,
-                                        'key': g.name,
-                                        'cases': [c.codename for c in g.cases]}
-                                       for g in s.groups]}
-                           for s in self.subtasks]}),
+                          {'feedback': self.feedback,
+                           'tcinfo':
+                           [{'name': s.description,
+                             'key': s.name,
+                             'public': s.public,
+                             'for_public_score': s.for_public_score,
+                             'for_private_score': s.for_private_score,
+                             'groups': [{'points': g.points,
+                                         'key': g.name,
+                                         'cases': [c.codename for c
+                                                   in g.cases]}
+                                        for g in s.groups]}
+                            for s in self.subtasks]}),
                       time_limit=float(self._timelimit),
                       memory_limit=self._memorylimit
                       )
@@ -1413,71 +1413,98 @@ class TaskConfig(CommonConfig, Scope):
                 self._run_job_group(evaluation_job_group)
                 evaluation_job_group.to_submission_evaluation(
                     submission_result, ifpublic)
-                    
-            evs = { ev.testcase.codename : ev for ev in submission_result.evaluations }   
-            expectations = { tuple(json.loads(key)) : val for key,val in additional_info["expected"].iteritems() }     
+
+            evs = {ev.testcase.codename: ev for ev
+                   in submission_result.evaluations}
+            expectations = {tuple(json.loads(key)): val for key, val
+                            in additional_info["expected"].iteritems()}
             possible_task = expectations[(0, self.name)]
             possible_subtask = []
             possible_group = []
             extra = []
-            
+
             case_results = []
-            
+
             def colored(t, b):
-                if b > 0: return MyColors.green(str(t))
-                if b < 0: return MyColors.red(str(t))
-                else:     return str(t)
-            
+                if b > 0:
+                    return MyColors.green(str(t))
+                if b < 0:
+                    return MyColors.red(str(t))
+                else:
+                    return str(t)
+
             for s in self.subtasks:
                 possible_subtask = expectations[(1, s.name)]
-                
+
                 with header("Subtask {}".format(s.name), depth=4):
                     for g in s.groups:
                         possible_group = expectations[(2, g.name)]
-                        possible = possible_task + possible_subtask + possible_group
+                        possible = possible_task + possible_subtask + \
+                            possible_group
                         extra = []
                         cases_failed = False
-                        
+
                         worst_case = (2, "")
-                        
-                        with header("Group {}".format(g.name), depth=4):                   
+
+                        with header("Group {}".format(g.name), depth=4):
                             for c in g.cases:
-                                with header("Test case {}".format(self.cases_by_codename[c.codename]),
+                                with header("Test case {}".
+                                            format(self.cases_by_codename
+                                                   [c.codename]),
                                             depth=4):
                                     ev = evs[c.codename]
-                                                                                 
+
                                     mandatory = expectations[(3, c.codename)]
                                     result = UnitTest.get_result(limits, ev)
-                                    L = UnitTest.case_line(result, mandatory, possible + mandatory)
-                                    
+                                    L = UnitTest.case_line(result, mandatory,
+                                                           possible +
+                                                           mandatory)
+
                                     print_msg("Time  Memory  Answer")
-                                    print_msg("{}     {}       {}".format(*tuple(colored(*x) for x in L)))
-                                    
-                                    accepted, desc = UnitTest.judge_case(result, mandatory, possible + mandatory)
+                                    print_msg("{}     {}       {}".
+                                              format(*tuple(colored(*x)
+                                                     for x in L)))
+
+                                    accepted, desc = \
+                                        UnitTest.judge_case(result, mandatory,
+                                                            possible +
+                                                            mandatory)
+
                                     if len(mandatory) > 0:
-                                        print_msg(desc, error = (accepted <= 0), success = (accepted > 0))
-                                        if accepted <= 0: cases_failed = True
-                                            
+                                        print_msg(desc, error=(accepted <= 0),
+                                                  success=(accepted > 0))
+                                        if accepted <= 0:
+                                            cases_failed = True
+
                                     else:
-                                        worst_case = min(worst_case, (accepted, desc))                                    
-                                        print_msg(MyColors.blue("No case-specific expectations given."))
-                                    
+                                        worst_case = min(worst_case,
+                                                         (accepted, desc))
+                                        print_msg(MyColors.blue("No case-"
+                                                                "specific "
+                                                                "expectations "
+                                                                "given."))
+
                                     print_msg("")
-                                    
+
                                     case_results += result
                                     extra += expectations[(3, c.codename)]
-                        
-                            status, short, desc = UnitTest.judge_group(case_results, possible + extra) 
-                            status, desc = min((status, desc), worst_case)    
-                                                        
+
+                            status, short, desc = \
+                                UnitTest.judge_group(case_results,
+                                                     possible + extra)
+                            status, desc = min((status, desc), worst_case)
+
                             if status <= 0 or not cases_failed:
-                                print_msg(desc, error = (status <= 0), success = (status > 0))
+                                print_msg(desc, error=(status <= 0),
+                                          success=(status > 0))
                             if cases_failed:
-                                print_msg("At least one testcase did not behave as expected, see above.", error=True)
-                            
+                                print_msg("At least one testcase did not "
+                                          "behave as expected, see above.",
+                                          error=True)
+
                             print_msg("")
                             case_results = []
-        
+
         # Assign score to the submission.
         score_type = get_score_type(dataset=ddb)
         public_score, public_details = \

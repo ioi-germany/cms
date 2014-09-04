@@ -22,7 +22,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from cms.grading.ScoreType import ScoreType
-from cms.grading import UnitTest
+from cms.grading import UnitTest, mem_human, time_human
 import json
 
 
@@ -239,12 +239,14 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
                 <tr>
                     <td class="{{"unit_test_ok" if c["line"][0][1] > 0 else \
                                  "unit_test_failed" if c["line"][0][1] < 0 \
-                                 else ""}} short">
+                                 else ""}} short" style="cursor:default;"
+                     title="{{c["time"]}}">
                         {{c["line"][0][0]}}
                     </td>
                     <td class="{{"unit_test_ok" if c["line"][1][1] > 0 else \
                                  "unit_test_failed" if c["line"][1][1] < 0 \
-                                 else ""}} short">
+                                 else ""}} short" style="cursor:default;"
+                     title="{{c["memory"]}}">
                         {{c["line"][1][0]}}
                     </td>
                     <td class="{{"unit_test_ok" if c["line"][2][1] > 0 else \
@@ -367,6 +369,8 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
                     subtasks[-1]["groups"][-1]["grouplen"] += 1
                     r = UnitTest.get_result(self.submission_info["limits"],
                                             evaluations[idx])
+                    t = time_human(evaluations[idx].execution_time)
+                    m = mem_human(evaluations[idx].execution_memory) + "B"
                     min_f = min(min_f, UnitTest.score(r) if
                                 UnitTest.meaningful_score(r) else 0)
 
@@ -379,7 +383,8 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
                              "this testcase.")
 
                     subtasks[-1]["groups"][-1]["cases"].\
-                        append({"line": l, "verdict": v})
+                        append({"line": l, "verdict": v, "time": t,
+                                "memory": m})
 
                     accepted, desc = \
                         UnitTest.judge_case(r, mandatory, mandatory + possible)

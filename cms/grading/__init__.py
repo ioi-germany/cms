@@ -173,6 +173,7 @@ def get_evaluation_commands(language, executable_filename):
         raise ValueError("Unknown language %s." % language)
     return commands
 
+
 def format_status_text(status, translator=None):
     """Format the given status text in the given locale.
 
@@ -786,16 +787,19 @@ def task_score(user, task):
                 partial = True
 
     return max(last_score, max_tokened_score), partial
-    
+
+
 class UnitTest:
     """Functions for basic unit tests
     """
     @staticmethod
-    def get_result(limits, evaluation):    
+    def get_result(limits, evaluation):
         def get(x):
-            try:    return evaluation[x]
-            except: return getattr(evaluation, x)
-    
+            try:
+                return evaluation[x]
+            except KeyError:
+                return getattr(evaluation, x)
+
         """Collect information about the evaluation
         """
         result = []
@@ -838,11 +842,15 @@ class UnitTest:
 
     @staticmethod
     def ignore(x, l):
-        try:    return float(x) >= UnitTest.score(l)
-        except: pass
-    
-        if "time" in l and x == "time?":     return True
-        if "memory" in l and x == "memory?": return True
+        try:
+            return float(x) >= UnitTest.score(l)
+        except ValueError:
+            pass
+
+        if "time" in l and x == "time?":
+            return True
+        if "memory" in l and x == "memory?":
+            return True
         return False
 
     @staticmethod
@@ -850,11 +858,13 @@ class UnitTest:
         """Get score of testcase or group
         """
         s = 1.0
-        
+
         for r in results:
-            try:    s = min(s, float(r))
-            except: pass
-            
+            try:
+                s = min(s, float(r))
+            except ValueError:
+                pass
+
         return s
 
     @staticmethod
@@ -867,7 +877,7 @@ class UnitTest:
                 return True
             except:
                 pass
-                
+
         return False
 
     @staticmethod
@@ -877,53 +887,86 @@ class UnitTest:
         return not('time' in results or 'memory' in results)
 
     @staticmethod
-    def case_line(results, mandatory, optional, c = ['o', '~', 'x', '--']):
+    def case_line(results, mandatory, optional, c=['o', '~', 'x', '--']):
         """Information about a single testcase as part of a group
            This function returns a list of tuples, where the first entry
            visualises the respective result and the second one is >0
            iff the result is as expected
         """
         def badness(key, r):
-            if key in r:       return 2
-            if key + '?' in r: return 1
-            else:              return 0
-    
+            if key in r:
+                return 2
+            if key + '?' in r:
+                return 1
+            else:
+                return 0
+
         def get_int(b):
-            if b: return  1
-            else: return -1
-    
+            if b:
+                return 1
+            else:
+                return -1
+
         L = []
 
         for x in ['time', 'memory']:
             L.append((c[badness(x, results)],
-                      get_int((x in results or not x in mandatory) and badness(x, results) <= badness(x, optional))))
+                      get_int((x in results or not x in mandatory) and
+                              badness(x, results) <= badness(x, optional))))
 
         meaningful = UnitTest.meaningful_score(results)
-        L.append((UnitTest.score(results) if meaningful else c[-1], 
-                  0 if not meaningful else get_int(UnitTest.score(results) >= UnitTest.score(optional))))
+        L.append((UnitTest.score(results) if meaningful else c[-1],
+                  0 if not meaningful else get_int(UnitTest.score(results) >=
+                                                   UnitTest.score(optional))))
         return L
 
     @staticmethod
-    def judge_group(results, mandatory, optional = None):
+    def judge_group(results, mandatory, optional=None):
         """Judge a whole group given a concatenated list of the results of
            the individual cases
         """
-        if optional is None: optional = mandatory
-    
-        if any(x not in optional for x in results if not UnitTest.ignore(x, optional + ['time', 'memory'])):
-            return (-2, "failed", "The submission failed for a reason you did not expect.")
+        if optional is None:
+            optional = mandatory
 
-        if any(x.endswith("?") for x in results if not UnitTest.ignore(x, optional)):
-            return (0, "ambiguous", "It is not clear whether the submission respects the limits.")
+        if any(x not in optional for x in results
+               if not UnitTest.ignore(x, optional + ['time', 'memory'])):
+            return (-2, "failed", "The submission failed for a reason "
+                    "you did not expect.")
+
+        if any(x.endswith("?") for x in results
+               if not UnitTest.ignore(x, optional)):
+            return (0, "ambiguous", "It is not clear whether the submission "
+                       "respects the limits.")
 
         if len(mandatory) == 0 or any(x in results for x in mandatory):
             return (1, "okay", "... all shall be well.")
-        
-        return (-1, "failed", "You expected the submission to fail but it didn't.")
-        
+
+        return (-1, "failed",
+                "You expected the submission to fail but it didn't.")
+
     @staticmethod
     def judge_case(results, mandatory, optional):
         """Judge a single testcase
         """
         a, b, c = UnitTest.judge_group(results, mandatory, optional)
         return a, c
+
+
+def mem_human(mem):
+    if mem is None:
+        return "None"
+    if mem > 2 ** 30:
+        return "%4.3gG" % (float(mem) / (2 ** 30))
+    if mem > 2 ** 20:
+        return "%4.3gM" % (float(mem) / (2 ** 20))
+    if mem > 2 ** 10:
+        return "%4dK" % (mem / (2 ** 10))
+    return "%4d" % mem
+
+
+def time_human(t):
+    if t is None:
+        return "None"
+    if t < .1:
+        return "{} ms".format(t * 1000)
+    return "{} s".format(t)
