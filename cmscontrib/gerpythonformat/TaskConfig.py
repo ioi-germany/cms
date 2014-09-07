@@ -126,6 +126,10 @@ class MySubtask(Scope):
         self.task.subtask_stack.pop()
 
     @property
+    def unique_name(self):
+        return (self.name,)
+
+    @property
     def directory(self):
         """
         The name of the directory containing the groups for
@@ -232,6 +236,10 @@ class MyGroup(Scope):
     def __exit__(self, type, value, traceback):
         self.indenter.stop()
         self.task.group_stack.pop()
+
+    @property
+    def unique_name(self):
+        return self.subtask.unique_name + (self.name,)
 
     @property
     def directory(self):
@@ -347,6 +355,10 @@ class MyCase(object):
         self.locations = []
 
     @property
+    def unique_name(self):
+        return (None, None, self.codename)
+
+    @property
     def directory(self):
         """
         The name of the directory containing the input and output files for
@@ -420,32 +432,27 @@ class MySubmission(object):
                 if k not in ["time", "memory", "time?", "memory?", "wrong"]:
                     raise Exception("Unknown expected result '{}'".format(k))
 
-        self.expectations = {(0, self.get_name(self.task)): []}
+        self.expectations = {(): []}
 
         for s in self.task.subtasks:
-            self.expectations[(1, self.get_name(s))] = []
+            self.expectations[s.unique_name] = []
 
             for g in s.groups:
-                self.expectations[(2, self.get_name(g))] = []
+                self.expectations[g.unique_name] = []
 
                 for c in g.cases:
-                    self.expectations[(3, self.get_name(c))] = []
+                    self.expectations[c.unique_name] = []
 
         # Convert the given lists of expected events to something more
         # readable for ScoreTypes
         for key, items in self.expected.iteritems():
             for item in items:
-                self.expectations[(item._level(), self.get_name(item))].\
+                self.expectations[item.unique_name].\
                     append(key if key != "wrong" else "0.0")
 
+        # JSON doesn't allow lists nor tuples as keys
         self.expectations = {json.dumps(key): val for key, val
                              in self.expectations.iteritems()}
-
-    def get_name(self, item):
-        try:
-            return item.name
-        except:
-            return item.codename
 
     def _should_test(self, local_test):
         """
@@ -1220,14 +1227,17 @@ class TaskConfig(CommonConfig, Scope):
                           {'feedback': self.feedback,
                            'tcinfo':
                            [{'name': s.description,
-                             'key': s.name,
+                             'key': s.unique_name,
                              'public': s.public,
                              'for_public_score': s.for_public_score,
                              'for_private_score': s.for_private_score,
                              'groups': [{'points': g.points,
-                                         'key': g.name,
+                                         'key': g.unique_name,
                                          'cases': [c.codename for c
-                                                   in g.cases]}
+                                                   in g.cases],
+                                         'case_keys': [c.unique_name
+                                                       for c in
+                                                       g.cases]}
                                         for g in s.groups]}
                             for s in self.subtasks]}),
                       time_limit=float(self._timelimit),
@@ -1418,7 +1428,7 @@ class TaskConfig(CommonConfig, Scope):
                    in submission_result.evaluations}
             expectations = {tuple(json.loads(key)): val for key, val
                             in additional_info["expected"].iteritems()}
-            possible_task = expectations[(0, self.name)]
+            possible_task = expectations[()]
             possible_subtask = []
             possible_group = []
             extra = []
@@ -1434,11 +1444,11 @@ class TaskConfig(CommonConfig, Scope):
                     return str(t)
 
             for s in self.subtasks:
-                possible_subtask = expectations[(1, s.name)]
+                possible_subtask = expectations[s.unique_name]
 
                 with header("Subtask {}".format(s.name), depth=4):
                     for g in s.groups:
-                        possible_group = expectations[(2, g.name)]
+                        possible_group = expectations[g.unique_name]
                         possible = possible_task + possible_subtask + \
                             possible_group
                         extra = []
@@ -1454,7 +1464,7 @@ class TaskConfig(CommonConfig, Scope):
                                             depth=4):
                                     ev = evs[c.codename]
 
-                                    mandatory = expectations[(3, c.codename)]
+                                    mandatory = expectations[c.unique_name]
                                     result = UnitTest.get_result(limits, ev)
                                     L = UnitTest.case_line(result, mandatory,
                                                            possible +
@@ -1487,7 +1497,7 @@ class TaskConfig(CommonConfig, Scope):
                                     print_msg("")
 
                                     case_results += result
-                                    extra += expectations[(3, c.codename)]
+                                    extra += expectations[c.unique_name]
 
                             status, short, desc = \
                                 UnitTest.judge_group(case_results,

@@ -797,7 +797,7 @@ class UnitTest:
         def get(x):
             try:
                 return evaluation[x]
-            except KeyError:
+            except (KeyError, TypeError):
                 return getattr(evaluation, x)
 
         """Collect information about the evaluation

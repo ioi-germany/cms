@@ -333,8 +333,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
 
         expectations = {tuple(json.loads(key)): val for key, val
                         in self.submission_info["expected"].iteritems()}
-        possible_task = [x for key, val in expectations.iteritems()
-                         if key[0] == 0 for x in val]
+        possible_task = expectations[()]
         possible_subtask = []
         possible_group = []
         extra = []
@@ -346,14 +345,14 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
         for subtask in self.parameters:
             subtasks.append({"name": subtask["name"], "status": (0, "okay"),
                              "groups": []})
-            possible_subtask = expectations[(1, subtask["key"])]
+            possible_subtask = expectations[tuple(subtask["key"])]
 
             group_score = 0
 
             worst_group = (1, "okay")
 
             for i, g in enumerate(subtask["groups"]):
-                possible_group = expectations[(2, g["key"])]
+                possible_group = expectations[tuple(g["key"])]
                 possible = possible_task + possible_subtask + possible_group
 
                 subtasks[-1]["groups"].append({"verdict": (42, ""),
@@ -365,7 +364,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
                 cases_failed = False
                 worst_case = (2, "")
 
-                for idx in g["cases"]:
+                for idx, unique in zip(g["cases"], g["case_keys"]):
                     subtasks[-1]["groups"][-1]["grouplen"] += 1
                     r = UnitTest.get_result(self.submission_info["limits"],
                                             evaluations[idx])
@@ -374,7 +373,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
                     min_f = min(min_f, UnitTest.score(r) if
                                 UnitTest.meaningful_score(r) else 0)
 
-                    mandatory = expectations[(3, idx)]
+                    mandatory = expectations[tuple(unique)]
 
                     l = UnitTest.case_line(r, mandatory,
                                            possible + mandatory,
