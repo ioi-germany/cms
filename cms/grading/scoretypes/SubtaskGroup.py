@@ -202,6 +202,8 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
     UNIT_TEST_TEMPLATE = """\
 {% from cms.grading import format_status_text %}
 {% from cms.server import format_size %}
+{% import json %}
+{{ json.dumps(details["subtasks"]) }}
 {% for st in details["subtasks"] %}
     {% if st["status"][0] > 0 %}
 <div class="subtask correct">
@@ -363,6 +365,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
 
                 cases_failed = False
                 worst_case = (2, "")
+                case_results = []
 
                 for idx, unique in zip(g["cases"], g["case_keys"]):
                     subtasks[-1]["groups"][-1]["grouplen"] += 1
@@ -396,9 +399,10 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
                         if accepted <= 0:
                             cases_failed = True
 
+                    case_results += r
+                    extra += mandatory
+
                 group_score += min_f * g["points"]
-                case_results += r
-                extra += mandatory
 
                 status, short, desc = \
                     UnitTest.judge_group(case_results, possible,
