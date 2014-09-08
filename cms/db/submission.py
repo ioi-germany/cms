@@ -7,7 +7,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
-# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2014 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -42,6 +42,7 @@ from .smartmappedcollection import smart_mapped_collection
 from cmscommon.datetime import make_datetime
 
 import json
+
 
 class Submission(Base):
     """Class to store a submission.
@@ -163,12 +164,13 @@ class Submission(Base):
         """
         return self.token is not None or self.is_unit_test()
 
-
     def is_unit_test(self):
-        if self.additional_info is None: return False
-        
+        if self.additional_info is None:
+            return False
+
         ai = json.loads(self.additional_info)
-        return "unit_test" in ai and ai["unit_test"]
+        return ai.get("unit_test", False)
+
 
 class File(Base):
     """Class to store information about one file submitted within a

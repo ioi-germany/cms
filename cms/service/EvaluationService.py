@@ -789,7 +789,8 @@ class EvaluationService(Service):
                     elif to_evaluate_public(submission_result):
                         if self.push_in_queue(
                                 JobQueueEntry(
-                                    EvaluationService.JOB_TYPE_PUBLIC_EVALUATION,
+                                    EvaluationService.
+                                    JOB_TYPE_PUBLIC_EVALUATION,
                                     submission.id,
                                     dataset.id),
                                 EvaluationService.JOB_PRIORITY_HIGH,
@@ -798,7 +799,8 @@ class EvaluationService(Service):
                     elif to_evaluate_private(submission_result):
                         if self.push_in_queue(
                                 JobQueueEntry(
-                                    EvaluationService.JOB_TYPE_PRIVATE_EVALUATION,
+                                    EvaluationService.
+                                    JOB_TYPE_PRIVATE_EVALUATION,
                                     submission.id,
                                     dataset.id),
                                 EvaluationService.JOB_PRIORITY_MEDIUM,
@@ -1220,7 +1222,8 @@ class EvaluationService(Service):
                     EvaluationService.JOB_TYPE_PUBLIC_EVALUATION,
                     submission_result.submission_id,
                     submission_result.dataset_id),
-                EvaluationService.JOB_PRIORITY_HIGH,
+                EvaluationService.JOB_PRIORITY_MEDIUM if submission.
+                is_unit_test() else EvaluationService.JOB_PRIORITY_HIGH,
                 submission.timestamp)
         # If instead submission failed compilation, we don't evaluate,
         # but we inform ScoringService of the new submission. We need
@@ -1278,9 +1281,12 @@ class EvaluationService(Service):
         # submission.
         if submission_result.evaluated(public):
             submission_result.sa_session.commit()
-            self.scoring_service.new_evaluation(
-                submission_id=submission_result.submission_id,
-                dataset_id=submission_result.dataset_id)
+
+            if not public or not submission.is_unit_test():
+                self.scoring_service.new_evaluation(
+                    submission_id=submission_result.submission_id,
+                    dataset_id=submission_result.dataset_id)
+
             # If we just evaluated the public test cases, evaluate
             # the private test cases now.
             if public:
