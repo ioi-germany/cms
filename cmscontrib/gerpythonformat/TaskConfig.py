@@ -556,6 +556,12 @@ class TaskConfig(CommonConfig, Scope):
         # Feedback
         self.feedback = None
 
+    @property
+    def unique_name(self):
+        """Helper method for unit tests
+        """
+        return ()
+
     def _readconfig(self, filename):
         with header("Loading task {}".format(self.name), depth=2):
             super(TaskConfig, self)._readconfig(filename)
