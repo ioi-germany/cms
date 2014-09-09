@@ -68,6 +68,8 @@ class ScoreType(object):
         self.parameters = parameters
         self.public_testcases = public_testcases
 
+        self.set_submission_info(info)
+
         # Preload the maximum possible scores.
         self.max_score, self.max_public_score, self.ranking_headers = \
             self.max_scores()
@@ -130,6 +132,9 @@ class ScoreType(object):
         You might want to override this
         """
         return "token"
+
+    def set_submission_info(self, info):
+        pass
 
     def is_unit_test(self):
         return False

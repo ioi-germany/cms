@@ -40,7 +40,6 @@ class ScoreTypeWithUnitTest(ScoreType):
     def __init__(self, parameters, public_testcases, info):
         super(ScoreTypeWithUnitTest, self).\
             __init__(parameters['tcinfo'], public_testcases, info)
-        self.set_submission_info(info)
 
     def set_submission_info(self, info):
         if info is None:
@@ -54,10 +53,7 @@ class ScoreTypeWithUnitTest(ScoreType):
             else self.UNIT_TEST_TEMPLATE
 
     def is_unit_test(self):
-        try:
-            return self._unit_test
-        except AttributeError:
-            return False
+        return self._unit_test
 
     def user_max_scores(self):
         raise NotImplementedError
