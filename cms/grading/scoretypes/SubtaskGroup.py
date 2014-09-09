@@ -56,7 +56,7 @@ class ScoreTypeWithUnitTest(ScoreType):
     def is_unit_test(self):
         try:
             return self._unit_test
-        except:
+        except AttributeError:
             return False
 
     def user_max_scores(self):
@@ -66,15 +66,11 @@ class ScoreTypeWithUnitTest(ScoreType):
         public, private, headers = self.user_max_scores()
 
         if self.is_unit_test():
-            try:
-                public = self.submission_info["expected_public_score"]
-            except:
-                pass
+            public = self.submission_info.get("expected_public_score",
+                                              public)
 
-            try:
-                private = self.submission_info["expected_score"]
-            except:
-                pass
+            private = self.submission_info.get("expected_score",
+                                               private)
 
         return public, private, headers
 
@@ -202,8 +198,6 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
     UNIT_TEST_TEMPLATE = """\
 {% from cms.grading import format_status_text %}
 {% from cms.server import format_size %}
-{% import json %}
-{{ json.dumps(details["subtasks"]) }}
 {% for st in details["subtasks"] %}
     {% if st["status"][0] > 0 %}
 <div class="subtask correct">
