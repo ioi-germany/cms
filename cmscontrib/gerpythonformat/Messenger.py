@@ -93,11 +93,13 @@ class IndentManager(object):
 
 
 def print_msg(message, headerdepth=None,
-              error=False, warning=False, success=False):
+              error=False, warning=False, success=False,
+              len_off=0):
     symbols = {1: "#", 2: "#", 3: "=", 4: "-"}
     if headerdepth in symbols:
         s = symbols[headerdepth]
         rl = max(0, 75-len(message)-IndentManager.indent*2)
+        rl += len_off
         message = s*3 + " " + message + " " + s*rl
     message = " "*(IndentManager.indent*2) + message
     if headerdepth == 1:
@@ -120,6 +122,6 @@ def print_block(message):
             print " "*(IndentManager.indent*2) + l
 
 
-def header(message, depth):
-    print_msg(message, depth)
+def header(message, depth, len_off=0):
+    print_msg(message, depth, len_off=len_off)
     return IndentManager()

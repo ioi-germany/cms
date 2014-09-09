@@ -26,7 +26,6 @@ from cms import SOURCE_EXT_TO_LANGUAGE_MAP
 from cms.db import Task, Statement, Testcase, Dataset, \
     SubmissionFormatElement, Attachment, Manager, Submission, File, \
     SubmissionResult
-from cms.grading import UnitTest
 from cms.grading.scoretypes import get_score_type
 from cms.grading.tasktypes import get_task_type
 from cms.grading.Job import JobGroup
@@ -1398,9 +1397,6 @@ class TaskConfig(CommonConfig, Scope):
         ddb (Dataset): database object for the data set
 
         """
-        additional_info = json.loads(sdb.additional_info)
-        limits = additional_info["limits"]
-
         submission_result = SubmissionResult(submission=sdb,
                                              dataset=ddb)
         # Compile
@@ -1430,113 +1426,55 @@ class TaskConfig(CommonConfig, Scope):
                 evaluation_job_group.to_submission_evaluation(
                     submission_result, ifpublic)
 
-            evs = {ev.testcase.codename: ev for ev
-                   in submission_result.evaluations}
-            expectations = {tuple(json.loads(key)): val for key, val
-                            in additional_info["expected"].iteritems()}
-            possible_task = expectations[()]
-            possible_subtask = []
-            possible_group = []
-            extra = []
-
-            case_results = []
-
-            def colored(t, b):
-                if b > 0:
-                    return MyColors.green(str(t))
-                if b < 0:
-                    return MyColors.red(str(t))
-                else:
-                    return str(t)
-
-            for s in self.subtasks:
-                possible_subtask = expectations[s.unique_name]
-
-                with header("Subtask {}".format(s.name), depth=4):
-                    for g in s.groups:
-                        possible_group = expectations[g.unique_name]
-                        possible = possible_task + possible_subtask + \
-                            possible_group
-                        extra = []
-                        cases_failed = False
-
-                        worst_case = (2, "")
-
-                        with header("Group {}".format(g.name), depth=4):
-                            for c in g.cases:
-                                with header("Test case {}".
-                                            format(self.cases_by_codename
-                                                   [c.codename]),
-                                            depth=4):
-                                    ev = evs[c.codename]
-
-                                    mandatory = expectations[c.unique_name]
-                                    result = UnitTest.get_result(limits, ev)
-                                    L = UnitTest.case_line(result, mandatory,
-                                                           possible +
-                                                           mandatory)
-
-                                    print_msg("Time  Memory  Answer")
-                                    print_msg("{}     {}       {}".
-                                              format(*tuple(colored(*x)
-                                                     for x in L)))
-
-                                    accepted, desc = \
-                                        UnitTest.judge_case(result, mandatory,
-                                                            possible +
-                                                            mandatory)
-
-                                    if len(mandatory) > 0:
-                                        print_msg(desc, error=(accepted <= 0),
-                                                  success=(accepted > 0))
-                                        if accepted <= 0:
-                                            cases_failed = True
-
-                                    else:
-                                        worst_case = min(worst_case,
-                                                         (accepted, desc))
-                                        print_msg(MyColors.blue("No case-"
-                                                                "specific "
-                                                                "expectations "
-                                                                "given."))
-
-                                    print_msg("")
-
-                                    case_results += result
-                                    extra += expectations[c.unique_name]
-
-                            status, short, desc = \
-                                UnitTest.judge_group(case_results,
-                                                     possible + extra)
-                            status, desc = min((status, desc), worst_case)
-
-                            if status <= 0 or not cases_failed:
-                                print_msg(desc, error=(status <= 0),
-                                          success=(status > 0))
-                            if cases_failed:
-                                print_msg("At least one testcase did not "
-                                          "behave as expected, see above.",
-                                          error=True)
-
-                            print_msg("")
-                            case_results = []
-
-        # Assign score to the submission.
-        score_type = get_score_type(dataset=ddb)
+        # Judge unit test
+        score_type = get_score_type(dataset=ddb, info=sdb.additional_info)
         public_score, public_details = \
             score_type.compute_score(submission_result, True)
         score, details, ranking_details = \
             score_type.compute_score(submission_result, False)
-        print_msg("Score: %.1f" % score)
-        print_msg("Public score: %.1f" % public_score)
-        expected_score = float(additional_info["expected_score"])
-        expected_public_score = float(additional_info["expected_public_score"])
-        if abs(score-expected_score) > 0.0001:
-            print_msg("Wrong score (expected {}, got {})"
-                      .format(expected_score, score), error=True)
-        if abs(public_score-expected_public_score) > 0.0001:
-            print_msg("Wrong public score (expected {}, got {})"
-                      .format(expected_public_score, public_score), error=True)
+
+        def v((accepted, desc), upper=False):
+            d = desc.replace("<br>", "\n")
+
+            if upper:
+                d = d.upper()
+
+            if accepted == 42:
+                return MyColors.blue(d)
+            elif accepted <= 0:
+                return MyColors.red(d)
+            else:
+                return MyColors.green(d)
+
+        def myheader(name, status, d):
+            desc = status[1]
+            base_space = 65
+            space = base_space - len(name) - len(desc)
+
+            return header(name + (space * " ") + v(status, True), depth=d,
+                          len_off=8)
+
+        # Present verdict
+        details = json.loads(details)
+
+        for st in details["subtasks"]:
+            with myheader(st["name"], st["status"], 3):
+                for i, g in enumerate(st["groups"]):
+                    with header("Group {}".format(i + 1), depth=4):
+                        print_block(v(g["verdict"]))
+                        print ""
+                        print_msg("Time  Memory  Answer  Verdict")
+
+                        for c in g["cases"]:
+                            l = [(b, unicode(a)) for a, b in c["line"]]
+                            print_msg(v(l[0]) + " " * 5 +
+                                      v(l[1]) + " " * 7 +
+                                      v(l[2]) + " " * (8 - len(l[2][1])) +
+                                      v(c["verdict"]))
+
+                    print ""
+
+            print ""
 
     def _run_job_group(self, job_group):
         """
