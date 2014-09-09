@@ -21,7 +21,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from cms.grading.ScoreType import ScoreType
+from cms.grading.ScoreType import ScoreTypeWithUnitTest
 from cms.grading import UnitTest, mem_human, time_human
 import json
 
@@ -29,58 +29,6 @@ import json
 # Dummy function to mark translatable string.
 def N_(message):
     return message
-
-
-class ScoreTypeWithUnitTest(ScoreType):
-    """Basic methods for score types that can handle unit tests
-    """
-    USER_TEMPLATE = ""
-    UNIT_TEST_TEMPLATE = ""
-
-    def __init__(self, parameters, public_testcases, info):
-        super(ScoreTypeWithUnitTest, self).\
-            __init__(parameters['tcinfo'], public_testcases, info)
-
-    def set_submission_info(self, info):
-        if info is None:
-            self.submission_info = None
-            self._unit_test = False
-        else:
-            self.submission_info = json.loads(info)
-            self._unit_test = self.submission_info["unit_test"]
-
-        self.TEMPLATE = self.USER_TEMPLATE if not self.is_unit_test() \
-            else self.UNIT_TEST_TEMPLATE
-
-    def is_unit_test(self):
-        return self._unit_test
-
-    def user_max_scores(self):
-        raise NotImplementedError
-
-    def max_scores(self):
-        public, private, headers = self.user_max_scores()
-
-        if self.is_unit_test():
-            public = self.submission_info.get("expected_public_score",
-                                              public)
-
-            private = self.submission_info.get("expected_score",
-                                               private)
-
-        return public, private, headers
-
-    def unit_test_compute_score(self, submission_result, public):
-        raise NotImplementedError
-
-    def user_compute_score(self, submission_result, public):
-        raise NotImplementedError
-
-    def compute_score(self, submission_result, public):
-        if self.is_unit_test():
-            return self.unit_test_compute_score(submission_result, public)
-        else:
-            return self.user_compute_score(submission_result, public)
 
 
 class SubtaskGroup(ScoreTypeWithUnitTest):
