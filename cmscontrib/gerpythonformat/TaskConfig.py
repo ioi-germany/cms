@@ -1433,7 +1433,7 @@ class TaskConfig(CommonConfig, Scope):
         score, details, ranking_details = \
             score_type.compute_score(submission_result, False)
 
-        def v((accepted, desc), upper=False):
+        def v((accepted, desc), upper=False, z=False):
             d = desc.replace("<br>", "\n")
 
             if upper:
@@ -1442,6 +1442,8 @@ class TaskConfig(CommonConfig, Scope):
             if accepted == 42:
                 return MyColors.blue(d)
             elif accepted <= 0:
+                if z and accepted == 0:
+                    return d
                 return MyColors.red(d)
             else:
                 return MyColors.green(d)
@@ -1451,8 +1453,7 @@ class TaskConfig(CommonConfig, Scope):
             base_space = 65
             space = base_space - len(name) - len(desc)
 
-            return header(name + (space * " ") + v(status, True), depth=d,
-                          len_off=8)
+            return header(name + (space * " ") + v(status, True), depth=d)
 
         # Present verdict
         details = json.loads(details)
@@ -1467,10 +1468,12 @@ class TaskConfig(CommonConfig, Scope):
 
                         for c in g["cases"]:
                             l = [(b, unicode(a)) for a, b in c["line"]]
-                            print_msg(v(l[0]) + " " * 5 +
-                                      v(l[1]) + " " * 7 +
-                                      v(l[2]) + " " * (8 - len(l[2][1])) +
-                                      v(c["verdict"]))
+                            print_msg(v(l[0], z=True) + " " * 5 +
+                                      v(l[1], z=True) + " " * 7 +
+                                      v(l[2], z=True) + " " *
+                                      (8 - len(l[2][1])) +
+                                      v(c["verdict"]),
+                                      hanging_indent=22)
 
                     print ""
 

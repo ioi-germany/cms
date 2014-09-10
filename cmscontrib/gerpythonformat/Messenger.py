@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2014 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -92,36 +92,167 @@ class IndentManager(object):
         self.stop()
 
 
-def print_msg(message, headerdepth=None,
-              error=False, warning=False, success=False,
-              len_off=0):
-    symbols = {1: "#", 2: "#", 3: "=", 4: "-"}
-    if headerdepth in symbols:
-        s = symbols[headerdepth]
-        rl = max(0, 75-len(message)-IndentManager.indent*2)
-        rl += len_off
-        message = s*3 + " " + message + " " + s*rl
-    message = " "*(IndentManager.indent*2) + message
-    if headerdepth == 1:
-        message = "#"*80 + "\n" + message + "\n" + "#"*80
-    if headerdepth is not None:
-        message = MyColors.bold(message)
-    if error:
-        message = MyColors.red(message)
-    if warning:
-        message = MyColors.yellow(message)
-    if success:
-        message = MyColors.green(message)
-    print message
+def estimate_len(s):
+    """Get a better estimate on the length of s
+    This functions skips the basic formatting commands,
+    but it does not respect Unicode commands
+    """
+    r = 0
+    skip = False
+
+    for c in s:
+        if c == '\033':
+            skip = True
+
+        if not skip:
+            r += 1
+
+        if c == 'm':
+            skip = False
+
+    return r
 
 
-def print_block(message):
+def print_msg_line(l, headerdepth, error, warning,
+                   success, hanging_indent,
+                   fill_character, extra_width):
+    indent = IndentManager.indent * 2
+    rem_width = 75 - indent
+    curr_line = " " * indent
+
+    data = {"indent": indent, "rem_width": rem_width,
+            "curr_line": curr_line,
+            "hanging_indent": hanging_indent,
+            "result": [],
+            "empty_line": True}
+
+    # We officially give up
+    if rem_width <= 10:
+        print l
+        return
+
+    def flush_line():
+        data["result"].append(data["curr_line"])
+
+        data["indent"] += data["hanging_indent"]
+        data["hanging_indent"] = 0
+        data["rem_width"] = 75 - data["indent"]
+        data["curr_line"] = " " * data["indent"]
+
+    # TODO: This currently ignores '\t' and exotic whitespaces
+    L = l.split(" ")
+
+    i = 0
+    while i < len(L):
+        data["empty_line"] = False
+        w = L[i]
+
+        # Too long for the next line?
+        if estimate_len(w) > 75 - data["indent"] - \
+           data["hanging_indent"]:
+            v = w[:rem_width]
+            data["curr_line"] += v
+
+            flush_line()
+            w = w[rem_width:]
+            L[i] = w
+
+            continue
+
+        if estimate_len(w) > data["rem_width"]:
+            flush_line()
+
+        data["curr_line"] += w
+
+        if estimate_len(w) < data["rem_width"]:
+            data["curr_line"] += " "
+
+        data["rem_width"] -= estimate_len(w) + 1
+
+        if data["rem_width"] <= 0:
+            flush_line()
+
+        i += 1
+
+    # Output last line
+    if data["empty_line"]:
+        data["rem_width"] = 0
+    else:
+        data["result"].append(data["curr_line"])
+
+    data["rem_width"] += extra_width
+
+    if data["rem_width"] >= 1:
+        if data["result"][-1][-1] != ' ':
+            data["result"][-1] += " "
+            data["rem_width"] -= 1
+
+        data["result"][-1] += fill_character * data["rem_width"]
+
+    for line in data["result"]:
+        if headerdepth is not None:
+            line = MyColors.bold(line)
+        if error:
+            line = MyColors.red(line)
+        if warning:
+            line = MyColors.yellow(line)
+        if success:
+            line = MyColors.green(line)
+
+        print line
+
+
+def print_msg_base(message, headerdepth, error,
+                   warning, success, hanging_indent,
+                   fill_character, extra_width):
     message = message.strip()
+
     if len(message) > 0:
         for l in message.split("\n"):
-            print " "*(IndentManager.indent*2) + l
+            print_msg_line(l, headerdepth, error,
+                           warning, success,
+                           hanging_indent, fill_character,
+                           extra_width)
 
 
-def header(message, depth, len_off=0):
-    print_msg(message, depth, len_off=len_off)
+def print_msg(message, headerdepth=None,
+              error=False, warning=False, success=False,
+              hanging_indent=0, fill_character=' '):
+    symbols = {1: "#", 2: "#", 3: "=", 4: "-"}
+
+    if headerdepth in symbols:
+        s = symbols[headerdepth]
+        message = s * 3 + " " + message
+        hanging_indent = 4
+        fill_character = s
+
+    wrapper = "#" * 80
+
+    if headerdepth is not None:
+        wrapper = MyColors.bold(wrapper)
+    if error:
+        wrapper = MyColors.red(wrapper)
+    if warning:
+        wrapper = MyColors.yellow(wrapper)
+    if success:
+        wrapper = MyColors.green(wrapper)
+
+    if headerdepth == 1:
+        print wrapper
+
+    print_msg_base(message, headerdepth, error, warning,
+                   success, hanging_indent, fill_character,
+                   extra_width=5 if headerdepth is not None
+                   else 0)
+
+    if headerdepth == 1:
+        print wrapper
+
+
+def print_block(msg):
+    print_msg(msg)
+
+
+def header(message, depth):
+    print_msg(message, depth)
     return IndentManager()
