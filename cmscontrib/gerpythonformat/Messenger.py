@@ -37,39 +37,74 @@ class MyColors:
         return platform == "linux" or platform == "linux2"
 
     @classmethod
-    def red(cls, s):
+    def _red(cls, s):
         if cls.colors_enabled():
             return cls.red_code + s + cls.end_code
         else:
             return s
 
     @classmethod
-    def green(cls, s):
+    def red(cls, s):
+        r = ""
+        for t in s.split(cls.end_code):
+            r += cls._red(t)
+        return r
+
+    @classmethod
+    def _green(cls, s):
         if cls.colors_enabled():
             return cls.green_code + s + cls.end_code
         else:
             return s
 
     @classmethod
-    def yellow(cls, s):
+    def green(cls, s):
+        r = ""
+        for t in s.split(cls.end_code):
+            r += cls._green(t)
+        return r
+
+    @classmethod
+    def _yellow(cls, s):
         if cls.colors_enabled():
             return cls.yellow_code + s + cls.end_code
         else:
             return s
 
     @classmethod
-    def blue(cls, s):
+    def yellow(cls, s):
+        r = ""
+        for t in s.split(cls.end_code):
+            r += cls._yellow(t)
+        return r
+
+    @classmethod
+    def _blue(cls, s):
         if cls.colors_enabled():
             return cls.blue_code + s + cls.end_code
         else:
             return s
 
     @classmethod
-    def bold(cls, s):
+    def blue(cls, s):
+        r = ""
+        for t in s.split(cls.end_code):
+            r += cls._blue(t)
+        return r
+
+    @classmethod
+    def _bold(cls, s):
         if cls.colors_enabled():
             return cls.bold_code + s + cls.end_code
         else:
             return s
+
+    @classmethod
+    def bold(cls, s):
+        r = ""
+        for t in s.split(cls.end_code):
+            r += cls._bold(t)
+        return r
 
     @classmethod
     def ellipsis(cls):
