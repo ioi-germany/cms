@@ -185,7 +185,7 @@ def print_msg_line(l, headerdepth, error, warning,
         # Too long for the next line?
         if estimate_len(w) > 75 - data["indent"] - \
            data["hanging_indent"]:
-            v = w[:rem_width]
+            v = w[:data["rem_width"]]
             data["curr_line"] += v
 
             flush_line()

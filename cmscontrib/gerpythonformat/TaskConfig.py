@@ -1448,18 +1448,19 @@ class TaskConfig(CommonConfig, Scope):
             else:
                 return MyColors.green(d)
 
-        def myheader(name, status, d):
+        def myheader(name, status):
             desc = status[1]
             base_space = 65
             space = base_space - len(name) - len(desc)
 
-            return header(name + (space * " ") + v(status, True), depth=d)
+            return header(name + " " + ((space - 2) * "=") + " " +
+                          v(status, True), depth=3)
 
         # Present verdict
         details = json.loads(details)
 
         for st in details["subtasks"]:
-            with myheader(st["name"], st["status"], 3):
+            with myheader(st["name"], st["status"]):
                 for i, g in enumerate(st["groups"]):
                     with header("Group {}".format(i + 1), depth=4):
                         print_block(v(g["verdict"]))
