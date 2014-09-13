@@ -51,13 +51,10 @@
     {% end %}
     <td class="datetime">{{ _("pending...") }} </td>
 {% else %}
-    {% set details = json.loads(sr.score_details) %}
-    {% set verdict = (0, None) %}
-    {% if "verdict" in details %}
-        {% set verdict = details["verdict"] %}
-    {% end %}
+    {% set details = json.loads(sr.unit_test_score_details) %}
+    {% set verdict = details.get("verdict", (0, None)) %}
     {% set bgc = "class=\"%s\"" % ("score_100" if verdict[0] == 1 else "score_0") %}
-<tr data-submission="{{ s_idx }}" data-status="5" 
+<tr data-submission="{{ s_idx }}" data-status="5"
     {% raw bgc %}>
     {% raw col1 %}
     <td class="status">

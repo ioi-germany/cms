@@ -417,14 +417,5 @@ class ScoreTypeWithUnitTest(ScoreType):
 
         return public, private, headers
 
-    def unit_test_compute_score(self, submission_result, public):
+    def compute_unit_test_score(self, submission_result):
         raise NotImplementedError
-
-    def user_compute_score(self, submission_result, public):
-        raise NotImplementedError
-
-    def compute_score(self, submission_result, public):
-        if self.is_unit_test():
-            return self.unit_test_compute_score(submission_result, public)
-        else:
-            return self.user_compute_score(submission_result, public)

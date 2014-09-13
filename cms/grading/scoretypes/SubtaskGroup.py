@@ -249,21 +249,17 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
 
         return private_score, public_score, headers
 
-    def unit_test_compute_score(self, submission_result, public):
+    def compute_unit_test_score(self, submission_result):
         """Compute the score of a unit test.
 
         See the same method in ScoreType for details.
 
         """
         # Actually, this means it didn't even compile!
-        if not submission_result.evaluated(public):
+        if not submission_result.evaluated():
             D = {'subtasks': [], 'info': self.submission_info}
 
-            if public:
-                return 0.0, json.dumps(D)
-            else:
-                return 0.0, json.dumps(D), \
-                    json.dumps(["%lg" % 0.0 for _ in self.parameters])
+            return json.dumps(D)
 
         evaluations = dict((ev.codename, ev)
                            for ev in submission_result.evaluations)
@@ -381,12 +377,9 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
                 public_score == wanted_public) and not subtasks_failed
         details["verdict"] = (1, "Okay") if okay else (0, "Failed")
 
-        if public:
-            return public_score, json.dumps(details)
-        else:
-            return private_score, json.dumps(details), json.dumps([])
+        return json.dumps(details)
 
-    def user_compute_score(self, submission_result, public):
+    def compute_score(self, submission_result, public):
         """Compute the score of a normal submission.
 
         See the same method in ScoreType for details.
