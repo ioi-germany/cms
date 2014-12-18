@@ -70,7 +70,11 @@
           Evaluating...
           {% elif sr.scored() %}
             {% try %}
-              {% set max_score = st.max_score %}
+              {% if s.is_unit_test() %}
+                {% set max_score = st.unit_test_expected_scores(s.additional_info)[1] %}
+              {% else %}
+                {% set max_score = st.max_score %}
+              {% end %}
             {% except %}
               {% set max_score = "[Cannot get score type - see logs]" %}
             {% end %}

@@ -208,7 +208,6 @@ $(document).ready(function () {
         <tbody>
     {% for s_idx, s in unit_tests %}
         {% set sr = s.get_result(s.task.active_dataset) %}
-        {% set score_type = get_score_type(dataset=s.task.active_dataset, info=s.additional_info) %}
         {% include unit_test_row.html %}
     {% end %}
         </tbody>
@@ -309,7 +308,7 @@ $(document).ready(function () {
     {% else %}
         {% for s_idx, s in user_submissions %}
             {% set sr = s.get_result(s.task.active_dataset) %}
-            {% set score_type = get_score_type(dataset=s.task.active_dataset, info=s.additional_info) %}
+            {% set score_type = get_score_type(dataset=s.task.active_dataset) %}
             {% include submission_row.html %}
         {% end %}
     {% end %}

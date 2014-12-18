@@ -23,6 +23,7 @@
 
 from cms.grading.ScoreType import ScoreType
 from cms.grading import UnitTest, mem_human, time_human
+from tornado.template import Template
 import json
 
 
@@ -229,12 +230,11 @@ class SubtaskGroup(ScoreType):
         return self._feedback
 
     def unit_test_expected_scores(self, submission_info):
-        public, private, headers = self.user_max_scores()
+        submission_info = json.loads(submission_info)
+        public = submission_info.get("expected_public_score", 42)
+        private = submission_info.get("expected_score", 42)
 
-        public = submission_info.get("expected_public_score", public)
-        private = submission_info.get("expected_score", private)
-
-        return public, private, headers
+        return public, private, []
 
     def max_scores(self):
         """Compute the maximum score of a submission.
@@ -258,13 +258,14 @@ class SubtaskGroup(ScoreType):
 
         return private_score, public_score, headers
 
-    def compute_unit_test_score(self, submission_result, public,
-                                submission_info):
+    def compute_unit_test_score(self, submission_result,
+                                additional_info):
         """Compute the score of a unit test.
 
-        See the same method in ScoreType for details.
-
         """
+        public = False
+        submission_info = json.loads(additional_info)
+        
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated(public):
             D = {'subtasks': [], 'info': submission_info}
@@ -389,7 +390,7 @@ class SubtaskGroup(ScoreType):
 
         return json.dumps(details)
 
-    def compute_score(self, submission_result, public, submission_info):
+    def compute_score(self, submission_result, public):
         """Compute the score of a normal submission.
 
         See the same method in ScoreType for details.
@@ -482,3 +483,36 @@ class SubtaskGroup(ScoreType):
 
     def reduce(self, outcomes):
         return min(outcomes)
+        
+    def get_html_details(self, score_details, translator=None):
+        """Return an HTML string representing the score details of a
+        submission.
+
+        score_details (unicode): the data saved by the score type
+            itself in the database; can be public or private.
+        translator (function|None): the function to localize strings,
+            or None to use the identity.
+
+        return (string): an HTML string representing score_details.
+
+        """
+        if translator is None:
+            translator = lambda string: string
+        try:
+            score_details = json.loads(score_details)
+        except (TypeError, ValueError):
+            # TypeError raised if score_details is None
+            logger.error("Found a null or non-JSON score details string. "
+                         "Try invalidating scores.")
+            return translator("Score details temporarily unavailable.")
+        else:
+            try:
+                ut = score_details["info"]["unit_test"]
+            except:
+                ut = False
+                
+            TEMPLATE = self.UNIT_TEST_TEMPLATE if ut else \
+                       self.USER_TEMPLATE
+        
+            return Template(TEMPLATE).generate(details=score_details,
+                                               _=translator)

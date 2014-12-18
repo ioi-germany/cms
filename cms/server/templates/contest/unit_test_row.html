@@ -63,13 +63,15 @@
     </td>
 
     {% if score_type is not None %}
-    <td class="public_score {{ get_score_class(sr.public_score, score_type.max_public_score) }}">
-            {{ "%g" % round(sr.public_score, task.score_precision) }} / {{ "%g" % round(score_type.max_scores()[0], task.score_precision) }}
+        {% set max_public_score = score_type.unit_test_expected_scores(s.additional_info)[0] %}
+        {% set max_score = score_type.unit_test_expected_scores(s.additional_info)[1] %}
+    <td class="public_score {{ get_score_class(sr.public_score, max_public_score) }}">
+            {{ "%g" % round(sr.public_score, task.score_precision) }} / {{ "%g" % round(max_public_score, task.score_precision) }}
     </td>
         {% if True %}
             {% if score_type is not None and score_type.max_score != 0 %}
-        <td class="total_score {{ get_score_class(sr.score, score_type.max_score) }}">
-                {{ "%g" % round(sr.score, task.score_precision) }} / {{ "%g" % round(score_type.max_scores()[1], task.score_precision) }}
+        <td class="total_score {{ get_score_class(sr.score, max_score) }}">
+                {{ "%g" % round(sr.score, task.score_precision) }} / {{ "%g" % round(max_score, task.score_precision) }}
         </td>
             {% else %}
         <td class="total_score">

@@ -1427,11 +1427,14 @@ class TaskConfig(CommonConfig, Scope):
                     submission_result, ifpublic)
 
         # Judge unit test
-        score_type = get_score_type(dataset=ddb, info=sdb.additional_info)
+        score_type = get_score_type(dataset=ddb)
         public_score, public_details = \
             score_type.compute_score(submission_result, True)
         score, details, ranking_details = \
             score_type.compute_score(submission_result, False)
+            
+        details = score_type.compute_unit_test_score(submission_result,
+                                                     sdb.additional_info)
 
         def v((accepted, desc), upper=False, z=False):
             d = desc.replace("<br>", "\n")

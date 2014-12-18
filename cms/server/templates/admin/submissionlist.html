@@ -68,7 +68,7 @@
             Evaluated ({{ sr.score }} / {{ max_score }})
             <div class="score_details" id="evaluation_{{ s.id }}" style="display: none;">
               {% try %}
-                {% if current_score_type.is_unit_test() %}
+                {% if s.is_unit_test() %}
                   {% raw current_score_type.get_html_details(sr.unit_test_score_details) %}
                 {% else %}
                   {% raw current_score_type.get_html_details(sr.score_details) %}

@@ -1,11 +1,7 @@
-{% if score_type is not None and score_type.is_unit_test() %}
-    {% set col1 = "<td class=\"datetime\"> <b> UNIT TEST </b> </td>" %}
+{% if show_date %}
+    {% set col1 = "<td class=\"datetime\">%s</td>" % format_datetime(s.timestamp, timezone, locale=locale) %}
 {% else %}
-    {% if show_date %}
-        {% set col1 = "<td class=\"datetime\">%s</td>" % format_datetime(s.timestamp, timezone, locale=locale) %}
-    {% else %}
-        {% set col1 = "<td class=\"time\">%s</td>" % format_time(s.timestamp, timezone, locale=locale) %}
-    {% end %}
+    {% set col1 = "<td class=\"time\">%s</td>" % format_time(s.timestamp, timezone, locale=locale) %}
 {% end %}
 {% if sr is None or not sr.compiled() %}
 <tr data-submission="{{ s_idx }}" data-status="1">
@@ -65,7 +61,7 @@
     </td>
 
     {% if score_type is not None %}
-    <td class="public_score {{ get_score_class(sr.public_score, score_type.max_public_score) }}">
+    <td class="public_score {{ get_score_class(sr.public_score, max_public_score) }}">
             {{ "%g" % round(sr.public_score, task.score_precision) }} / {{ "%g" % round(score_type.max_public_score, task.score_precision) }}
     </td>
     {% end %}
@@ -73,7 +69,7 @@
     {% if score_type is None or score_type.feedback() == "token" %}
         {% if s.token is not None %}
             {% if score_type is not None and score_type.max_score != 0 %}
-        <td class="total_score {{ get_score_class(sr.score, score_type.max_score) }}">
+        <td class="total_score {{ get_score_class(sr.score, max_score) }}">
                 {{ "%g" % round(sr.score, task.score_precision) }} / {{ "%g" % round(score_type.max_score, task.score_precision) }}
         </td>
             {% else %}
