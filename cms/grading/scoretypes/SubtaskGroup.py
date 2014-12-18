@@ -31,7 +31,7 @@ def N_(message):
     return message
 
 
-class SubtaskGroup(ScoreTypeWithUnitTest):
+class SubtaskGroup(ScoreType):
     """The testcases are divided into subtasks, which themselves consist of
     groups. The score of a group is the minimum score among the contained
     test cases multiplied with a parameter of the group. The score of a subtask
@@ -220,14 +220,23 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
 {% end %}
 """
 
-    def __init__(self, parameters, public_testcases, info):
+    def __init__(self, parameters, public_testcases):
         self._feedback = parameters['feedback']
-        super(SubtaskGroup, self).__init__(parameters, public_testcases, info)
+        super(SubtaskGroup, self).__init__(parameters['tcinfo'], public_testcases)
 
     def feedback(self):
         return self._feedback
 
-    def user_max_scores(self):
+    def unit_test_expected_scores(self, submission_info):
+        public, private, headers = self.user_max_scores()
+
+        public = submission_info.get("expected_public_score", public)
+        private = submission_info.get("expected_score", private)
+
+
+        return public, private, headers
+
+    def max_scores(self):
         """Compute the maximum score of a submission.
 
         See the same method in ScoreType for details.
@@ -249,7 +258,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
 
         return private_score, public_score, headers
 
-    def unit_test_compute_score(self, submission_result, public):
+    def unit_test_compute_score(self, submission_result, public, submission_info):
         """Compute the score of a unit test.
 
         See the same method in ScoreType for details.
@@ -257,7 +266,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
         """
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated(public):
-            D = {'subtasks': [], 'info': self.submission_info}
+            D = {'subtasks': [], 'info': submission_info}
 
             if public:
                 return 0.0, json.dumps(D)
@@ -272,7 +281,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
         private_score = 0
 
         expectations = {tuple(json.loads(key)): val for key, val
-                        in self.submission_info["expected"].iteritems()}
+                        in submission_info["expected"].iteritems()}
         possible_task = expectations[()]
         possible_subtask = []
         possible_group = []
@@ -307,7 +316,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
 
                 for idx, unique in zip(g["cases"], g["case_keys"]):
                     subtasks[-1]["groups"][-1]["grouplen"] += 1
-                    r = UnitTest.get_result(self.submission_info["limits"],
+                    r = UnitTest.get_result(submission_info["limits"],
                                             evaluations[idx])
                     t = time_human(evaluations[idx].execution_time)
                     m = mem_human(evaluations[idx].execution_memory) + "B"
@@ -373,7 +382,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
             if subtasks[-1]["status"][0] <= 0:
                 subtasks_failed = True
 
-        details = {"subtasks": subtasks, "info": self.submission_info,
+        details = {"subtasks": subtasks, "info": submission_info,
                    "more": self.parameters, "verdict": (1, "Okay")}
 
         wanted_public, wanted_private, dummy = self.max_scores()
@@ -386,7 +395,7 @@ class SubtaskGroup(ScoreTypeWithUnitTest):
         else:
             return private_score, json.dumps(details), json.dumps([])
 
-    def user_compute_score(self, submission_result, public):
+    def user_compute_score(self, submission_result, public, submission_info):
         """Compute the score of a normal submission.
 
         See the same method in ScoreType for details.

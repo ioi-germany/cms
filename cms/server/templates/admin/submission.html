@@ -3,7 +3,7 @@
 {% block core %}
 {% from cms.grading import format_status_text %}
 {% from cms.grading.scoretypes import get_score_type %}
-{% set st = get_score_type(dataset=shown_dataset, info=s.additional_info) %}
+{% set st = get_score_type(dataset=shown_dataset) %}
 {% set sr = s.get_result(shown_dataset) %}
 <div class="core_title">
   <h1>Submission {{ s.id }} (Task: <a href="{{ url_root }}/task/{{ s.task.id }}">{{ s.task.name }}</a>)</h1>
@@ -144,10 +144,10 @@
 
   {% if sr is not None and sr.evaluated() %}
 
-<h2 id="title_evaluation_admin" class="{{"toggling_off" if st.is_unit_test() else "toggling_on"}}">
+<h2 id="title_evaluation_admin" class="{{"toggling_off" if s.is_unit_test() else "toggling_on"}}">
     Evaluation (as seen by the admin)
 </h2>
-<div id="evaluation_admin" style="{{"display:none;" if st.is_unit_test() else ""}}">
+<div id="evaluation_admin" style="{{"display:none;" if s.is_unit_test() else ""}}">
 
   <table class="bordered">
     <thead>

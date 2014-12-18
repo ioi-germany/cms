@@ -168,10 +168,7 @@ $(document).ready(function () {
 {% for s_idx, s in enumerate(sorted(submissions, key=lambda s: s.timestamp, reverse=True)) %}
     {% set s_idx = len(submissions) - s_idx %}
     {% set sr = s.get_result(s.task.active_dataset) %}
-    {% set st = get_score_type(dataset=s.task.active_dataset, info=s.additional_info) %}
-    {% if st.is_unit_test() %}
-        {% comment This is awkward (and most probably quadratic), but seems to be the only %}
-        {% comment way thanks to Tornado %}
+    {% if s.is_unit_test() %}
         {% set unit_tests = unit_tests + [(s_idx, s)] %}
     {% else %}
         {% set user_submissions = user_submissions + [(s_idx, s)] %}

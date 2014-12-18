@@ -34,9 +34,11 @@
     </thead>
     <tbody>
       {% for s in sorted(submissions, key=lambda s: s.timestamp, reverse=True) %}
-        {% try %}
-          {% set current_score_type = get_score_type(dataset=shown_dataset, info=s.additional_info) %}
-        {% except %}
+        {% if current_score_type is None %}
+            {% try %}
+                {% set current_score_type = get_score_type(dataset=shown_dataset) %}
+            {% except %}
+            {% end %}
         {% end %}
       <tr>
         <td><a href="{{ url_root }}/submission/{{ s.id }}/{{ shown_dataset.id }}">{{ str(s.timestamp) }}</a></td>
@@ -55,7 +57,11 @@
             <div  id="evaluation_{{ s.id }}" class="score_details" style="display: none;">
             {% elif sr.scored() %}
               {% try %}
-                {% set max_score = current_score_type.max_scores()[1] %}
+                {% if s.is_unit_test() %}
+                  {% set max_score = current_score_type.unit_test_expected_scores(s.additional_info)[1] %}
+                {% else %}
+                  {% set max_score = current_score_type.max_score %}
+                {% end %}
               {% except %}
                 {% set max_score = "[Cannot get score type - see logs]" %}
               {% end %}
