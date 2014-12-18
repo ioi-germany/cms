@@ -21,7 +21,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from cms.grading.ScoreType import ScoreTypeWithUnitTest
+from cms.grading.ScoreType import ScoreType
 from cms.grading import UnitTest, mem_human, time_human
 import json
 
@@ -222,7 +222,8 @@ class SubtaskGroup(ScoreType):
 
     def __init__(self, parameters, public_testcases):
         self._feedback = parameters['feedback']
-        super(SubtaskGroup, self).__init__(parameters['tcinfo'], public_testcases)
+        super(SubtaskGroup, self).__init__(parameters['tcinfo'],
+                                           public_testcases)
 
     def feedback(self):
         return self._feedback
@@ -232,7 +233,6 @@ class SubtaskGroup(ScoreType):
 
         public = submission_info.get("expected_public_score", public)
         private = submission_info.get("expected_score", private)
-
 
         return public, private, headers
 
@@ -258,7 +258,8 @@ class SubtaskGroup(ScoreType):
 
         return private_score, public_score, headers
 
-    def unit_test_compute_score(self, submission_result, public, submission_info):
+    def unit_test_compute_score(self, submission_result, public,
+                                submission_info):
         """Compute the score of a unit test.
 
         See the same method in ScoreType for details.
