@@ -78,7 +78,11 @@ function update_additional_answer(element, invoker)
               {% end %}
             Evaluated ({{ sr.score }} / {{ max_score }})
             <div  id="evaluation_{{ s.id }}" class="score_details" style="display: none;">
-              {% raw score_type.get_html_details(sr.score_details) %}
+              {% if score_type.is_unit_test() %}
+                {% raw score_type.get_html_details(sr.unit_test_score_details) %}
+              {% else %}
+                {% raw score_type.get_html_details(sr.score_details) %}
+              {% end %}
             {% else %}
             Evaluated
             <div id="evaluation_{{ s.id }}" style="display: none;">

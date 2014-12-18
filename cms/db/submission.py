@@ -375,6 +375,10 @@ class SubmissionResult(Base):
         String,
         nullable=True)
 
+    unit_test_score_details = Column(
+        String,
+        nullable=True)
+
     # Ranking score details. It is a list of strings that are going to
     # be shown in a single row in the table of submission in RWS. JSON
     # encoded.
@@ -537,6 +541,7 @@ class SubmissionResult(Base):
         self.public_score = None
         self.public_score_details = None
         self.ranking_score_details = None
+        self.unit_test_score_details = None
 
     def set_compilation_outcome(self, success):
         """Set the compilation outcome based on the success.

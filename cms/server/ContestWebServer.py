@@ -1256,7 +1256,8 @@ class SubmissionStatusHandler(BaseHandler):
             raise tornado.web.HTTPError(404)
 
         sr = submission.get_result(task.active_dataset)
-        score_type = get_score_type(dataset=task.active_dataset, info=submission.additional_info)
+        score_type = get_score_type(dataset=task.active_dataset,
+                                    info=submission.additional_info)
 
         # TODO: use some kind of constants to refer to the status.
         data = dict()
@@ -1291,7 +1292,7 @@ class SubmissionStatusHandler(BaseHandler):
                         round(mprivs, task.score_precision)
                 data["score"] = "%g" % \
                     round(sr.score, task.score_precision)
-            if submission.is_unit_test():                
+            if submission.is_unit_test():
                 try:
                     data["verdict"] = json.loads(sr.score_details)["verdict"]
                 except:
@@ -1321,16 +1322,19 @@ class SubmissionDetailsHandler(BaseHandler):
             raise tornado.web.HTTPError(404)
 
         sr = submission.get_result(task.active_dataset)
-        score_type = get_score_type(dataset=task.active_dataset, info=submission.additional_info)
+        score_type = get_score_type(dataset=task.active_dataset,
+                                    info=submission.additional_info)
 
         details = None
         if sr is not None:
-            if submission.tokened():
+            if score_type.is_unit_test():
+                details = sr.unit_test_score_details
+            elif submission.tokened():
                 details = sr.score_details
             else:
                 details = sr.public_score_details
 
-            if sr.scored(not submission.tokened()):
+            if details is not None:
                 details = score_type.get_html_details(details, self._)
             else:
                 details = None

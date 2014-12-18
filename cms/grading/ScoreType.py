@@ -373,4 +373,47 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
         """
         logger.error("Unimplemented method reduce.")
-        raise NotImplementedError("Please subclass this class.")
+
+
+class ScoreTypeWithUnitTest(ScoreType):
+    """Basic methods for score types that can handle unit tests
+    """
+    USER_TEMPLATE = ""
+    UNIT_TEST_TEMPLATE = ""
+
+    def __init__(self, parameters, public_testcases, info):
+        super(ScoreTypeWithUnitTest, self).\
+            __init__(parameters['tcinfo'], public_testcases, info)
+
+    def set_submission_info(self, info):
+        if info is None:
+            self.submission_info = None
+            self._unit_test = False
+        else:
+            self.submission_info = json.loads(info)
+            self._unit_test = self.submission_info["unit_test"]
+
+        self.TEMPLATE = self.USER_TEMPLATE if not self.is_unit_test() \
+            else self.UNIT_TEST_TEMPLATE
+
+    def is_unit_test(self):
+        return self._unit_test
+
+    def user_max_scores(self):
+        raise NotImplementedError
+
+    def max_scores(self):
+        public, private, headers = self.user_max_scores()
+
+        if self.is_unit_test():
+            public = self.submission_info.get("expected_public_score",
+                                              public)
+
+            private = self.submission_info.get("expected_score",
+                                               private)
+
+        return public, private, headers
+
+    def compute_unit_test_score(self, submission_result):
+        raise NotImplementedError
+>>>>>>> 89847cbc293d1f583ada510312fdadaed8d9b09f

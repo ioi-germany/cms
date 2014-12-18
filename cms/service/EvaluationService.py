@@ -151,10 +151,14 @@ def jqe_check(jqe):
             submission = Submission.get_from_id(jqe.object_id, session)
             submission_result = submission.get_result_or_create(dataset)
             return to_compile(submission_result)
-        elif jqe.job_type == EvaluationService.JOB_TYPE_EVALUATION:
+        elif jqe.job_type == EvaluationService.JOB_TYPE_PUBLIC_EVALUATION:
             submission = Submission.get_from_id(jqe.object_id, session)
             submission_result = submission.get_result_or_create(dataset)
-            return to_evaluate(submission_result)
+            return to_evaluate_public(submission_result)
+        elif jqe.job_type == EvaluationService.JOB_TYPE_PRIVATE_EVALUATION:
+            submission = Submission.get_from_id(jqe.object_id, session)
+            submission_result = submission.get_result_or_create(dataset)
+            return to_evaluate_private(submission_result)
         elif jqe.job_type == EvaluationService.JOB_TYPE_TEST_COMPILATION:
             user_test = UserTest.get_from_id(jqe.object_id, session)
             user_test_result = user_test.get_result_or_create(dataset)
@@ -1282,10 +1286,9 @@ class EvaluationService(Service):
         if submission_result.evaluated(public):
             submission_result.sa_session.commit()
 
-            if not public or not submission.is_unit_test():
-                self.scoring_service.new_evaluation(
-                    submission_id=submission_result.submission_id,
-                    dataset_id=submission_result.dataset_id)
+            self.scoring_service.new_evaluation(
+                submission_id=submission_result.submission_id,
+                dataset_id=submission_result.dataset_id)
 
             # If we just evaluated the public test cases, evaluate
             # the private test cases now.
