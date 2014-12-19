@@ -504,6 +504,7 @@ class SubmissionResult(Base):
         return self.public_scored() and \
             (public or all(getattr(self, k) is not None for k in [
                 "score", "score_details",
+                "unit_test_score_details",
                 "ranking_score_details"]))
 
     def invalidate_compilation(self):

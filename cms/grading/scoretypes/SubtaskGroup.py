@@ -24,7 +24,12 @@
 from cms.grading.ScoreType import ScoreType
 from cms.grading import UnitTest, mem_human, time_human
 from tornado.template import Template
+
 import json
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 # Dummy function to mark translatable string.
@@ -265,7 +270,7 @@ class SubtaskGroup(ScoreType):
         """
         public = False
         submission_info = json.loads(additional_info)
-        
+
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated(public):
             D = {'subtasks': [], 'info': submission_info}
@@ -483,7 +488,7 @@ class SubtaskGroup(ScoreType):
 
     def reduce(self, outcomes):
         return min(outcomes)
-        
+
     def get_html_details(self, score_details, translator=None):
         """Return an HTML string representing the score details of a
         submission.
@@ -510,9 +515,9 @@ class SubtaskGroup(ScoreType):
                 ut = score_details["info"]["unit_test"]
             except:
                 ut = False
-                
+
             TEMPLATE = self.UNIT_TEST_TEMPLATE if ut else \
-                       self.USER_TEMPLATE
-        
+                self.USER_TEMPLATE
+
             return Template(TEMPLATE).generate(details=score_details,
                                                _=translator)

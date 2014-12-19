@@ -1432,7 +1432,6 @@ class TaskConfig(CommonConfig, Scope):
             score_type.compute_score(submission_result, True)
         score, details, ranking_details = \
             score_type.compute_score(submission_result, False)
-            
         details = score_type.compute_unit_test_score(submission_result,
                                                      sdb.additional_info)
 

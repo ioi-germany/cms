@@ -125,7 +125,7 @@ class ScoreType(object):
         """
         logger.error("Unimplemented method compute_score.")
         raise NotImplementedError("Please subclass this class.")
-        
+
     def compute_unit_test_score(self, submission_result,
                                 submission_info):
         """

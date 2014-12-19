@@ -167,17 +167,16 @@ class ScoringService(Service):
             if submission_result.needs_public_scoring():
                 submission_result.public_score, \
                     submission_result.public_score_details = \
-                    score_type.compute_score(submission_result, True,
-                                             submission.additional_info)
+                    score_type.compute_score(submission_result, True)
             if submission_result.needs_private_scoring():
                 submission_result.score, \
                     submission_result.score_details, \
                     submission_result.ranking_score_details = \
-                    score_type.compute_score(submission_result, False,
-                                             submission.additional_info)
+                    score_type.compute_score(submission_result, False)
                 submission_result.unit_test_score_details = \
                     score_type.compute_unit_test_score(submission_result,
-                                                       submission.additional_info)
+                                                       submission.
+                                                       additional_info)
 
             # Store it.
             session.commit()
