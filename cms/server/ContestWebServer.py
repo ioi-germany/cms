@@ -1285,17 +1285,19 @@ class SubmissionStatusHandler(BaseHandler):
                     round(score_type.max_public_score, task.score_precision)
             data["public_score"] = "%g" % \
                 round(sr.public_score, task.score_precision)
+
+            if submission.is_unit_test():
+                utd = json.loads(sr.unit_test_score_details)
+                data["expected_public"] = utd["expected_public"]
+                data["expected_private"] = utd["expected_private"]
+                data["verdict"] = utd["verdict"]
+
             if submission.tokened():
                 if score_type is not None and score_type.max_score != 0:
                     data["max_score"] = "%g" % \
                         round(score_type.max_score, task.score_precision)
                 data["score"] = "%g" % \
                     round(sr.score, task.score_precision)
-            if submission.is_unit_test():
-                try:
-                    data["verdict"] = json.loads(sr.score_details)["verdict"]
-                except:
-                    pass
 
         self.write(data)
 

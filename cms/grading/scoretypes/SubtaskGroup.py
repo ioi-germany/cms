@@ -240,8 +240,8 @@ class SubtaskGroup(ScoreType):
         except:
             pass
 
-        public = submission_info.get("expected_public_score", 42)
-        private = submission_info.get("expected_score", 42)
+        public = submission_info.get("expected_public_score", 0)
+        private = submission_info.get("expected_score", 0)
 
         return public, private
 
@@ -273,7 +273,14 @@ class SubtaskGroup(ScoreType):
 
         """
         public = False
-        submission_info = json.loads(additional_info)
+
+        try:
+            submission_info = json.loads(additional_info)
+        except:
+            submission_info = additional_info
+
+        if submission_info is None:
+            return json.dumps({"verdict": (-1, "Not a Unit Test")})
 
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated(public):
@@ -396,7 +403,10 @@ class SubtaskGroup(ScoreType):
             self.unit_test_expected_scores(submission_info)
         okay = (private_score == wanted_private and
                 public_score == wanted_public) and not subtasks_failed
+
         details["verdict"] = (1, "Okay") if okay else (0, "Failed")
+        details["expected_public"] = wanted_public
+        details["expected_private"] = wanted_private
 
         return json.dumps(details)
 

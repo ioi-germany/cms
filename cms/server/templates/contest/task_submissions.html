@@ -39,6 +39,7 @@ function get_score_class (score, max_score) {
     }
 }
 
+{% comment TODO: fix this for unit tests %}
 update_submission_row = function (x, submission_id, data) {
     var row = $("#" + x + " tbody tr[data-submission=\"" + submission_id + "\"]");
     row.attr("data-status", data["status"]);
@@ -47,20 +48,33 @@ update_submission_row = function (x, submission_id, data) {
         if (data["public_score"] != undefined) {
             var public_score = data["public_score"];
             if (data["max_public_score"] != undefined) {
-                row.children("td.public_score").addClass(get_score_class(parseFloat(data["public_score"]), parseFloat(data["max_public_score"])));
-                public_score += " / " + data["max_public_score"];
+                row.children("td.public_score").addClass(get_score_class(parseFloat(data["public_score"]), 
+                                                         parseFloat(data["max_public_score"])));
+                
+                if(x == "unit_test_list") {
+                    public_score += " / " + data["expected_public"];
+                }
+                else {
+                    public_score += " / " + data["max_public_score"];
+                }
             }
             row.children("td.public_score").removeClass("undefined").html(public_score);
         }
         if (data["score"] != undefined) {
             var score = data["score"];
-            if (data["max_score"] != undefined) {
+            if (data["max_score"] != undefined ) {
                 row.children("td.total_score").addClass(get_score_class(parseFloat(data["score"]), parseFloat(data["max_score"])));
-                score += " / " + data["max_score"];
+                
+                if(x == "unit_test_list") {
+                    score += " / " + data["expected_private"]
+                }
+                else {
+                    score += " / " + data["max_score"];
+                }
             }
             row.children("td.total_score").removeClass("undefined").html(score);
         }
-        if(data["verdict"] != undefined) {
+        if(data["verdict"] != undefined && x == "unit_test_list") {
             var short_verdict = data["verdict"][0];
             var verdict_details = data["verdict"][1];
             row.children("td.verdict").html(verdict_details);
