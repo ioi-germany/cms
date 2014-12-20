@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from Messenger import print_msg, print_block, header, MyColors
+from Messenger import print_msg, print_block, header, MyColors, box
 from CommonConfig import exported_function, CommonConfig
 from Executable import ExitCodeException
 from ConstraintParser import ConstraintList, merge_constraints
@@ -1435,6 +1435,9 @@ class TaskConfig(CommonConfig, Scope):
         details = score_type.compute_unit_test_score(submission_result,
                                                      sdb.additional_info)
 
+        expected_public, expected_private, dummy = \
+            score_type.unit_test_expected_scores(sdb.additional_info)
+
         def v((accepted, desc), upper=False, z=False):
             d = desc.replace("<br>", "\n")
 
@@ -1481,6 +1484,23 @@ class TaskConfig(CommonConfig, Scope):
                     print ""
 
             print ""
+
+        public_score = MyColors.green("{}".format(public_score)) if \
+            public_score == expected_public else \
+            MyColors.red("{}".format(public_score))
+        score = MyColors.green("{}".format(score)) if \
+            score == expected_private else \
+            MyColors.red("{}".format(score))
+
+        print_msg("Public Score: {} (expected: {})".format(public_score,
+                                                           expected_public))
+        print_msg("Total Score: {} (expected: {})".format(score,
+                                                          expected_private))
+        print ""
+        verd = details["verdict"]
+        box(" Overall verdict ", MyColors.green(verd[1]) if verd[0] == 1
+            else MyColors.red(verd[1]))
+        print ""
 
     def _run_job_group(self, job_group):
         """

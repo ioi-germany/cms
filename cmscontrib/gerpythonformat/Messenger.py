@@ -148,6 +148,27 @@ def estimate_len(s):
     return r
 
 
+def center_line(l, filler=' ', outer=None, bold=False):
+    if outer is None:
+        outer = filler
+
+    x = estimate_len(l)
+    r = 78 - x
+    s = outer + filler * (r / 2) + l + \
+        filler * ((r + 1) / 2) + outer
+
+    if bold:
+        s = MyColors.bold(s)
+
+    print s
+
+
+def box(h, l):
+    center_line(h, '-', '+', True)
+    center_line(l, ' ', '|', True)
+    center_line("", "-", '+', True)
+
+
 def print_msg_line(l, headerdepth, error, warning,
                    success, hanging_indent,
                    fill_character, extra_width):
