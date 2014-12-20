@@ -1434,8 +1434,7 @@ class TaskConfig(CommonConfig, Scope):
             score_type.compute_score(submission_result, False)
         details = score_type.compute_unit_test_score(submission_result,
                                                      sdb.additional_info)
-
-        expected_public, expected_private, dummy = \
+        expected_public, expected_private = \
             score_type.unit_test_expected_scores(sdb.additional_info)
 
         def v((accepted, desc), upper=False, z=False):

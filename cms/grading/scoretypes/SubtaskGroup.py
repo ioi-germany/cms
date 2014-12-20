@@ -235,11 +235,15 @@ class SubtaskGroup(ScoreType):
         return self._feedback
 
     def unit_test_expected_scores(self, submission_info):
-        submission_info = json.loads(submission_info)
+        try:
+            submission_info = json.loads(submission_info)
+        except:
+            pass
+
         public = submission_info.get("expected_public_score", 42)
         private = submission_info.get("expected_score", 42)
 
-        return public, private, []
+        return public, private
 
     def max_scores(self):
         """Compute the maximum score of a submission.
@@ -388,7 +392,8 @@ class SubtaskGroup(ScoreType):
         details = {"subtasks": subtasks, "info": submission_info,
                    "more": self.parameters, "verdict": (1, "Okay")}
 
-        wanted_public, wanted_private, dummy = self.max_scores()
+        wanted_public, wanted_private = \
+            self.unit_test_expected_scores(submission_info)
         okay = (private_score == wanted_private and
                 public_score == wanted_public) and not subtasks_failed
         details["verdict"] = (1, "Okay") if okay else (0, "Failed")
