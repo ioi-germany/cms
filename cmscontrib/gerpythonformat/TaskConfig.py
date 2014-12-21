@@ -1491,8 +1491,10 @@ class TaskConfig(CommonConfig, Scope):
             score == expected_private else \
             MyColors.red("{}".format(score))
 
-        print_msg("Public Score: {} (expected: {})".format(public_score,
-                                                           expected_public))
+        if score_type.feedback() != "full":
+            print_msg("Public Score: {} (expected: {})".
+                      format(public_score, expected_public))
+
         print_msg("Total Score: {} (expected: {})".format(score,
                                                           expected_private))
         print ""

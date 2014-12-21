@@ -401,8 +401,9 @@ class SubtaskGroup(ScoreType):
 
         wanted_public, wanted_private = \
             self.unit_test_expected_scores(submission_info)
-        okay = (private_score == wanted_private and
-                public_score == wanted_public) and not subtasks_failed
+        okay = private_score == wanted_private and \
+            (public_score == wanted_public or self._feedback == "full") \
+            and not subtasks_failed
 
         details["verdict"] = (1, "Okay") if okay else (0, "Failed")
         details["expected_public"] = wanted_public

@@ -212,10 +212,10 @@ $(document).ready(function () {
                 <th class="time">{{ _("Time") }}</th>
     {% end %}
                 <th class="status">{{ _("Status") }}</th>
-    {% if score_type is not None %}
+    {% if score_type is not None and score_type.feedback() != "full" %}
                 <th class="public_score">{{ _("Public score") }}</th>
-                <th class="total_score">{{ _("Total score") }}</th>
     {% end %}
+                <th class="total_score">{{ _("Total score") }}</th>
                 <th class="time"> {{ _("Verdict") }}</th>
             </tr>
         </thead>

@@ -11,7 +11,9 @@
         {{ _("Compiling...") }}
     </td>
     {% if score_type is not None %}
-    <td class="public_score undefined">{{ _("N/A") }}</td>
+        {% if score_type.feedback() != "full" %}
+        <td class="public_score undefined">{{ _("N/A") }}</td>
+        {% end %}
     <td class="total_score undefined">{{ _("N/A") }}</td>
     {% end %}
     <td class="verdict"> {{ _("pending...") }} </td>
@@ -23,7 +25,9 @@
         <a class="details">{{ _("details") }}</a>
     </td>
     {% if score_type is not None %}
-    <td class="public_score undefined">{{ _("N/A") }}</td>
+        {% if score_type.feedback() != "full" %}
+        <td class="public_score undefined">{{ _("N/A") }}</td>
+        {% end %}
     <td class="total_score undefined">{{ _("N/A") }}</td>
     {% end %}
     {% comment TODO %}
@@ -35,7 +39,9 @@
         {{ _("Evaluating...") }}
     </td>
     {% if score_type is not None %}
-    <td class="public_score undefined">{{ _("N/A") }}</td>
+        {% if score_type.feedback() != "full" %}
+        <td class="public_score undefined">{{ _("N/A") }}</td>
+        {% end %}
     <td class="total_score undefined">{{ _("N/A") }}</td>
     {% end %}
     <td class="verdict">{{ _("pending...") }} </td>
@@ -46,7 +52,9 @@
         {{ _("Scoring...") }}
     </td>
     {% if score_type is not None %}
-    <td class="public_score undefined">{{ _("N/A") }}</td>
+        {% if score_type.feedback() != "full" %}
+        <td class="public_score undefined">{{ _("N/A") }}</td>
+        {% end %}
     <td class="total_score undefined">{{ _("N/A") }}</td>
     {% end %}
     <td class="datetime">{{ _("pending...") }} </td>
@@ -65,9 +73,12 @@
     {% if score_type is not None %}
         {% set max_public_score = score_type.unit_test_expected_scores(s.additional_info)[0] %}
         {% set max_score = score_type.unit_test_expected_scores(s.additional_info)[1] %}
+        {% if score_type.feedback() != "full" %}
     <td class="public_score {{ get_score_class(sr.public_score, max_public_score) }}">
+        
             {{ "%g" % round(sr.public_score, task.score_precision) }} / {{ "%g" % round(max_public_score, task.score_precision) }}
     </td>
+        {% end %}
         {% if True %}
             {% if score_type is not None and score_type.max_score != 0 %}
         <td class="total_score {{ get_score_class(sr.score, max_score) }}">
