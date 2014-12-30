@@ -284,8 +284,8 @@ class SubtaskGroup(ScoreType):
 
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated(public):
-            D = {'subtasks': [], 'info': submission_info}
-
+            D = {'subtasks': [], 'info': submission_info,
+                 'verdict': (-1, "Compilation failed")}
             return json.dumps(D)
 
         evaluations = dict((ev.codename, ev)

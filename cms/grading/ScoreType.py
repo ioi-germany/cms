@@ -139,9 +139,6 @@ class ScoreType(object):
         """
         return "token"
 
-    def set_submission_info(self, info):
-        pass
-
 
 class ScoreTypeAlone(ScoreType):
     """Intermediate class to manage tasks where the score of a
@@ -377,3 +374,4 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
         """
         logger.error("Unimplemented method reduce.")
+        raise NotImplementedError("Please subclass this class.")
