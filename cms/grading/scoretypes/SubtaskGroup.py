@@ -224,13 +224,8 @@ class SubtaskGroup(ScoreType):
 {% end %}
 """
 
-    def __init__(self, parameters, public_testcases):
-        self._feedback = parameters['feedback']
-        super(SubtaskGroup, self).__init__(parameters['tcinfo'],
-                                           public_testcases)
-
     def feedback(self):
-        return self._feedback
+        return self.parameters["feedback"]
 
     def unit_test_expected_scores(self, submission_info):
         submission_info = json.loads(submission_info)
@@ -250,7 +245,7 @@ class SubtaskGroup(ScoreType):
         public_score = 0.0
         headers = list()
 
-        for subtask in self.parameters:
+        for subtask in self.parameters["tcinfo"]:
             st_score = 0
             for group in subtask["groups"]:
                 st_score += group["points"]
@@ -274,7 +269,8 @@ class SubtaskGroup(ScoreType):
                 return 0.0, json.dumps([])
             else:
                 return 0.0, json.dumps([]), \
-                    json.dumps(["%lg" % 0.0 for _ in self.parameters])
+                    json.dumps(["%lg" % 0.0
+                                for _ in self.parameters["tcinfo"]])
 
         evaluations = dict((ev.codename, ev)
                            for ev in submission_result.evaluations)
@@ -283,7 +279,7 @@ class SubtaskGroup(ScoreType):
         if not public:
             ranking_details = []
 
-        for subtask in self.parameters:
+        for subtask in self.parameters["tcinfo"]:
             if subtask["public"] or not public:  # Shakespeare has been here
                 st_score = 0
                 st_maxscore = 0
@@ -376,7 +372,7 @@ class SubtaskGroup(ScoreType):
 
         symbol_table = ['✓', '≈', '✗', '―']
 
-        for subtask in self.parameters:
+        for subtask in self.parameters["tcinfo"]:
             subtasks.append({"name": subtask["name"], "status": (0, "okay"),
                              "groups": []})
             possible_subtask = expectations[tuple(subtask["key"])]
@@ -468,7 +464,7 @@ class SubtaskGroup(ScoreType):
                 subtasks_failed = True
 
         details = {"unit_test": True, "subtasks": subtasks,
-                   "more": self.parameters, "verdict": (1, "Okay")}
+                   "more": self.parameters["tcinfo"], "verdict": (1, "Okay")}
 
         okay = private_score == wanted_private and \
             (public_score == wanted_public or self._feedback == "full") \

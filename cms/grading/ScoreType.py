@@ -95,9 +95,8 @@ class ScoreType(object):
                          "Try invalidating scores.")
             return translator("Score details temporarily unavailable.")
         else:
-            template = self.TEMPLATE
-            return Template(template).generate(details=score_details,
-                                               _=translator)
+            return Template(self.TEMPLATE).generate(details=score_details,
+                                                    _=translator)
 
     def max_scores(self):
         """Returns the maximum score that one could aim to in this
