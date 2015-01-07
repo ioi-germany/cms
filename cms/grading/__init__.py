@@ -836,7 +836,7 @@ class UnitTest:
 
         # check solution (if possible)
         if float(get("outcome")) < 1 and UnitTest.meaningful_score(result):
-            result.append(evaluation.outcome)
+            result.append(get("outcome"))
 
         return result
 
