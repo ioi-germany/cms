@@ -189,7 +189,7 @@ def print_msg_line(l, headerdepth, error, warning,
 
     def flush_line():
         data["result"].append(data["curr_line"])
-
+        data["empty_line"] = True
         data["indent"] += data["hanging_indent"]
         data["hanging_indent"] = 0
         data["rem_width"] = 75 - data["indent"]
@@ -210,7 +210,7 @@ def print_msg_line(l, headerdepth, error, warning,
             data["curr_line"] += v
 
             flush_line()
-            w = w[rem_width:]
+            w = w[data["rem_width"]:]
             L[i] = w
 
             continue
