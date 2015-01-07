@@ -131,7 +131,7 @@ class ScoreType(object):
         """
         You might want to override this
         """
-        return self.compute_score(submission_result, False)
+        return json.dumps({})
 
     def feedback(self):
         """
