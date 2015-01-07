@@ -1444,7 +1444,7 @@ class TaskConfig(CommonConfig, Scope):
                 d = d.upper()
 
             if accepted == 42:
-                return MyColors.blue(d)
+                return MyColors.blue("No explicit expectations.")
             elif accepted <= 0:
                 if z and accepted == 0:
                     return d
