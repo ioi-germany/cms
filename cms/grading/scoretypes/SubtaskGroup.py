@@ -339,8 +339,6 @@ class SubtaskGroup(ScoreType):
         """Compute the score of a unit test.
 
         """
-        public = False
-
         if submission_info is None:
             return json.dumps({"verdict": (-1, "Not a Unit Test")})
 
@@ -350,10 +348,9 @@ class SubtaskGroup(ScoreType):
         submission_info = json.loads(submission_info)
 
         # Actually, this means it didn't even compile!
-        if not submission_result.evaluated(public):
-            D = {'subtasks': [], 'info': submission_info,
-                 'verdict': (-1, "Compilation failed")}
-            return json.dumps(D)
+        if not submission_result.evaluated(False):
+            return json.dumps({'subtasks': [],
+                               'verdict': (-1, "Compilation failed")})
 
         evaluations = dict((ev.codename, ev)
                            for ev in submission_result.evaluations)
@@ -465,7 +462,7 @@ class SubtaskGroup(ScoreType):
                 subtasks_failed = True
 
         details = {"unit_test": True, "subtasks": subtasks,
-                   "more": self.parameters["tcinfo"], "verdict": (1, "Okay")}
+                   "verdict": (1, "Okay")}
 
         okay = private_score == wanted_private and \
             (public_score == wanted_public or self._feedback == "full") \
