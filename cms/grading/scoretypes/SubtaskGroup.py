@@ -465,7 +465,7 @@ class SubtaskGroup(ScoreType):
                    "verdict": (1, "Okay")}
 
         okay = private_score == wanted_private and \
-            (public_score == wanted_public or self._feedback == "full") \
+            (public_score == wanted_public or self.feedback() == "full") \
             and not subtasks_failed
 
         details["verdict"] = (1, "Okay") if okay else (0, "Failed")
