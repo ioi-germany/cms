@@ -375,7 +375,7 @@ class SubtaskGroup(ScoreType):
         case_results = []
         subtasks_failed = False
 
-        symbol_table = [u'\u2713', u'\u2248', u'\u2717', u'\u2015']
+        symbol_table = ['✓', '≈', '✗', '―']
 
         for subtask in self.parameters:
             subtasks.append({"name": subtask["name"], "status": (0, "okay"),
