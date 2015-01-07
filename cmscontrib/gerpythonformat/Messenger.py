@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013-2014 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,7 +18,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 from sys import platform
+
+
+def get_terminal_line_length():
+    try:
+        return int(os.popen('stty size', 'r').read().split()[1])
+    except:
+        return 1000000000
+
+
+line_length = min(get_terminal_line_length(), 140)
 
 
 class MyColors:
@@ -153,7 +164,7 @@ def center_line(l, filler=' ', outer=None, bold=False):
         outer = filler
 
     x = estimate_len(l)
-    r = 78 - x
+    r = line_length - 2 - x
     s = outer + filler * (r / 2) + l + \
         filler * ((r + 1) / 2) + outer
 
@@ -173,7 +184,7 @@ def print_msg_line(l, headerdepth, error, warning,
                    success, hanging_indent,
                    fill_character, extra_width):
     indent = IndentManager.indent * 2
-    rem_width = 75 - indent
+    rem_width = line_length - 5 - indent
     curr_line = " " * indent
 
     data = {"indent": indent, "rem_width": rem_width,
@@ -192,7 +203,7 @@ def print_msg_line(l, headerdepth, error, warning,
         data["empty_line"] = True
         data["indent"] += data["hanging_indent"]
         data["hanging_indent"] = 0
-        data["rem_width"] = 75 - data["indent"]
+        data["rem_width"] = line_length - 5 - data["indent"]
         data["curr_line"] = " " * data["indent"]
 
     # TODO: This currently ignores '\t' and exotic whitespaces
@@ -204,7 +215,7 @@ def print_msg_line(l, headerdepth, error, warning,
         w = L[i]
 
         # Too long for the next line?
-        if estimate_len(w) > 75 - data["indent"] - \
+        if estimate_len(w) > line_length - 5 - data["indent"] - \
            data["hanging_indent"]:
             v = w[:data["rem_width"]]
             data["curr_line"] += v
@@ -282,7 +293,7 @@ def print_msg(message, headerdepth=None,
         hanging_indent = 4
         fill_character = s
 
-    wrapper = "#" * 80
+    wrapper = "#" * line_length
 
     if headerdepth is not None:
         wrapper = MyColors.bold(wrapper)

@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013-2014 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,7 +18,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from Messenger import print_msg, print_block, header, MyColors, box
+from Messenger import line_length, print_msg, print_block, header, MyColors, \
+    box
 from CommonConfig import exported_function, CommonConfig
 from Executable import ExitCodeException
 from ConstraintParser import ConstraintList, merge_constraints
@@ -1454,7 +1455,7 @@ class TaskConfig(CommonConfig, Scope):
 
         def myheader(name, status):
             desc = status[1]
-            base_space = 65
+            base_space = line_length - 15
             space = base_space - len(name) - len(desc)
 
             return header(name + " " + ((space - 2) * "=") + " " +
