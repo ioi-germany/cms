@@ -6,7 +6,7 @@
 # Copyright © 2010-2013 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
-# Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2014-2015 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2014 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -56,6 +56,7 @@ class ScoreType(object):
 
     """
     TEMPLATE = ""
+    UNIT_TEST_TEMPLATE = ""
 
     def __init__(self, parameters, public_testcases):
         """Initializer.
@@ -72,6 +73,18 @@ class ScoreType(object):
         # Preload the maximum possible scores.
         self.max_score, self.max_public_score, self.ranking_headers = \
             self.max_scores()
+
+    def is_unit_test(self, score_details):
+        """Whether the HTML string for a submission with these score details
+        should be generated using UNIT_TEST_TEMPLATE instead of TEMPLATE.
+
+        score_details (object): the decoded data saved by the score type
+            itself in the database
+
+        return (bool): whether to use UNIT_TEST_TEMPLATE
+
+        """
+        return False
 
     def get_html_details(self, score_details, translator=None):
         """Return an HTML string representing the score details of a
@@ -95,8 +108,11 @@ class ScoreType(object):
                          "Try invalidating scores.")
             return translator("Score details temporarily unavailable.")
         else:
-            return Template(self.TEMPLATE).generate(details=score_details,
-                                                    _=translator)
+            template = self.TEMPLATE
+            if self.is_unit_test(score_details):
+                template = self.UNIT_TEST_TEMPLATE
+            return Template(template).generate(details=score_details,
+                                               _=translator)
 
     def max_scores(self):
         """Returns the maximum score that one could aim to in this

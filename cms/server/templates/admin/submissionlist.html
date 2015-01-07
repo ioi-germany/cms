@@ -35,10 +35,10 @@
     <tbody>
       {% for s in sorted(submissions, key=lambda s: s.timestamp, reverse=True) %}
         {% if current_score_type is None %}
-            {% try %}
-                {% set current_score_type = get_score_type(dataset=shown_dataset) %}
-            {% except %}
-            {% end %}
+          {% try %}
+            {% set current_score_type = get_score_type(dataset=shown_dataset) %}
+          {% except %}
+          {% end %}
         {% end %}
       <tr>
         <td><a href="{{ url_root }}/submission/{{ s.id }}/{{ shown_dataset.id }}">{{ str(s.timestamp) }}</a></td>
