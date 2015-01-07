@@ -19,7 +19,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from Messenger import line_length, print_msg, print_block, header, MyColors, \
-    box
+    box, estimate_len
 from CommonConfig import exported_function, CommonConfig
 from Executable import ExitCodeException
 from ConstraintParser import ConstraintList, merge_constraints
@@ -1453,6 +1453,11 @@ class TaskConfig(CommonConfig, Scope):
             else:
                 return MyColors.green(d)
 
+        def w(details, (accepted, desc), length, z=False):
+            return v((accepted, 
+                      extend(details.strip() + " " + desc, length)),
+                      upper=False, z=z)
+
         def myheader(name, status):
             desc = status[1]
             base_space = line_length - 15
@@ -1461,8 +1466,12 @@ class TaskConfig(CommonConfig, Scope):
             return header(name + " " + ((space - 2) * "=") + " " +
                           v(status, True), depth=3)
 
+        def extend(s, l):
+            return s + ((l - estimate_len(s)) * " ")
+
         # Present verdict
         details = json.loads(details)
+        LENGTH = 12
 
         for st in details["subtasks"]:
             with myheader(st["name"], st["status"]):
@@ -1470,16 +1479,20 @@ class TaskConfig(CommonConfig, Scope):
                     with header("Group {}".format(i + 1), depth=4):
                         print_block(v(g["verdict"]))
                         print ""
-                        print_msg("Time  Memory  Answer  Verdict")
+                        print_msg(extend("Time", LENGTH) + "  " +
+                                  extend("Memory", LENGTH) + "  " +
+                                  extend("Answer", LENGTH) + "  Verdict")
 
                         for c in g["cases"]:
                             l = [(b, unicode(a)) for a, b in c["line"]]
-                            print_msg(v(l[0], z=True) + " " * 5 +
-                                      v(l[1], z=True) + " " * 7 +
-                                      v(l[2], z=True) + " " *
-                                      (8 - len(l[2][1])) +
+                            print_msg(w(c["time"], l[0], LENGTH, z=True) +
+                                      "  " +
+                                      w(c["memory"], l[1], LENGTH, z=True) +
+                                      "  " +
+                                      extend(v(l[2], z=True), LENGTH) +
+                                      "  " +
                                       v(c["verdict"]),
-                                      hanging_indent=22)
+                                      hanging_indent=3 * LENGTH + 6)
 
                     print ""
 
