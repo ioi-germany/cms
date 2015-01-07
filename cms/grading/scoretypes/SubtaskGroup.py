@@ -287,7 +287,7 @@ class SubtaskGroup(ScoreType):
                 for groupnr, group in enumerate(subtask["groups"]):
                     outcomes = [float(evaluations[idx].outcome)
                                 for idx in group["cases"]]
-                    gr_score = self.reduce(outcomes) * group["points"]
+                    gr_score = min(outcomes) * group["points"]
                     st_score += gr_score
                     st_maxscore += group["points"]
 
@@ -486,6 +486,3 @@ class SubtaskGroup(ScoreType):
             return N_("Correct")
         else:
             return N_("Partially correct")
-
-    def reduce(self, outcomes):
-        return min(outcomes)
