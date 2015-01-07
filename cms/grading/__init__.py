@@ -7,7 +7,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
-# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2014 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -889,7 +889,7 @@ class UnitTest:
     @staticmethod
     def case_line(results, mandatory, optional, c=['o', '~', 'x', '--']):
         """Information about a single testcase as part of a group
-           This function returns a list of tuples, where the first entry
+           This function returns a list of pairs, where the first entry
            visualises the respective result and the second one is >0
            iff the result is as expected
         """
@@ -911,7 +911,7 @@ class UnitTest:
 
         for x in ['time', 'memory']:
             L.append((c[badness(x, results)],
-                      get_int((x in results or not x in mandatory) and
+                      get_int((x in results or x not in mandatory) and
                               badness(x, results) <= badness(x, optional))))
 
         meaningful = UnitTest.meaningful_score(results)

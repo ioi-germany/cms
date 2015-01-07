@@ -54,6 +54,7 @@ class SubtaskGroup(ScoreType):
     TEMPLATE = """\
 {% from cms.grading import format_status_text %}
 {% from cms.server import format_size %}
+{% if not details["unit_test"] %}
 {% for st in details["subtasks"] %}
     {% if "score" in st and "max_score" in st %}
         {% if st["score"] >= st["max_score"] %}
@@ -142,11 +143,8 @@ class SubtaskGroup(ScoreType):
         </table>
     </div>
 </div>
-{% end %}"""
-
-    UNIT_TEST_TEMPLATE = """\
-{% from cms.grading import format_status_text %}
-{% from cms.server import format_size %}
+{% end %}
+{% else %}
 {% for st in details["subtasks"] %}
     {% if st["status"][0] > 0 %}
 <div class="subtask correct">
@@ -223,6 +221,7 @@ class SubtaskGroup(ScoreType):
     </div>
 </div>
 {% end %}
+{% end %}
 """
 
     def __init__(self, parameters, public_testcases):
@@ -234,10 +233,7 @@ class SubtaskGroup(ScoreType):
         return self._feedback
 
     def unit_test_expected_scores(self, submission_info):
-        try:
-            submission_info = json.loads(submission_info)
-        except:
-            pass
+        submission_info = json.loads(submission_info)
 
         public = submission_info.get("expected_public_score", 0)
         private = submission_info.get("expected_score", 0)
@@ -334,7 +330,7 @@ class SubtaskGroup(ScoreType):
                     "testcases": [],
                     })
 
-        details = {"subtasks": subtasks}
+        details = {"unit_test": False, "subtasks": subtasks}
 
         if public:
             return score, json.dumps(details)
@@ -343,16 +339,19 @@ class SubtaskGroup(ScoreType):
                 json.dumps(ranking_details)
 
     def compute_unit_test_score(self, submission_result,
-                                additional_info):
+                                submission_info):
         """Compute the score of a unit test.
 
         """
         public = False
 
-        if additional_info is None:
+        if submission_info is None:
             return json.dumps({"verdict": (-1, "Not a Unit Test")})
 
-        submission_info = json.loads(additional_info)
+        wanted_public, wanted_private = \
+            self.unit_test_expected_scores(submission_info)
+
+        submission_info = json.loads(submission_info)
 
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated(public):
@@ -468,18 +467,14 @@ class SubtaskGroup(ScoreType):
             if subtasks[-1]["status"][0] <= 0:
                 subtasks_failed = True
 
-        details = {"subtasks": subtasks, "info": submission_info,
+        details = {"unit_test": True, "subtasks": subtasks,
                    "more": self.parameters, "verdict": (1, "Okay")}
 
-        wanted_public, wanted_private = \
-            self.unit_test_expected_scores(submission_info)
         okay = private_score == wanted_private and \
             (public_score == wanted_public or self._feedback == "full") \
             and not subtasks_failed
 
         details["verdict"] = (1, "Okay") if okay else (0, "Failed")
-        details["expected_public"] = wanted_public
-        details["expected_private"] = wanted_private
 
         return json.dumps(details)
 
@@ -500,9 +495,3 @@ class SubtaskGroup(ScoreType):
 
     def reduce(self, outcomes):
         return min(outcomes)
-
-    def is_unit_test(self, score_details):
-        try:
-            return score_details["info"]["unit_test"]
-        except:
-            return False

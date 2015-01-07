@@ -56,7 +56,6 @@ class ScoreType(object):
 
     """
     TEMPLATE = ""
-    UNIT_TEST_TEMPLATE = ""
 
     def __init__(self, parameters, public_testcases):
         """Initializer.
@@ -73,18 +72,6 @@ class ScoreType(object):
         # Preload the maximum possible scores.
         self.max_score, self.max_public_score, self.ranking_headers = \
             self.max_scores()
-
-    def is_unit_test(self, score_details):
-        """Whether the HTML string for a submission with these score details
-        should be generated using UNIT_TEST_TEMPLATE instead of TEMPLATE.
-
-        score_details (object): the decoded data saved by the score type
-            itself in the database
-
-        return (bool): whether to use UNIT_TEST_TEMPLATE
-
-        """
-        return False
 
     def get_html_details(self, score_details, translator=None):
         """Return an HTML string representing the score details of a
@@ -109,8 +96,6 @@ class ScoreType(object):
             return translator("Score details temporarily unavailable.")
         else:
             template = self.TEMPLATE
-            if self.is_unit_test(score_details):
-                template = self.UNIT_TEST_TEMPLATE
             return Template(template).generate(details=score_details,
                                                _=translator)
 

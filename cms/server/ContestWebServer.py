@@ -8,7 +8,7 @@
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
-# Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2014-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -1288,8 +1288,9 @@ class SubmissionStatusHandler(BaseHandler):
 
             if submission.is_unit_test():
                 utd = json.loads(sr.unit_test_score_details)
-                data["expected_public"] = utd["expected_public"]
-                data["expected_private"] = utd["expected_private"]
+                data["expected_public"], data["expected_private"] = \
+                    score_type.unit_test_expected_scores(
+                        submission.additional_info)
                 data["verdict"] = utd["verdict"]
 
             if submission.tokened():
