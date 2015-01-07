@@ -266,6 +266,82 @@ class SubtaskGroup(ScoreType):
 
         return private_score, public_score, headers
 
+    def compute_score(self, submission_result, public):
+        """Compute the score of a normal submission.
+
+        See the same method in ScoreType for details.
+
+        """
+        # Actually, this means it didn't even compile!
+        if not submission_result.evaluated(public):
+            if public:
+                return 0.0, json.dumps([])
+            else:
+                return 0.0, json.dumps([]), \
+                    json.dumps(["%lg" % 0.0 for _ in self.parameters])
+
+        evaluations = dict((ev.codename, ev)
+                           for ev in submission_result.evaluations)
+        subtasks = []
+        score = 0
+        if not public:
+            ranking_details = []
+
+        for subtask in self.parameters:
+            if subtask["public"] or not public:  # Shakespeare has been here
+                st_score = 0
+                st_maxscore = 0
+                testcases = []
+                for groupnr, group in enumerate(subtask["groups"]):
+                    outcomes = [float(evaluations[idx].outcome)
+                                for idx in group["cases"]]
+                    gr_score = self.reduce(outcomes) * group["points"]
+                    st_score += gr_score
+                    st_maxscore += group["points"]
+
+                    first = True
+                    for idx in group["cases"]:
+                        oc = self.get_public_outcome(
+                            float(evaluations[idx].outcome))
+                        tc = {"outcome": oc,
+                              "text": evaluations[idx].text,
+                              "time": evaluations[idx].execution_time,
+                              "memory": evaluations[idx].execution_memory,
+                              }
+                        if first:
+                            first = False
+                            tc["groupnr"] = groupnr+1
+                            tc["grouplen"] = len(group["cases"])
+
+                        testcases.append(tc)
+                if (public and subtask["for_public_score"]) or \
+                   (not public and subtask["for_private_score"]):
+                    score += st_score
+                subtasks.append({
+                    "public": subtask["public"],  # TODO depends on public?
+                    "for_public_score": subtask["for_public_score"],
+                    "for_private_score": subtask["for_private_score"],
+                    "name": subtask["name"],
+                    "score": st_score,
+                    "max_score": st_maxscore,
+                    "testcases": testcases,
+                    })
+                if not public:
+                    ranking_details.append("%lg" % round(st_score, 2))
+            else:
+                subtasks.append({
+                    "name": subtask["name"],
+                    "testcases": [],
+                    })
+
+        details = {"subtasks": subtasks}
+
+        if public:
+            return score, json.dumps(details)
+        else:
+            return score, json.dumps(details), \
+                json.dumps(ranking_details)
+
     def compute_unit_test_score(self, submission_result,
                                 additional_info):
         """Compute the score of a unit test.
@@ -406,82 +482,6 @@ class SubtaskGroup(ScoreType):
         details["expected_private"] = wanted_private
 
         return json.dumps(details)
-
-    def compute_score(self, submission_result, public):
-        """Compute the score of a normal submission.
-
-        See the same method in ScoreType for details.
-
-        """
-        # Actually, this means it didn't even compile!
-        if not submission_result.evaluated(public):
-            if public:
-                return 0.0, json.dumps([])
-            else:
-                return 0.0, json.dumps([]), \
-                    json.dumps(["%lg" % 0.0 for _ in self.parameters])
-
-        evaluations = dict((ev.codename, ev)
-                           for ev in submission_result.evaluations)
-        subtasks = []
-        score = 0
-        if not public:
-            ranking_details = []
-
-        for subtask in self.parameters:
-            if subtask["public"] or not public:  # Shakespeare has been here
-                st_score = 0
-                st_maxscore = 0
-                testcases = []
-                for groupnr, group in enumerate(subtask["groups"]):
-                    outcomes = [float(evaluations[idx].outcome)
-                                for idx in group["cases"]]
-                    gr_score = self.reduce(outcomes) * group["points"]
-                    st_score += gr_score
-                    st_maxscore += group["points"]
-
-                    first = True
-                    for idx in group["cases"]:
-                        oc = self.get_public_outcome(
-                            float(evaluations[idx].outcome))
-                        tc = {"outcome": oc,
-                              "text": evaluations[idx].text,
-                              "time": evaluations[idx].execution_time,
-                              "memory": evaluations[idx].execution_memory,
-                              }
-                        if first:
-                            first = False
-                            tc["groupnr"] = groupnr+1
-                            tc["grouplen"] = len(group["cases"])
-
-                        testcases.append(tc)
-                if (public and subtask["for_public_score"]) or \
-                   (not public and subtask["for_private_score"]):
-                    score += st_score
-                subtasks.append({
-                    "public": subtask["public"],  # TODO depends on public?
-                    "for_public_score": subtask["for_public_score"],
-                    "for_private_score": subtask["for_private_score"],
-                    "name": subtask["name"],
-                    "score": st_score,
-                    "max_score": st_maxscore,
-                    "testcases": testcases,
-                    })
-                if not public:
-                    ranking_details.append("%lg" % round(st_score, 2))
-            else:
-                subtasks.append({
-                    "name": subtask["name"],
-                    "testcases": [],
-                    })
-
-        details = {"subtasks": subtasks}
-
-        if public:
-            return score, json.dumps(details)
-        else:
-            return score, json.dumps(details), \
-                json.dumps(ranking_details)
 
     def get_public_outcome(self, outcome):
         """Return a public outcome from an outcome.
