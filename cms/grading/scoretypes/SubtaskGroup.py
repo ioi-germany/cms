@@ -449,6 +449,7 @@ class SubtaskGroup(ScoreType):
                     status = -1
                     desc += "At least one testcase did not behave as " \
                             "expected, cf. the \"test verdict\" column."
+                    short = "failed"
 
                 subtasks[-1]["groups"][-1]["verdict"] = (status, desc)
                 worst_group = min(worst_group, (status, short))

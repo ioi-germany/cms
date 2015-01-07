@@ -893,6 +893,11 @@ class UnitTest:
            visualises the respective result and the second one is >0
            iff the result is as expected
         """
+        o = optional
+
+        if len(mandatory) > 0:
+            o = UnitTest.remove_scores(o)
+
         def badness(key, r):
             if key in r:
                 return 2
@@ -912,12 +917,17 @@ class UnitTest:
         for x in ['time', 'memory']:
             L.append((c[badness(x, results)],
                       get_int((x in results or x not in mandatory) and
-                              badness(x, results) <= badness(x, optional))))
+                              badness(x, results) <= badness(x, o))))
 
         meaningful = UnitTest.meaningful_score(results)
+
+        # Either UnitTest.score(o) or UnitTest.score(mandatory) will
+        # be equal to 1, thus min is indeed correct
         L.append((UnitTest.score(results) if meaningful else c[-1],
-                  0 if not meaningful else get_int(UnitTest.score(results) >=
-                                                   UnitTest.score(optional))))
+                  0 if not meaningful
+                  else get_int(UnitTest.score(results) >=
+                               min(UnitTest.score(o),
+                                   UnitTest.score(mandatory)))))
         return L
 
     @staticmethod
@@ -931,7 +941,7 @@ class UnitTest:
         if any(x not in optional for x in results
                if not UnitTest.ignore(x, optional + ['time', 'memory'])):
             return (-2, "failed", "The submission failed for a reason "
-                    "you did not expect.")
+                    "you did not expect (or score too low).")
 
         if any(x.endswith("?") for x in results
                if not UnitTest.ignore(x, optional)):
@@ -945,10 +955,30 @@ class UnitTest:
                 "You expected the submission to fail but it didn't.")
 
     @staticmethod
+    def is_score(x):
+        try:
+            float(x)
+            return True
+        except:
+            return False
+
+    @staticmethod
+    def has_score(l):
+        return any(UnitTest.is_score(x) for x in l)
+
+    @staticmethod
+    def remove_scores(l):
+        return [x for x in l if not UnitTest.is_score(x)]
+
+    @staticmethod
     def judge_case(results, mandatory, optional):
         """Judge a single testcase
         """
-        a, b, c = UnitTest.judge_group(results, mandatory, optional)
+        o = optional
+        if UnitTest.has_score(mandatory):
+            o = UnitTest.remove_scores(o)
+
+        a, b, c = UnitTest.judge_group(results, mandatory, o)
         return a, c
 
 
