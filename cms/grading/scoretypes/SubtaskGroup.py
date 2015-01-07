@@ -266,9 +266,9 @@ class SubtaskGroup(ScoreType):
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated(public):
             if public:
-                return 0.0, json.dumps([])
+                return 0.0, json.dumps({"unit_test": False, "subtasks": []})
             else:
-                return 0.0, json.dumps([]), \
+                return 0.0, json.dumps({"unit_test": False, "subtasks": []}), \
                     json.dumps(["%lg" % 0.0
                                 for _ in self.parameters["tcinfo"]])
 
@@ -340,7 +340,8 @@ class SubtaskGroup(ScoreType):
 
         """
         if submission_info is None:
-            return json.dumps({"verdict": (-1, "Not a Unit Test")})
+            return json.dumps({"unit_test": True,
+                               "verdict": (-1, "Not a Unit Test")})
 
         wanted_public, wanted_private = \
             self.unit_test_expected_scores(submission_info)
@@ -349,7 +350,7 @@ class SubtaskGroup(ScoreType):
 
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated(False):
-            return json.dumps({'subtasks': [],
+            return json.dumps({"unit_test": True, 'subtasks': [],
                                'verdict': (-1, "Compilation failed")})
 
         evaluations = dict((ev.codename, ev)
@@ -361,8 +362,6 @@ class SubtaskGroup(ScoreType):
         expectations = {tuple(json.loads(key)): val for key, val
                         in submission_info["expected"].iteritems()}
         possible_task = expectations[()]
-        possible_subtask = []
-        possible_group = []
         extra = []
         case_results = []
         subtasks_failed = False
@@ -461,8 +460,7 @@ class SubtaskGroup(ScoreType):
             if subtasks[-1]["status"][0] <= 0:
                 subtasks_failed = True
 
-        details = {"unit_test": True, "subtasks": subtasks,
-                   "verdict": (1, "Okay")}
+        details = {"unit_test": True, "subtasks": subtasks}
 
         okay = private_score == wanted_private and \
             (public_score == wanted_public or self.feedback() == "full") \
