@@ -22,8 +22,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from .Messenger import line_length, print_msg, print_block, header, MyColors, \
-    box, estimate_len
+from .Messenger import line_length, print_msg, print_block, header, red, \
+    green, blue, box, estimate_len
 from .CommonConfig import exported_function, CommonConfig
 from .Executable import ExitCodeException
 from .ConstraintParser import ConstraintList, merge_constraints
@@ -1449,13 +1449,13 @@ class TaskConfig(CommonConfig, Scope):
                 d = d.upper()
 
             if accepted == 42:
-                return MyColors.blue("No explicit expectations.")
+                return blue("No explicit expectations.")
             elif accepted <= 0:
                 if z and accepted == 0:
                     return d
-                return MyColors.red(d)
+                return red(d)
             else:
-                return MyColors.green(d)
+                return green(d)
 
         def w(details, (accepted, desc), length, z=False):
             return v((accepted,
@@ -1509,12 +1509,12 @@ class TaskConfig(CommonConfig, Scope):
 
             print()
 
-        public_score = MyColors.green("{}".format(public_score)) if \
+        public_score = green("{}".format(public_score)) if \
             public_score == expected_public else \
-            MyColors.red("{}".format(public_score))
-        score = MyColors.green("{}".format(score)) if \
+            red("{}".format(public_score))
+        score = green("{}".format(score)) if \
             score == expected_private else \
-            MyColors.red("{}".format(score))
+            red("{}".format(score))
 
         if score_type.feedback() != "full":
             print_msg("Public Score: {} (expected: {})".
@@ -1524,8 +1524,8 @@ class TaskConfig(CommonConfig, Scope):
                                                           expected_private))
         print()
         verd = details["verdict"]
-        box(" Overall verdict ", MyColors.green(verd[1]) if verd[0] == 1
-            else MyColors.red(verd[1]))
+        box(" Overall verdict ", green(verd[1]) if verd[0] == 1
+            else red(verd[1]))
         print()
 
     def _run_job_group(self, job_group):

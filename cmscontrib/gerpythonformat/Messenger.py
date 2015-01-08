@@ -36,94 +36,43 @@ def get_terminal_line_length():
 line_length = min(get_terminal_line_length(), 140)
 
 
-class MyColors:
-    """ Class for coloring output to stdout
-    Currently only linux is supported
-    """
-    red_code = "\033[91m"
-    green_code = "\033[92m"
-    yellow_code = "\033[93m"
-    blue_code = "\033[94m"
-    bold_code = "\033[1m"
-    end_code = "\033[0m"
+# Coloring output to stdout:
+# Currently only linux is supported
 
-    @classmethod
-    def colors_enabled(cls):
-        return platform == "linux" or platform == "linux2"
+red_code = "\033[91m"
+green_code = "\033[92m"
+yellow_code = "\033[93m"
+blue_code = "\033[94m"
+bold_code = "\033[1m"
+end_code = "\033[0m"
 
-    @classmethod
-    def _red(cls, s):
-        if cls.colors_enabled():
-            return cls.red_code + s + cls.end_code
-        else:
-            return s
 
-    @classmethod
-    def red(cls, s):
+def colors_enabled():
+    return platform == "linux" or platform == "linux2"
+
+
+def color_function(start):
+    def f(string):
+        if not colors_enabled():
+            return string
         r = ""
-        for t in s.split(cls.end_code):
-            r += cls._red(t)
+        # Split the string to make nested formatting commands behave as
+        # expected.
+        for t in string.split(end_code):
+            r += start + t + end_code
         return r
+    return f
 
-    @classmethod
-    def _green(cls, s):
-        if cls.colors_enabled():
-            return cls.green_code + s + cls.end_code
-        else:
-            return s
 
-    @classmethod
-    def green(cls, s):
-        r = ""
-        for t in s.split(cls.end_code):
-            r += cls._green(t)
-        return r
+red = color_function(red_code)
+green = color_function(green_code)
+yellow = color_function(yellow_code)
+blue = color_function(blue_code)
+bold = color_function(bold_code)
 
-    @classmethod
-    def _yellow(cls, s):
-        if cls.colors_enabled():
-            return cls.yellow_code + s + cls.end_code
-        else:
-            return s
 
-    @classmethod
-    def yellow(cls, s):
-        r = ""
-        for t in s.split(cls.end_code):
-            r += cls._yellow(t)
-        return r
-
-    @classmethod
-    def _blue(cls, s):
-        if cls.colors_enabled():
-            return cls.blue_code + s + cls.end_code
-        else:
-            return s
-
-    @classmethod
-    def blue(cls, s):
-        r = ""
-        for t in s.split(cls.end_code):
-            r += cls._blue(t)
-        return r
-
-    @classmethod
-    def _bold(cls, s):
-        if cls.colors_enabled():
-            return cls.bold_code + s + cls.end_code
-        else:
-            return s
-
-    @classmethod
-    def bold(cls, s):
-        r = ""
-        for t in s.split(cls.end_code):
-            r += cls._bold(t)
-        return r
-
-    @classmethod
-    def ellipsis(cls):
-        return cls.blue(cls.bold("..."))
+def ellipsis():
+    return blue(bold("..."))
 
 
 class IndentManager(object):
@@ -143,9 +92,14 @@ class IndentManager(object):
 
 
 def estimate_len(s):
-    """Get a better estimate on the length of s
-    This functions skips the basic formatting commands,
-    but it does not respect Unicode commands
+    """Estimate the length of a string when displayed in a terminal.
+    The basic ANSI formatting commands are skipped (but for example \n and \t
+    are counted as one character).
+
+    s (unicode): the string
+
+    return (int): its length
+
     """
     r = 0
     skip = False
@@ -163,24 +117,49 @@ def estimate_len(s):
     return r
 
 
-def center_line(l, filler=' ', outer=None, bold=False):
+def pad_center(string, length, filler=' '):
+    """Adds the filler on both ends to make the string of the specified length.
+    If the string is already longer than the specified length, it is returned
+    unchanged.
+
+    string (unicode): the string to pad
+    length (int): the length the string is supposed to have
+    filler (unicode): the character to fill the space with
+
+    return (unicode): the padded string
+
+    """
+    r = length - estimate_len(string)
+    if r < 0:
+        return string
+    return filler*(r/2) + string + filler*((r+1)/2)
+
+
+def center_line(l, filler=' ', outer=None, make_bold=False):
     if outer is None:
         outer = filler
 
-    x = estimate_len(l)
-    r = line_length - 2 - x
-    s = outer + filler * (r / 2) + l + \
-        filler * ((r + 1) / 2) + outer
+    r = line_length - 2*estimate_len(outer)
+    s = outer + pad_center(l, r, filler) + outer
 
-    if bold:
-        s = MyColors.bold(s)
+    if make_bold:
+        s = bold(s)
 
     print(s)
 
 
-def box(h, l):
-    center_line(h, '-', '+', True)
-    center_line(l, ' ', '|', True)
+def box(title, content):
+    """Prints a box with title on the top border and content in the interior.
+    +------title-------+
+    |     content      |
+    +------------------+
+
+    title (unicode):
+    content (unicode):
+
+    """
+    center_line(title, '-', '+', True)
+    center_line(content, ' ', '|', True)
     center_line("", "-", '+', True)
 
 
@@ -262,13 +241,13 @@ def print_msg_line(l, headerdepth, error, warning,
 
     for line in data["result"]:
         if headerdepth is not None:
-            line = MyColors.bold(line)
+            line = bold(line)
         if error:
-            line = MyColors.red(line)
+            line = red(line)
         if warning:
-            line = MyColors.yellow(line)
+            line = yellow(line)
         if success:
-            line = MyColors.green(line)
+            line = green(line)
 
         print(line)
 
@@ -300,13 +279,13 @@ def print_msg(message, headerdepth=None,
     wrapper = "#" * line_length
 
     if headerdepth is not None:
-        wrapper = MyColors.bold(wrapper)
+        wrapper = bold(wrapper)
     if error:
-        wrapper = MyColors.red(wrapper)
+        wrapper = red(wrapper)
     if warning:
-        wrapper = MyColors.yellow(wrapper)
+        wrapper = yellow(wrapper)
     if success:
-        wrapper = MyColors.green(wrapper)
+        wrapper = green(wrapper)
 
     if headerdepth == 1:
         print(wrapper)
