@@ -383,8 +383,6 @@ class SubtaskGroup(ScoreType):
         case_results = []
         subtasks_failed = False
 
-        symbol_table = ['✓', '≈', '✗', '―']
-
         for subtask in self.parameters["tcinfo"]:
             subtasks.append({"name": subtask["name"], "status": (0, "okay"),
                              "groups": []})
@@ -416,8 +414,7 @@ class SubtaskGroup(ScoreType):
                     mandatory = case_expectations[idx]
 
                     l = UnitTest.case_line(r, mandatory,
-                                           possible + mandatory,
-                                           symbol_table)
+                                           possible + mandatory)
                     v = (42, "No explicit expectations given for "
                              "this testcase.")
 

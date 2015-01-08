@@ -887,7 +887,7 @@ class UnitTest:
         return not('time' in results or 'memory' in results)
 
     @staticmethod
-    def case_line(results, mandatory, optional, c=['o', '~', 'x', '--']):
+    def case_line(results, mandatory, optional, c=['✓', '≈', '✗', '―']):
         """Information about a single testcase as part of a group
            This function returns a list of pairs, where the first entry
            visualises the respective result and the second one is >0
