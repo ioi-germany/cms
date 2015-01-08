@@ -887,7 +887,7 @@ class UnitTest:
         return not('time' in results or 'memory' in results)
 
     @staticmethod
-    def case_line(results, mandatory, optional, c=['o', '~', 'x', '--']):
+    def case_line(results, mandatory, optional, c=['✓', '≈', '✗', '―']):
         """Information about a single testcase as part of a group
            This function returns a list of pairs, where the first entry
            visualises the respective result and the second one is >0
@@ -931,13 +931,10 @@ class UnitTest:
         return L
 
     @staticmethod
-    def judge_group(results, mandatory, optional=None):
+    def judge_group(results, mandatory, optional):
         """Judge a whole group given a concatenated list of the results of
            the individual cases
         """
-        if optional is None:
-            optional = mandatory
-
         if any(x not in optional for x in results
                if not UnitTest.ignore(x, optional + ['time', 'memory'])):
             return (-2, "failed", "The submission failed for a reason "
@@ -963,10 +960,6 @@ class UnitTest:
             return False
 
     @staticmethod
-    def has_score(l):
-        return any(UnitTest.is_score(x) for x in l)
-
-    @staticmethod
     def remove_scores(l):
         return [x for x in l if not UnitTest.is_score(x)]
 
@@ -974,9 +967,7 @@ class UnitTest:
     def judge_case(results, mandatory, optional):
         """Judge a single testcase
         """
-        o = optional
-        if UnitTest.has_score(mandatory):
-            o = UnitTest.remove_scores(o)
+        optional = UnitTest.remove_scores(optional)
 
-        a, b, c = UnitTest.judge_group(results, mandatory, o)
+        a, b, c = UnitTest.judge_group(results, mandatory, optional)
         return a, c
