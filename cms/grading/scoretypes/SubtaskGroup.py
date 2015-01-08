@@ -380,7 +380,6 @@ class SubtaskGroup(ScoreType):
         case_expectations = submission_info["expected_case"]
         possible_task = expectations[()]
         extra = []
-        case_results = []
         subtasks_failed = False
 
         for subtask in self.parameters["tcinfo"]:
@@ -403,6 +402,8 @@ class SubtaskGroup(ScoreType):
 
                 cases_failed = False
                 worst_case = (2, "")
+
+                # List of all results of all test cases in this group
                 case_results = []
 
                 for idx in g["cases"]:
