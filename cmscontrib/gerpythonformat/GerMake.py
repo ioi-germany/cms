@@ -21,7 +21,7 @@
 from ContestConfig import ContestConfig
 from LocationStack import chdir
 from cms.db.filecacher import FileCacher
-from cmscontrib.gerpythonformat import copyrecusivelyifnecessary
+from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 import argparse
 import os
 import shutil
@@ -45,7 +45,7 @@ class GerMake:
             shutil.rmtree(self.wdir)
         if not os.path.exists(self.wdir):
             os.mkdir(self.wdir)
-        copyrecusivelyifnecessary(self.odir, self.wdir, set([self.wdir]))
+        copyrecursivelyifnecessary(self.odir, self.wdir, set([self.wdir]))
         self.wdir = os.path.abspath(self.wdir)
         filecacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
         try:

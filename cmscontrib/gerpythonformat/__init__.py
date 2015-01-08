@@ -38,7 +38,7 @@ def copyifnecessary(source, destination):
         shutil.copyfile(source, destination)
 
 
-def copyrecusivelyifnecessary(source, destination, ignore=set()):
+def copyrecursivelyifnecessary(source, destination, ignore=set()):
     """Copy the directory or file source to destination recursively.
     Files are only touched if their contents differ.
 
@@ -56,8 +56,8 @@ def copyrecusivelyifnecessary(source, destination, ignore=set()):
             os.mkdir(destination)
         names = os.listdir(source)
         for name in names:
-            copyrecusivelyifnecessary(os.path.join(source, name),
-                                      os.path.join(destination, name),
-                                      ignore)
+            copyrecursivelyifnecessary(os.path.join(source, name),
+                                       os.path.join(destination, name),
+                                       ignore)
     else:
         raise Exception("Node {} cannot be copied (wrong type)".format(source))

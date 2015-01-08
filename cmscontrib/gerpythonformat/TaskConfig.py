@@ -18,6 +18,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
+from __future__ import unicode_literals
+
 from Messenger import line_length, print_msg, print_block, header, MyColors, \
     box, estimate_len
 from CommonConfig import exported_function, CommonConfig
@@ -1454,20 +1457,24 @@ class TaskConfig(CommonConfig, Scope):
                 return MyColors.green(d)
 
         def w(details, (accepted, desc), length, z=False):
-            return v((accepted, 
-                      extend(details.strip() + " " + desc, length)),
-                      upper=False, z=z)
+            return v((accepted,
+                      extend(padleft(details.strip() + " " + desc, 9),
+                             length)),
+                     upper=False, z=z)
 
         def myheader(name, status):
             desc = status[1]
             base_space = line_length - 15
             space = base_space - len(name) - len(desc)
 
-            return header(name + " " + ((space - 2) * "=") + " " +
+            return header(name + " " + (space - 2)*"=" + " " +
                           v(status, True), depth=3)
 
         def extend(s, l):
-            return s + ((l - estimate_len(s)) * " ")
+            return s + max(l - estimate_len(s), 0)*" "
+
+        def padleft(s, l):
+            return max(l-estimate_len(s), 0)*" " + s
 
         # Present verdict
         details = json.loads(details)
@@ -1478,10 +1485,11 @@ class TaskConfig(CommonConfig, Scope):
                 for i, g in enumerate(st["groups"]):
                     with header("Group {}".format(i + 1), depth=4):
                         print_block(v(g["verdict"]))
-                        print ""
+                        print()
+                        print("  ", end="")
                         print_msg(extend("Time", LENGTH) + "  " +
-                                  extend("Memory", LENGTH) + "  " +
-                                  extend("Answer", LENGTH) + "  Verdict")
+                                  extend("Memory", LENGTH-2) + "  " +
+                                  extend("Answer", 10) + "  Verdict")
 
                         for c in g["cases"]:
                             l = [(b, unicode(a)) for a, b in c["line"]]
@@ -1489,14 +1497,14 @@ class TaskConfig(CommonConfig, Scope):
                                       "  " +
                                       w(c["memory"], l[1], LENGTH, z=True) +
                                       "  " +
-                                      extend(v(l[2], z=True), LENGTH) +
+                                      extend(padleft(v(l[2], z=True), 4), 10) +
                                       "  " +
                                       v(c["verdict"]),
                                       hanging_indent=3 * LENGTH + 6)
 
-                    print ""
+                    print()
 
-            print ""
+            print()
 
         public_score = MyColors.green("{}".format(public_score)) if \
             public_score == expected_public else \
@@ -1511,11 +1519,11 @@ class TaskConfig(CommonConfig, Scope):
 
         print_msg("Total Score: {} (expected: {})".format(score,
                                                           expected_private))
-        print ""
+        print()
         verd = details["verdict"]
         box(" Overall verdict ", MyColors.green(verd[1]) if verd[0] == 1
             else MyColors.red(verd[1]))
-        print ""
+        print()
 
     def _run_job_group(self, job_group):
         """

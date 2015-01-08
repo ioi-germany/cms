@@ -986,9 +986,9 @@ def mem_human(mem):
     if mem is None:
         return "None"
     if mem > 2 ** 30:
-        return "%4.3gG" % (float(mem) / (2 ** 30))
+        return "%5.1fG" % (float(mem) / (2 ** 30))
     if mem > 2 ** 20:
-        return "%4.3gM" % (float(mem) / (2 ** 20))
+        return "%5.1fM" % (float(mem) / (2 ** 20))
     if mem > 2 ** 10:
         return "%4dK" % (mem / (2 ** 10))
     return "%4d" % mem
@@ -997,6 +997,4 @@ def mem_human(mem):
 def time_human(t):
     if t is None:
         return "None"
-    if t < .1:
-        return "{}ms".format(t * 1000)
-    return "{}s".format(t)
+    return "%.3fs" % t
