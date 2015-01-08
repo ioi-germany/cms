@@ -22,7 +22,7 @@ import os
 import os.path
 
 from cmscontrib.BaseLoader import Loader
-from cmscontrib.gerpythonformat import copyrecusivelyifnecessary
+from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 from LocationStack import chdir
 from ContestConfig import ContestConfig
 
@@ -58,8 +58,8 @@ class GerLoader(Loader):
         """
         self.buildpath = os.path.join(os.path.dirname(self.path),
                                       os.path.basename(self.path), "build")
-        copyrecusivelyifnecessary(self.path, self.buildpath,
-                                  set([self.buildpath]))
+        copyrecursivelyifnecessary(self.path, self.buildpath,
+                                   set([self.buildpath]))
         with chdir(self.buildpath):
             rules = ".rules"
             if not os.path.exists(rules):
