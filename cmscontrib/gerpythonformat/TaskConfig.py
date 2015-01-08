@@ -1459,7 +1459,7 @@ class TaskConfig(CommonConfig, Scope):
 
         def w(details, (accepted, desc), length, z=False):
             return v((accepted,
-                      extend(padleft(details.strip() + " " + desc, 9),
+                      extend(padleft(details.strip() + " " + desc, 10),
                              length)),
                      upper=False, z=z)
 
@@ -1494,9 +1494,11 @@ class TaskConfig(CommonConfig, Scope):
 
                         for c in g["cases"]:
                             l = [(b, unicode(a)) for a, b in c["line"]]
-                            print_msg(w(c["time"], l[0], LENGTH, z=True) +
+                            ftime = "%.3fs" % c["time"]
+                            fmem = "%.1fMB" % (float(c["memory"])/2**20)
+                            print_msg(w(ftime, l[0], LENGTH, z=True) +
                                       "  " +
-                                      w(c["memory"], l[1], LENGTH, z=True) +
+                                      w(fmem, l[1], LENGTH, z=True) +
                                       "  " +
                                       extend(padleft(v(l[2], z=True), 4), 10) +
                                       "  " +
