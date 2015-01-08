@@ -997,6 +997,4 @@ def mem_human(mem):
 def time_human(t):
     if t is None:
         return "None"
-    if t < .1:
-        return "{}ms".format(t * 1000)
-    return "{}s".format(t)
+    return "%.3fs" % t
