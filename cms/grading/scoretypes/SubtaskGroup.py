@@ -21,8 +21,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
 from cms.grading.ScoreType import ScoreType
-from cms.grading import UnitTest, mem_human, time_human
+from cms.grading import UnitTest
 
 import json
 import logging
@@ -183,13 +187,13 @@ class SubtaskGroup(ScoreType):
                     <td class="{{"unit_test_ok" if c["line"][0][1] > 0 else \
                                  "unit_test_failed" if c["line"][0][1] < 0 \
                                  else ""}} short" style="cursor:default;"
-                     title="{{c["time"]}}">
+                     title="{{ "%(seconds)0.3f s" % {'seconds': c["time"]} }}">
                         {{c["line"][0][0]}}
                     </td>
                     <td class="{{"unit_test_ok" if c["line"][1][1] > 0 else \
                                  "unit_test_failed" if c["line"][1][1] < 0 \
                                  else ""}} short" style="cursor:default;"
-                     title="{{c["memory"]}}">
+                     title="{{ format_size(c["memory"]) }}">
                         {{c["line"][1][0]}}
                     </td>
                     <td class="{{"unit_test_ok" if c["line"][2][1] > 0 else \
@@ -204,9 +208,9 @@ class SubtaskGroup(ScoreType):
                         {{c["verdict"][1]}}
                     </td>
             {% if first %}
-                    <td rowspan={{g["grouplen"]}} class="{{"unit_test_ok" if \
-                                  g["verdict"][0] > 0 else \
-                                  "unit_test_failed"}}">
+                    <td rowspan={{len(g["cases"])}}
+                     class="{{"unit_test_ok" if g["verdict"][0] > 0 else \
+                              "unit_test_failed"}}">
                         {% raw g["verdict"][1] %}
                     </td>
             {% end %}
@@ -336,6 +340,20 @@ class SubtaskGroup(ScoreType):
                                 submission_info):
         """Compute the score of a unit test.
 
+        Format of the returned details:
+            unit_test: True/False
+            subtasks:
+                name: name of the subtask
+                status: (0, "okay")
+                groups:
+                    verdict: (42, "")
+                    cases:
+                        line: (,)                             case_line()
+                        verdict: (42, "No expl. exp.")        judge_case()
+                                                        if len(mandatory) != 0
+                        time: 0.412
+                        memory: 33659290                      in bytes
+
         """
         if submission_info is None:
             return json.dumps({"unit_test": True,
@@ -359,6 +377,7 @@ class SubtaskGroup(ScoreType):
 
         expectations = {tuple(json.loads(key)): val for key, val
                         in submission_info["expected"].iteritems()}
+        case_expectations = submission_info["expected_case"]
         possible_task = expectations[()]
         extra = []
         case_results = []
@@ -380,8 +399,7 @@ class SubtaskGroup(ScoreType):
                 possible = possible_task + possible_subtask + possible_group
 
                 subtasks[-1]["groups"].append({"verdict": (42, ""),
-                                               "cases": [],
-                                               "grouplen": 0})
+                                               "cases": []})
                 min_f = 1.0
                 extra = []
 
@@ -389,16 +407,13 @@ class SubtaskGroup(ScoreType):
                 worst_case = (2, "")
                 case_results = []
 
-                for idx, unique in zip(g["cases"], g["case_keys"]):
-                    subtasks[-1]["groups"][-1]["grouplen"] += 1
+                for idx in g["cases"]:
                     r = UnitTest.get_result(submission_info["limits"],
                                             evaluations[idx])
-                    t = time_human(evaluations[idx].execution_time)
-                    m = mem_human(evaluations[idx].execution_memory) + "B"
                     min_f = min(min_f, UnitTest.score(r) if
                                 UnitTest.meaningful_score(r) else 0)
 
-                    mandatory = expectations[tuple(unique)]
+                    mandatory = case_expectations[idx]
 
                     l = UnitTest.case_line(r, mandatory,
                                            possible + mandatory,
@@ -407,8 +422,9 @@ class SubtaskGroup(ScoreType):
                              "this testcase.")
 
                     subtasks[-1]["groups"][-1]["cases"].\
-                        append({"line": l, "verdict": v, "time": t,
-                                "memory": m})
+                        append({"line": l, "verdict": v,
+                                "time": evaluations[idx].execution_time,
+                                "memory": evaluations[idx].execution_memory})
 
                     accepted, desc = \
                         UnitTest.judge_case(r, mandatory, mandatory + possible)

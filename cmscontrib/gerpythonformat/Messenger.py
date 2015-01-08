@@ -18,6 +18,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import os
 from sys import platform
 
@@ -171,7 +175,7 @@ def center_line(l, filler=' ', outer=None, bold=False):
     if bold:
         s = MyColors.bold(s)
 
-    print s
+    print(s)
 
 
 def box(h, l):
@@ -195,7 +199,7 @@ def print_msg_line(l, headerdepth, error, warning,
 
     # We officially give up
     if rem_width <= 10:
-        print l
+        print(l)
         return
 
     def flush_line():
@@ -266,7 +270,7 @@ def print_msg_line(l, headerdepth, error, warning,
         if success:
             line = MyColors.green(line)
 
-        print line
+        print(line)
 
 
 def print_msg_base(message, headerdepth, error,
@@ -305,7 +309,7 @@ def print_msg(message, headerdepth=None,
         wrapper = MyColors.green(wrapper)
 
     if headerdepth == 1:
-        print wrapper
+        print(wrapper)
 
     print_msg_base(message, headerdepth, error, warning,
                    success, hanging_indent, fill_character,
@@ -313,7 +317,7 @@ def print_msg(message, headerdepth=None,
                    else 0)
 
     if headerdepth == 1:
-        print wrapper
+        print(wrapper)
 
 
 def print_block(msg):

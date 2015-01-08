@@ -18,14 +18,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from Messenger import line_length, print_msg, print_block, header, MyColors, \
+from .Messenger import line_length, print_msg, print_block, header, MyColors, \
     box, estimate_len
-from CommonConfig import exported_function, CommonConfig
-from Executable import ExitCodeException
-from ConstraintParser import ConstraintList, merge_constraints
+from .CommonConfig import exported_function, CommonConfig
+from .Executable import ExitCodeException
+from .ConstraintParser import ConstraintList, merge_constraints
 from cms import SOURCE_EXT_TO_LANGUAGE_MAP
 from cms.db import Task, Statement, Testcase, Dataset, \
     SubmissionFormatElement, Attachment, Manager, Submission, File, \
@@ -358,10 +359,6 @@ class MyCase(object):
         self.locations = []
 
     @property
-    def unique_name(self):
-        return (None, None, self.codename)
-
-    @property
     def directory(self):
         """
         The name of the directory containing the input and output files for
@@ -443,15 +440,21 @@ class MySubmission(object):
             for g in s.groups:
                 self.expectations[g.unique_name] = []
 
-                for c in g.cases:
-                    self.expectations[c.unique_name] = []
+        self.case_expectations = {}
+
+        for c in self.task.cases:
+            self.case_expectations[c.codename] = []
 
         # Convert the given lists of expected events to something more
         # readable for ScoreTypes
         for key, items in self.expected.iteritems():
+            simplified_key = key if key != "wrong" else "0.0"
             for item in items:
-                self.expectations[item.unique_name].\
-                    append(key if key != "wrong" else "0.0")
+                if isinstance(item, MyCase):
+                    self.case_expectations[item.codename].\
+                        append(simplified_key)
+                else:
+                    self.expectations[item.unique_name].append(simplified_key)
 
         # JSON doesn't allow lists nor tuples as keys
         self.expectations = {json.dumps(key): val for key, val
@@ -1243,10 +1246,7 @@ class TaskConfig(CommonConfig, Scope):
                              'groups': [{'points': g.points,
                                          'key': g.unique_name,
                                          'cases': [c.codename for c
-                                                   in g.cases],
-                                         'case_keys': [c.unique_name
-                                                       for c in
-                                                       g.cases]}
+                                                   in g.cases]}
                                         for g in s.groups]}
                             for s in self.subtasks]}),
                       time_limit=float(self._timelimit),
@@ -1386,6 +1386,7 @@ class TaskConfig(CommonConfig, Scope):
                             submission.strong_mem_limit)},
              "unit_test": True,
              "expected": submission.expectations,
+             "expected_case": submission.case_expectations,
              "expected_score": submission.score,
              "expected_public_score": submission.public_score,
              "task_name": self.name})
@@ -1458,7 +1459,7 @@ class TaskConfig(CommonConfig, Scope):
 
         def w(details, (accepted, desc), length, z=False):
             return v((accepted,
-                      extend(padleft(details.strip() + " " + desc, 9),
+                      extend(padleft(details.strip() + " " + desc, 10),
                              length)),
                      upper=False, z=z)
 
@@ -1493,9 +1494,11 @@ class TaskConfig(CommonConfig, Scope):
 
                         for c in g["cases"]:
                             l = [(b, unicode(a)) for a, b in c["line"]]
-                            print_msg(w(c["time"], l[0], LENGTH, z=True) +
+                            ftime = "%.3fs" % c["time"]
+                            fmem = "%.1fMB" % (float(c["memory"])/2**20)
+                            print_msg(w(ftime, l[0], LENGTH, z=True) +
                                       "  " +
-                                      w(c["memory"], l[1], LENGTH, z=True) +
+                                      w(fmem, l[1], LENGTH, z=True) +
                                       "  " +
                                       extend(padleft(v(l[2], z=True), 4), 10) +
                                       "  " +
