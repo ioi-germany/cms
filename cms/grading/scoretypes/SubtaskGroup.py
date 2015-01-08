@@ -377,6 +377,7 @@ class SubtaskGroup(ScoreType):
 
         expectations = {tuple(json.loads(key)): val for key, val
                         in submission_info["expected"].iteritems()}
+        case_expectations = submission_info["expected_case"]
         possible_task = expectations[()]
         extra = []
         case_results = []
@@ -406,13 +407,13 @@ class SubtaskGroup(ScoreType):
                 worst_case = (2, "")
                 case_results = []
 
-                for idx, unique in zip(g["cases"], g["case_keys"]):
+                for idx in g["cases"]:
                     r = UnitTest.get_result(submission_info["limits"],
                                             evaluations[idx])
                     min_f = min(min_f, UnitTest.score(r) if
                                 UnitTest.meaningful_score(r) else 0)
 
-                    mandatory = expectations[tuple(unique)]
+                    mandatory = case_expectations[idx]
 
                     l = UnitTest.case_line(r, mandatory,
                                            possible + mandatory,

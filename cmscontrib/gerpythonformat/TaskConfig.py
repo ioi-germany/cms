@@ -359,10 +359,6 @@ class MyCase(object):
         self.locations = []
 
     @property
-    def unique_name(self):
-        return (None, None, self.codename)
-
-    @property
     def directory(self):
         """
         The name of the directory containing the input and output files for
@@ -444,15 +440,21 @@ class MySubmission(object):
             for g in s.groups:
                 self.expectations[g.unique_name] = []
 
-                for c in g.cases:
-                    self.expectations[c.unique_name] = []
+        self.case_expectations = {}
+
+        for c in self.task.cases:
+            self.case_expectations[c.codename] = []
 
         # Convert the given lists of expected events to something more
         # readable for ScoreTypes
         for key, items in self.expected.iteritems():
+            simplified_key = key if key != "wrong" else "0.0"
             for item in items:
-                self.expectations[item.unique_name].\
-                    append(key if key != "wrong" else "0.0")
+                if isinstance(item, MyCase):
+                    self.case_expectations[item.codename].\
+                        append(simplified_key)
+                else:
+                    self.expectations[item.unique_name].append(simplified_key)
 
         # JSON doesn't allow lists nor tuples as keys
         self.expectations = {json.dumps(key): val for key, val
@@ -1244,10 +1246,7 @@ class TaskConfig(CommonConfig, Scope):
                              'groups': [{'points': g.points,
                                          'key': g.unique_name,
                                          'cases': [c.codename for c
-                                                   in g.cases],
-                                         'case_keys': [c.unique_name
-                                                       for c in
-                                                       g.cases]}
+                                                   in g.cases]}
                                         for g in s.groups]}
                             for s in self.subtasks]}),
                       time_limit=float(self._timelimit),
@@ -1387,6 +1386,7 @@ class TaskConfig(CommonConfig, Scope):
                             submission.strong_mem_limit)},
              "unit_test": True,
              "expected": submission.expectations,
+             "expected_case": submission.case_expectations,
              "expected_score": submission.score,
              "expected_public_score": submission.public_score,
              "task_name": self.name})
