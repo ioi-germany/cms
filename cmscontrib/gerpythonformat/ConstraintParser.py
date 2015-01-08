@@ -18,6 +18,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
+from __future__ import unicode_literals
+
 
 class Constraint(object):
     def __init__(self, variables, min, max):
@@ -38,11 +41,11 @@ class Constraint(object):
             s += ", ".join(self.variables) + r"\le {}".format(self.pretty(self.max))
         s += "$"
         return s
-        
+
     def pretty(self, a):
         s = "{}".format(a)
         m = len(s) % 3
-        
+
         t = ""
         for i in range(0, len(s)):
             if (i + 3 - m) % 3 == 0 and i != 0:
