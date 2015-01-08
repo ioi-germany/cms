@@ -8,7 +8,7 @@
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2014 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2014-2015 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
