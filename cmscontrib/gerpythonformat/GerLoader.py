@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -26,8 +27,8 @@ import os.path
 
 from cmscontrib.BaseLoader import Loader
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
-from LocationStack import chdir
-from ContestConfig import ContestConfig
+from .LocationStack import chdir
+from .ContestConfig import ContestConfig
 
 
 class GerLoader(Loader):

@@ -18,14 +18,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from Messenger import line_length, print_msg, print_block, header, MyColors, \
+from .Messenger import line_length, print_msg, print_block, header, MyColors, \
     box, estimate_len
-from CommonConfig import exported_function, CommonConfig
-from Executable import ExitCodeException
-from ConstraintParser import ConstraintList, merge_constraints
+from .CommonConfig import exported_function, CommonConfig
+from .Executable import ExitCodeException
+from .ConstraintParser import ConstraintList, merge_constraints
 from cms import SOURCE_EXT_TO_LANGUAGE_MAP
 from cms.db import Task, Statement, Testcase, Dataset, \
     SubmissionFormatElement, Attachment, Manager, Submission, File, \

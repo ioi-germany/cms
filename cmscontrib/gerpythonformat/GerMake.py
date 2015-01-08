@@ -18,11 +18,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from ContestConfig import ContestConfig
-from LocationStack import chdir
+from .ContestConfig import ContestConfig
+from .LocationStack import chdir
 from cms import utf8_decoder
 from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
