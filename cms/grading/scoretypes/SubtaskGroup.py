@@ -197,14 +197,12 @@ class SubtaskGroup(ScoreType):
                                  else ""}} short">
                         {{c["line"][2][0]}}
                     </td>
-            {% if c["verdict"][0] != 42 %}
-                    <td class="{{"unit_test_ok" if c["verdict"][0] > 0 else \
+                    <td class="{{"no_expectations" \
+                                 if c["verdict"][0] == 42 else \
+                                 "unit_test_ok" if c["verdict"][0] > 0 else \
                                  "unit_test_failed"}}">
                         {{c["verdict"][1]}}
                     </td>
-            {% else %}
-                    <td class="no_expectations"> {{c["verdict"][1]}} </td>
-            {% end %}
             {% if first %}
                     <td rowspan={{g["grouplen"]}} class="{{"unit_test_ok" if \
                                   g["verdict"][0] > 0 else \
