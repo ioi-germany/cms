@@ -226,7 +226,8 @@ class BaseHandler(CommonRequestHandler):
         params["contest"] = self.contest
         params["url_root"] = get_url_root(self.request.path)
         if self.contest is not None:
-            params["phase"] = self.contest.main_group.phase(params["timestamp"])
+            params["phase"] = \
+                self.contest.main_group.phase(params["timestamp"])
             # Keep "== None" in filter arguments. SQLAlchemy does not
             # understand "is None".
             params["unanswered"] = self.sql_session.query(Question)\
@@ -660,7 +661,8 @@ class ContestHandler(BaseHandler):
             self.get_string(attrs, "description")
 
             try:
-                contest.main_group = self.safe_get_item(Group,
+                contest.main_group = self.safe_get_item(
+                    Group,
                     self.get_argument("main_group", contest.main_group_id))
             except KeyError:
                 self.application.service.add_notification(
@@ -669,7 +671,6 @@ class ContestHandler(BaseHandler):
                     ""
                     )
                 return
-
 
             assert attrs.get("name") is not None, "No contest name specified."
 
