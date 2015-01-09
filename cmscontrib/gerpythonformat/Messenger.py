@@ -22,9 +22,14 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import codecs
 from functools import wraps
 import os
-from sys import platform
+import sys
+
+
+sys.stdout = codecs.getwriter("utf8")(sys.stdout)
+sys.stderr = codecs.getwriter("utf8")(sys.stderr)
 
 
 def get_terminal_line_length():
@@ -49,7 +54,7 @@ end_code = "\033[0m"
 
 
 def colors_enabled():
-    return platform == "linux" or platform == "linux2"
+    return sys.platform == "linux" or sys.platform == "linux2"
 
 
 def color_function(start):
@@ -307,23 +312,20 @@ def add_line_breaks(l, length, hanging_indent=0):
 
     class data:  # workaround to be able to assign to variables in flush_line()
         indent = 0
-        rem_width = length - indent
-        curr_line = " " * indent
-        empty_line = True
-        part = ""
+        rem_width = length
+        curr_line = ""
 
     next_indent = hanging_indent
 
     # We officially give up
-    if data.rem_width <= 10:
+    if length - next_indent <= 10:
         return l
 
     def flush_line():
-        result.append(data.curr_line.rstrip())
-        data.empty_line = True
+        result.append(" "*data.indent + data.curr_line.rstrip())
         data.indent = next_indent
         data.rem_width = length - data.indent
-        data.curr_line = " " * data.indent
+        data.curr_line = ""
 
     def add_word(s):
         l = estimate_len(s)
@@ -358,14 +360,15 @@ def add_line_breaks(l, length, hanging_indent=0):
         else:
             return add_word
 
+    part = ""
     for c in l:
-        if len(data.part) > 0 and (c == "\n" or
-                                   classify(data.part[0]) != classify(c)):
-            classify(data.part[0])(data.part)
-            data.part = ""
-        data.part += c
-    if len(data.part) > 0:
-        classify(data.part[0])(data.part)
+        if len(part) > 0 and (c == "\n" or
+                                   classify(part[0]) != classify(c)):
+            classify(part[0])(part)
+            part = ""
+        part += c
+    if len(part) > 0:
+        classify(part[0])(part)
     if len(data.curr_line) > 0:
         flush_line()
 

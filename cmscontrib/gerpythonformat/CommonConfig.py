@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -28,6 +28,7 @@ from .Executable import CPPProgram, InternalPython, ExternalScript, \
 from cms.rules.Rule import LaTeXRule, CommandRule
 from .Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
 import inspect
+import io
 import os
 from collections import defaultdict
 import copy
@@ -204,7 +205,7 @@ class CommonConfig(object):
         for s in parts:
             out += easycall(s)
         for fname in files:
-            with open(fname, 'w') as f:
+            with io.open(fname, 'w', encoding="utf-8") as f:
                 f.write(out)
 
     def _get_supplement_extension_files(self, ext):

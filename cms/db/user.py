@@ -85,7 +85,8 @@ class Group(Base):
         Integer,
         ForeignKey(Contest.id,
                    onupdate="CASCADE", ondelete="CASCADE"),
-        index=True) # nullable=True does not work due to a circular dependency
+        nullable=False,
+        index=True)
     contest = relationship(
         Contest,
         backref=backref('groups',

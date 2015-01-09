@@ -1481,7 +1481,7 @@ class TaskConfig(CommonConfig, Scope):
                         print()
                         print(indent(side_by_side(["Time", "Memory",
                                                    "Answer", "Verdict"],
-                                                  [2, 15, 28, 37])))
+                                                  [2, 14, 27, 37])))
 
                         for c in g["cases"]:
                             l = [(b, unicode(a)) for a, b in c["line"]]
@@ -1495,7 +1495,7 @@ class TaskConfig(CommonConfig, Scope):
                                 remaining_line_length() - 37)
                             print(indent(side_by_side([ftime, fmem,
                                                        fans, fverd],
-                                                      [0, 14, 26, 37])))
+                                                      [0, 13, 25, 37])))
 
                     print()
 
