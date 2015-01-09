@@ -1442,11 +1442,8 @@ class TaskConfig(CommonConfig, Scope):
         expected_public, expected_private = \
             score_type.unit_test_expected_scores(sdb.additional_info)
 
-        def v((accepted, desc), upper=False, z=False):
+        def v((accepted, desc), z=False):
             d = desc.replace("<br>", "\n")
-
-            if upper:
-                d = d.upper()
 
             if accepted == 42:
                 return blue("No explicit expectations.")
@@ -1459,8 +1456,7 @@ class TaskConfig(CommonConfig, Scope):
 
         def w(details, (accepted, desc), length, z=False):
             return v((accepted,
-                      pad_left(details.strip() + " " + desc, length)),
-                     upper=False, z=z)
+                      pad_left(details.strip() + " " + desc, length)), z=z)
 
         def myheader(name, status):
             desc = status[1]
@@ -1468,7 +1464,7 @@ class TaskConfig(CommonConfig, Scope):
             space = base_space - len(name) - len(desc)
 
             return header(name + " " + (space - 2)*"=" + " " +
-                          v(status, True), depth=3)
+                          v(status), depth=3)
 
         # Present verdict
         details = json.loads(details)

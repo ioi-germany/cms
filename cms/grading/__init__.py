@@ -794,13 +794,17 @@ class UnitTest:
     """
     @staticmethod
     def get_result(limits, evaluation):
-        def get(x):
-            try:
-                return evaluation[x]
-            except (KeyError, TypeError):
-                return getattr(evaluation, x)
+        """Collect information about the evaluation.
 
-        """Collect information about the evaluation
+        limits (dict): a dictionary with entries weak_time_limit and
+                       strong_time_limit
+        evaluation (Evaluation): the Evaluation object to study
+
+        return ([unicode]): a list of reasons of failure:
+                            time, time?, memory, memory? and possibly a
+                            score < 1 (if the weak time and memory limits have
+                            been satisfied)
+
         """
         result = []
 
@@ -813,8 +817,9 @@ class UnitTest:
                 return 0
 
         # check time constraints
-        if get("execution_time") is not None:  # TODO What if this is None?
-            timeverdict = check(float(get("execution_time")),
+        # TODO What if this is None?
+        if evaluation.execution_time is not None:
+            timeverdict = check(float(evaluation.execution_time),
                                 float(limits["weak_time_limit"]),
                                 float(limits["strong_time_limit"]))
             if timeverdict == -1:
@@ -823,8 +828,9 @@ class UnitTest:
                 result.append("time?")
 
         # check memory constraints
-        if get("execution_memory") is not None:  # TODO What if this is None?
-            memverdict = check(float(get("execution_memory")) / 2**20,
+        # TODO What if this is None?
+        if evaluation.execution_memory is not None:
+            memverdict = check(float(evaluation.execution_memory) / 2**20,
                                float(limits["weak_mem_limit"]),
                                float(limits["strong_mem_limit"]))
             if "violating memory limits" in json.loads(evaluation.text)[0]:
@@ -835,8 +841,8 @@ class UnitTest:
                 result.append("memory?")
 
         # check solution (if possible)
-        if float(get("outcome")) < 1 and UnitTest.meaningful_score(result):
-            result.append(get("outcome"))
+        if float(evaluation.outcome) < 1 and UnitTest.meaningful_score(result):
+            result.append(evaluation.outcome)
 
         return result
 
@@ -855,7 +861,13 @@ class UnitTest:
 
     @staticmethod
     def score(results):
-        """Get score of testcase or group
+        """Get the minimum score of a list of results.
+
+        results ([unicode]): list of results
+                             (time, time?, memory, memory? or a score)
+
+        return (float): minimum score (1.0 if no score is present)
+
         """
         s = 1.0
 
@@ -880,10 +892,8 @@ class UnitTest:
            visualises the respective result and the second one is >0
            iff the result is as expected
         """
-        o = optional
-
         if len(mandatory) > 0:
-            o = UnitTest.remove_scores(o)
+            optional = UnitTest.remove_scores(optional)
 
         def badness(key, r):
             if key in r:
@@ -904,17 +914,18 @@ class UnitTest:
         for x in ['time', 'memory']:
             L.append((c[badness(x, results)],
                       get_int((x in results or x not in mandatory) and
-                              badness(x, results) <= badness(x, o))))
+                              badness(x, results) <= badness(x, optional))))
 
-        meaningful = UnitTest.meaningful_score(results)
+        if UnitTest.meaningful_score(results):
+            # Either UnitTest.score(optional) or UnitTest.score(mandatory) will
+            # be equal to 1, thus min is indeed correct
+            L.append((UnitTest.score(results),
+                      get_int(UnitTest.score(results) >=
+                              min(UnitTest.score(optional),
+                                  UnitTest.score(mandatory)))))
+        else:
+            L.append(c[-1], 0)
 
-        # Either UnitTest.score(o) or UnitTest.score(mandatory) will
-        # be equal to 1, thus min is indeed correct
-        L.append((UnitTest.score(results) if meaningful else c[-1],
-                  0 if not meaningful
-                  else get_int(UnitTest.score(results) >=
-                               min(UnitTest.score(o),
-                                   UnitTest.score(mandatory)))))
         return L
 
     @staticmethod
@@ -923,7 +934,7 @@ class UnitTest:
            the individual cases
         """
         optional = optional + mandatory
-        
+
         if any(x not in optional for x in results
                if not UnitTest.ignore(x, optional + ['time', 'memory'])):
             return (-2, "failed", "The submission failed for a reason "

@@ -160,7 +160,7 @@ class SubtaskGroup(ScoreType):
             {{ st["name"] }}
         </span>
         <span class="score">
-            {{st["status"][1].upper()}}
+            {{st["status"][1]}}
         </span>
     </div>
     <div class="subtask-body">
@@ -383,8 +383,7 @@ class SubtaskGroup(ScoreType):
         subtasks_failed = False
 
         for subtask in self.parameters["tcinfo"]:
-            subtasks.append({"name": subtask["name"], "status": (0, "okay"),
-                             "groups": []})
+            subtasks.append({"name": subtask["name"], "groups": []})
             possible_subtask = expectations[tuple(subtask["key"])]
 
             group_score = 0
@@ -466,7 +465,7 @@ class SubtaskGroup(ScoreType):
             if subtask["for_private_score"]:
                 private_score += group_score
 
-            subtasks[-1]["status"] = worst_group
+            subtasks[-1]["status"] = (worst_group[0], worst_group[1].upper())
 
             if subtasks[-1]["status"][0] <= 0:
                 subtasks_failed = True
