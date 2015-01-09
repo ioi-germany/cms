@@ -396,7 +396,7 @@ class SubtaskGroup(ScoreType):
 
                 subtasks[-1]["groups"].append({"verdict": (42, ""),
                                                "cases": []})
-                min_f = 1.0
+                min_f = 1.0  # Minimum "score" of a test case in this group
                 extra = []
 
                 cases_failed = False
@@ -413,10 +413,8 @@ class SubtaskGroup(ScoreType):
 
                     mandatory = case_expectations[idx]
 
-                    l = UnitTest.case_line(r, mandatory,
-                                           possible + mandatory)
-                    v = (42, "No explicit expectations given for "
-                             "this testcase.")
+                    l = UnitTest.case_line(r, mandatory, possible)
+                    v = (42, "No explicit expectations.")
 
                     subtasks[-1]["groups"][-1]["cases"].\
                         append({"line": l, "verdict": v,

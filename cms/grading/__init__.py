@@ -892,6 +892,8 @@ class UnitTest:
            visualises the respective result and the second one is >0
            iff the result is as expected
         """
+        optional = optional + mandatory
+
         if len(mandatory) > 0:
             optional = UnitTest.remove_scores(optional)
 
@@ -924,7 +926,7 @@ class UnitTest:
                               min(UnitTest.score(optional),
                                   UnitTest.score(mandatory)))))
         else:
-            L.append(c[-1], 0)
+            L.append((c[-1], 0))
 
         return L
 

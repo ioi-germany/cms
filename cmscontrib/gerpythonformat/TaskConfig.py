@@ -1446,7 +1446,7 @@ class TaskConfig(CommonConfig, Scope):
             d = desc.replace("<br>", "\n")
 
             if accepted == 42:
-                return blue("No explicit expectations.")
+                return blue(d)
             elif accepted <= 0:
                 if z and accepted == 0:
                     return d
