@@ -135,10 +135,9 @@ class Rule(object):
         if self.result is None:
             self.result = RuleResult()
             self.run()
-            if not self.result.badfail:  # Don't save the result if
-                                         # something really bad happened
-                                         # (e.g. the dependencies could not
-                                         # be determined)
+            # Don't save the result if something really bad happened (e.g. the
+            # dependencies could not be determined)
+            if not self.result.badfail:
                 with open(mhf, 'w') as f:
                     # Save the result.
                     # The mission is saved for debugging purposes.
