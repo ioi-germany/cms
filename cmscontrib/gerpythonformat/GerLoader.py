@@ -60,9 +60,8 @@ class GerLoader(Loader):
         """See docstring in class Loader.
 
         """
-        self.buildpath = os.path.join(os.path.dirname(self.path),
-                                      os.path.basename(self.path), "build")
-        copyrecursivelyifnecessary(self.path, self.buildpath,
+        self.buildpath = os.path.join(self.path, "build")
+        copyrecursivelyifnecessary(unicode(self.path), self.buildpath,
                                    set([self.buildpath]))
         with chdir(self.buildpath):
             rules = ".rules"
