@@ -868,19 +868,6 @@ class UnitTest:
         return s
 
     @staticmethod
-    def score_specified(l):
-        """Test whether a score has been specified
-        """
-        for x in l:
-            try:
-                float(x)
-                return True
-            except:
-                pass
-
-        return False
-
-    @staticmethod
     def meaningful_score(results):
         """Test whether the score actually makes sense
         """

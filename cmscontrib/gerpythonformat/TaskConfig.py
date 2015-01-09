@@ -22,8 +22,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from .Messenger import line_length, print_msg, print_block, header, MyColors, \
-    box, estimate_len
+from .Messenger import print_msg, print_block, header, red, green, blue, box, \
+    side_by_side, pad_left, add_line_breaks, remaining_line_length, indent
 from .CommonConfig import exported_function, CommonConfig
 from .Executable import ExitCodeException
 from .ConstraintParser import ConstraintList, merge_constraints
@@ -1449,37 +1449,29 @@ class TaskConfig(CommonConfig, Scope):
                 d = d.upper()
 
             if accepted == 42:
-                return MyColors.blue("No explicit expectations.")
+                return blue("No explicit expectations.")
             elif accepted <= 0:
                 if z and accepted == 0:
                     return d
-                return MyColors.red(d)
+                return red(d)
             else:
-                return MyColors.green(d)
+                return green(d)
 
         def w(details, (accepted, desc), length, z=False):
             return v((accepted,
-                      extend(padleft(details.strip() + " " + desc, 10),
-                             length)),
+                      pad_left(details.strip() + " " + desc, length)),
                      upper=False, z=z)
 
         def myheader(name, status):
             desc = status[1]
-            base_space = line_length - 15
+            base_space = remaining_line_length() - 15
             space = base_space - len(name) - len(desc)
 
             return header(name + " " + (space - 2)*"=" + " " +
                           v(status, True), depth=3)
 
-        def extend(s, l):
-            return s + max(l - estimate_len(s), 0)*" "
-
-        def padleft(s, l):
-            return max(l-estimate_len(s), 0)*" " + s
-
         # Present verdict
         details = json.loads(details)
-        LENGTH = 12
 
         for st in details["subtasks"]:
             with myheader(st["name"], st["status"]):
@@ -1487,34 +1479,34 @@ class TaskConfig(CommonConfig, Scope):
                     with header("Group {}".format(i + 1), depth=4):
                         print_block(v(g["verdict"]))
                         print()
-                        print("  ", end="")
-                        print_msg(extend("Time", LENGTH) + "  " +
-                                  extend("Memory", LENGTH-2) + "  " +
-                                  extend("Answer", 10) + "  Verdict")
+                        print(indent(side_by_side(["Time", "Memory",
+                                                   "Answer", "Verdict"],
+                                                  [2, 15, 28, 37])))
 
                         for c in g["cases"]:
                             l = [(b, unicode(a)) for a, b in c["line"]]
                             ftime = "%.3fs" % c["time"]
                             fmem = "%.1fMB" % (float(c["memory"])/2**20)
-                            print_msg(w(ftime, l[0], LENGTH, z=True) +
-                                      "  " +
-                                      w(fmem, l[1], LENGTH, z=True) +
-                                      "  " +
-                                      extend(padleft(v(l[2], z=True), 4), 10) +
-                                      "  " +
-                                      v(c["verdict"]),
-                                      hanging_indent=3 * LENGTH + 6)
+                            ftime = w(ftime, l[0], 8, z=True)
+                            fmem = w(fmem, l[1], 10, z=True)
+                            fans = "   " + v(l[2], z=True)
+                            fverd = add_line_breaks(
+                                v(c["verdict"]),
+                                remaining_line_length() - 37)
+                            print(indent(side_by_side([ftime, fmem,
+                                                       fans, fverd],
+                                                      [0, 14, 26, 37])))
 
                     print()
 
             print()
 
-        public_score = MyColors.green("{}".format(public_score)) if \
+        public_score = green("{}".format(public_score)) if \
             public_score == expected_public else \
-            MyColors.red("{}".format(public_score))
-        score = MyColors.green("{}".format(score)) if \
+            red("{}".format(public_score))
+        score = green("{}".format(score)) if \
             score == expected_private else \
-            MyColors.red("{}".format(score))
+            red("{}".format(score))
 
         if score_type.feedback() != "full":
             print_msg("Public Score: {} (expected: {})".
@@ -1524,8 +1516,8 @@ class TaskConfig(CommonConfig, Scope):
                                                           expected_private))
         print()
         verd = details["verdict"]
-        box(" Overall verdict ", MyColors.green(verd[1]) if verd[0] == 1
-            else MyColors.red(verd[1]))
+        box(" Overall verdict ", green(verd[1]) if verd[0] == 1
+            else red(verd[1]))
         print()
 
     def _run_job_group(self, job_group):
