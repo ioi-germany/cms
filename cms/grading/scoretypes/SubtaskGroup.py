@@ -425,7 +425,7 @@ class SubtaskGroup(ScoreType):
                                 "memory": evaluations[idx].execution_memory})
 
                     accepted, desc = \
-                        UnitTest.judge_case(r, mandatory, mandatory + possible)
+                        UnitTest.judge_case(r, mandatory, possible)
 
                     if len(mandatory) == 0:
                         worst_case = min(worst_case, (accepted, desc))
@@ -441,8 +441,7 @@ class SubtaskGroup(ScoreType):
                 group_score += min_f * g["points"]
 
                 status, short, desc = \
-                    UnitTest.judge_group(case_results, possible,
-                                         possible + extra)
+                    UnitTest.judge_group(case_results, possible, extra)
                 c_st = "failed" if worst_case[0] < 0 else \
                        "ambiguous" if worst_case[0] == 0 else "okay"
                 status, short, desc = min((status, short, desc),

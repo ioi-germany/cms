@@ -922,6 +922,8 @@ class UnitTest:
         """Judge a whole group given a concatenated list of the results of
            the individual cases
         """
+        optional = optional + mandatory
+        
         if any(x not in optional for x in results
                if not UnitTest.ignore(x, optional + ['time', 'memory'])):
             return (-2, "failed", "The submission failed for a reason "
