@@ -22,6 +22,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from functools import wraps
 import os
 from sys import platform
 
@@ -91,6 +92,10 @@ class IndentManager(object):
         self.stop()
 
 
+def remaining_line_length():
+    return line_length - IndentManager.indent * 2
+
+
 def estimate_len(s):
     """Estimate the length of a string when displayed in a terminal.
     The basic ANSI formatting commands are skipped (but for example \n and \t
@@ -117,8 +122,21 @@ def estimate_len(s):
     return r
 
 
+def apply_to_lines(func):
+    """Returns a function that applies func to each line of the first input
+    parameter.
+    """
+    @wraps(func)
+    def f(string, *args, **kwargs):
+        res = [func(l, *args, **kwargs) for l in string.split("\n")]
+        return "\n".join(res)
+    return f
+
+
+@apply_to_lines
 def pad_center(string, length, filler=' '):
-    """Adds the filler on both ends to make the string of the specified length.
+    """In each line, adds the filler on both ends to make the string of the
+    specified length.
     If the string is already longer than the specified length, it is returned
     unchanged.
 
@@ -133,6 +151,86 @@ def pad_center(string, length, filler=' '):
     if r < 0:
         return string
     return filler*(r/2) + string + filler*((r+1)/2)
+
+
+@apply_to_lines
+def pad_left(string, length, filler=' '):
+    """In each line, adds the filler on the left to make the string of the
+    specified length.
+    If the string is already longer than the specified length, it is returned
+    unchanged.
+
+    string (unicode): the string to pad
+    length (int): the length the string is supposed to have
+    filler (unicode): the character to fill the space with
+
+    return (unicode): the padded string
+
+    """
+    r = length - estimate_len(string)
+    if r < 0:
+        return string
+    return filler*r + string
+
+
+@apply_to_lines
+def pad_right(string, length, filler=' '):
+    """In each line, adds the filler on the right to make the string of the
+    specified length.
+    If the string is already longer than the specified length, it is returned
+    unchanged.
+
+    string (unicode): the string to pad
+    length (int): the length the string is supposed to have
+    filler (unicode): the character to fill the space with
+
+    return (unicode): the padded string
+
+    """
+    r = length - estimate_len(string)
+    if r < 0:
+        return string
+    return string + filler*r
+
+
+@apply_to_lines
+def add_left(string, filler=' '):
+    """In each line, adds the filler on the left.
+
+    string (unicode): the string to modify
+    filler (unicode): the string to add
+
+    return (unicode): the modified string
+
+    """
+    return filler + string
+
+
+@apply_to_lines
+def add_right(string, filler=' '):
+    """In each line, adds the filler on the right.
+
+    string (unicode): the string to modify
+    filler (unicode): the string to add
+
+    return (unicode): the modified string
+
+    """
+    return string + filler
+
+
+@apply_to_lines
+def indent(string, filler=' '):
+    """Indent each line of the string according to the current indentation
+    level.
+
+    string (unicode): the string to indent
+    filler (unicode): the character to fill the space with
+
+    return (unicode): the indented string
+
+    """
+    return filler * (IndentManager.indent*2) + string
 
 
 def center_line(l, filler=' ', outer=None, make_bold=False):
@@ -163,140 +261,152 @@ def box(title, content):
     center_line("", "-", '+', True)
 
 
-def print_msg_line(l, headerdepth, error, warning,
-                   success, hanging_indent,
-                   fill_character, extra_width):
-    indent = IndentManager.indent * 2
-    rem_width = line_length - 5 - indent
-    curr_line = " " * indent
+def side_by_side(strings, offsets):
+    """Puts the lines of the given strings in a table-like layout.
 
-    data = {"indent": indent, "rem_width": rem_width,
-            "curr_line": curr_line,
-            "hanging_indent": hanging_indent,
-            "result": [],
-            "empty_line": True}
+    For example,
+    side_by_side(["Column 1", "Column 2\nwith line\nbreaks","Column 3"],
+                 [0,12,24]))
+    returns:
+    Column 1    Column 2    Column 3
+                with line
+                breaks
+
+    strings ([unicode]): the columns of the table
+    offsets ([int]): the positions of the left edges of the columns
+
+    return (unicode): the table
+
+    """
+    lines = [s.split("\n") for s in strings]
+    num_lines = max(map(len, lines))
+    res = []
+    for iline in xrange(num_lines):
+        line = ""
+        for istring, o in zip(xrange(len(strings)), offsets):
+            if len(line) > 0:
+                line += " "
+            line += " "*max(o-estimate_len(line), 0)
+            if iline < len(lines[istring]):
+                line += lines[istring][iline]
+        res.append(line)
+    return "\n".join(res)
+
+
+def add_line_breaks(l, length, hanging_indent=0):
+    """Add appropriate line breaks to a string.
+
+    l (unicode): the input string (may already consist of multiple lines)
+    length (int): the maximum allowed line length
+    hanging_indent (int): how much to indent all lines after the first one
+
+    return (unicode): the string with appropriate line breaks
+
+    """
+    result = []
+
+    class data:  # workaround to be able to assign to variables in flush_line()
+        indent = 0
+        rem_width = length - indent
+        curr_line = " " * indent
+        empty_line = True
+        part = ""
+
+    next_indent = hanging_indent
 
     # We officially give up
-    if rem_width <= 10:
-        print(l)
-        return
+    if data.rem_width <= 10:
+        return l
 
     def flush_line():
-        data["result"].append(data["curr_line"])
-        data["empty_line"] = True
-        data["indent"] += data["hanging_indent"]
-        data["hanging_indent"] = 0
-        data["rem_width"] = line_length - 5 - data["indent"]
-        data["curr_line"] = " " * data["indent"]
+        result.append(data.curr_line.rstrip())
+        data.empty_line = True
+        data.indent = next_indent
+        data.rem_width = length - data.indent
+        data.curr_line = " " * data.indent
 
-    # TODO: This currently ignores '\t' and exotic whitespaces
-    L = l.split(" ")
-
-    i = 0
-    while i < len(L):
-        data["empty_line"] = False
-        w = L[i]
-
-        # Too long for the next line?
-        if estimate_len(w) > line_length - 5 - data["indent"] - \
-           data["hanging_indent"]:
-            v = w[:data["rem_width"]]
-            data["curr_line"] += v
-
+    def add_word(s):
+        l = estimate_len(s)
+        if l <= data.rem_width:
+            data.curr_line += s
+            data.rem_width -= l
+        # Also too long for the next line?
+        elif l > length - next_indent:
+            data.curr_line += s[:data.rem_width]
             flush_line()
-            w = w[data["rem_width"]:]
-            L[i] = w
+            add_word(s[data.rem_width:])
+        else:
+            flush_line()
+            add_word(s)
 
-            continue
-
-        if estimate_len(w) > data["rem_width"]:
+    def add_whitespace(s):
+        l = estimate_len(s)
+        if l <= data.rem_width:
+            data.curr_line += s
+            data.rem_width -= l
+        else:
             flush_line()
 
-        data["curr_line"] += w
+    def add_newline(s):
+        flush_line()
 
-        if estimate_len(w) < data["rem_width"]:
-            data["curr_line"] += " "
+    def classify(c):
+        if c == " ":
+            return add_whitespace
+        elif c == "\n":
+            return add_newline
+        else:
+            return add_word
 
-        data["rem_width"] -= estimate_len(w) + 1
+    for c in l:
+        if len(data.part) > 0 and (c == "\n" or
+                                   classify(data.part[0]) != classify(c)):
+            classify(data.part[0])(data.part)
+            data.part = ""
+        data.part += c
+    if len(data.part) > 0:
+        classify(data.part[0])(data.part)
+    if len(data.curr_line) > 0:
+        flush_line()
 
-        if data["rem_width"] <= 0:
-            flush_line()
-
-        i += 1
-
-    # Output last line
-    if data["empty_line"]:
-        data["rem_width"] = 0
-    else:
-        data["result"].append(data["curr_line"])
-
-    data["rem_width"] += extra_width
-
-    if data["rem_width"] >= 1:
-        if data["result"][-1][-1] != ' ':
-            data["result"][-1] += " "
-            data["rem_width"] -= 1
-
-        data["result"][-1] += fill_character * data["rem_width"]
-
-    for line in data["result"]:
-        if headerdepth is not None:
-            line = bold(line)
-        if error:
-            line = red(line)
-        if warning:
-            line = yellow(line)
-        if success:
-            line = green(line)
-
-        print(line)
-
-
-def print_msg_base(message, headerdepth, error,
-                   warning, success, hanging_indent,
-                   fill_character, extra_width):
-    message = message.strip()
-
-    if len(message) > 0:
-        for l in message.split("\n"):
-            print_msg_line(l, headerdepth, error,
-                           warning, success,
-                           hanging_indent, fill_character,
-                           extra_width)
+    return "\n".join(result)
 
 
 def print_msg(message, headerdepth=None,
               error=False, warning=False, success=False,
               hanging_indent=0, fill_character=' '):
+    if estimate_len(message) == 0:
+        return
     symbols = {1: "#", 2: "#", 3: "=", 4: "-"}
 
+    left = ""
     if headerdepth in symbols:
         s = symbols[headerdepth]
-        message = s * 3 + " " + message
-        hanging_indent = 4
+        left = s * 3 + " "
         fill_character = s
+    rem_length = remaining_line_length() - estimate_len(left)
 
-    wrapper = "#" * line_length
+    res = add_line_breaks(message, rem_length-1, hanging_indent)
+    res = add_right(res, " ")
+    res = pad_right(res, rem_length, fill_character)
+    res = add_left(res, left)
+
+    if headerdepth == 1:
+        wrapper = "#" * remaining_line_length()
+        res = wrapper + "\n" + res + "\n" + wrapper
+
+    res = indent(res)
 
     if headerdepth is not None:
-        wrapper = bold(wrapper)
+        res = bold(res)
     if error:
-        wrapper = red(wrapper)
+        res = red(res)
     if warning:
-        wrapper = yellow(wrapper)
+        res = yellow(res)
     if success:
-        wrapper = green(wrapper)
+        res = green(res)
 
-    if headerdepth == 1:
-        print(wrapper)
-
-    print_msg_base(message, headerdepth, error, warning,
-                   success, hanging_indent, fill_character,
-                   extra_width=5 if headerdepth is not None
-                   else 0)
-
-    if headerdepth == 1:
-        print(wrapper)
+    print(res)
 
 
 def print_block(msg):
