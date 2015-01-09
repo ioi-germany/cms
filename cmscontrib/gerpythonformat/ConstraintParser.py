@@ -35,11 +35,13 @@ class Constraint(object):
     def latex(self):
         s = "$"
         if self.max is None:
-            s += ", ".join(self.variables) + r"\ge {}".format(self.pretty(self.min))
+            s += ", ".join(self.variables)
+            s += r"\ge {}".format(self.pretty(self.min))
         else:
             if self.min is not None:
                 s += r"{}\le ".format(self.min)
-            s += ", ".join(self.variables) + r"\le {}".format(self.pretty(self.max))
+            s += ", ".join(self.variables)
+            s += r"\le {}".format(self.pretty(self.max))
         s += "$"
         return s
 
