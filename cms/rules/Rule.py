@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,6 +23,7 @@ from __future__ import unicode_literals
 
 import hashlib
 import imp
+import io
 import json
 import os
 import subprocess
@@ -31,7 +32,7 @@ import subprocess
 def hashfile(filename):
     """Return the sha256 sum of the given file.
     """
-    with open(filename, 'r') as f:
+    with io.open(filename, 'rb') as f:
         hasher = hashlib.sha256()
         while True:
             data = f.read(2**14)
@@ -44,7 +45,7 @@ def hashfile(filename):
 def readfile(filename):
     """Return the contents of the given file.
     """
-    with open(filename, 'r') as f:
+    with io.open(filename, 'r', encoding="utf-8") as f:
         return f.read()
 
 
@@ -113,7 +114,7 @@ class Rule(object):
         mhf = self.missionhashfile()
         if not os.path.exists(mhf):
             return False
-        with open(mhf, 'r') as f:
+        with io.open(mhf, 'rb') as f:
             r = RuleResult.import_from_dict(json.load(f)['result'])
             return r.uptodate()
 
@@ -131,7 +132,7 @@ class Rule(object):
         mhf = self.missionhashfile()
         if not force:
             if os.path.exists(mhf):
-                with open(mhf, 'r') as f:
+                with io.open(mhf, 'rb') as f:
                     result = \
                         RuleResult.import_from_dict(json.load(f)['result'])
                     if result.uptodate():
@@ -143,7 +144,7 @@ class Rule(object):
                                          # something really bad happened
                                          # (e.g. the dependencies could not
                                          # be determined)
-                with open(mhf, 'w') as f:
+                with io.open(mhf, 'wb') as f:
                     # Save the result.
                     # The mission is saved for debugging purposes.
                     json.dump({'mission': self.mission(),
@@ -296,15 +297,15 @@ class CommandRule(Rule):
         stdin = self.stdin
         if self.stdinstring:
             stdin = ".in"
-            with open(stdin, "w") as f:
+            with io.open(stdin, "w", encoding="utf-8") as f:
                 f.write(self.stdinstring)
         of = ".out" if self.stdout is None else self.stdout
         ef = ".err" if self.stderr is None else self.stderr
-        with open(of, 'w') as fout:
-            with open(ef, 'w') as ferr:
+        with io.open(of, 'w', encoding="utf-8") as fout:
+            with io.open(ef, 'w', encoding="utf-8") as ferr:
                 fin = None
                 if stdin is not None:
-                    fin = open(stdin, 'r')
+                    fin = io.open(stdin, 'r', encoding="utf-8")
                 self.result.log['code'] = subprocess.call(self.command,
                                                           stdin=fin,
                                                           stdout=fout,
@@ -350,7 +351,7 @@ def readmakefile(filename, result, readoutput):
     if not os.path.exists(filename):  # We cannot find out the dependencies
         result.badfail = True
         return
-    with open(filename, 'r') as f:
+    with io.open(filename, 'r', encoding="utf-8") as f:
         # FIXME The makefile parsing is far from perfect...
         aftercolon = False
         for line in f:
@@ -480,11 +481,6 @@ class LaTeXRule(CommandRule):
     def post_run(self):
         self.result.add_dependency(self.source)  # Should not be necessary
         readmakefile(".deps", self.result, True)
-        # Re-encode output as latexmk seems to output latin_1 instead of utf8
-        self.result.log['out'] = self.result.log['out'] \
-            .decode('latin_1').encode('utf8')
-        self.result.log['err'] = self.result.log['err'] \
-            .decode('latin_1').encode('utf8')
 
 
 class JobRule(Rule):
@@ -616,7 +612,7 @@ class PythonFunctionRule(Rule):
         kwargs = dict(self.kwargs)
 
         if self.stdout is not None:
-            stdout = open(self.stdout, "w")
+            stdout = io.open(self.stdout, "w", encoding="utf-8")
             kwargs["stdout"] = stdout
 
         self.result.log['return_value'] = module.gen(*self.args, **kwargs)

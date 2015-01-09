@@ -22,9 +22,14 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import codecs
 from functools import wraps
 import os
-from sys import platform
+import sys
+
+
+sys.stdout = codecs.getwriter("utf8")(sys.stdout)
+sys.stderr = codecs.getwriter("utf8")(sys.stderr)
 
 
 def get_terminal_line_length():
@@ -49,7 +54,7 @@ end_code = "\033[0m"
 
 
 def colors_enabled():
-    return platform == "linux" or platform == "linux2"
+    return sys.platform == "linux" or sys.platform == "linux2"
 
 
 def color_function(start):
