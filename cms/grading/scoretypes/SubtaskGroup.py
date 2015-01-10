@@ -408,8 +408,7 @@ class SubtaskGroup(ScoreType):
                 for idx in g["cases"]:
                     r = UnitTest.get_result(submission_info["limits"],
                                             evaluations[idx])
-                    min_f = min(min_f, UnitTest.score(r) if
-                                UnitTest.meaningful_score(r) else 0)
+                    min_f = min(min_f, float(evaluations[idx].outcome))
 
                     mandatory = case_expectations[idx]
 
