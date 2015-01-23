@@ -400,10 +400,10 @@ class SubtaskGroup(ScoreType):
                 extra = []
 
                 cases_failed = False
-                worst_case = (2, "")
 
                 # List of all results of all test cases in this group
                 case_results = []
+                extended_results = []
 
                 for idx in g["cases"]:
                     r = UnitTest.get_result(submission_info["limits"],
@@ -424,25 +424,24 @@ class SubtaskGroup(ScoreType):
                     accepted, desc = \
                         UnitTest.judge_case(r, mandatory, possible)
 
-                    if len(mandatory) == 0:
-                        worst_case = min(worst_case, (accepted, desc))
-                    else:
+                    # Testcase Expectations
+                    if len(mandatory) != 0:
                         subtasks[-1]["groups"][-1]["cases"][-1]["verdict"] = \
                             (accepted, desc)
                         if accepted <= 0:
                             cases_failed = True
-
-                    case_results += r
-                    extra += mandatory
+                        extended_results += r
+                        l = [x for x in r if not UnitTest.ignore(x, mandatory)
+                             and x not in mandatory]
+                        case_results += l
+                    else:
+                        case_results += r
 
                 group_score += min_f * g["points"]
 
                 status, short, desc = \
-                    UnitTest.judge_group(case_results, possible, extra)
-                c_st = "failed" if worst_case[0] < 0 else \
-                       "ambiguous" if worst_case[0] == 0 else "okay"
-                status, short, desc = min((status, short, desc),
-                                          (worst_case[0], c_st, worst_case[1]))
+                    UnitTest.judge_group(case_results, extended_results,
+                                         possible, extra)
 
                 if cases_failed:
                     if status > 0:

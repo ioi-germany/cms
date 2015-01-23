@@ -921,21 +921,30 @@ class UnitTest:
         if UnitTest.meaningful_score(results):
             # Either UnitTest.score(optional) or UnitTest.score(mandatory) will
             # be equal to 1, thus min is indeed correct
+            score_high_enough = (UnitTest.score(results) >=
+                                 min(UnitTest.score(optional),
+                                     UnitTest.score(mandatory)))
+            score_low_enough = (len(mandatory) == 0 or
+                                UnitTest.score(results) <=
+                                min(UnitTest.score(optional),
+                                    UnitTest.score(mandatory)))
+
             L.append((UnitTest.score(results),
-                      get_int(UnitTest.score(results) >=
-                              min(UnitTest.score(optional),
-                                  UnitTest.score(mandatory)))))
+                      get_int(score_high_enough and score_low_enough)))
         else:
             L.append((c[-1], 0))
 
         return L
 
     @staticmethod
-    def judge_group(results, mandatory, optional):
+    def judge_group(results, extended_results, mandatory, optional):
         """Judge a whole group given a concatenated list of the results of
            the individual cases
+           extended_results contains results of testcases with explicit
+           expectations
         """
         optional = optional + mandatory
+        extended_results = results + extended_results
 
         if any(x not in optional for x in results
                if not UnitTest.ignore(x, optional + ['time', 'memory'])):
@@ -947,11 +956,13 @@ class UnitTest:
             return (0, "ambiguous", "It is not clear whether the submission "
                        "respects the limits.")
 
-        if len(mandatory) == 0 or any(x in results for x in mandatory):
+        if len(mandatory) == 0 or any(x in extended_results
+                                      for x in mandatory):
             return (1, "okay", "... all shall be well.")
 
         return (-1, "failed",
-                "You expected the submission to fail but it didn't.")
+                "You expected the submission to fail but it didn't "
+                "(or score too high).")
 
     @staticmethod
     def is_score(x):
@@ -971,5 +982,5 @@ class UnitTest:
         """
         optional = UnitTest.remove_scores(optional)
 
-        a, b, c = UnitTest.judge_group(results, mandatory, optional)
+        a, b, c = UnitTest.judge_group(results, results, mandatory, optional)
         return a, c
