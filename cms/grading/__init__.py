@@ -971,5 +971,5 @@ class UnitTest:
         """
         optional = UnitTest.remove_scores(optional)
 
-        a, b, c = UnitTest.judge_group(results, results, mandatory, optional)
+        a, b, c = UnitTest.judge_group(results, [], mandatory, optional)
         return a, c
