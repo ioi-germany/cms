@@ -1485,13 +1485,13 @@ class TaskConfig(CommonConfig, Scope):
                             fmem = "%.1fMB" % (float(c["memory"])/2**20)
                             ftime = w(ftime, l[0], 8, z=True)
                             fmem = w(fmem, l[1], 10, z=True)
-                            fans = "   " + v(l[2], z=True)
+                            fans = v(l[2], z=True)
                             fverd = add_line_breaks(
                                 v(c["verdict"]),
                                 remaining_line_length() - 37)
                             print(indent(side_by_side([ftime, fmem,
                                                        fans, fverd],
-                                                      [0, 13, 25, 37])))
+                                                      [0, 12, 27, 37])))
 
                     print()
 
