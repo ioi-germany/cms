@@ -415,26 +415,23 @@ class SubtaskGroup(ScoreType):
                     l = UnitTest.case_line(r, mandatory, possible)
                     v = (42, "No explicit expectations.")
 
+                    # Test case expectations
+                    if len(mandatory) != 0:
+                        accepted, desc = v = \
+                            UnitTest.judge_case(r, mandatory, possible)
+                        if accepted <= 0:
+                            cases_failed = True
+                        extended_results += r
+                        case_results += \
+                            [x for x in r if not UnitTest.ignore(x, mandatory)
+                             and x not in mandatory]
+                    else:
+                        case_results += r
+
                     subtasks[-1]["groups"][-1]["cases"].\
                         append({"line": l, "verdict": v,
                                 "time": evaluations[idx].execution_time,
                                 "memory": evaluations[idx].execution_memory})
-
-                    accepted, desc = \
-                        UnitTest.judge_case(r, mandatory, possible)
-
-                    # Testcase Expectations
-                    if len(mandatory) != 0:
-                        subtasks[-1]["groups"][-1]["cases"][-1]["verdict"] = \
-                            (accepted, desc)
-                        if accepted <= 0:
-                            cases_failed = True
-                        extended_results += r
-                        l = [x for x in r if not UnitTest.ignore(x, mandatory)
-                             and x not in mandatory]
-                        case_results += l
-                    else:
-                        case_results += r
 
                 group_score += min_f * g["points"]
 
