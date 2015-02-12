@@ -894,9 +894,6 @@ class UnitTest:
         """
         optional = optional + mandatory
 
-        if len(mandatory) > 0:
-            optional = UnitTest.remove_scores(optional)
-
         def badness(key, r):
             if key in r:
                 return 2
@@ -919,18 +916,10 @@ class UnitTest:
                               badness(x, results) <= badness(x, optional))))
 
         if UnitTest.meaningful_score(results):
-            # Either UnitTest.score(optional) or UnitTest.score(mandatory) will
-            # be equal to 1, thus min is indeed correct
-            score_high_enough = (UnitTest.score(results) >=
-                                 min(UnitTest.score(optional),
-                                     UnitTest.score(mandatory)))
-            score_low_enough = (len(mandatory) == 0 or
-                                UnitTest.score(results) <=
-                                min(UnitTest.score(optional),
-                                    UnitTest.score(mandatory)))
-
             L.append((UnitTest.score(results),
-                      get_int(score_high_enough and score_low_enough)))
+                      get_int(UnitTest.score(optional) <=
+                              UnitTest.score(results) <=
+                              UnitTest.score(mandatory))))
         else:
             L.append((c[-1], 0))
 
