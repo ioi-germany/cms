@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2014 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2015 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -238,12 +238,14 @@ def indent(string, filler=' '):
     return filler * (IndentManager.indent*2) + string
 
 
-def center_line(l, filler=' ', outer=None, make_bold=False):
-    if outer is None:
-        outer = filler
+def center_line(l, filler=' ', outer_left=None, outer_right=None, make_bold=False):
+    if outer_left is None:
+        outer_left = filler
+    if outer_right is None:
+        outer_right = outer_left
 
-    r = line_length - 2*estimate_len(outer)
-    s = outer + pad_center(l, r, filler) + outer
+    r = line_length - estimate_len(outer_left) - estimate_len(outer_right)
+    s = outer_left + pad_center(l, r, filler) + outer_right
 
     if make_bold:
         s = bold(s)
@@ -251,7 +253,7 @@ def center_line(l, filler=' ', outer=None, make_bold=False):
     print(s)
 
 
-def box(title, content):
+def box(title, content, double=False):
     """Prints a box with title on the top border and content in the interior.
     +------title-------+
     |     content      |
@@ -259,11 +261,17 @@ def box(title, content):
 
     title (unicode):
     content (unicode):
+    double (boolean):
 
     """
-    center_line(title, '-', '+', True)
-    center_line(content, ' ', '|', True)
-    center_line("", "-", '+', True)
+    if double:
+        center_line(title, '═', '╔', '╗', True)
+        center_line(content, ' ', '║', None, True)
+        center_line("", '═', '╚', '╝', True)    
+    else:
+        center_line(title, '─', '╭', '╮', True)
+        center_line(content, ' ', '│', None, True)
+        center_line("", '─', '╰', '╯', True)
 
 
 def side_by_side(strings, offsets):
@@ -378,9 +386,16 @@ def add_line_breaks(l, length, hanging_indent=0):
 def print_msg(message, headerdepth=None,
               error=False, warning=False, success=False,
               hanging_indent=0, fill_character=' '):
+    """
+    If headerdepth==1, all parameters following will be ignored
+    """
     if estimate_len(message) == 0:
         return
-    symbols = {1: "#", 2: "#", 3: "=", 4: "-"}
+    symbols = {2: "▰", 3: "═", 4: "─"}
+
+    if headerdepth == 1:
+        box('', message, True)
+        return
 
     left = ""
     if headerdepth in symbols:
@@ -393,10 +408,6 @@ def print_msg(message, headerdepth=None,
     res = add_right(res, " ")
     res = pad_right(res, rem_length, fill_character)
     res = add_left(res, left)
-
-    if headerdepth == 1:
-        wrapper = "#" * remaining_line_length()
-        res = wrapper + "\n" + res + "\n" + wrapper
 
     res = indent(res)
 
