@@ -1463,7 +1463,7 @@ class TaskConfig(CommonConfig, Scope):
             base_space = remaining_line_length() - 15
             space = base_space - len(name) - len(desc)
 
-            return header(name + " " + (space - 2)*"=" + " " +
+            return header(name + " " + (space - 2)*"═" + " " +
                           v(status), depth=3)
 
         # Present verdict
