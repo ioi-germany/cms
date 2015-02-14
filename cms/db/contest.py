@@ -7,6 +7,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
+# Copyright © 2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -178,11 +179,12 @@ class Contest(Base):
         Integer,
         ForeignKey("group.id", use_alter=True, name="fk_contest_main_group_id",
                    onupdate="CASCADE", ondelete="SET NULL"),
-        nullable=False,
+        # nullable=False,  # This would fail with post_update=True.
         index=True)
     main_group = relationship(
         "Group",
-        primaryjoin="Group.id==Contest.main_group_id")
+        primaryjoin="Group.id==Contest.main_group_id",
+        post_update=True)
 
     # Follows the description of the fields automatically added by
     # SQLAlchemy.

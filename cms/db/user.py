@@ -6,6 +6,7 @@
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -92,8 +93,7 @@ class Group(Base):
         backref=backref('groups',
                         cascade="all, delete-orphan",
                         passive_deletes=True),
-        primaryjoin="Contest.id==Group.contest_id",
-        post_update=True)
+        primaryjoin="Contest.id==Group.contest_id")
 
     def phase(self, timestamp):
         """Return: -1 if contest isn't started yet at time timestamp,
