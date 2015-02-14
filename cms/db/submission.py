@@ -450,7 +450,7 @@ class SubmissionResult(Base):
         """
         return SubmissionResult.compilation_outcome == "ok"
 
-    def evaluated(self):
+    def evaluated(self, public=False):  # TODO
         """Return whether the submission result has been evaluated.
 
         return (bool): True if evaluated, False otherwise.

@@ -6,6 +6,8 @@
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -213,7 +215,8 @@ class EvaluationJob(Job):
                  time_limit=None, memory_limit=None,
                  success=None, outcome=None, text=None,
                  user_output=None, plus=None,
-                 only_execution=False, get_output=False):
+                 only_execution=False, get_output=False,
+                 output_trunc_len=None):
         """Initialization.
 
         See base class for the remaining arguments.
@@ -245,6 +248,8 @@ class EvaluationJob(Job):
         get_output (bool|None): whether to retrieve the execution
             output (together with only_execution, useful for the user
             tests).
+        output_trunc_len (int): length at which the output is truncated
+                                (no truncation if None)
 
         """
         if files is None:
@@ -271,6 +276,7 @@ class EvaluationJob(Job):
         self.plus = plus
         self.only_execution = only_execution
         self.get_output = get_output
+        self.output_trunc_len = output_trunc_len
 
     def export_to_dict(self):
         res = Job.export_to_dict(self)
@@ -294,6 +300,7 @@ class EvaluationJob(Job):
             'plus': self.plus,
             'only_execution': self.only_execution,
             'get_output': self.get_output,
+            'output_trunc_len': self.output_trunc_len,
             })
         return res
 
@@ -452,14 +459,16 @@ class JobGroup(object):
     # Evaluation
 
     @staticmethod
-    def from_submission_evaluation(submission, dataset, testcase_codename):
+    def from_submission_evaluation(submission, dataset, testcase_codename,
+                                   submission_result=None):
         job = EvaluationJob()
 
         # Job
         job.task_type = dataset.task_type
         job.task_type_parameters = dataset.task_type_parameters
 
-        submission_result = submission.get_result(dataset)
+        if submission_result is None:
+            submission_result = submission.get_result(dataset)
 
         # This should have been created by now.
         assert submission_result is not None
@@ -470,8 +479,17 @@ class JobGroup(object):
         job.files = dict(submission.files)
         job.managers = dict(dataset.managers)
         job.executables = dict(submission_result.executables)
-        job.time_limit = dataset.time_limit
-        job.memory_limit = dataset.memory_limit
+        job.get_output = True
+        job.output_trunc_len = 1024
+        if submission.additional_info is None:
+            additional_limits = {}
+        else:
+            additional_info = json.loads(submission.additional_info)
+            additional_limits = additional_info.get("limits", {})
+            job.time_limit = additional_limits.get("weak_time_limit",
+                                                   dataset.time_limit)
+            job.memory_limit = additional_limits.get("weak_mem_limit",
+                                                     dataset.memory_limit)
 
         testcase = dataset.testcases[testcase_codename]
         job.input = testcase.input
@@ -548,6 +566,7 @@ class JobGroup(object):
                         dataset.managers[manager_filename]
 
         job.get_output = True
+        job.output_trunc_len = 100 * 1024
         job.only_execution = True
 
         jobs = {"": job}

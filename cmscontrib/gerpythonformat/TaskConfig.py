@@ -1421,15 +1421,16 @@ class TaskConfig(CommonConfig, Scope):
             if submission_result.compilation_stderr is not None:
                 print_block(submission_result.compilation_stderr)
             # Evaluate
-            for ifpublic in [True, False]:
+            for testcase_codename in sorted(ddb.testcases.iterkeys()):
                 evaluation_job_group = \
                     JobGroup.from_submission_evaluation(sdb,
                                                         ddb,
-                                                        ifpublic,
+                                                        testcase_codename,
                                                         submission_result)
                 self._run_job_group(evaluation_job_group)
                 evaluation_job_group.to_submission_evaluation(
-                    submission_result, ifpublic)
+                    submission_result)
+            submission_result.set_evaluation_outcome()
 
         # Judge unit test
         score_type = get_score_type(dataset=ddb)
