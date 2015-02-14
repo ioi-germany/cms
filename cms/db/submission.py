@@ -324,30 +324,15 @@ class SubmissionResult(Base):
         Unicode,
         nullable=True)
 
-    # For public test cases only:
     # Evaluation outcome (can be None = yet to evaluate, "ok" =
     # evaluation successful). At any time, this should be equal to
     # evaluations != [].
-    public_evaluation_outcome = Column(
+    evaluation_outcome = Column(
         String,
         nullable=True)
 
     # Number of attempts of evaluation.
-    public_evaluation_tries = Column(
-        Integer,
-        nullable=False,
-        default=0)
-
-    # For private test cases only:
-    # Evaluation outcome (can be None = yet to evaluate, "ok" =
-    # evaluation successful). At any time, this should be equal to
-    # evaluations != [].
-    private_evaluation_outcome = Column(
-        String,
-        nullable=True)
-
-    # Number of attempts of evaluation.
-    private_evaluation_tries = Column(
+    evaluation_tries = Column(
         Integer,
         nullable=False,
         default=0)
@@ -441,40 +426,16 @@ class SubmissionResult(Base):
         """
         return self.compilation_outcome == "ok"
 
-    def public_evaluated(self):
-        """Return whether the submission result has been evaluated on the
-        public test cases.
-
-        return (bool): True if evaluated, False otherwise.
-
-        """
-        return self.public_evaluation_outcome is not None
-
-    def evaluated(self, public=False):
+    def evaluated(self):
         """Return whether the submission result has been evaluated.
 
-        public (bool): if True, return whether it has been evaluated
-                       for public test cases; otherwise return whether
-                       it has been evaluated for all test cases
         return (bool): True if evaluated, False otherwise.
 
         """
-        return self.public_evaluated() and \
-            (public or self.private_evaluation_outcome is not None)
+        return self.evaluation_outcome is not None
 
-    def needs_public_scoring(self):
-        """Return whether the submission result needs to be scored
-        publicly (whether public_score should be computed now).
-
-        return (bool): True if in need of scoring, False otherwise.
-
-        """
-        return (self.compilation_failed() or self.public_evaluated()) and \
-            not self.public_scored()
-
-    def needs_private_scoring(self):
-        """Return whether the submission result needs to be scored
-        privately (whether score should be computed now).
+    def needs_scoring(self):
+        """Return whether the submission result needs to be scored.
 
         return (bool): True if in need of scoring, False otherwise.
 
@@ -482,30 +443,16 @@ class SubmissionResult(Base):
         return (self.compilation_failed() or self.evaluated()) and \
             not self.scored()
 
-    def public_scored(self):
-        """Return whether the submission result has been scored for the
-        public test cases.
+    def scored(self):
+        """Return whether the submission result has been scored.
 
         return (bool): True if scored, False otherwise.
 
         """
         return all(getattr(self, k) is not None for k in [
-            "public_score", "public_score_details"])
-
-    def scored(self, public=False):
-        """Return whether the submission result has been scored.
-
-        public (bool): if True, return whether it has been scored
-                       for public test cases; otherwise return whether
-                       it has been scored for all test cases
-        return (bool): True if scored, False otherwise.
-
-        """
-        return self.public_scored() and \
-            (public or all(getattr(self, k) is not None for k in [
-                "score", "score_details",
-                "unit_test_score_details",
-                "ranking_score_details"]))
+            "score", "score_details",
+            "public_score", "public_score_details",
+            "ranking_score_details"])
 
     def invalidate_compilation(self):
         """Blank all compilation and evaluation outcomes, and the score.
@@ -527,10 +474,8 @@ class SubmissionResult(Base):
 
         """
         self.invalidate_score()
-        self.public_evaluation_outcome = None
-        self.public_evaluation_tries = 0
-        self.private_evaluation_outcome = None
-        self.private_evaluation_tries = 0
+        self.evaluation_outcome = None
+        self.evaluation_tries = 0
         self.evaluations = []
 
     def invalidate_score(self):
@@ -552,14 +497,11 @@ class SubmissionResult(Base):
         """
         self.compilation_outcome = "ok" if success else "fail"
 
-    def set_evaluation_outcome(self, public):
+    def set_evaluation_outcome(self):
         """Set the evaluation outcome (always ok now).
 
         """
-        if public:
-            self.public_evaluation_outcome = "ok"
-        else:
-            self.private_evaluation_outcome = "ok"
+        self.evaluation_outcome = "ok"
 
 
 class Executable(Base):

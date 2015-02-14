@@ -110,17 +110,17 @@ class ScoreType(object):
         logger.error("Unimplemented method max_scores.")
         raise NotImplementedError("Please subclass this class.")
 
-    def compute_score(self, submission_result, public):
+    def compute_score(self, submission_result):
         """Computes a score of a single submission. We don't know here
         how to do it, but our subclasses will.
 
         submission_id (int): the submission to evaluate.
-        public (bool): whether to score only public test cases
 
-        returns (float, str) or (float, str, [str]): respectively: the
+        returns (float, str, float, str, [str]): respectively: the
             score, the HTML string with additional information (e.g.
-            testcases' and subtasks' score), the list of strings to send
-            to RWS if public is False.
+            testcases' and subtasks' score), and the same information
+            from the point of view of a user that did not play a
+            token, the list of strings to send to RWS.
 
         """
         logger.error("Unimplemented method compute_score.")
@@ -273,77 +273,81 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
         return score, public_score, headers
 
-    def compute_score(self, submission_result, public):
+    def compute_score(self, submission_result):
         """Compute the score of a submission.
 
-        See the same method in ScoreType for details.
+        submission_id (int): the submission to evaluate.
+        returns (float): the score
 
         """
         # Actually, this means it didn't even compile!
-        if not submission_result.evaluated(public):
-            if public:
-                return 0.0, "[]"
-            else:
-                return 0.0, "[]", \
-                    json.dumps(["%lg" % 0.0 for _ in self.parameters])
+        if not submission_result.evaluated():
+            return 0.0, "[]", 0.0, "[]", \
+                json.dumps(["%lg" % 0.0 for _ in self.parameters])
 
         # XXX Lexicographical order by codename
         indices = sorted(self.public_testcases.keys())
         evaluations = dict((ev.codename, ev)
                            for ev in submission_result.evaluations)
-        score = 0
         subtasks = []
-        if not public:
-            ranking_details = []
+        public_subtasks = []
+        ranking_details = []
         tc_start = 0
         tc_end = 0
 
         for st_idx, parameter in enumerate(self.parameters):
             tc_end = tc_start + parameter[1]
+            st_score = self.reduce([float(evaluations[idx].outcome)
+                                    for idx in indices[tc_start:tc_end]],
+                                   parameter) * parameter[0]
             st_public = all(self.public_testcases[idx]
                             for idx in indices[tc_start:tc_end])
+            tc_outcomes = dict((
+                idx,
+                self.get_public_outcome(
+                    float(evaluations[idx].outcome), parameter)
+                ) for idx in indices[tc_start:tc_end])
 
             testcases = []
+            public_testcases = []
             for idx in indices[tc_start:tc_end]:
-                if self.public_testcases[idx] or not public:
-                    testcases.append({
-                        "idx": idx,
-                        "outcome": self.get_public_outcome(
-                            float(evaluations[idx].outcome), parameter),
-                        "text": evaluations[idx].text,
-                        "time": evaluations[idx].execution_time,
-                        "memory": evaluations[idx].execution_memory,
-                        })
+                testcases.append({
+                    "idx": idx,
+                    "outcome": tc_outcomes[idx],
+                    "text": evaluations[idx].text,
+                    "time": evaluations[idx].execution_time,
+                    "memory": evaluations[idx].execution_memory,
+                    })
+                if self.public_testcases[idx]:
+                    public_testcases.append(testcases[-1])
                 else:
-                    testcases.append({"idx": idx})
-            if st_public or not public:
-                st_score = self.reduce(
-                    [float(evaluations[idx].outcome)
-                     for idx in indices[tc_start:tc_end]
-                     if self.public_testcases[idx] or not public],
-                    parameter) * parameter[0]
-                score += st_score
-                subtasks.append({
-                    "idx": st_idx + 1,
-                    "score": st_score,
-                    "max_score": parameter[0],
-                    "testcases": testcases,
-                    })
-                if not public:
-                    ranking_details.append("%g" % round(st_score, 2))
+                    public_testcases.append({"idx": idx})
+            subtasks.append({
+                "idx": st_idx + 1,
+                "score": st_score,
+                "max_score": parameter[0],
+                "testcases": testcases,
+                })
+            if st_public:
+                public_subtasks.append(subtasks[-1])
             else:
-                subtasks.append({
+                public_subtasks.append({
                     "idx": st_idx + 1,
-                    "testcases": testcases,
+                    "testcases": public_testcases,
                     })
+
+            ranking_details.append("%g" % round(st_score, 2))
 
             tc_start = tc_end
 
-        if public:
-            return score, json.dumps(subtasks)
-        else:
-            return score, json.dumps(subtasks), \
-                json.dumps(ranking_details)
+        score = sum(st["score"] for st in subtasks)
+        public_score = sum(st["score"]
+                           for st in public_subtasks
+                           if "score" in st)
+
+        return score, json.dumps(subtasks), \
+            public_score, json.dumps(public_subtasks), \
+            json.dumps(ranking_details)
 
     def get_public_outcome(self, outcome, parameter):
         """Return a public outcome from an outcome.

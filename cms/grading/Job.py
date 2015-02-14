@@ -6,8 +6,6 @@
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013 Stefano Maggiolo <s.maggiolo@gmail.com>
-# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -42,6 +40,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import json
+from copy import deepcopy
 
 from cms.db import File, Manager, Executable, UserTestExecutable, Evaluation
 
@@ -215,8 +214,7 @@ class EvaluationJob(Job):
                  time_limit=None, memory_limit=None,
                  success=None, outcome=None, text=None,
                  user_output=None, plus=None,
-                 only_execution=False, get_output=False,
-                 output_trunc_len=None):
+                 only_execution=False, get_output=False):
         """Initialization.
 
         See base class for the remaining arguments.
@@ -248,8 +246,6 @@ class EvaluationJob(Job):
         get_output (bool|None): whether to retrieve the execution
             output (together with only_execution, useful for the user
             tests).
-        output_trunc_len (int): length at which the output is truncated
-                                (no truncation if None)
 
         """
         if files is None:
@@ -276,7 +272,6 @@ class EvaluationJob(Job):
         self.plus = plus
         self.only_execution = only_execution
         self.get_output = get_output
-        self.output_trunc_len = output_trunc_len
 
     def export_to_dict(self):
         res = Job.export_to_dict(self)
@@ -300,7 +295,6 @@ class EvaluationJob(Job):
             'plus': self.plus,
             'only_execution': self.only_execution,
             'get_output': self.get_output,
-            'output_trunc_len': self.output_trunc_len,
             })
         return res
 
@@ -459,69 +453,50 @@ class JobGroup(object):
     # Evaluation
 
     @staticmethod
-    def from_submission_evaluation(submission, dataset, public,
-                                   submission_result=None):
+    def from_submission_evaluation(submission, dataset):
+        job = EvaluationJob()
+
+        # Job
+        job.task_type = dataset.task_type
+        job.task_type_parameters = dataset.task_type_parameters
+
+        submission_result = submission.get_result(dataset)
+
+        # This should have been created by now.
+        assert submission_result is not None
+
+        # EvaluationJob; dict() is required to detach the dictionary
+        # that gets added to the Job from the control of SQLAlchemy
+        job.language = submission.language
+        job.files = dict(submission.files)
+        job.managers = dict(dataset.managers)
+        job.executables = dict(submission_result.executables)
+        job.time_limit = dataset.time_limit
+        job.memory_limit = dataset.memory_limit
+
         jobs = dict()
 
         for k, testcase in dataset.testcases.iteritems():
-            if testcase.public != public:
-                continue
+            job2 = deepcopy(job)
 
-            job = EvaluationJob()
+            job2.input = testcase.input
+            job2.output = testcase.output
+            job2.info = "evaluate submission %d on testcase %s" % \
+                        (submission.id, testcase.codename)
 
-            # Job
-            job.task_type = dataset.task_type
-            job.task_type_parameters = dataset.task_type_parameters
-
-            if submission_result is None:
-                submission_result = submission.get_result(dataset)
-
-            # This should have been created by now.
-            assert submission_result is not None
-
-            # EvaluationJob; dict() is required to detach the dictionary
-            # that gets added to the Job from the control of SQLAlchemy
-            job.language = submission.language
-            job.files = dict(submission.files)
-            job.managers = dict(dataset.managers)
-            job.executables = dict(submission_result.executables)
-            job.get_output = True
-            job.output_trunc_len = 1024
-
-            if submission.additional_info is None:
-                additional_limits = {}
-            else:
-                additional_info = json.loads(submission.additional_info)
-                additional_limits = additional_info.get("limits", {})
-
-            job.time_limit = additional_limits.get("weak_time_limit",
-                                                   dataset.time_limit)
-            job.memory_limit = additional_limits.get("weak_mem_limit",
-                                                     dataset.memory_limit)
-
-            job.input = testcase.input
-            job.output = testcase.output
-            job.info = "evaluate submission %d on testcase %s" % \
-                       (submission.id, testcase.codename)
-
-            jobs[k] = job
+            jobs[k] = job2
 
         return JobGroup(jobs)
 
-    def to_submission_evaluation(self, sr, public):
+    def to_submission_evaluation(self, sr):
         # This should actually be useless.
-        #sr.invalidate_evaluation()
-        # ... but let's do this to be sure
-        if public:
-            sr.public_evaluation_tries = 0
-        else:
-            sr.private_evaluation_tries = 0
+        sr.invalidate_evaluation()
 
         # No need to check self.success or job.success because this
         # method gets called only if the first (and therefore the
         # second!) is True.
 
-        sr.set_evaluation_outcome(public)
+        sr.set_evaluation_outcome()
 
         for test_name, job in self.jobs.iteritems():
             assert isinstance(job, EvaluationJob)
@@ -533,7 +508,6 @@ class JobGroup(object):
                 execution_wall_clock_time=job.plus.get(
                     'execution_wall_clock_time'),
                 execution_memory=job.plus.get('execution_memory'),
-                output=job.user_output,
                 evaluation_shard=job.shard,
                 evaluation_sandbox=":".join(job.sandboxes),
                 testcase=sr.dataset.testcases[test_name])]
@@ -578,7 +552,6 @@ class JobGroup(object):
                         dataset.managers[manager_filename]
 
         job.get_output = True
-        job.output_trunc_len = 100 * 1024
         job.only_execution = True
 
         jobs = {"": job}

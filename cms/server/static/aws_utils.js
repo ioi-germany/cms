@@ -350,11 +350,8 @@ CMS.AWSUtils.prototype.repr_job = function(job) {
     } else if (job[0] == 'compile') {
         job_type = 'Compiling';
         object_type = 'submission';
-    } else if (job[0] == 'evaluate_public') {
-        job_type = 'Evaluating (public)';
-        object_type = 'submission';
-    } else if (job[0] == 'evaluate_private') {
-        job_type = 'Evaluating (private)';
+    } else if (job[0] == 'evaluate') {
+        job_type = 'Evaluating';
         object_type = 'submission';
     } else if (job[0] == 'compile_test') {
         job_type = 'Compiling';

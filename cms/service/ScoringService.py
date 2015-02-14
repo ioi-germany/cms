@@ -7,7 +7,6 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
-# Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -149,9 +148,8 @@ class ScoringService(Service):
                                  (submission_id, dataset_id))
 
             # Check if it's ready to be scored.
-            if not submission_result.needs_public_scoring() and \
-                    not submission_result.needs_private_scoring():
-                if submission_result.public_scored():
+            if not submission_result.needs_scoring():
+                if submission_result.scored():
                     logger.info("Submission result %d(%d) is already scored.",
                                 submission_id, dataset_id)
                     return
@@ -164,26 +162,18 @@ class ScoringService(Service):
             score_type = get_score_type(dataset=dataset)
 
             # Compute score and fill it in the database.
-            if submission_result.needs_public_scoring():
+            submission_result.score, \
+                submission_result.score_details, \
                 submission_result.public_score, \
-                    submission_result.public_score_details = \
-                    score_type.compute_score(submission_result, True)
-            if submission_result.needs_private_scoring():
-                submission_result.score, \
-                    submission_result.score_details, \
-                    submission_result.ranking_score_details = \
-                    score_type.compute_score(submission_result, False)
-                submission_result.unit_test_score_details = \
-                    score_type.compute_unit_test_score(submission_result,
-                                                       submission.
-                                                       additional_info)
+                submission_result.public_score_details, \
+                submission_result.ranking_score_details = \
+                score_type.compute_score(submission_result)
 
             # Store it.
             session.commit()
 
             # If dataset is the active one, update RWS.
-            if dataset is submission.task.active_dataset and \
-                    submission_result.scored():
+            if dataset is submission.task.active_dataset:
                 self.proxy_service.submission_scored(
                     submission_id=submission.id)
 
@@ -231,8 +221,7 @@ class ScoringService(Service):
 
         with SessionGen() as session:
             for sr in get_submission_results(session=session):
-                if sr is not None and (sr.needs_public_scoring() or
-                                       sr.needs_private_scoring()):
+                if sr is not None and sr.needs_scoring():
                     self._scorer_queue.put((sr.submission_id, sr.dataset_id))
                     counter += 1
 
@@ -299,7 +288,7 @@ class ScoringService(Service):
                                        session=session)
 
             for sr in submission_results:
-                if sr.public_scored():
+                if sr.scored():
                     sr.invalidate_score()
                     temp_queue.append((sr.submission_id, sr.dataset_id))
 
