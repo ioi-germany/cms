@@ -62,7 +62,7 @@
 
     {% if score_type is not None %}
     <td class="public_score {{ get_score_class(sr.public_score, score_type.max_public_score) }}">
-            {{ "%g" % round(sr.public_score, task.score_precision) }} / {{ "%g" % round(score_type.max_public_score, task.score_precision) }}
+        {{ "%g" % round(sr.public_score, task.score_precision) }} / {{ "%g" % round(score_type.max_public_score, task.score_precision) }}
     </td>
     {% end %}
 
@@ -81,7 +81,6 @@
     <td class="total_score undefined">
         {{ _("N/A") }}
     </td>
-        {% end %}
         {% end %}
     {% end %}
 {% end %}
