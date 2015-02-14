@@ -50,9 +50,8 @@ import tornado.locale
 from cms import config, ServiceCoord, get_service_shards, get_service_address
 from cms.io import WebService
 from cms.db import Session, Contest, User, Announcement, Question, Message, \
-    Submission, SubmissionResult, File, Task, Dataset, Attachment, Manager, \
-    Testcase, SubmissionFormatElement, Statement, \
-    Group
+    Submission, File, Task, Dataset, Attachment, Manager, Testcase, \
+    SubmissionFormatElement, Statement, Group
 from cms.db.filecacher import FileCacher
 from cms.grading import compute_changes_for_dataset
 from cms.grading.tasktypes import get_task_type_class
@@ -263,8 +262,8 @@ class BaseHandler(CommonRequestHandler):
                 kwargs["exc_info"][0] != tornado.web.HTTPError:
             exc_info = kwargs["exc_info"]
             logger.error(
-                "Uncaught exception (%r) while processing a request: %s" %
-                (exc_info[1], ''.join(traceback.format_exception(*exc_info))))
+                "Uncaught exception (%r) while processing a request: %s",
+                exc_info[1], ''.join(traceback.format_exception(*exc_info)))
 
         # Most of the handlers raise a 404 HTTP error before r_params
         # is defined. If r_params is not defined we try to define it
@@ -918,73 +917,6 @@ class DeleteManagerHandler(BaseHandler):
         self.redirect("/task/%s" % task.id)
 
 
-# TODO: Move this somewhere more appropriate?
-def copy_dataset(
-        new_dataset, old_dataset, clone_results, clone_managers, sql_session):
-    """Copy an existing dataset's test cases, and optionally
-    submission results and managers.
-
-    new_dataset (Dataset): target dataset to copy into.
-    old_dataset (Dataset): original dataset to copy from.
-    clone_results (bool): copy submission results.
-    clone_managers (bool): copy dataset managers.
-    sql_session (Session): the session to commit.
-
-    """
-    new_testcases = dict()
-    for old_t in old_dataset.testcases.itervalues():
-        new_t = old_t.clone()
-        new_t.dataset = new_dataset
-        new_testcases[new_t.codename] = new_t
-
-    if clone_managers:
-        for old_m in old_dataset.managers.itervalues():
-            new_m = old_m.clone()
-            new_m.dataset = new_dataset
-
-    sql_session.flush()
-
-    new_results = list()
-    if clone_results:
-        # We issue this query manually to optimize it: we load all
-        # executables and evaluations at once instead of having SA
-        # lazy-load them when we access them for each SubmissionResult,
-        # one at a time. We need them because we want to copy them too,
-        # recursively.
-        old_results = \
-            sql_session.query(SubmissionResult)\
-                       .filter(SubmissionResult.dataset == old_dataset)\
-                       .options(joinedload(SubmissionResult.submission))\
-                       .options(joinedload(SubmissionResult.executables))\
-                       .options(joinedload(SubmissionResult.evaluations)).all()
-
-        for old_sr in old_results:
-            # Create the submission result.
-            new_sr = old_sr.clone()
-            new_sr.submission = old_sr.submission
-            new_sr.dataset = new_dataset
-
-            # Create executables.
-            for old_e in old_sr.executables.itervalues():
-                new_e = old_e.clone()
-                new_e.submission_result = new_sr
-
-            # Create evaluations.
-            for old_e in old_sr.evaluations:
-                new_e = old_e.clone()
-                new_e.submission_result = new_sr
-                new_e.testcase = new_testcases[old_e.codename]
-
-            # We need to keep a reference to the object to prevent it
-            # from being deleted (as SQLAlchemy's Session holds just a
-            # weak reference...).
-            new_results += [new_sr]
-
-    sql_session.flush()
-
-    return new_results
-
-
 class AddDatasetHandler(BaseHandler):
     """Add a dataset to a task.
 
@@ -1057,20 +989,18 @@ class AddDatasetHandler(BaseHandler):
             self.sql_session.add(dataset)
 
         except Exception as error:
-            logger.warning("Invalid field: %s" % (traceback.format_exc()))
+            logger.warning("Invalid field.", exc_info=True)
             self.application.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect("/add_dataset/%s/%s" % (task_id, dataset_id_to_copy))
             return
 
         if original_dataset is not None:
-            # If we were cloning the dataset, copy all testcases across
-            # too. If the user insists, clone all evaluation
-            # information too.
+            # If we were cloning the dataset, copy all managers and
+            # testcases across too. If the user insists, clone all
+            # evaluation information too.
             clone_results = bool(self.get_argument("clone_results", False))
-            clone_managers = bool(self.get_argument("clone_managers", False))
-            copy_dataset(dataset, original_dataset, clone_results,
-                         clone_managers, self.sql_session)
+            dataset.clone_from(original_dataset, True, True, clone_results)
 
         # If the task does not yet have an active dataset, make this
         # one active.
@@ -1078,7 +1008,6 @@ class AddDatasetHandler(BaseHandler):
             task.active_dataset = dataset
 
         if try_commit(self.sql_session, self):
-            # self.application.service.scoring_service.reinitialize()
             self.redirect("/task/%s" % task_id)
         else:
             self.redirect("/add_dataset/%s/%s" % (task_id,
@@ -1188,21 +1117,22 @@ class ActivateDatasetHandler(BaseHandler):
         task.active_dataset = dataset
 
         if try_commit(self.sql_session, self):
-            # self.application.service.scoring_service.reinitialize()
             self.application.service.proxy_service.dataset_updated(
                 task_id=task.id)
 
             # This kicks off judging of any submissions which were previously
             # unloved, but are now part of an autojudged taskset.
-            self.application.service.evaluation_service.search_jobs_not_done()
-            self.application.service.scoring_service.search_jobs_not_done()
+            self.application.service\
+                .evaluation_service.search_operations_not_done()
+            self.application.service\
+                .scoring_service.search_operations_not_done()
 
         # Now send notifications to contestants.
         datetime = make_datetime()
 
         r = re.compile('notify_([0-9]+)$')
         count = 0
-        for k, v in self.request.arguments.iteritems():
+        for k in self.request.arguments:
             m = r.match(k)
             if not m:
                 continue
@@ -1238,8 +1168,10 @@ class ToggleAutojudgeDatasetHandler(BaseHandler):
 
             # This kicks off judging of any submissions which were previously
             # unloved, but are now part of an autojudged taskset.
-            self.application.service.evaluation_service.search_jobs_not_done()
-            self.application.service.scoring_service.search_jobs_not_done()
+            self.application.service\
+                .evaluation_service.search_operations_not_done()
+            self.application.service\
+                .scoring_service.search_operations_not_done()
 
         self.redirect("/task/%s" % dataset.task_id)
 
@@ -1524,6 +1456,8 @@ class AddTaskHandler(BaseHandler):
 
             self.get_int(attrs, "score_precision")
 
+            self.get_string(attrs, "score_mode")
+
             # Create the task.
             attrs["num"] = len(self.contest.tasks)
             attrs["contest"] = self.contest
@@ -1615,6 +1549,8 @@ class TaskHandler(BaseHandler):
 
             self.get_int(attrs, "score_precision")
 
+            self.get_string(attrs, "score_mode")
+
             # Update the task.
             task.set_attrs(attrs)
 
@@ -1649,8 +1585,9 @@ class TaskHandler(BaseHandler):
                     "testcase_%s_public" % testcase.id, False))
 
         if try_commit(self.sql_session, self):
-            # Update the task on RWS.
-            self.application.service.proxy_service.reinitialize()
+            # Update the task and score on RWS.
+            self.application.service.proxy_service.dataset_updated(
+                task_id=task.id)
         self.redirect("/task/%s" % task_id)
 
 
@@ -2045,8 +1982,8 @@ class QuestionReplyHandler(BaseHandler):
         question.reply_timestamp = make_datetime()
 
         if try_commit(self.sql_session, self):
-            logger.info("Reply sent to user %s for question with id %s." %
-                        (question.user.username, question_id))
+            logger.info("Reply sent to user %s for question with id %s.",
+                        question.user.username, question_id)
 
         self.redirect(ref)
 
@@ -2068,9 +2005,9 @@ class QuestionIgnoreHandler(BaseHandler):
         # Commit the change.
         question.ignored = should_ignore
         if try_commit(self.sql_session, self):
-            logger.info("Question '%s' by user %s %s" %
-                        (question.subject, question.user.username,
-                         ["unignored", "ignored"][should_ignore]))
+            logger.info("Question '%s' by user %s %s",
+                        question.subject, question.user.username,
+                        ["unignored", "ignored"][should_ignore])
 
         self.redirect(ref)
 
@@ -2090,8 +2027,7 @@ class MessageHandler(BaseHandler):
                           user=user)
         self.sql_session.add(message)
         if try_commit(self.sql_session, self):
-            logger.info("Message submitted to user %s."
-                        % user.username)
+            logger.info("Message submitted to user %s.", user.username)
 
         self.redirect("/user/%s" % user_id)
 

@@ -3,6 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
+# Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -27,9 +28,10 @@ from __future__ import unicode_literals
 
 from cmscontrib.YamlLoader import YamlLoader
 from cmscontrib.gerpythonformat.GerLoader import GerLoader
+from cmscontrib.PolygonLoader import PolygonLoader
 
 LOADERS = dict((loader_class.short_name, loader_class)
-               for loader_class in [YamlLoader, GerLoader])
+               for loader_class in [YamlLoader, GerLoader, PolygonLoader])
 
 
 def choose_loader(arg, path, error_callback):
