@@ -27,7 +27,8 @@ from .Messenger import print_msg, print_block, header, red, green, blue, box, \
 from .CommonConfig import exported_function, CommonConfig
 from .Executable import ExitCodeException
 from .ConstraintParser import ConstraintList, merge_constraints
-from cms import SOURCE_EXT_TO_LANGUAGE_MAP
+from cms import SOURCE_EXT_TO_LANGUAGE_MAP, SCORE_MODE_MAX_TOKENED_LAST, \
+    SCORE_MODE_MAX
 from cms.db import Task, Statement, Testcase, Dataset, \
     SubmissionFormatElement, Attachment, Manager, Submission, File, \
     SubmissionResult
@@ -562,6 +563,9 @@ class TaskConfig(CommonConfig, Scope):
         # Feedback
         self.feedback = None
 
+        # Score mode
+        self._score_mode = None
+
     @property
     def unique_name(self):
         """Helper method for unit tests
@@ -1077,6 +1081,37 @@ class TaskConfig(CommonConfig, Scope):
         self.testsubmissions.append(
             MySubmission(self, [os.path.abspath(s) for s in args], **kwargs))
 
+    @exported_function
+    def score_mode_max_tokened_last(self):
+        """
+        The score for a task will be the maximum of the score of all
+        tokened submissions and the last submission.
+
+        This is the default for all tasks without full feedback.
+
+        """
+        self._score_mode = SCORE_MODE_MAX_TOKENED_LAST
+
+    @exported_function
+    def score_mode_max(self):
+        """
+        The score for a task will be the maximum of the score of all
+        submissions.
+
+        This is the default for all tasks with full feedback.
+
+        """
+        self._score_mode = SCORE_MODE_MAX
+
+    def score_mode(self):
+        if self._score_mode is None:
+            if self.feedback == "full":
+                return SCORE_MODE_MAX
+            else:
+                return SCORE_MODE_MAX_TOKENED_LAST
+        else:
+            return self._score_mode
+
     def _printresult(self):
         with header("Statistics", depth=3):
             print_msg("Taskname: {}".format(self.name))
@@ -1086,6 +1121,7 @@ class TaskConfig(CommonConfig, Scope):
             print_msg("Task statements: {}".format(", ".join(sts)))
             print_msg("Number of subtasks: {}".format(len(self.subtasks)))
             print_msg("Number of test cases: {}".format(len(self.cases)))
+            print_msg("Score mode: {}".format(self.score_mode()))
             if not self.everything_checked:
                 print_msg("Not every test case has been checked", error=True)
 
@@ -1176,6 +1212,7 @@ class TaskConfig(CommonConfig, Scope):
         tdb.min_submission_interval = self.min_submission_interval
         tdb.max_user_test_number = self.max_user_test_number
         tdb.min_user_test_interval = self.min_user_test_interval
+        tdb.score_mode = self.score_mode()
 
         if self.tasktype == "OutputOnly":
             tdb.submission_format = [
