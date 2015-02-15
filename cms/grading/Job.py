@@ -486,10 +486,10 @@ class JobGroup(object):
         else:
             additional_info = json.loads(submission.additional_info)
             additional_limits = additional_info.get("limits", {})
-            job.time_limit = additional_limits.get("weak_time_limit",
-                                                   dataset.time_limit)
-            job.memory_limit = additional_limits.get("weak_mem_limit",
-                                                     dataset.memory_limit)
+        job.time_limit = additional_limits.get("weak_time_limit",
+                                               dataset.time_limit)
+        job.memory_limit = additional_limits.get("weak_mem_limit",
+                                                 dataset.memory_limit)
 
         testcase = dataset.testcases[testcase_codename]
         job.input = testcase.input

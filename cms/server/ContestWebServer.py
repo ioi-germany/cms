@@ -1283,10 +1283,10 @@ class SubmissionStatusHandler(BaseHandler):
             data["status"] = 2
             data["status_text"] = "%s <a class=\"details\">%s</a>" % (
                 self._("Compilation failed"), self._("details"))
-        elif not sr.evaluated(not submission.tokened()):
+        elif not sr.evaluated():
             data["status"] = 3
             data["status_text"] = self._("Evaluating...")
-        elif not sr.scored(not submission.tokened()):
+        elif not sr.scored():
             data["status"] = 4
             data["status_text"] = self._("Scoring...")
         else:

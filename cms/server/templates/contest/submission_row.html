@@ -28,7 +28,7 @@
     {% if score_type is not None and score_type.feedback() == "token" %}
     <td class="total_score undefined">{{ _("N/A") }}</td>
     {% end %}
-{% elif not sr.evaluated(not s.tokened()) %}
+{% elif not sr.evaluated() %}
 <tr data-submission="{{ s_idx }}" data-status="3">
     {% raw col1 %}
     <td class="status">
@@ -40,7 +40,7 @@
     {% if score_type is not None and score_type.feedback() == "token" %}
     <td class="total_score undefined">{{ _("N/A") }}</td>
     {% end %}
-{% elif not sr.scored(not s.tokened()) %}
+{% elif not sr.scored() %}
 <tr data-submission="{{ s_idx }}" data-status="4">
     {% raw col1 %}
     <td class="status">
