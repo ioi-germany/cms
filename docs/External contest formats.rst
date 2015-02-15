@@ -173,6 +173,8 @@ By default, all tasks are batch files, with custom checker and score type is Sum
 Polygon (by now) doesn't allow custom contest-wide files, so general contest options should be hard-coded in the loader.
 
 
+.. _GermanFormat:
+
 German import format
 =====================
 

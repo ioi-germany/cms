@@ -1,6 +1,17 @@
 Running CMS
 ***********
 
+If you only intend to develop tasks locally without running the actual server on your machine, you do not need to configure the DB or CMS. Just copy :file:`config/cms.conf.sample` to :file:`config/cms.conf` and install again:
+
+.. sourcecode:: bash
+
+    ./setup.py build
+    sudo ./setup.py install
+
+See :ref:`GermanFormat` for details on how to develop tasks.
+
+Nevertheless, you should read the complete documentation for an overview of CMS!
+
 Configuring the DB
 ==================
 
