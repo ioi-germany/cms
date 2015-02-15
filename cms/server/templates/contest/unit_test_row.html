@@ -32,7 +32,7 @@
     {% end %}
     {% comment TODO %}
     <td class="verdict"> {{ _("oops") }} </td>
-{% elif not sr.evaluated(False) %}
+{% elif not sr.evaluated() %}
 <tr data-submission="{{ s_idx }}" data-status="3">
     {% raw col1 %}
     <td class="status">
@@ -45,7 +45,7 @@
     <td class="total_score undefined">{{ _("N/A") }}</td>
     {% end %}
     <td class="verdict">{{ _("pending...") }} </td>
-{% elif not sr.scored(False) %}
+{% elif not sr.scored() %}
 <tr data-submission="{{ s_idx }}" data-status="4">
     {% raw col1 %}
     <td class="status">
@@ -75,7 +75,7 @@
         {% set max_score = score_type.unit_test_expected_scores(s.additional_info)[1] %}
         {% if score_type.feedback() != "full" %}
     <td class="public_score {{ get_score_class(sr.public_score, max_public_score) }}">
-        
+
             {{ "%g" % round(sr.public_score, task.score_precision) }} / {{ "%g" % round(max_public_score, task.score_precision) }}
     </td>
         {% end %}

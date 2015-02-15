@@ -391,7 +391,7 @@ class SubtaskGroup(ScoreType):
 
         return private_score, public_score, headers
 
-    def compute_score(self, submission_result, public):
+    def _compute_score(self, submission_result, public):
         """Compute the score of a normal submission.
 
         See the same method in ScoreType for details.
@@ -467,6 +467,20 @@ class SubtaskGroup(ScoreType):
         else:
             return score, json.dumps(details), \
                 json.dumps(ranking_details)
+
+    def compute_score(self, submission_result):
+        """Compute the score of a normal submission.
+
+        See the same method in ScoreType for details.
+
+        """
+        public_score, public_score_details = \
+            self._compute_score(submission_result, True)
+        score, score_details, ranking_score_details = \
+            self._compute_score(submission_result, False)
+        return score, score_details, \
+            public_score, public_score_details, \
+            ranking_score_details
 
     def compute_unit_test_score(self, submission_result,
                                 submission_info):

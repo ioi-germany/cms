@@ -8,6 +8,7 @@
 # Copyright © 2013-2016 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2017 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
+# Copyright © 2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -111,6 +112,11 @@ class ScoringExecutor(Executor):
                 score_type.compute_score(submission_result)
             submission_result.ranking_score_details = \
                 json.dumps(ranking_score_details)
+
+            # Compute unit test score.
+            submission_result.unit_test_score_details = \
+                score_type.compute_unit_test_score(submission_result,
+                                                   submission.additional_info)
 
             # Store it.
             session.commit()
