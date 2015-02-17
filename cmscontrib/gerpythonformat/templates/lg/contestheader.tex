@@ -5,3 +5,8 @@
 \lhead{\vbox to \headh{\sffamily
 \contestname\\
 Aufgabe: {\bfseries \taskname}\vss}}
+
+\def\sthelper#1#2{{\sffamily\bfseries Teilaufgabe\ #1 (#2 Punkte).\enspace}}
+\newcount\stcount
+\stcount=0
+\def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \removelastskip\smallskip\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}
