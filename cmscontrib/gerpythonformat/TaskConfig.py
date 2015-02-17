@@ -1472,9 +1472,9 @@ class TaskConfig(CommonConfig, Scope):
         # Judge unit test
         score_type = get_score_type(dataset=ddb)
         public_score, public_details = \
-            score_type.compute_score(submission_result, True)
+            score_type._compute_score(submission_result, True)
         score, details, ranking_details = \
-            score_type.compute_score(submission_result, False)
+            score_type._compute_score(submission_result, False)
         details = score_type.compute_unit_test_score(submission_result,
                                                      sdb.additional_info)
         expected_public, expected_private = \
