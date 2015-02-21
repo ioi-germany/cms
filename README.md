@@ -37,6 +37,10 @@ repository:
 git submodule update --init
 ```
 
+In the folder `docs` you can find a Vagrant File; copy it to the top level
+if you want to use it. Vagrant is a tool that enables to create the same virtual 
+machine environment on multiple machines.  To use it you need to install virtual
+ box and vagrant (use google). Then you can start it using `vagrant up`.
 
 Support
 -------
