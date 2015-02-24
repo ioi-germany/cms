@@ -524,7 +524,8 @@ class JobGroup(object):
                 execution_memory=job.plus.get('execution_memory'),
                 evaluation_shard=job.shard,
                 evaluation_sandbox=":".join(job.sandboxes),
-                testcase=sr.dataset.testcases[test_name])]
+                testcase=sr.dataset.testcases[test_name],
+                output=job.user_output)]
 
     @staticmethod
     def from_user_test_evaluation(user_test, dataset):
