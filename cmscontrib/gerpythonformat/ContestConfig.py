@@ -30,7 +30,7 @@ from cms import DEFAULT_LANGUAGES
 from cms.db import Contest, User, Group
 import os
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import json
 
@@ -405,7 +405,7 @@ class ContestConfig(CommonConfig):
             gdb = Group(name=g.name)
             gdb.start = g.start
             gdb.stop = g.stop
-            gdb.per_user_time = g.per_user_time
+            gdb.per_user_time = timedelta(seconds=g.per_user_time)
             self.groupsdb[g.name] = gdb
             cdb.groups.append(gdb)
 
