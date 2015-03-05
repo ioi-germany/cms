@@ -405,7 +405,8 @@ class ContestConfig(CommonConfig):
             gdb = Group(name=g.name)
             gdb.start = g.start
             gdb.stop = g.stop
-            gdb.per_user_time = timedelta(seconds=g.per_user_time)
+            gdb.per_user_time = None if g.per_user_time is None else \
+                                timedelta(seconds=g.per_user_time)
             self.groupsdb[g.name] = gdb
             cdb.groups.append(gdb)
 
