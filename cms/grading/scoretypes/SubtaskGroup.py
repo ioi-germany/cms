@@ -26,7 +26,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from cms.grading.ScoreType import ScoreType
-from cms.grading import UnitTest
+from cms.grading import UnitTest, format_status_text
 
 import json
 import logging
@@ -427,6 +427,11 @@ class SubtaskGroup(ScoreType):
                              and x not in mandatory]
                     else:
                         case_results += r
+
+                    v = (v[0],
+                         v[1] + "<br>Grader output: " +
+                         format_status_text(
+                             unicode(evaluations[idx].text)).strip())
 
                     subtasks[-1]["groups"][-1]["cases"].\
                         append({"line": l, "verdict": v,
