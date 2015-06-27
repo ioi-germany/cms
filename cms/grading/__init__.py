@@ -193,7 +193,7 @@ class JobException(Exception):
 
 
 def get_compilation_commands(language, source_filenames, executable_filename,
-                             for_evaluation=True):
+                             for_evaluation=True, with_grader=False):
     """Return the compilation commands.
 
     The compilation commands are for the specified language, source
@@ -257,9 +257,16 @@ def get_compilation_commands(language, source_filenames, executable_filename,
         commands.append(command)
     elif language == LANG_JAVA:
         class_name = os.path.splitext(source_filenames[0])[0]
-        command = ["/usr/bin/gcj", "--main=%s" % class_name, "-O3", "-o",
-                   executable_filename] + source_filenames
+        command = ["/usr/bin/javac"] + source_filenames
+        executable_class_name = class_name
+        if with_grader:
+            executable_class_name = "grader"
+        jar_command = ["/bin/bash", "-c", "/usr/bin/jar cfe %s.jar %s *.class" %
+            (class_name, executable_class_name)]
+        mv_command = ["/bin/mv", "%s.jar" % class_name, executable_filename]
         commands.append(command)
+        commands.append(jar_command)
+        commands.append(mv_command)
     else:
         raise ValueError("Unknown language %s." % language)
     return commands
@@ -279,7 +286,7 @@ def get_evaluation_commands(language, executable_filename):
 
     """
     commands = []
-    if language in (LANG_C, LANG_CPP, LANG_PASCAL, LANG_JAVA):
+    if language in (LANG_C, LANG_CPP, LANG_PASCAL):
         command = [os.path.join(".", executable_filename)]
         commands.append(command)
     elif language == LANG_PYTHON:
@@ -289,6 +296,9 @@ def get_evaluation_commands(language, executable_filename):
         commands.append(command)
     elif language == LANG_PHP:
         command = ["/usr/bin/php5", executable_filename]
+        commands.append(command)
+    elif language == LANG_JAVA:
+        command = ["/usr/bin/java", "-Xmx512M", "-Xss64M", "-jar", executable_filename]
         commands.append(command)
     else:
         raise ValueError("Unknown language %s." % language)

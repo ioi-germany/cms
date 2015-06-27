@@ -470,7 +470,7 @@ class StupidSandbox(SandboxBase):
         self.preserve_env = False
         self.inherit_env = []
         self.set_env = {}
-        self.max_processes = 1
+        self.max_processes = None
         self.verbosity = 0
 
         # Set common environment variables.
@@ -814,7 +814,7 @@ class IsolateSandbox(SandboxBase):
         self.stack_space = None        # -k
         self.address_space = None      # -m
         self.stdout_file = None        # -o
-        self.max_processes = 1         # -p
+        self.max_processes = None      # -p
         self.stderr_file = None        # -r
         self.timeout = None            # -t
         self.verbosity = 0             # -v
@@ -949,7 +949,7 @@ class IsolateSandbox(SandboxBase):
         if self.stack_space is not None:
             res += ["--stack=%d" % self.stack_space]
         if self.address_space is not None:
-            res += ["--mem=%d" % self.address_space]
+            res += ["--cg-mem=%d" % self.address_space]
         if self.stdout_file is not None:
             res += ["--stdout=%s" % self.inner_absolute_path(self.stdout_file)]
         if self.max_processes is not None:
