@@ -27,7 +27,8 @@ from __future__ import unicode_literals
 import logging
 
 from cms import LANGUAGES, LANGUAGE_TO_SOURCE_EXT_MAP, \
-    LANGUAGE_TO_HEADER_EXT_MAP, LANGUAGE_TO_OBJ_EXT_MAP, LANG_JAVA
+    LANGUAGE_TO_HEADER_EXT_MAP, LANGUAGE_TO_OBJ_EXT_MAP, \
+    LANGUAGE_TO_SHARED_OBJ_EXT_MAP, LANG_JAVA
 from cms.grading import get_compilation_commands, get_evaluation_commands, \
     compilation_step, evaluation_step, human_evaluation_message, \
     is_evaluation_passed, extract_outcome_and_text, white_diff_step
@@ -188,6 +189,10 @@ class Batch(TaskType):
                      for obj in LANGUAGE_TO_OBJ_EXT_MAP.itervalues()):
                 files_to_get[filename] = \
                     job.managers[filename].digest
+            elif any(filename.endswith(sobj)
+                     for sobj in LANGUAGE_TO_SHARED_OBJ_EXT_MAP.itervalues()):
+                files_to_get[filename] = \
+                    job.managers[filename].digest
 
         for filename, digest in files_to_get.iteritems():
             sandbox.create_file_from_storage(filename, digest)
@@ -247,6 +252,13 @@ class Batch(TaskType):
         files_to_get = {
             input_filename: job.input
             }
+
+        # Also copy all managers that might be useful during evaluation.
+        for filename in job.managers.iterkeys():
+            if any(filename.endswith(sobj)
+                     for sobj in LANGUAGE_TO_SHARED_OBJ_EXT_MAP.itervalues()):
+                files_to_get[filename] = \
+                    job.managers[filename].digest
 
         # Put the required files into the sandbox
         for filename, digest in executables_to_get.iteritems():

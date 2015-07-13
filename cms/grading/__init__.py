@@ -298,7 +298,8 @@ def get_evaluation_commands(language, executable_filename):
         command = ["/usr/bin/php5", executable_filename]
         commands.append(command)
     elif language == LANG_JAVA:
-        command = ["/usr/bin/java", "-Xmx512M", "-Xss64M", "-jar", executable_filename]
+        command = ["/usr/bin/java", "-Djava.library.path=.", "-Xmx512M",
+                   "-Xss64M", "-jar", executable_filename]
         commands.append(command)
     else:
         raise ValueError("Unknown language %s." % language)

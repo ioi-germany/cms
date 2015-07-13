@@ -108,6 +108,13 @@ LANGUAGE_TO_OBJ_EXT_MAP = {
     LANG_C: ".o",
     LANG_CPP: ".o",
     LANG_PASCAL: ".o",
+    LANG_JAVA: ".class",
+}
+LANGUAGE_TO_SHARED_OBJ_EXT_MAP = {
+    LANG_C: ".so",
+    LANG_CPP: ".so",
+    LANG_PASCAL: ".so",
+    LANG_JAVA: ".so",
 }
 
 
