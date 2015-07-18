@@ -261,11 +261,15 @@ def get_compilation_commands(language, source_filenames, executable_filename,
         executable_class_name = class_name
         if with_grader:
             executable_class_name = "grader"
-        jar_command = ["/bin/bash", "-c", "/usr/bin/jar cfe %s.jar %s *.class" %
-            (class_name, executable_class_name)]
-        mv_command = ["/bin/mv", "%s.jar" % class_name, executable_filename]
+        # jar_command = ["/bin/bash", "-c", "/usr/bin/jar cfe %s.jar %s *.class" %
+        #     (class_name, executable_class_name)]
+        # mv_command = ["/bin/mv", "%s.jar" % class_name, executable_filename]
+        zip_command = ["/bin/bash", "-c", "/usr/bin/zip %s.zip *.class" %
+            (class_name, )]
+        mv_command = ["/bin/mv", "%s.zip" % class_name, executable_filename]
         commands.append(command)
-        commands.append(jar_command)
+        # commands.append(jar_command)
+        commands.append(zip_command)
         commands.append(mv_command)
     else:
         raise ValueError("Unknown language %s." % language)
@@ -298,8 +302,10 @@ def get_evaluation_commands(language, executable_filename):
         command = ["/usr/bin/php5", executable_filename]
         commands.append(command)
     elif language == LANG_JAVA:
-        command = ["/usr/bin/java", "-Djava.library.path=.", "-Xmx512M",
-                   "-Xss64M", "-jar", executable_filename]
+        command = ["/usr/bin/unzip", executable_filename]
+        commands.append(command)
+        command = ["/usr/bin/java", "-Xmx512M",
+                   "-Xss64M", "grader"]
         commands.append(command)
     else:
         raise ValueError("Unknown language %s." % language)
@@ -493,10 +499,14 @@ def evaluation_step(sandbox, commands,
 
     """
     for command in commands:
+        non_secure = False
+        if "unzip" in command[0]:
+            non_secure = True
+
         success = evaluation_step_before_run(
             sandbox, command, time_limit, memory_limit,
             allow_dirs, writable_files,
-            stdin_redirect, stdout_redirect, wait=True)
+            stdin_redirect, stdout_redirect, wait=True, non_secure=non_secure)
         if not success:
             logger.debug("Job failed in evaluation_step_before_run.")
             return False, None
@@ -512,7 +522,7 @@ def evaluation_step_before_run(sandbox, command,
                                time_limit=0, memory_limit=0,
                                allow_dirs=None, writable_files=None,
                                stdin_redirect=None, stdout_redirect=None,
-                               wait=False):
+                               wait=False, non_secure=False):
     """First part of an evaluation step, until the running.
 
     return: exit code already translated if wait is True, the
@@ -553,7 +563,7 @@ def evaluation_step_before_run(sandbox, command,
 
     # Actually run the evaluation command.
     logger.debug("Starting execution step.")
-    return sandbox.execute_without_std(command, wait=wait)
+    return sandbox.execute_without_std(command, wait=wait, non_secure=non_secure)
 
 
 def evaluation_step_after_run(sandbox):

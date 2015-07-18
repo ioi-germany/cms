@@ -1195,7 +1195,7 @@ class IsolateSandbox(SandboxBase):
 
     def _popen(self, command,
                stdin=None, stdout=None, stderr=None,
-               close_fds=True):
+               close_fds=True, non_secure=False):
         """Execute the given command in the sandbox using
         subprocess.Popen, assigning the corresponding standard file
         descriptors.
@@ -1212,6 +1212,22 @@ class IsolateSandbox(SandboxBase):
         """
         self.exec_num += 1
         self.log = None
+
+        if non_secure:
+            if non_secure:
+                logger.error("Executing non-securely: %s at %s", pretty_print_cmdline(command), self.path)
+            try:
+                prev_permissions = stat.S_IMODE(os.stat(self.path).st_mode)
+                os.chmod(self.path, 0777)
+                p = subprocess.Popen(command, cwd=self.path)
+                os.chmod(self.path, prev_permissions)
+            except OSError:
+                logger.critical("Failed to execute program in sandbox "
+                                "with command: %s", pretty_print_cmdline(args),
+                                exc_info=True)
+                raise
+            return p
+
         args = [self.box_exec] + self.build_box_options() + ["--"] + command
         logger.debug("Executing program in sandbox with command: `%s'.",
                      pretty_print_cmdline(args))
@@ -1233,7 +1249,7 @@ class IsolateSandbox(SandboxBase):
 
         return p
 
-    def execute_without_std(self, command, wait=False):
+    def execute_without_std(self, command, wait=False, non_secure=False):
         """Execute the given command in the sandbox using
         subprocess.Popen and discarding standard input, output and
         error. More specifically, the standard input gets closed just
@@ -1253,7 +1269,7 @@ class IsolateSandbox(SandboxBase):
         """
         popen = self._popen(command, stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            close_fds=True)
+                            close_fds=True, non_secure=non_secure)
 
         # If the caller wants us to wait for completion, we also avoid
         # std*** to interfere with command. Otherwise we let the
