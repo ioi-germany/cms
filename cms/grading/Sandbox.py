@@ -842,6 +842,10 @@ class IsolateSandbox(SandboxBase):
         if os.path.isdir("/etc/alternatives"):
             self.add_mapped_directories(["/etc/alternatives"])
 
+        # On Arch Linux, JDK needs the following directory.
+        if os.path.isdir("/etc/java-8-openjdk"):
+            self.add_mapped_directories(["/etc/java-8-openjdk"])
+
         # Tell isolate to get the sandbox ready.
         box_cmd = [self.box_exec] + (["--cg"] if self.cgroup else []) \
             + ["--box-id=%d" % self.box_id] + ["--init"]
