@@ -304,8 +304,9 @@ def get_evaluation_commands(language, executable_filename):
     elif language == LANG_JAVA:
         command = ["/usr/bin/unzip", executable_filename]
         commands.append(command)
+        # This will fail when using a grader.
         command = ["/usr/bin/java", "-Djava.library.path=.", "-Xmx512M",
-                   "-Xss64M", "grader"]
+                   "-Xss64M", executable_filename]
         commands.append(command)
     else:
         raise ValueError("Unknown language %s." % language)
