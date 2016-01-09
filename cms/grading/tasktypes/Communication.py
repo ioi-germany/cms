@@ -233,8 +233,8 @@ class Communication(TaskType):
             "input.txt": job.input,
             "res.txt": job.output
             }
-        # /etc/alternatives is needed for default Oracle JDK setup on Ubuntu
-        manager_allow_dirs = [fifo_dir, abortion_control_fifo_dir, "/etc/alternatives"]
+        # /etc/java-8-openjdk is needed for default Oracle JDK setup on Arch
+        manager_allow_dirs = [fifo_dir, abortion_control_fifo_dir, "/etc/java-8-openjdk"]
         for filename, digest in manager_executables_to_get.iteritems():
             sandbox_mgr.create_file_from_storage(
                 filename, digest, executable=True)

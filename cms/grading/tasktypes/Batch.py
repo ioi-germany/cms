@@ -267,14 +267,14 @@ class Batch(TaskType):
             sandbox.create_file_from_storage(filename, digest)
 
         # Actually performs the execution
-        # /etc/alternatives is needed for default Oracle JDK setup on Ubuntu
+        # /etc/java-8-openjdk is needed for default Oracle JDK setup on Arch
         success, plus = evaluation_step(
             sandbox,
             commands,
             job.time_limit,
             job.memory_limit,
             writable_files=files_allowing_write,
-            allow_dirs=("/etc/alternatives", ),
+            allow_dirs=("/etc/java-8-openjdk", ),
             stdin_redirect=stdin_redirect,
             stdout_redirect=stdout_redirect)
 
