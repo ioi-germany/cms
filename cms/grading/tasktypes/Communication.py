@@ -220,11 +220,6 @@ class Communication(TaskType):
         manager_command = ["./%s" % manager_filename, fifo_in, fifo_out,
                            fifo_solution_quitter, fifo_manager_quitter]
 
-        if job.language == LANG_JAVA:
-            command = ["/usr/bin/java", "-jar", executable_filename, fifo_out, fifo_in]
-        else:
-            command = ["./%s" % executable_filename, fifo_out, fifo_in]
-
         manager_executables_to_get = {
             manager_filename:
             job.managers[manager_filename].digest
@@ -255,7 +250,13 @@ class Communication(TaskType):
         # Second step: we start the user submission compiled with the
         # stub.
         executable_filename = job.executables.keys()[0]
-        command = ["./%s" % executable_filename, fifo_out, fifo_in]
+
+        if job.language == LANG_JAVA:
+            command = ["/usr/bin/java", "-jar", executable_filename,
+                       fifo_out, fifo_in]
+        else:
+            command = ["./%s" % executable_filename, fifo_out, fifo_in]
+
         executables_to_get = {
             executable_filename:
             job.executables[executable_filename].digest
