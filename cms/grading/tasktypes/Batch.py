@@ -28,7 +28,7 @@ import logging
 
 from cms import LANGUAGES, LANGUAGE_TO_SOURCE_EXT_MAP, \
     LANGUAGE_TO_HEADER_EXT_MAP, LANGUAGE_TO_OBJ_EXT_MAP, \
-    LANGUAGE_TO_SHARED_OBJ_EXT_MAP, LANG_JAVA
+    LANGUAGE_TO_SHARED_OBJ_EXT_MAP, LANG_JAVA, config
 from cms.grading import get_compilation_commands, get_evaluation_commands, \
     compilation_step, evaluation_step, human_evaluation_message, \
     is_evaluation_passed, extract_outcome_and_text, white_diff_step
@@ -267,14 +267,13 @@ class Batch(TaskType):
             sandbox.create_file_from_storage(filename, digest)
 
         # Actually performs the execution
-        # /etc/java-8-openjdk is needed for default Oracle JDK setup on Arch
         success, plus = evaluation_step(
             sandbox,
             commands,
             job.time_limit,
             job.memory_limit,
             writable_files=files_allowing_write,
-            allow_dirs=("/etc/java-8-openjdk", ),
+            allow_dirs=config.sandbox_extra_allow_dirs,
             stdin_redirect=stdin_redirect,
             stdout_redirect=stdout_redirect)
 

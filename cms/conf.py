@@ -65,6 +65,7 @@ class Config(object):
 
         # Worker.
         self.keep_sandbox = True
+        self.sandbox_extra_allow_dirs = []
         self.use_cgroups = True
         self.sandbox_implementation = 'isolate'
 

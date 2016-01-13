@@ -56,6 +56,13 @@
     "_help": "of space very soon.",
     "keep_sandbox": false,
 
+    "_help": "List of strings:",
+    "_help": "The extra directories that should be available from inside the",
+    "_help": "sandbox. In particular, Java needs something like",
+    "_help": "/etc/alternatives (on Ubuntu) or",
+    "_help": "/etc/java-8-openjdk (on Arch Linux).",
+    "sandbox_extra_allow_dirs": [],
+
 
 
     "_section": "Sandbox",
