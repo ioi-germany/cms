@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,6 +24,7 @@ from __future__ import unicode_literals
 
 import os
 import os.path
+import resource
 
 from cmscontrib.BaseLoader import Loader
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
@@ -60,6 +61,10 @@ class GerLoader(Loader):
         """See docstring in class Loader.
 
         """
+        # Unset stack size limit
+        resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,
+                                                   resource.RLIM_INFINITY))
+
         self.buildpath = os.path.join(self.path, "build")
         copyrecursivelyifnecessary(unicode(self.path), self.buildpath,
                                    set([self.buildpath]))

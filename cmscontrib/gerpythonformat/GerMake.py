@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,6 +29,7 @@ from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 import argparse
 import os
+import resource
 import shutil
 
 
@@ -43,6 +44,10 @@ class GerMake:
         self.clean = clean
 
     def make(self):
+        # Unset stack size limit
+        resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,
+                                                   resource.RLIM_INFINITY))
+
         if not os.path.exists(os.path.join(self.odir, "contest-config.py")):
             raise Exception("Directory doesn't contain contest-config.py")
         self.wdir = os.path.join(self.odir, "build")
