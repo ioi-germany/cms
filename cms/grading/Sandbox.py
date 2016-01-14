@@ -896,7 +896,7 @@ class IsolateSandbox(SandboxBase):
         # Close everything, then open only the specified.
         self.allow_writing_none()
         for path in (os.path.join(self.path, path) for path in paths):
-            os.chmod(path, 0o722)
+            os.chmod(path, 0o766)
 
     def get_root_path(self):
         """Return the toplevel path of the sandbox.
