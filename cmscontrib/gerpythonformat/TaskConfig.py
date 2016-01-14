@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013-2015 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -1519,7 +1519,10 @@ class TaskConfig(CommonConfig, Scope):
                         for c in g["cases"]:
                             l = [(b, unicode(a)) for a, b in c["line"]]
                             ftime = "%.3fs" % c["time"]
-                            fmem = "%.1fMB" % (float(c["memory"])/2**20)
+                            if c["memory"] is None:
+                                fmem = "??? MB"
+                            else:
+                                fmem = "%.1fMB" % (float(c["memory"])/2**20)
                             ftime = w(ftime, l[0], 8, z=True)
                             fmem = w(fmem, l[1], 10, z=True)
                             fans = v(l[2], z=True)
