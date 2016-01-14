@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -42,10 +42,10 @@ def hashfile(filename):
         return hasher.hexdigest()
 
 
-def readfile(filename):
+def readfile(filename, encoding="utf-8"):
     """Return the contents of the given file.
     """
-    with io.open(filename, 'r', encoding="utf-8") as f:
+    with io.open(filename, 'r', encoding=encoding) as f:
         return f.read()
 
 
@@ -226,7 +226,8 @@ class RuleResult(object):
 class CommandRule(Rule):
     def __init__(self, rulesdir, command, dependencies=[], outputs=[],
                  stdin=None, stdinstring=None,
-                 stdout=None, stderr=None, dependonexe=True):
+                 stdout=None, stderr=None, dependonexe=True,
+                 read_stdout=True, read_stderr=True):
         """A rule running the given command.
         The exit code is saved to result.code.
 
@@ -255,6 +256,10 @@ class CommandRule(Rule):
         dependonexe (bool): whether the executable should be considered a
                             dependency
 
+        read_stdout (bool): whether stdout should be saved automatically
+
+        read_stderr (bool): whether stderr should be saved automatically
+
         """
         super(CommandRule, self).__init__(rulesdir)
         self.command = map(str, command)
@@ -264,6 +269,8 @@ class CommandRule(Rule):
         self.stdinstring = stdinstring
         self.stdout = stdout
         self.stderr = stderr
+        self.read_stdout = read_stdout
+        self.read_stderr = read_stderr
         self.dependonexe = dependonexe
         if self.stdin is not None and self.stdinstring is not None:
             raise Exception("You can't redirect stdin from a file and a "
@@ -279,6 +286,8 @@ class CommandRule(Rule):
                 'stdinstring': self.stdinstring,
                 'stdout': self.stdout,
                 'stderr': self.stderr,
+                'read_stdout': self.read_stdout,
+                'read_stderr': self.read_stderr,
                 'dependonexe': self.dependonexe}
 
     def pre_run(self):
@@ -311,9 +320,9 @@ class CommandRule(Rule):
                                                           stderr=ferr)
                 if stdin is not None:
                     fin.close()
-        if self.stdout is None:
+        if self.stdout is None and self.read_stdout:
             self.result.log['out'] = readfile(".out")
-        if self.stderr is None:
+        if self.stderr is None and self.read_stderr:
             self.result.log['err'] = readfile(".err")
         self.post_run()
         for f in self.dependencies:
@@ -461,7 +470,8 @@ class LaTeXRule(CommandRule):
         """
         command = ["latexmk", "-g", "-pdf",
                    "-deps", "-deps-out=.deps"] + extra + [source]
-        super(LaTeXRule, self).__init__(rulesdir, command, dependonexe=False)
+        super(LaTeXRule, self).__init__(rulesdir, command, dependonexe=False,
+                                        read_stdout=False, read_stderr=False)
         self.source = source
         self.extra = extra
 
@@ -480,6 +490,9 @@ class LaTeXRule(CommandRule):
     def post_run(self):
         self.result.add_dependency(self.source)  # Should not be necessary
         readmakefile(".deps", self.result, True)
+        # Latexmk seems to output latin_1 instead of utf8.
+        self.result.log['out'] = readfile(".out", "latin_1")
+        self.result.log['err'] = readfile(".err", "latin_1")
 
 
 class JobRule(Rule):
