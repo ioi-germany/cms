@@ -29,7 +29,7 @@ import os
 import subprocess
 
 
-def hashfile(filename):
+def compute_file_hash(filename):
     """Return the sha256 sum of the given file.
     """
     with io.open(filename, 'rb') as f:
@@ -115,7 +115,8 @@ class Rule(object):
         if not os.path.exists(mhf):
             return False
         with io.open(mhf, 'rb') as f:
-            r = RuleResult.import_from_dict(json.load(f)['result'])
+            r = RuleResult.import_from_dict(self.rulesdir,
+                                            json.load(f)['result'])
             return r.uptodate()
 
     def ensure(self, force=False):
@@ -134,11 +135,12 @@ class Rule(object):
             if os.path.exists(mhf):
                 with io.open(mhf, 'rb') as f:
                     result = \
-                        RuleResult.import_from_dict(json.load(f)['result'])
+                        RuleResult.import_from_dict(self.rulesdir,
+                                                    json.load(f)['result'])
                     if result.uptodate():
                         self.result = result
         if self.result is None:
-            self.result = RuleResult()
+            self.result = RuleResult(self.rulesdir)
             self.run()
             # Don't save the result if something really bad happened (e.g. the
             # dependencies could not be determined)
@@ -155,7 +157,7 @@ class Rule(object):
 
 
 class RuleResult(object):
-    def __init__(self, dependencies={}, outputs={}, log={}):
+    def __init__(self, rulesdir, dependencies={}, outputs={}, log={}):
         """Initialise the result of a rule execution.
 
         dependencies (dict): dictionary mapping each dependency file name to
@@ -173,16 +175,37 @@ class RuleResult(object):
         badfail (bool): if True, then the result will not be saved
 
         """
+        self.rulesdir = rulesdir
         self.dependencies = dict(dependencies)
         self.outputs = dict(outputs)
         self.log = dict(log)
         self.badfail = False
 
+    def hash_of_file(self, filename):
+        """Return the hash of the given file. This hash is looked up in the
+        "database" first (given the path and ctime) and only if nothing
+        is found, it is computed (and then the result is saved to the
+        "database").
+        """
+        filename = os.path.abspath(filename)
+        hasher = hashlib.sha256()
+        hasher.update(json.dumps({'type': 'filehash',
+                                  'file': filename,
+                                  'ctime': os.path.getctime(filename)}))
+        hashfile = os.path.join(self.rulesdir, hasher.hexdigest())
+        if os.path.exists(hashfile):
+            return readfile(hashfile)
+        else:
+            hash_ = compute_file_hash(filename)
+            with io.open(hashfile, 'wb') as f:
+                f.write(hash_)
+            return hash_
+
     def add_dependency(self, filename):
         """Add a file using its current hash value.
         """
         if os.path.isfile(filename):
-            self.dependencies[filename] = hashfile(filename)
+            self.dependencies[filename] = self.hash_of_file(filename)
         else:
             self.dependencies[filename] = None
 
@@ -190,7 +213,7 @@ class RuleResult(object):
         """Add a file using its current hash value.
         """
         if os.path.isfile(filename):
-            self.outputs[filename] = hashfile(filename)
+            self.outputs[filename] = self.hash_of_file(filename)
         else:
             self.outputs[filename] = None
 
@@ -202,14 +225,14 @@ class RuleResult(object):
                 if os.path.isfile(fn):
                     return False
             else:
-                if not os.path.isfile(fn) or h != hashfile(fn):
+                if not os.path.isfile(fn) or h != self.hash_of_file(fn):
                     return False
         for fn, h in self.outputs.iteritems():
             if h is None:
                 if os.path.isfile(fn):
                     return False
             else:
-                if not os.path.isfile(fn) or h != hashfile(fn):
+                if not os.path.isfile(fn) or h != self.hash_of_file(fn):
                     return False
         return True
 
@@ -219,8 +242,8 @@ class RuleResult(object):
                 'log': self.log}
 
     @classmethod
-    def import_from_dict(cls, data):
-        return cls(**data)
+    def import_from_dict(cls, rulesdir, data):
+        return cls(rulesdir=rulesdir, **data)
 
 
 class CommandRule(Rule):
