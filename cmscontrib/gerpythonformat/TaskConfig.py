@@ -816,6 +816,22 @@ class TaskConfig(CommonConfig, Scope):
             with open(filename) as fi:
                 shutil.copyfileobj(fi, stdout)
         return self.encapsulate(f)
+        
+    @exported_function
+    def verbatim(self, *args, **kwargs):
+        flush = True
+        
+        try:
+            flush = kwargs["flush"]
+        except:
+            pass
+    
+        def curried(stdout=None, **kwargs):
+            stdout.write(" ".join(["{}".format(x) for x in args]))
+            if flush:
+                stdout.write("\n")
+            
+        return self.encapsulate(curried)
 
     @exported_function
     def subtask(self, description, name=None, public=False,
