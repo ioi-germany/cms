@@ -6,7 +6,7 @@
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2013-2015 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2016 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -205,13 +205,27 @@ class SubtaskGroup(ScoreType):
                                  if c["verdict"][0] == 42 else \
                                  "unit_test_ok" if c["verdict"][0] > 0 else \
                                  "unit_test_failed"}}">
-                        {{c["verdict"][1]}}
+                                 
+            {% set x = c["verdict"][1].split(chr(10)) %}
+            {% for i,t in enumerate(x) %}                                
+                        {{t}}
+                {% if i < len(x) - 1 %}
+                        <br>
+                {% end %}            
+            {% end %}
                     </td>
             {% if first %}
                     <td rowspan={{len(g["cases"])}}
                      class="{{"unit_test_ok" if g["verdict"][0] > 0 else \
                               "unit_test_failed"}}">
-                        {% raw g["verdict"][1] %}
+                        
+                {% set x = g["verdict"][1].split(chr(10)) %}
+                {% for i,t in enumerate(x) %}                                
+                        {{t}}
+                    {% if i < len(x) - 1 %}
+                        <br>
+                    {% end %}            
+                {% end %}
                     </td>
             {% end %}
             {% set first = False %}
@@ -429,7 +443,7 @@ class SubtaskGroup(ScoreType):
                         case_results += r
 
                     v = (v[0],
-                         v[1] + "<br>Grader output: " +
+                         v[1] + "\nGrader output: " +
                          format_status_text(
                              unicode(evaluations[idx].text)).strip())
 
@@ -448,7 +462,7 @@ class SubtaskGroup(ScoreType):
                     if status > 0:
                         desc = ""
                     else:
-                        desc += "<br><br>"
+                        desc += "\n\n"
 
                     status = -1
                     desc += "At least one testcase did not behave as " \
