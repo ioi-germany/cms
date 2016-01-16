@@ -819,6 +819,17 @@ class TaskConfig(CommonConfig, Scope):
         
     @exported_function
     def verbatim(self, *args, **kwargs):
+        """
+        Helper function for testcases which are hardcoded in the config file
+        (should be only used for very small testcases)
+        
+        You can pass any sequence of variables (that can be meaningfully
+        converted to strings) to this method, they will be separated by
+        blank spaces.
+        
+        The input is terminated with a newline unless you add flush=False
+        as a parameter.
+        """
         flush = True
         
         try:
