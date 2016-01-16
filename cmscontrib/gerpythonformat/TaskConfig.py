@@ -1508,7 +1508,7 @@ class TaskConfig(CommonConfig, Scope):
             score_type.unit_test_expected_scores(sdb.additional_info)
 
         def v((accepted, desc), z=False):
-            d = desc.replace("<br>", "\n")
+            d = desc#.replace("<br>", "\n")
 
             if accepted == 42:
                 return blue(d)
