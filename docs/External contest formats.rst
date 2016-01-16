@@ -284,14 +284,19 @@ The usual way to specify subtasks, groups and test cases is the following::
         with group(20):  # Group with 20 points
             testcase(gen.i(3, 9))
             testcase(gen.i(4, 11))
-    generate_feedback()  # Generate detailed feedback subtasks
+    partial_feedback()  # Generate detailed feedback subtasks
 
 The :py:meth:`.TaskConfig.testcase` method generates a test case (using :py:meth:`.make_testcase`) and adds it to the current group (w.r.t. the :samp:`with` statements). If you have already generated a test case using :py:meth:`.make_testcase`, you can use :py:meth:`.TaskConfig.add_testcase` to add it to the current group.
 
 Detailed (partial) feedback
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We can give partial feedback by creating a (public) detailed feedback subtask containing a subset of the official test cases. These detailed feedback subtasks can be automatically created using :py:meth:`.generate_feedback` after you have marked the wanted test cases by handing :samp:`feedback=True` to :py:meth:`.TaskConfig.add_testcase` (or :py:meth:`.TaskConfig.testcase`).
+We can give partial feedback by creating a (public) detailed feedback subtask containing a subset of the official test cases. These detailed feedback subtasks can be automatically created using :py:meth:`.partial_feedback` after you have marked the wanted test cases by handing :samp:`feedback=True` to :py:meth:`.TaskConfig.add_testcase` (or :py:meth:`.TaskConfig.testcase`).
+
+Full feedback
+^^^^^^^^^^^^^
+
+We can give full feedback by calling :py:meth:`.full_feedback`.
 
 Test case checkers
 ^^^^^^^^^^^^^^^^^^
