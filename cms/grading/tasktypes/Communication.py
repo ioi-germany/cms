@@ -6,7 +6,7 @@
 # Copyright © 2010-2014 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
-# Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2014-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -33,7 +33,8 @@ import tempfile
 from cms import LANGUAGES, LANGUAGE_TO_SOURCE_EXT_MAP, \
     LANGUAGE_TO_HEADER_EXT_MAP, LANGUAGE_TO_OBJ_EXT_MAP, LANG_JAVA, config
 from cms.grading.Sandbox import wait_without_std
-from cms.grading import get_compilation_commands, compilation_step, \
+from cms.grading import get_compilation_commands, get_evaluation_commands, \
+    compilation_step, \
     human_evaluation_message, is_evaluation_passed, \
     extract_outcome_and_text, evaluation_step_before_run, \
     evaluation_step_after_run
@@ -228,8 +229,7 @@ class Communication(TaskType):
             "input.txt": job.input,
             "res.txt": job.output
             }
-        manager_allow_dirs = [fifo_dir, abortion_control_fifo_dir] + \
-            config.sandbox_extra_allow_dirs
+        manager_allow_dirs = [fifo_dir, abortion_control_fifo_dir]
         for filename, digest in manager_executables_to_get.iteritems():
             sandbox_mgr.create_file_from_storage(
                 filename, digest, executable=True)
@@ -251,20 +251,39 @@ class Communication(TaskType):
         # stub.
         executable_filename = job.executables.keys()[0]
 
-        if job.language == LANG_JAVA:
-            command = ["/usr/bin/java", "-jar", executable_filename,
-                       fifo_out, fifo_in]
-        else:
-            command = ["./%s" % executable_filename, fifo_out, fifo_in]
+        language = job.language
+        commands = get_evaluation_commands(language, executable_filename)
 
         executables_to_get = {
             executable_filename:
             job.executables[executable_filename].digest
             }
-        user_allow_dirs = [fifo_dir]
+        user_allow_dirs = config.sandbox_extra_allow_dirs + [fifo_dir]
         for filename, digest in executables_to_get.iteritems():
             sandbox_user.create_file_from_storage(
                 filename, digest, executable=True)
+
+        # Ugly hack just for Java (this will unpack the jar archive)
+        # Copied from evaluation_step!
+        for command in commands[:-1]:
+            non_secure = False
+            if "unzip" in command[0]:
+                non_secure = True
+
+            success = evaluation_step_before_run(
+                sandbox_user, command, job.time_limit, job.memory_limit,
+                user_allow_dirs, writable_files=None,
+                wait=True, non_secure=non_secure)
+            if not success:
+                logger.debug("Job failed in evaluation_step_before_run.")
+                job.success = False
+                job.plus = None
+                job.outcome = None
+                job.text = None
+                return
+
+        # The actual command to run the solution (for Java)
+        command = commands[-1]
         process = evaluation_step_before_run(
             sandbox_user,
             command,
