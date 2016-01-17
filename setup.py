@@ -286,10 +286,6 @@ def install():
         prefix = optlist[0][1]
         print("Installing under prefix {}".format(prefix))
 
-    # Root directories for the /usr and /var trees.
-    USR_ROOT = os.path.join(prefix, "usr", "local")
-    VAR_ROOT = os.path.join(prefix, "var", "local")
-
     # We set permissions for each manually installed files, so we want
     # max liberty to change them.
     old_umask = os.umask(0000)
@@ -299,6 +295,14 @@ def install():
     cmsuser = pwd.getpwnam("cmsuser")
     root = pwd.getpwnam("root")
     cmsuser_grp = grp.getgrnam("cmsuser")
+
+    # Root directories for the /usr and /var trees.
+    makedir(os.path.join(prefix, "usr"), root, 0755)
+    makedir(os.path.join(prefix, "var"), root, 0755)
+    USR_ROOT = os.path.join(prefix, "usr", "local")
+    VAR_ROOT = os.path.join(prefix, "var", "local")
+    makedir(USR_ROOT, root, 0755)
+    makedir(VAR_ROOT, root, 0755)
 
     print("copying isolate to /usr/local/bin/.")
     makedir(os.path.join(USR_ROOT, "bin"), root, 0755)
