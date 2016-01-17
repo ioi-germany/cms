@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -327,7 +327,8 @@ class ContestConfig(CommonConfig):
                                 "topmost level of the folder {}"
                                 .format(os.getcwd()))
 
-            with TaskConfig(self, self.rules, s, len(self.tasks),
+            with TaskConfig(self, os.path.abspath(".rules"),
+                            s, len(self.tasks),
                             ignore_latex=self.ignore_latex,
                             make_datasets=self.make_datasets) as taskconfig:
                 for f in self.ontasks:
