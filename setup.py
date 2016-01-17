@@ -7,6 +7,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
+# Copyright © 2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -36,14 +37,10 @@ import shutil
 import re
 import pwd
 import grp
+import getopt
 
 from glob import glob
 from setuptools import setup
-
-
-# Root directories for the /usr and /var trees.
-USR_ROOT = os.path.join("/", "usr", "local")
-VAR_ROOT = os.path.join("/", "var", "local")
 
 
 def do_setup():
@@ -282,6 +279,17 @@ def install():
     RWS.
 
     """
+    # Figure out the installation prefix
+    prefix = "/"
+    optlist, args = getopt.getopt(sys.argv[2:], [], ["prefix="])
+    if len(optlist) > 0 and optlist[0][0] == "--prefix":
+        prefix = optlist[0][1]
+        print("Installing under prefix {}".format(prefix))
+
+    # Root directories for the /usr and /var trees.
+    USR_ROOT = os.path.join(prefix, "usr", "local")
+    VAR_ROOT = os.path.join(prefix, "var", "local")
+
     # We set permissions for each manually installed files, so we want
     # max liberty to change them.
     old_umask = os.umask(0000)
