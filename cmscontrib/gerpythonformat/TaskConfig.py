@@ -99,9 +99,10 @@ class MySubtask(Scope):
     :ivar name: Internal (short) name of this subtask
     :ivar public: Whether this subtask is public
     :ivar groups: Groups contained in this subtask
+    :ivar partial: Is this a partial feedback subtask?
     """
     def __init__(self, task, description, name, public,
-                 for_public_score, for_private_score):
+                 for_public_score, for_private_score, partial):
         super(MySubtask, self).__init__(task)
         self.task = task
         self.description = description
@@ -109,6 +110,7 @@ class MySubtask(Scope):
         self.public = public
         self.for_public_score = for_public_score
         self.for_private_score = for_private_score
+        self.partial = partial
         self.groups = []
         self.feedbackcases = []
         self.checkers = []
@@ -194,7 +196,8 @@ class MySubtask(Scope):
             return
         if points is None:
             points = sum(g.points for g in self.groups)
-        with self.task.subtask(description, name=name, public=True) as s:
+        with self.task.subtask(description, name=name, public=True, 
+                               partial=True) as s:
             with s.group(points) as g:
                 for case in self.feedbackcases:
                     g.add_testcase(case, must_still_be_checked=False)
@@ -399,13 +402,15 @@ class MyCase(object):
 
 
 class MySubmission(object):
-    def __init__(self, task, filenames, score, public_score, expected={},
+    def __init__(self, task, filenames, score, public_score, 
+                 partial_score=0, expected={},
                  weak_time_limit=None, strong_time_limit=None,
                  weak_mem_limit=None, strong_mem_limit=None):
         self.task = task
         self.filenames = filenames
         self.score = score
         self.public_score = public_score
+        self.partial_score = partial_score
         if weak_time_limit is None:
             weak_time_limit = task.weak_time_limit
         self.weak_time_limit = weak_time_limit
@@ -504,7 +509,7 @@ class TaskConfig(CommonConfig, Scope):
 
     This object is exported as a variable called :samp:`task`.
     """
-    def __init__(self, upstream, rules, name, num, make_datasets,
+    def __init__(self, upstream, rules, name, num, make_datasets, feedback,
                  ignore_latex=False):
         super(TaskConfig, self).__init__(rules, ignore_latex)
         Scope.__init__(self)
@@ -561,7 +566,8 @@ class TaskConfig(CommonConfig, Scope):
         self.bequeathing = False
 
         # Feedback
-        self.feedback = None
+        self._feedback_param = feedback
+        self.feedback = feedback[0]
 
         # Score mode
         self._score_mode = None
@@ -846,7 +852,8 @@ class TaskConfig(CommonConfig, Scope):
 
     @exported_function
     def subtask(self, description, name=None, public=False,
-                counts_for_public=None, counts_for_private=None):
+                counts_for_public=None, counts_for_private=None,
+                partial=False):
         """
         Specify the start of a new subtask. The number of points awarded
         for a subtask is the sum of the numbers of points awarded for each
@@ -879,6 +886,8 @@ class TaskConfig(CommonConfig, Scope):
         counts for private (bool): whether the subtask counts toward private
                        score
                        if the value is None this is set to not public
+                       
+        partial(bool): is this a partial feedback subtask?
 
         return (MySubtask): object representing the created subtask
 
@@ -892,7 +901,8 @@ class TaskConfig(CommonConfig, Scope):
             name = "s" + str(len(self.subtasks))
 
         subtask = MySubtask(self, description, name, public,
-                            counts_for_public, counts_for_private)
+                            counts_for_public, counts_for_private,
+                            partial)
 
         self.subtasks.append(subtask)
 
@@ -1005,7 +1015,6 @@ class TaskConfig(CommonConfig, Scope):
     def _level(self):
         return 0
 
-    @exported_function
     def full_feedback(self):
         """
         Call this only after all testcases have been added
@@ -1024,15 +1033,12 @@ class TaskConfig(CommonConfig, Scope):
                     for c in g.cases:
                         c.public = True
 
-        self.supply("latex", "\\def\\feedback{full}\n")
-
-    @exported_function
     def partial_feedback(self, description_suffix=" (Partial Feedback)",
                          name_suffix="_feedback"):
         """
         Generate detailed feedback subtasks for all subtasks generated
         so far (that contain at least one test case marked for detailed
-        feedback).
+        feedback)
 
         description_suffix (string): this string will be appended to the
                                      description of the subtask to obtain the
@@ -1052,7 +1058,13 @@ class TaskConfig(CommonConfig, Scope):
             s.put_feedback(s.description + description_suffix,
                            s.name + name_suffix)
 
-        self.supply("latex", "\\def\\feedback{partial}")
+    def no_feedback(self):
+        pass
+        
+    def _activate_feedback(self):
+        func = self._feedback_param[1]
+        args = (self, ) + self._feedback_param[2:]
+        func(*args)
 
     @exported_function
     def test_submission_limits(self,
@@ -1307,6 +1319,7 @@ class TaskConfig(CommonConfig, Scope):
                              'public': s.public,
                              'for_public_score': s.for_public_score,
                              'for_private_score': s.for_private_score,
+                             'partial': s.partial,
                              'groups': [{'points': g.points,
                                          'key': g.unique_name,
                                          'cases': [c.codename for c
@@ -1453,6 +1466,7 @@ class TaskConfig(CommonConfig, Scope):
              "expected_case": submission.case_expectations,
              "expected_score": submission.score,
              "expected_public_score": submission.public_score,
+             "expected_partial_score": submission.partial_score,
              "task_name": self.name})
 
         return sdb

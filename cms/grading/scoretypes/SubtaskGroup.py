@@ -149,6 +149,121 @@ class SubtaskGroup(ScoreType):
 </div>
 {% end %}
 {% else %}
+{% if details["public_score_okay"] == True %}
+    <div class="subtask correct">
+        <div class="subtask-head">
+            <span class="title" style="margin-top:-2px">
+                Public score
+            </span>
+            <span class="score">
+                OKAY
+            </span>
+        </div>
+        <div class="subtask-body">
+            <table class="table table-bordered table-striped">
+                <tr>
+                <td>
+                    Expected: {{details["wanted_public"]}}
+                </td>
+                <td>
+                    Got: {{details["public"]}}
+                </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+{% elif details["public_score_okay"] == False %}
+    <div class="subtask notcorrect">
+        <div class="subtask-head">
+            <span class="title" style="margin-top:-2px">
+                Public score
+            </span>
+            <span class="score">
+                FAILED
+            </span>
+        </div>
+        <div class="subtask-body">
+            <table class="table table-bordered table-striped">
+                <tr>
+                <td>
+                    Expected: {{details["wanted_public"]}}
+                </td>
+                <td>
+                    Got: {{details["public"]}}
+                </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+{% else %}
+    <div class="subtask correct">
+        <div class="subtask-head">
+            <span class="title" style="margin-top:-2px">
+                Public score 
+            </span>
+            <span class="score">
+                ———
+            </span>
+        </div>
+        <div class="subtask-body">
+            <table class="table table-bordered table-striped">
+                <tr><td>
+                    This is a full feedback task, hence there is no
+                    such thing as a public score.
+                </td></tr>
+            </table>
+        </div>
+    </div>
+{% end %}
+{% if details["private_score_okay"] %}
+    <div class="subtask correct">
+        <div class="subtask-head">
+            <span class="title" style="margin-top:-2px">
+                Total score
+            </span>
+            <span class="score">
+                OKAY
+            </span>
+        </div>
+        <div class="subtask-body">
+            <table class="table table-bordered table-striped">
+                <tr>
+                <td>
+                    Expected: {{details["wanted_private"]}}
+                </td>
+                <td>
+                    Got: {{details["private"]}}
+                </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+{% else %}
+    <div class="subtask notcorrect">
+        <div class="subtask-head">
+            <span class="title" style="margin-top:-2px">
+                Total score
+            </span>
+            <span class="score">
+                FAILED
+            </span>
+        </div>
+        <div class="subtask-body">
+            <table class="table table-bordered table-striped">
+                <tr>
+                <td>
+                    Expected: {{details["wanted_private"]}}
+                </td>
+                <td>
+                    Got: {{details["private"]}}
+                </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+{% end %}
+<br><br>
+
 {% for st in details["subtasks"] %}
     {% if st["status"][0] > 0 %}
 <div class="subtask correct">
@@ -248,6 +363,9 @@ class SubtaskGroup(ScoreType):
 
         public = submission_info.get("expected_public_score", 0)
         private = submission_info.get("expected_score", 0)
+        
+        if self.feedback() == "partial":
+            public = submission_info.get("expected_partial_score", 0)
 
         return public, private
 
@@ -396,16 +514,26 @@ class SubtaskGroup(ScoreType):
         extra = []
         subtasks_failed = False
 
-        for subtask in self.parameters["tcinfo"]:
+        for subtask in self.parameters["tcinfo"]:       
             subtasks.append({"name": subtask["name"], "groups": []})
-            possible_subtask = expectations[tuple(subtask["key"])]
-
+            
+            # There are no expectations for partial feedback subtasks
+            if subtask["partial"]:
+                possible_subtask = []
+            else:
+                possible_subtask = expectations[tuple(subtask["key"])]
+                
             group_score = 0
 
             worst_group = (1, "okay")
 
             for i, g in enumerate(subtask["groups"]):
-                possible_group = expectations[tuple(g["key"])]
+                # There are no expectations for partial feedback subtasks
+                if subtask["partial"]:
+                    possible_group = []
+                else:
+                    possible_group = expectations[tuple(g["key"])]
+                
                 possible = possible_task + possible_subtask + possible_group
 
                 subtasks[-1]["groups"].append({"verdict": (42, ""),
@@ -479,13 +607,26 @@ class SubtaskGroup(ScoreType):
 
             subtasks[-1]["status"] = (worst_group[0], worst_group[1].upper())
 
-            if subtasks[-1]["status"][0] <= 0:
+            # we ignore partial feedback subtasks (except for the score)
+            if subtask["partial"]:
+                subtasks.pop()
+            elif subtasks[-1]["status"][0] <= 0:
                 subtasks_failed = True
 
-        details = {"unit_test": True, "subtasks": subtasks}
+        private_score_okay = (private_score == wanted_private)
+        public_score_okay = (public_score == wanted_public)
 
-        okay = private_score == wanted_private and \
-            (public_score == wanted_public or self.feedback() == "full") \
+        details = {"unit_test": True, "subtasks": subtasks,
+                   "private_score_okay": private_score_okay,
+                   "public_score_okay" : None if self.feedback() == "full"
+                                         else public_score_okay,
+                   "public": public_score,
+                   "wanted_public": wanted_public,
+                   "private": private_score,
+                   "wanted_private": wanted_private}
+
+        okay = private_score_okay and \
+            (public_score_okay or self.feedback() == "full") \
             and not subtasks_failed
 
         details["verdict"] = (1, "Okay") if okay else (0, "Failed")

@@ -10,3 +10,9 @@ Aufgabe: {\bfseries \taskname}\vss}}
 \newcount\stcount
 \stcount=0
 \def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \removelastskip\smallskip\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}
+
+\def\feedbackheading{\sheading{Feedback}}
+\def\nofeedback{\feedbackheading Für diese Aufgabe ist kein erweitertes Feedback verfügbar. Die angegebene öffentliche Punktzahl entspricht nur deinem Ergebnis auf den öffentlichen Testfällen und hat im Allgemeinen wenig mit deiner tatsächlichen Punktzahl gemein.}
+\def\partialfeedback{\feedbackheading Für diese Aufgabe ist \emph{partial feedback} verfügbar, d.h.~du bekommst das Abschneiden deines Programms auf einer festen Auswahl der Testfälle zu sehen. Die angegebene Punktzahl bezieht sich auf diese Auswahl der Testfälle und gibt damit einen Hinweis auf deine tatsächliche Punktzahl. Letztere kann allerdings sowohl höher als auch niedriger als die angezeigte Punktzahl sein.}
+\def\fullfeedback{\feedbackheading Für diese Aufgabe ist \emph{full feedback} verfügbar, d.h.~die angezeigte Punktzahl entspricht deiner tatsächlichen Punktzahl.}
+\def\showfeedback{\csname\feedback feedback\endcsname}
