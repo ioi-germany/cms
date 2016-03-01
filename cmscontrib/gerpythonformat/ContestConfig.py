@@ -110,6 +110,10 @@ class ContestConfig(CommonConfig):
 
         # Export contest variable
         self.exported["contest"] = self
+        self.exported["no_feedback"] = ("no", TaskConfig.no_feedback)
+        self.exported["partial_feedback"] = ("partial",
+                                             TaskConfig.partial_feedback)
+        self.exported["full_feedback"] = ("full", TaskConfig.full_feedback)
 
         # Default submission limits
         self.submission_limits(None, None)
@@ -305,12 +309,14 @@ class ContestConfig(CommonConfig):
         return self.users[-1]
 
     @exported_function
-    def task(self, s):
+    def task(self, s, feedback):
         """
         Add a task to this contest.
 
         s (unicode): task name; the task description has to reside in the
                      folder with the same name
+        feedback:    type of feedback (one of the variables no_feedback,
+                     full_feedback, partial_feedback)
 
         """
         # Check if this task should be ignored
@@ -329,11 +335,13 @@ class ContestConfig(CommonConfig):
 
             with TaskConfig(self, os.path.abspath(".rules"),
                             s, len(self.tasks),
-                            ignore_latex=self.ignore_latex,
-                            make_datasets=self.make_datasets) as taskconfig:
+                            self.make_datasets,
+                            feedback,
+                            ignore_latex=self.ignore_latex) as taskconfig:
                 for f in self.ontasks:
                     f(taskconfig)
                 taskconfig._readconfig("config.py")
+                taskconfig._activate_feedback()
                 taskconfig._printresult()
                 self.tasks.append(taskconfig)
             print_msg("Task {} loaded completely".format(s), success=True)

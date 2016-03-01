@@ -59,6 +59,7 @@ class LgTemplate(PlainTemplate):
         shutil.copy(os.path.join(self.contest.wdir, "bar.pdf"),
                     os.path.join(task.wdir, "bar.pdf"))
         task.supply("latex", def_latex("barpdf", "bar.pdf"))
+        task.supply("latex", def_latex("feedback", task.feedback))
         self.mktestcasetable(task)
 
     def mktestcasetable(self, task):
