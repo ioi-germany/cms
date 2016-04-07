@@ -91,6 +91,7 @@ class ContestConfig(CommonConfig):
 
         """
         super(ContestConfig, self).__init__(rules, ignore_latex=ignore_latex)
+        self.infinite_tokens()
 
         self.onlytask = onlytask
 
@@ -108,12 +109,14 @@ class ContestConfig(CommonConfig):
         self.teams = {}
         self.users = []
 
-        # Export contest variable
+        # Export variables
         self.exported["contest"] = self
         self.exported["no_feedback"] = ("no", TaskConfig.no_feedback)
         self.exported["partial_feedback"] = ("partial",
                                              TaskConfig.partial_feedback)
         self.exported["full_feedback"] = ("full", TaskConfig.full_feedback)
+        self.exported["token_feedback"] = self._token_feedback
+        self.exported["std_token_feedback"] = self._token_feedback(3, 2)
 
         # Default submission limits
         self.submission_limits(None, None)
@@ -139,6 +142,29 @@ class ContestConfig(CommonConfig):
         print_msg("Loading contest {}".format(self.contestname), headerdepth=1)
         super(ContestConfig, self)._readconfig(filename)
         self._initialize_ranking()
+
+    def _token_feedback(self, gen_initial, gen_number,
+                        gen_interval=timedelta(minutes=30), gen_max=None,
+                        min_interval=timedelta(), max_number=None):
+        """
+        Specify the number of tokens available.
+
+        initial (int): number of tokens at the beginning of the contest
+
+        gen_number (int): number of tokens to generate each time
+
+        gen_time (timedelta): how often new tokens are generated
+
+        max (int): limit for the number of tokens at any time
+
+        min_interval (timedelta): time the user has to wait after using a
+                                  token before he can use another token
+
+        total (int): maximum number of tokens the user can use in total
+
+        """
+        return ("token", TaskConfig.tokens, gen_initial, gen_number, gen_interval,
+                gen_max, min_interval, max_number)
 
     @exported_function
     def ontask(self, f):

@@ -512,6 +512,7 @@ class TaskConfig(CommonConfig, Scope):
     def __init__(self, upstream, rules, name, num, make_datasets, feedback,
                  ignore_latex=False):
         super(TaskConfig, self).__init__(rules, ignore_latex)
+        self.no_tokens()
         Scope.__init__(self)
 
         if not os.path.exists("cases"):
