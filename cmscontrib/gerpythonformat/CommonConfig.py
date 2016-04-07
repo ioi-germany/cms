@@ -98,7 +98,6 @@ class CommonConfig(object):
                     self.exported[n] = f
 
         self.exported["timedelta"] = timedelta
-        self.no_tokens()
 
     # Run the configuration file
 
@@ -432,8 +431,8 @@ class CommonConfig(object):
         self.token_mode = "infinite"
 
     @exported_function
-    def tokens(self, gen_initial, gen_number, gen_interval, gen_max=None,
-               min_interval=timedelta(), max_number=None):
+    def tokens(self, gen_initial, gen_number, gen_interval, gen_max,
+               min_interval, max_number):
         """
         Specify the number of tokens available.
 
