@@ -78,6 +78,7 @@ class PlainTemplate(Template):
                           functools.partial(self.inputwidth, task))
         task.supply_latex("outputwidth",
                           functools.partial(self.outputwidth, task))
+                
         self.initconstraint(task)
         self.mktestcasetable(task)
 
@@ -145,8 +146,12 @@ class PlainTemplate(Template):
                 r += aftereachline
             r += end
             return r
+            
+        def tcn():
+            return "\\newcount\\numsamples \\numsamples={}".format(len(task.saved))
 
-        task.supply("latex", def_latex("showcases", tct))
+        task.supply("latex", def_latex("testcasetable", tct))
+        task.supply("latex", tcn)
 
     def mktestcasetable(self, task):
         """ Provide the standard testcase table
