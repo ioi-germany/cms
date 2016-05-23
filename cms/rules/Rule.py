@@ -182,24 +182,31 @@ class RuleResult(object):
         self.badfail = False
 
     def hash_of_file(self, filename):
-        """Return the hash of the given file. This hash is looked up in the
+        """Return the hash of the given file.
+        FIXME This hash is supposed to be looked up in the
         "database" first (given the path and ctime) and only if nothing
         is found, it is computed (and then the result is saved to the
         "database").
         """
-        filename = os.path.abspath(filename)
-        hasher = hashlib.sha256()
-        hasher.update(json.dumps({'type': 'filehash',
-                                  'file': filename,
-                                  'ctime': os.path.getctime(filename)}))
-        hashfile = os.path.join(self.rulesdir, hasher.hexdigest())
-        if os.path.exists(hashfile):
-            return readfile(hashfile)
-        else:
-            hash_ = compute_file_hash(filename)
-            with io.open(hashfile, 'wb') as f:
-                f.write(hash_)
-            return hash_
+        return compute_file_hash(filename)
+
+        # FIXME The following doesn't work on some systems, since getctime
+        # only has a precision of 1 second. But on all systems, it returns a
+        # floating point number and has therefore rounding errors!
+
+        #filename = os.path.abspath(filename)
+        #hasher = hashlib.sha256()
+        #hasher.update(json.dumps({'type': 'filehash',
+                                  #'file': filename,
+                                  #'ctime': os.path.getctime(filename)}))
+        #hashfile = os.path.join(self.rulesdir, hasher.hexdigest())
+        #if os.path.exists(hashfile):
+            #return readfile(hashfile)
+        #else:
+            #hash_ = compute_file_hash(filename)
+            #with io.open(hashfile, 'wb') as f:
+                #f.write(hash_)
+            #return hash_
 
     def add_dependency(self, filename):
         """Add a file using its current hash value.
