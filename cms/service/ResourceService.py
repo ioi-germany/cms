@@ -351,7 +351,7 @@ class ResourceService(Service):
                 proc_info = proc.as_dict(attrs=PSUTIL_PROC_ATTRS)
                 dic["since"] = self._last_saved_time - proc_info["create_time"]
                 dic["resident"], dic["virtual"] = \
-                    (x // B_TO_MB for x in proc_info["memory_info"])
+                    (x // B_TO_MB for x in [proc_info["memory_info"].rss, proc_info["memory_info"].vms])
                 cpu_times = proc_info["cpu_times"]
                 dic["user"] = int(
                     round((cpu_times[0] -
