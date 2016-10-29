@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2015 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2016 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -266,11 +266,11 @@ def box(title, content, double=False):
     """
     if double:
         center_line(title, '═', '╔', '╗', True)
-        center_line(content, ' ', '║', None, True)
+        for s in content.split('\n'): center_line(s, ' ', '║', None, True)
         center_line("", '═', '╚', '╝', True)    
     else:
         center_line(title, '─', '╭', '╮', True)
-        center_line(content, ' ', '│', None, True)
+        for s in content.split('\n'): center_line(s, ' ', '│', None, True)
         center_line("", '─', '╰', '╯', True)
 
 
