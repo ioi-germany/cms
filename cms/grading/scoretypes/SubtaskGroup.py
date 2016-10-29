@@ -569,7 +569,7 @@ class SubtaskGroup(ScoreType):
                     mandatory = case_expectations[idx]
 
                     l = UnitTest.case_line(r, mandatory, possible)
-                    v = (42, "No explicit expectations.")
+                    v = (42, "No case-specific expectations.")
 
                     # Test case expectations
                     if len(mandatory) != 0:

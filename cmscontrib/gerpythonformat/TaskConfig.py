@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2015 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2016 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from .Messenger import print_msg, print_block, header, red, green, blue, box, \
-    side_by_side, pad_left, add_line_breaks, remaining_line_length, indent
+    side_by_side, pad_left, add_line_breaks, remaining_line_length, indent, \
+    yellow
 from .CommonConfig import exported_function, CommonConfig
 from .Executable import ExitCodeException
 from .ConstraintParser import ConstraintList, merge_constraints
@@ -1289,6 +1290,9 @@ class TaskConfig(CommonConfig, Scope):
             ddb.task = tdb
             tdb.active_dataset = ddb
 
+        failed = []
+        unit_tests = []
+
         # Test submissions
         for s in self.testsubmissions:  # submissions are saved because they
                                         # are referenced through the user
@@ -1298,12 +1302,34 @@ class TaskConfig(CommonConfig, Scope):
             sdb.task_id = 0
 
             if s._should_test(local_test):
+                code = ", ".join(self.short_path(f) for f in s.filenames)
+            
                 sdb.id = 1
-                with header("Running solution {}"
-                            .format(", ".join(self.short_path(f)
-                                              for f in s.filenames)),
+                with header("Running solution {}".format(code),
                             depth=3):
-                    self._do_test_submission(sdb, ddb)
+                    if not self._do_test_submission(sdb, ddb):
+                        failed.append(code)
+                    
+                    unit_tests.append(code)
+
+        if len(self.testsubmissions) == 0:
+            print()
+            box(" No Unit Tests for Task \"{}\"! ".format(self._title),
+                red("You should define some unit tests for this task!"),
+                double = True)
+            print()
+            
+        elif len(unit_tests) != 0:
+            print()
+            box(" Unit Test Statistics for Task \"{}\" ".format(self._title),
+                (green("All unit tests passed.") if len(failed) == 0
+                 else red("{} unit test{} failed:\n".format(len(failed),
+                     "s" if len(failed) > 1 else "") +
+                     "\n".join(red(f) for f in failed))) +
+                ("\n\n" + yellow("There are some additional (non-local) "
+                 "unit tests!") if len(unit_tests) != len(self.testsubmissions)
+                 else ""), double = True)
+            print()
 
         return tdb
 
@@ -1598,6 +1624,8 @@ class TaskConfig(CommonConfig, Scope):
         box(" Overall verdict ", green(verd[1]) if verd[0] == 1
             else red(verd[1]))
         print()
+        
+        return verd[0] == 1
 
     def _run_job_group(self, job_group):
         """
