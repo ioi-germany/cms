@@ -1071,6 +1071,12 @@ class UnitTest:
             timeverdict = check(float(evaluation.execution_time),
                                 float(limits["weak_time_limit"]),
                                 float(limits["strong_time_limit"]))
+ 
+            if "wall clock limit exceeded" in json.loads(evaluation.text)[0] or \
+               evaluation.execution_wall_clock_time > \
+               float(limits["strong_time_limit"]):
+                timeverdict = -1
+ 
             if timeverdict == -1:
                 result.append("time")
             elif timeverdict == 0:
