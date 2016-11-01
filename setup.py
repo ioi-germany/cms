@@ -171,6 +171,7 @@ def do_setup():
                   "cmsYamlReimporter=cmscompat.YamlReimporter:main",
 
                   "cmsGerMake=cmscontrib.gerpythonformat.GerMake:main",
+                  "cmsGerMakeTask=cmscontrib.gerpythonformat.GerMakeTask:main",
 
                   "cmsPasswordSlips=cmscontrib.PasswordSlips:main"
               ]
