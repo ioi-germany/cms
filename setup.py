@@ -156,6 +156,7 @@ setup(
             "cmsYamlImporter=cmscompat.YamlImporter:main",
             "cmsYamlReimporter=cmscompat.YamlReimporter:main",
             "cmsGerMake=cmscontrib.gerpythonformat.GerMake:main",
+            "cmsGerMakeTask=cmscontrib.gerpythonformat.GerMakeTask:main",
         ]
     },
     keywords="ioi programming contest grader management system",
