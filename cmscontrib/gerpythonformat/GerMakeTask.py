@@ -69,10 +69,13 @@ class GerMakeTask:
                                              "contest-template.py"),
                                 os.path.join(self.wdir, "c.py"))
                 cc._readconfig("c.py")
-                cc.task(self.task, cc.exported["full_feedback"])
-                cc._makecontest()
-                for u in cc.users: cc._makeuser(u.username)
-                cc._maketask(filecacher, self.task, local_test=True)
+                cc._task(self.task, cc.exported["full_feedback"],
+                         self.minimal)
+
+                if not self.minimal:
+                    cc._makecontest()
+                    for u in cc.users: cc._makeuser(u.username)
+                    cc._maketask(filecacher, self.task, local_test=True)
 
         finally:
             filecacher.destroy_cache()
