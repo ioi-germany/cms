@@ -511,7 +511,7 @@ class TaskConfig(CommonConfig, Scope):
     This object is exported as a variable called :samp:`task`.
     """
     def __init__(self, upstream, rules, name, num, make_datasets, feedback,
-                 ignore_latex=False):
+                 ignore_latex=False, minimal=False):
         super(TaskConfig, self).__init__(rules, ignore_latex)
         self.no_tokens()
         Scope.__init__(self)
@@ -573,6 +573,9 @@ class TaskConfig(CommonConfig, Scope):
 
         # Score mode
         self._score_mode = None
+        
+        # Only compile statement (and everything necessary for this?)
+        self.minimal = minimal
 
     @property
     def unique_name(self):
@@ -993,11 +996,18 @@ class TaskConfig(CommonConfig, Scope):
                 with group(50):
                     testcase(...)
         """
+        if not kwargs.get("save") and self.minimal:
+            print_msg("Skipping testcase (minimal mode)")
+            return
+        
         if len(self.group_stack) == 0:
             raise Exception("testcase() called outside group")
         return self.group_stack[-1].testcase(*args, **kwargs)
 
     def _check(self, checker, infile, outfile, caseno, check_counter):
+        if self.minimal:
+            return
+    
         try:
             checker(outfile, stdin=infile, dependencies=[outfile])
         except ExitCodeException:
@@ -1154,6 +1164,9 @@ class TaskConfig(CommonConfig, Scope):
             return self._score_mode
 
     def _printresult(self):
+        if self.minimal:
+            return
+    
         with header("Statistics", depth=3):
             print_msg("Taskname: {}".format(self.name))
             sts = ["{} {}{}".format(l, self.short_path(s.file_),

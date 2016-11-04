@@ -334,15 +334,15 @@ class ContestConfig(CommonConfig):
                                  team))
         return self.users[-1]
 
-    @exported_function
-    def task(self, s, feedback):
+    def _task(self, s, feedback, minimal):
         """
-        Add a task to this contest.
+        Add a task to this contest (full version, not accessible from config.py).
 
         s (unicode): task name; the task description has to reside in the
                      folder with the same name
         feedback:    type of feedback (one of the variables no_feedback,
                      full_feedback, partial_feedback)
+        minimal (bool): only try to compile statement?     
 
         """
         # Check if this task should be ignored
@@ -363,14 +363,32 @@ class ContestConfig(CommonConfig):
                             s, len(self.tasks),
                             self.make_datasets,
                             feedback,
-                            ignore_latex=self.ignore_latex) as taskconfig:
+                            ignore_latex=self.ignore_latex,
+                            minimal=minimal) as taskconfig:
                 for f in self.ontasks:
                     f(taskconfig)
                 taskconfig._readconfig("config.py")
                 taskconfig._activate_feedback()
                 taskconfig._printresult()
                 self.tasks.append(taskconfig)
-            print_msg("Task {} loaded completely".format(s), success=True)
+            if minimal:
+                print_msg("Statement for task {} generated successfully".\
+                          format(s), success=True)
+            else:
+                print_msg("Task {} loaded completely".format(s), success=True)
+
+    @exported_function
+    def task(self, s, feedback):
+        """
+        Add a task to this contest (version accessible from config.py).
+
+        s (unicode): task name; the task description has to reside in the
+                     folder with the same name
+        feedback:    type of feedback (one of the variables no_feedback,
+                     full_feedback, partial_feedback) 
+
+        """
+        self._task(s, feedback, False)
 
     @exported_function
     def test_user(self, u):
