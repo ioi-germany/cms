@@ -1,0 +1,27 @@
+table.overview {
+    margin:7px;
+}
+
+/*
+table.overview td, th {
+    border-left: 1px solid silver;
+    border-top: 1px solid silver;
+    padding: 5px 7px 5px 7px;
+}
+
+table.overview tr:first-child th {
+    border-top:0px;
+}
+
+table.overview th:first-child, table.overview td:first-child {
+    border-left:0px;
+}
+
+table.overview tr:hover {
+    background-color: whitesmoke;
+}*/
+
+ul.embedded {
+    margin:0px;
+    list-style-position:inside;
+}

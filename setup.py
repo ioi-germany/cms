@@ -75,6 +75,11 @@ PACKAGE_DATA = {
         os.path.join("static", "lib", "*.*"),
         os.path.join("static", "*.*"),
     ],
+    "cmstaskoverview": [
+        os.path.join("templates", "*.*"),
+        os.path.join("static", "css", "*.*"),
+        os.path.join("static", "*.*")
+    ],
     "cmstestsuite": [
         os.path.join("code", "*.*"),
         os.path.join("tasks", "batch_stdio", "data", "*.*"),
@@ -122,6 +127,7 @@ setup(
              "scripts/cmsProxyService",
              "scripts/cmsPrintingService",
              "scripts/cmsRankingWebServer",
+             "scripts/cmsTaskOverviewWebServer",
              "scripts/cmsInitDB",
              "scripts/cmsDropDB"],
     entry_points={

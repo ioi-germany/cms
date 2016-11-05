@@ -290,7 +290,8 @@ Options:
         root = pwd.getpwnam("root")
         cmsuser = pwd.getpwnam("cmsuser")
         makedir(os.path.join(USR_ROOT, "etc"), root, 0o755)
-        for conf_file_name in ["cms.conf", "cms.ranking.conf"]:
+        for conf_file_name in ["cms.conf", "cms.ranking.conf",
+                               "cms.taskoverview.conf"]:
             conf_file = os.path.join(USR_ROOT, "etc", conf_file_name)
             # Skip if destination is a symlink
             if os.path.islink(conf_file):
