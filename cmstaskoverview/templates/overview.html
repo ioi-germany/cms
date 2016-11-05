@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="static/css/bootstrap.css">
+        <link rel="stylesheet" href="static/css/style.css">
+    </head>
+    
+    <body>
+        <table class="table table-striped table-bordered overview">
+            <tr>
+                <th> Name </th>
+                <th> Source </th>
+                <th> Diff<sub>Alg</sub> </th>
+                <th> Diff<sub>Impl</sub> </th>
+                <th> Keywords </th>
+                <th> Uses </th>
+                <th> Remarks </th>
+                <th> Public? </th>
+            </tr>
+            
+            {% for t in tasks %}
+            <tr>
+                <td> {% raw t.title          %} </td>
+                <td> {% raw t.source         %} </td>
+                <td> {% raw t.algorithm      %} </td>
+                <td> {% raw t.implementation %} </td>
+                <td>
+                    <ul class="embedded">
+                    {% for k in t.keywords %}
+                        <li> {% raw k %} </li>
+                    {% end %}
+                    </ul>
+                </td>
+                <td>
+                {% if len(t.uses) == 0 %}
+                    — 
+                {% else %}
+                    <ul class="embedded">
+                    {% for u in t.uses %}
+                        <li> {% raw u[0] %} ({% raw u[1] %}) </li>
+                    {% end %}
+                    </ul>
+                {% end %}
+                </td>
+                <td> {% raw t.remarks %} </td>
+                <td>
+                    {% raw "Yes" if t.public else "No" %}
+                </td>
+            </tr>
+            {% end %}
+        </table>
+    </body>
+</html>
