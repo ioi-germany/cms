@@ -17,24 +17,9 @@
         <script src="static/js/dateslider.js"></script>
         <script src="static/js/rangeslider.js"></script>
         <script src="static/js/download.js"></script>
+        <script src="static/js/modal.js"></script>
         
-        <script>
-            function open_modal(s)
-            {
-                var dialog = window.document.getElementById(s + "-dialog");
-                
-                dialog.classList.remove("hide");
-                dialog.classList.add("in");
-            }
-            
-            function close_modal(s)
-            {
-                var dialog = window.document.getElementById(s + "-dialog");
-                
-                dialog.classList.add("hide");
-                dialog.classList.remove("in");
-            }
-            
+        <script>            
             function init()
             {
                 init_date_slider("uses", {% raw tasks.interesting_dates() %}, true);
@@ -50,6 +35,7 @@
     </head>
     
     <body>
+        <div class="modal-backdrop invisible" id="modal-backdrop"></div>
         <div class="navbar header">
             <div class="navbar-inner header-inner">
                 <div style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;">
