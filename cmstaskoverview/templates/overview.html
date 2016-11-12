@@ -1,4 +1,4 @@
-{% from cmstaskoverview.Loader import TaskInfo %}
+{% from cmstaskoverview.TaskInfo import TaskInfo %}
 
 <!DOCTYPE html>
 <html>
@@ -16,6 +16,7 @@
         <script src="static/js/slider.js"></script>
         <script src="static/js/dateslider.js"></script>
         <script src="static/js/rangeslider.js"></script>
+        <script src="static/js/download.js"></script>
         
         <script>
             function open_modal(s)
@@ -34,30 +35,6 @@
                 dialog.classList.remove("in");
             }
             
-            var __current_pdf = null;
-            
-            function pdf_mouse_down(e)
-            {
-                __current_pdf = e.target;
-                __current_pdf.classList.add("down");
-            }
-            
-            function pdf_mouse_up(e)
-            {
-                if(__current_pdf != null)
-                {
-                    __current_pdf.classList.remove("down");
-                    __current_pdf = null;
-                }
-            }
-            
-            function pdf_mouse_click(e)
-            {
-                var p = e.target;
-                p.classList.remove("down");
-                p.classList.add("loading");
-            }
-            
             function init()
             {
                 init_date_slider("uses", {% raw tasks.interesting_dates() %}, true);
@@ -65,15 +42,7 @@
                 close_modal('col-select');
                 close_modal('row-select');
                 
-                var d = document.getElementsByClassName("download-icon");
-                
-                for(var i = 0; i < d.length; ++i)
-                {
-                    d[i].addEventListener("mousedown", pdf_mouse_down);
-                    d[i].addEventListener("click", pdf_mouse_click);
-                }
-                
-                window.addEventListener("mouseup", pdf_mouse_up);
+                init_download_icons();
             }
             
             window.addEventListener("load", init);
