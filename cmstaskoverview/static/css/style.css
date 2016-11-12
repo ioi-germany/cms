@@ -1,27 +1,106 @@
+/* Colors from bootstrap.css (see there) */
+
+body {
+    padding-top:60px;
+}
+
 table.overview {
-    margin:7px;
+    margin-top:15px;
+    margin-left:auto;
+    margin-right:auto;
+    width:99% !important;
 }
-
-/*
-table.overview td, th {
-    border-left: 1px solid silver;
-    border-top: 1px solid silver;
-    padding: 5px 7px 5px 7px;
-}
-
-table.overview tr:first-child th {
-    border-top:0px;
-}
-
-table.overview th:first-child, table.overview td:first-child {
-    border-left:0px;
-}
-
-table.overview tr:hover {
-    background-color: whitesmoke;
-}*/
 
 ul.embedded {
     margin:0px;
     list-style-position:inside;
+}
+
+div.header {
+    position:fixed;
+    top:0px;
+    left:0px;
+    right:0px;
+    z-index:255;
+}
+
+div.header-inner {
+    border-radius:0px;
+    padding:5px 10px;
+}
+
+div.header button.btn-large {
+    min-height:40px;
+}
+
+form.my-form {
+    padding:0px;
+    margin:0px;
+    margin-right:7px;
+    float:left;
+}
+
+div.control-panel {
+    padding:10px 15px;
+    margin:7px;
+    background:#f5f5f5;
+    border-radius:6px;
+    margin-bottom:15px;
+    border:1px solid #ddd;
+    box-shadow:inset 0px 1px 0px white;
+}
+
+div.form-group {
+    padding:0px;
+    margin-top:7px;
+}
+
+div.short-container {
+    display:table-cell;
+    padding:0px;
+    margin:0px;
+}
+
+div.control-table {
+    width:100%;
+    margin:0px;
+    padding:0px;
+    overflow:auto;
+    display:table;
+    margin-bottom:-7px;
+}
+
+div.mini-table {
+    margin:0px;
+    padding:0px;
+    width:100%;
+    display:table;
+    overflow:auto;
+}
+
+div.two-cols
+{
+    margin:0px;
+    padding:0px;
+    overflow:auto;
+    display:table-row;
+}
+
+div.two-cols > div {
+    margin-bottom:0px;
+    display:table-cell;
+    border-spacing:0px;
+    width:50%;
+}
+
+div.two-cols > div > div {
+    height:100% !important;
+}
+
+div.control-table > div:last-child {
+    margin-bottom:0px;
+}
+
+td.th {
+    font-weight:bold;
 }

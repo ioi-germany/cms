@@ -1,25 +1,213 @@
+{% from cmstaskoverview.Loader import TaskInfo %}
+
 <!DOCTYPE html>
 <html>
     <head>
         <link rel="stylesheet" href="static/css/bootstrap.css">
+        <link rel="stylesheet" href="static/css/cws_style.css">
         <link rel="stylesheet" href="static/css/style.css">
+        <link rel="stylesheet" href="static/css/download.css">
+        <link rel="stylesheet" href="static/css/slider.css">
+        <link rel="stylesheet" href="static/css/dateslider.css">
+        <link rel="stylesheet" href="static/css/tags.css">
+        <link rel="stylesheet" href="static/css/rangeslider.css">
+        <link rel="stylesheet" href="static/css/checkbox.css">
+        
+        <script src="static/js/slider.js"></script>
+        <script src="static/js/dateslider.js"></script>
+        <script src="static/js/rangeslider.js"></script>
+        
+        <script>
+            function open_modal(s)
+            {
+                var dialog = window.document.getElementById(s + "-dialog");
+                
+                dialog.classList.remove("hide");
+                dialog.classList.add("in");
+            }
+            
+            function close_modal(s)
+            {
+                var dialog = window.document.getElementById(s + "-dialog");
+                
+                dialog.classList.add("hide");
+                dialog.classList.remove("in");
+            }
+            
+            var __current_pdf = null;
+            
+            function pdf_mouse_down(e)
+            {
+                __current_pdf = e.target;
+                __current_pdf.classList.add("down");
+            }
+            
+            function pdf_mouse_up(e)
+            {
+                if(__current_pdf != null)
+                {
+                    __current_pdf.classList.remove("down");
+                    __current_pdf = null;
+                }
+            }
+            
+            function pdf_mouse_click(e)
+            {
+                var p = e.target;
+                p.classList.remove("down");
+                p.classList.add("loading");
+            }
+            
+            function init()
+            {
+                init_date_slider("uses", {% raw tasks.interesting_dates() %}, true);
+                
+                close_modal('col-select');
+                close_modal('row-select');
+                
+                var d = document.getElementsByClassName("download-icon");
+                
+                for(var i = 0; i < d.length; ++i)
+                {
+                    d[i].addEventListener("mousedown", pdf_mouse_down);
+                    d[i].addEventListener("click", pdf_mouse_click);
+                }
+                
+                window.addEventListener("mouseup", pdf_mouse_up);
+            }
+            
+            window.addEventListener("load", init);
+        </script>
     </head>
     
     <body>
+        <div class="navbar header">
+            <div class="navbar-inner header-inner">
+                <div style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;">
+                    <div>
+                        <a class="brand" href="./">
+                            Overview of Available Tasks
+                        </a>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary btn-large" onclick="open_modal('col-select')">
+                            Select columns
+                        </button>
+                        
+                        <button class="btn btn-primary btn-large" onclick="open_modal('row-select')">
+                            Add/Remove Search Criteria
+                        </button> 
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal" id="col-select-dialog">
+            <div class="modal-header">
+                <button type="button" class="close" onClick="close_modal('col-select')">&#xD7;</button>
+                <h3>Select Columns</h3>
+            </div>
+            <div class="modal-body">
+                <form name="col-select">
+                    <div class="control-panel">
+                    {% for key in TaskInfo.entries() %}
+                        <div class="checkbox">
+                            <input type="checkbox" id="col-{{key}}" checked>
+                            <label for="col-{{key}}">
+                            {% raw TaskInfo.desc()[key] %}
+                            </label>
+                        </div>
+                    {% end %}
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                    <button class="btn btn-success" style="float:left;">Apply</button>
+                    <button class="btn btn-secondary" onClick="close_modal('col-select')">Cancel</button>
+            </div>
+        </div>
+        
+        <div class="modal wide" id="row-select-dialog">
+            <div class="modal-header">
+                <button type="button" class="close" onClick="close_modal('row-select')">&#xD7;</button>
+                <h3>Add/Remove Search Criteria</h3>
+            </div>
+            <div class="modal-body">
+                <form name="row-select">  
+                    <div class="control-table">     
+                        <div class="two-cols">            
+                            <div>
+                                <div class="control-panel">
+                                    <h6> Algorithmic Difficulty </h6>
+                                    <div class="range-slider" id="alg-diff" data-maxval="10">
+                                    </div>
+                                    <div class="range-slider-info" data-for="alg-diff">
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="control-panel">
+                                    <h6> Implementation Difficulty </h6>
+                                    <div class="range-slider" id="impl-diff"  data-maxval="10">
+                                    </div>
+                                    <div class="range-slider-info" data-for="impl-diff">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                            <div>
+                                <div class="control-panel">
+                                    <h6> Last used </h6>
+                                    <label> All tasks used in the selected contests will be hidden. </label>
+                                    <div class="dateslider" id="uses">
+                                    </div>
+                                </div>
+                            </div>
+            
+                            <div>
+                                <div class="control-panel">
+                                    <h6> Public vs. private </h6>
+                                    <div class="mini-table">
+                                        <div class="two-cols">
+                                            <div class="checkbox">
+                                                <input type="checkbox" id="private" value="private" checked>                                        
+                                                <label for="private">
+                                                    Show private tasks
+                                                </label>
+                                            </div>
+                                            <div class="checkbox">
+                                                <input type="checkbox" id="public" value="public" checked>                                        
+                                                <label for="public">
+                                                    Show public tasks
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                       
+                </form>
+            </div>
+            <div class="modal-footer">
+                    <button class="btn btn-success" style="float:left;">Apply</button>
+                    <button class="btn btn-secondary" onclick="close_modal('row-select')">Cancel</button>
+            </div>
+        </div>
+        
         <table class="table table-striped table-bordered overview">
             <tr>
-                <th> Name </th>
-                <th> Source </th>
-                <th> Diff<sub>Alg</sub> </th>
-                <th> Diff<sub>Impl</sub> </th>
-                <th> Keywords </th>
-                <th> Uses </th>
-                <th> Remarks </th>
-                <th> Public? </th>
+            <!-- table-bordered doesn't work with th, so we emulate it -->
+            {% for key in TaskInfo.entries() %}
+                <td class="th"> {% raw TaskInfo.desc()[key] %} </td>
+            {% end %}
+                <td class="th"> PDF </td>
             </tr>
             
             {% for t in tasks %}
             <tr>
+                <td> <b> {% raw t.code %}  </b> </td>
                 <td> {% raw t.title          %} </td>
                 <td> {% raw t.source         %} </td>
                 <td> {% raw t.algorithm      %} </td>
@@ -37,7 +225,7 @@
                 {% else %}
                     <ul class="embedded">
                     {% for u in t.uses %}
-                        <li> {% raw u[0] %} ({% raw u[1] %}) </li>
+                        <li> {% raw u.info %} </li>
                     {% end %}
                     </ul>
                 {% end %}
@@ -45,6 +233,9 @@
                 <td> {% raw t.remarks %} </td>
                 <td>
                     {% raw "Yes" if t.public else "No" %}
+                </td>
+                <td class="download">
+                    <div class="download-icon" data-code="{% raw t.code %}"></div>
                 </td>
             </tr>
             {% end %}

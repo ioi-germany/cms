@@ -1,0 +1,34 @@
+div.range-slider-info {
+    width:100%;
+    display:flex;
+}
+
+div.unselectable {
+    -moz-user-select:none;
+    -ms-user-select:none;
+    -webkit-user-select:none;
+    user-select:none;
+}
+
+div.range-slider-label-left {
+    flex-grow:1;
+    width:0px;
+    text-align:right;
+}
+
+div.range-slider-label-center {
+    flex-grow:0;
+    text-align:center;
+}
+
+div.range-slider-label-right {
+    flex-grow:1;
+    width:0px;
+    text-align:left;
+}
+
+div.range-slider {
+    padding-top:7px;
+    padding-bottom:7px;
+    width:100%;
+}

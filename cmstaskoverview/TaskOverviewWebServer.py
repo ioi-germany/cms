@@ -29,7 +29,7 @@ from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler, Application
 
 from .Config import config
-from .Loader import load
+from .Loader import TaskInfo
 
 
 logger = logging.getLogger(__name__)
@@ -38,10 +38,11 @@ logger = logging.getLogger(__name__)
 class TaskOverviewHandler(RequestHandler):
     def get(self):  
         try:
-            tasks = load(config.task_repository)
+            tasks = TaskInfo(config.task_repository)
         except:
             logger.warning("couldn't load tasks")
             tasks = []
+            raise
         
         self.render("overview.html", tasks=tasks)
 

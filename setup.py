@@ -76,6 +76,8 @@ def do_setup():
         "cmstaskoverview": [
             os.path.join("templates", "*.*"),
             os.path.join("static", "css", "*.*"),
+            os.path.join("static", "img", "*.*"),
+            os.path.join("static", "js", "*.*"),
             os.path.join("static", "*.*")
         ],
         "cmscontrib": [
