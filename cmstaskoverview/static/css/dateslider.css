@@ -1,0 +1,19 @@
+div.dateslider {
+    padding-top:7px;
+    padding-bottom:7px;
+    overflow-x:scroll;
+}
+
+div.ds-annotation-container {
+    height:100px;
+    position:relative;
+    background-color:transparent;
+    display:inline-block;
+}
+
+div.ds-annotations {
+    position:absolute;
+    top:0px;
+    left:0px;
+    background-color:transparent;
+}

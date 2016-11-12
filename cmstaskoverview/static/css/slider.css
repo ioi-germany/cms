@@ -1,0 +1,65 @@
+/* Colors from bootstrap.css (see there) */
+
+div.slider {
+    padding-top:7px;
+    padding-bottom:7px;
+    width:100%;
+}
+
+div.slider-outer {
+    width:100%;
+    border-radius:4px;
+    background:#cccccc;
+    box-shadow:inset 0px 0px 2.5px 2px rgba(0, 0, 0, .2);
+    padding:0px;
+    overflow:hidden;
+}
+
+div.slider-helper {
+    position:relative;
+    width:100%;
+    height:8px;
+}
+
+div.slider-bar {
+    position:absolute;
+    left:0px;
+    right:0px;
+    top:0px;
+    bottom:0px;
+    background:linear-gradient(#0088cc, #0055cc);
+}
+
+div.slider-bar:hover {
+    background:#0055cc;
+}
+
+
+div.mark {
+    -moz-user-select:none;
+    -ms-user-select:none;
+    -webkit-user-select:none;
+    user-select:none;
+
+    position:absolute;
+    left:0px;
+    width:14px;
+    height:14px;
+    top:-3px;
+    border-radius:8px;
+    background:#888888;
+    box-shadow:inset 0px 0px 4px 4px rgba(255, 255, 255, .3);
+    border:.5px solid #999999;
+}
+
+div.mark:hover {
+    background:#0066cc;
+    border:.5px solid #0077cc;
+    box-shadow:inset 0px 0px 4px 4px rgba(255, 255, 255, .1);
+}
+
+div.mark.down {
+    background:#0055cc;
+    border:.5px solid #0066cc;
+    box-shadow:inset 0px 0px 4px 4px rgba(255, 255, 255, .1);
+}
