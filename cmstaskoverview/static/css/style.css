@@ -4,6 +4,20 @@ body {
     padding-top:60px;
 }
 
+div.modal-backdrop {
+    position:absolute;
+    top:0px;
+    left:0px;
+    right:0px;
+    bottom:0px;
+    background:rgba(0, 0, 0, .75);
+    z-index:10;
+}
+
+div.modal-backdrop.invisible {
+    display:none;
+}
+
 table.overview {
     margin-top:15px;
     margin-left:auto;
