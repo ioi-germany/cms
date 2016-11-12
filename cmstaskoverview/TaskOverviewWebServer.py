@@ -29,7 +29,7 @@ from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler, Application
 
 from .Config import config
-from .Loader import TaskInfo
+from .TaskInfo import TaskInfo
 
 
 logger = logging.getLogger(__name__)
