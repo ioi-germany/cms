@@ -306,3 +306,10 @@ function date_slider_get_val(id)
 {
     return __date_slider_repr_val[__date_slider_internal_id[id]][date_slider_get_raw(id)];
 }
+
+function date_slider_set(id, val)
+{
+    var ii = __date_slider_internal_id[id];
+    __date_slider_val[ii] = val;
+    _snap_date_slider(window.document.getElementById(ii));
+}

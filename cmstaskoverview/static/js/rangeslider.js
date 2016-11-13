@@ -135,7 +135,7 @@ function _range_slider_mouse_leave(e)
     _range_slider_release();
 }
 
-function _init_range_sliders()
+function init_range_sliders()
 {
     var slider_labels = window.document.getElementsByClassName("range-slider-info");
     var slider_label_dict = {};
@@ -188,7 +188,18 @@ function _init_range_sliders()
     window.addEventListener("mouseup", _range_slider_mouse_up);
 }
 
-window.addEventListener("load", _init_range_sliders);
+function range_slider_set(id, lower, upper)
+{
+    var i = __internal_id[id];
+    var l = window.document.getElementById(i + "_l");
+    var r = window.document.getElementById(i + "_r");
+    
+    __range_slider_left[i] = lower;
+    __range_slider_right[i] = upper;
+    
+    _snap_range_slider(l); _snap_range_slider(r);
+    _update_range_label(l);    
+}
 
 function range_slider_get_lower(id)
 {
@@ -198,4 +209,9 @@ function range_slider_get_lower(id)
 function range_slider_get_upper(id)
 {
     return __range_slider_right[__internal_id[id]];
+}
+
+function range_slider_get(id)
+{
+    return { lower: range_slider_get_lower(id), upper: range_slider_get_upper(id) };
 }

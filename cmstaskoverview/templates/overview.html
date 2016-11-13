@@ -1,4 +1,5 @@
 {% from cmstaskoverview.TaskInfo import TaskInfo %}
+{% import json %}
 
 <!DOCTYPE html>
 <html>
@@ -16,18 +17,77 @@
         <script src="static/js/slider.js"></script>
         <script src="static/js/dateslider.js"></script>
         <script src="static/js/rangeslider.js"></script>
-        <script src="static/js/download.js"></script>
         <script src="static/js/modal.js"></script>
+        <script src="static/js/overview.js"></script>
         
-        <script>            
+        <script>
+            var task_info = {% raw tasks.dump() %};
+            var entries = {% raw json.dumps(TaskInfo.entries()) %};
+            var desc = {% raw json.dumps(TaskInfo.desc()) %};
+            var show_col = {};
+            var criteria = { alg_diff:     { lower: 0, upper: 10 },
+                             impl_diff:    { lower: 0, upper: 10 },
+                             show_public:  true,
+                             show_private: true,
+                             only_before:  Infinity };      
+                             
+            var date_slider_raw = null;   
+            
+            function open_col_select()
+            {
+                open_modal('col-select');
+                
+                for(var i = 0; i < entries.length; ++i)
+                    window.document.getElementById("col-" + entries[i]).checked = show_col[entries[i]];
+            }
+            
+            function apply_col_select()
+            {
+                close_modal('col-select');
+                
+                for(var i = 0; i < entries.length; ++i)
+                    show_col[entries[i]] = window.document.getElementById("col-" + entries[i]).checked;
+                
+                fill_table(entries, desc, task_info, show_col, criteria);
+
+            }
+            
+            function open_row_select()
+            {
+                open_modal('row-select');
+
+                range_slider_set("alg-diff", criteria.alg_diff.lower, criteria.alg_diff.upper);
+                range_slider_set("impl-diff", criteria.impl_diff.lower, criteria.impl_diff.upper);
+                date_slider_set("uses", date_slider_raw);
+            }
+            
+            function apply_row_select()
+            {
+                close_modal('row-select');
+                
+                criteria.alg_diff = range_slider_get("alg-diff");
+                criteria.impl_diff = range_slider_get("impl-diff");
+                criteria.show_public = window.document.getElementById("public").checked;
+                criteria.show_private = window.document.getElementById("private").checked;
+                criteria.only_before = date_slider_get_val("uses");
+                date_slider_raw = date_slider_get_raw("uses");
+                
+                fill_table(entries, desc, task_info, show_col, criteria);
+            }
+                 
             function init()
             {
+                for(var i = 0; i < entries.length; ++i) show_col[entries[i]] = true;
+
+                init_range_sliders();
                 init_date_slider("uses", {% raw tasks.interesting_dates() %}, true);
+                criteria.only_before = date_slider_get_val("uses");  
+                date_slider_raw = date_slider_get_raw("uses");              
                 
                 close_modal('col-select');
                 close_modal('row-select');
                 
-                init_download_icons();
+                fill_table(entries, desc, task_info, show_col, criteria);
             }
             
             window.addEventListener("load", init);
@@ -45,11 +105,11 @@
                         </a>
                     </div>
                     <div>
-                        <button class="btn btn-primary btn-large" onclick="open_modal('col-select')">
+                        <button class="btn btn-primary btn-large" onclick="open_col_select()">
                             Select columns
                         </button>
                         
-                        <button class="btn btn-primary btn-large" onclick="open_modal('row-select')">
+                        <button class="btn btn-primary btn-large" onclick="open_row_select()">
                             Add/Remove Search Criteria
                         </button> 
                     </div>
@@ -65,9 +125,10 @@
             <div class="modal-body">
                 <form name="col-select">
                     <div class="control-panel">
+                    <h6>Columns to be shown</h6>
                     {% for key in TaskInfo.entries() %}
                         <div class="checkbox">
-                            <input type="checkbox" id="col-{{key}}" checked>
+                            <input type="checkbox" id="col-{{key}}">
                             <label for="col-{{key}}">
                             {% raw TaskInfo.desc()[key] %}
                             </label>
@@ -77,7 +138,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                    <button class="btn btn-success" style="float:left;">Apply</button>
+                    <button class="btn btn-success" style="float:left;" onclick="apply_col_select()">Apply</button>
                     <button class="btn btn-secondary" onClick="close_modal('col-select')">Cancel</button>
             </div>
         </div>
@@ -146,54 +207,13 @@
                 </form>
             </div>
             <div class="modal-footer">
-                    <button class="btn btn-success" style="float:left;">Apply</button>
+                    <button class="btn btn-success" style="float:left;" onclick="apply_row_select()">Apply</button>
                     <button class="btn btn-secondary" onclick="close_modal('row-select')">Cancel</button>
             </div>
         </div>
         
-        <table class="table table-striped table-bordered overview">
-            <tr>
-            <!-- table-bordered doesn't work with th, so we emulate it -->
-            {% for key in TaskInfo.entries() %}
-                <td class="th"> {% raw TaskInfo.desc()[key] %} </td>
-            {% end %}
-                <td class="th"> PDF </td>
-            </tr>
-            
-            {% for t in tasks %}
-            <tr>
-                <td> <b> {% raw t.code %}  </b> </td>
-                <td> {% raw t.title          %} </td>
-                <td> {% raw t.source         %} </td>
-                <td> {% raw t.algorithm      %} </td>
-                <td> {% raw t.implementation %} </td>
-                <td>
-                    <ul class="embedded">
-                    {% for k in t.keywords %}
-                        <li> {% raw k %} </li>
-                    {% end %}
-                    </ul>
-                </td>
-                <td>
-                {% if len(t.uses) == 0 %}
-                    — 
-                {% else %}
-                    <ul class="embedded">
-                    {% for u in t.uses %}
-                        <li> {% raw u.info %} </li>
-                    {% end %}
-                    </ul>
-                {% end %}
-                </td>
-                <td> {% raw t.remarks %} </td>
-                <td>
-                    {% raw "Yes" if t.public else "No" %}
-                </td>
-                <td class="download">
-                    <div class="download-icon" data-code="{% raw t.code %}"></div>
-                </td>
-            </tr>
-            {% end %}
+        <table class="table table-striped table-bordered overview" id="overview">
+            <!-- data insert via javascript:fill_table() -->
         </table>
     </body>
 </html>

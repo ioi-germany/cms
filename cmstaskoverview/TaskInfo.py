@@ -36,6 +36,10 @@ class DateEntry:
     
     def timestamp(self):
         return self.date.toordinal()
+    
+    def to_dict(self):
+        return {"timestamp": self.timestamp(),
+                "info":      self.info}
 
 
 class SingleTaskInfo:
@@ -66,6 +70,18 @@ class SingleTaskInfo:
             
         for key, value in info.iteritems():
             setattr(self, key, value)
+
+    def to_dict(self):
+        return {"code":           self.code,
+                "title":          self.title,
+                "source":         self.source,
+                "algorithm":      self.algorithm,
+                "implementation": self.implementation,
+                "keywords":       self.keywords,
+                "uses":           [e.to_dict() for e in self.uses],
+                "remarks":        self.remarks,
+                "public":         self.public}
+                
 
 
 class TaskInfo:
@@ -105,7 +121,10 @@ class TaskInfo:
                 data.pop()
             data.append((key, val))
             
-        return json.dumps(data)  
+        return json.dumps(data)
+    
+    def dump(self):
+        return json.dumps([t.to_dict() for t in self.tasks])
     
     def __iter__(self):
         for t in self.tasks:
@@ -114,7 +133,7 @@ class TaskInfo:
     @staticmethod
     def entries():
         return ["code", "title", "source", "algorithm", "implementation",
-                "keywords", "uses", "remarks", "public"]
+                "keywords", "uses", "remarks", "public", "download"]
 
     @staticmethod
     def desc():
@@ -126,4 +145,5 @@ class TaskInfo:
                 "keywords": "Keywords",
                 "uses": "Previous uses",
                 "remarks": "Remarks",
-                "public": "Public?"}
+                "public": "Public?",
+                "download": "PDF"}
