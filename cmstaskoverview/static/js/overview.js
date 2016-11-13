@@ -83,9 +83,18 @@ function relevant(t, c)
            (c.show_public || !t["public"]) && (c.show_private || t["public"]) &&
            uses_ok;
 }
+
+function comp(a, b)
+{
+    if(a.code > b.code) return 1;
+    if(a.code < b.code) return -1;
+                        return 0;
+}
                  
 function fill_table(entries, desc, task_info, show_col, criteria)
 {
+    task_info = Array.sort(task_info, comp);
+
     var table_body = "";
                 
     table_body += '<tr>';
