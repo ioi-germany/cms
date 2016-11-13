@@ -4,16 +4,6 @@ body {
     padding-top:60px;
 }
 
-div.modal-backdrop {
-    position:absolute;
-    top:0px;
-    left:0px;
-    right:0px;
-    bottom:0px;
-    background:rgba(0, 0, 0, .75);
-    z-index:10;
-}
-
 div.modal-backdrop.invisible {
     display:none;
 }
@@ -59,7 +49,7 @@ div.control-panel {
     margin:7px;
     background:#f5f5f5;
     border-radius:6px;
-    margin-bottom:15px;
+    margin-bottom:14px;
     border:1px solid #ddd;
     box-shadow:inset 0px 1px 0px white;
 }
@@ -111,7 +101,11 @@ div.two-cols > div > div {
     height:100% !important;
 }
 
-div.control-table > div:last-child {
+div.modal-body > form > div.control-panel:last-child {
+    margin-bottom:7px;
+}
+
+form {
     margin-bottom:0px;
 }
 
