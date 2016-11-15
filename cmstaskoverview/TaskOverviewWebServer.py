@@ -22,14 +22,16 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import logging
+import json
 
 from pkg_resources import resource_filename
 from tornado import template
 from tornado.ioloop import IOLoop
-from tornado.web import RequestHandler, Application
+from tornado.web import RequestHandler, Application, asynchronous
 
 from .Config import config
 from .TaskInfo import TaskInfo
+from .TaskFetch import TaskFetch
 
 
 logger = logging.getLogger(__name__)
@@ -47,26 +49,64 @@ class TaskOverviewHandler(RequestHandler):
         self.render("overview.html", tasks=tasks)
 
 
+class TaskCompileHandler(RequestHandler):
+    def get(self):        
+        self.write(TaskFetch.query(self.get_argument("code")))
+        self.flush()
+
+    def post(self):
+        TaskFetch.compile(self.get_argument("code"))
+
+
+class DownloadHandler(RequestHandler):
+    def share(self, url, code):
+        try:
+            f = open(url, "rb")
+            content = f.read()
+            
+            self.set_header("Content-Type", "application/pdf");
+            self.set_header("Content-Disposition",
+                            "attachment;filename=\"statement-{}.pdf\"".
+                                format(code))
+            self.write(content)
+            
+        except:
+            logger.error("could not download statement")
+            
+        finally:
+            f.close()
+
+    def get(self, code):
+        url = TaskFetch.get(code)
+
+        if url is None:
+            logger.error("could not download statement")
+        else:
+            self.share(url, code)
+
 class TaskOverviewWebServer:
     """Service running a web server that displays an overview of
        all available tasks
     """
 
     def __init__(self):
-        handlers = [(r"/", TaskOverviewHandler)]
+        handlers = [(r"/", TaskOverviewHandler),
+                    (r"/compile", TaskCompileHandler),
+                    (r"/download/(.*)", DownloadHandler)]
     
         base = "cmstaskoverview"
         params = {"template_path": resource_filename(base, "templates"),
                   "static_path":   resource_filename(base, "static")}
     
+        TaskFetch.init(config.task_repository)
+    
         self.app = Application(handlers, **params)
 
-    def run(self):
+    def run(self):    
         self.app.listen(config.http_port)
         
         try:
             IOLoop.instance().start()
         except KeyboardInterrupt:
             pass
-                                                    
-        
+

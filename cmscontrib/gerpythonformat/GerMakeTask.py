@@ -79,6 +79,11 @@ class GerMakeTask:
 
         finally:
             filecacher.destroy_cache()
+        
+        for _, s in cc.tasks[0]._statements.iteritems():
+            if s.primary: 
+                return os.path.abspath(s.file_)
+        return None
 
 def main():
     """Parse arguments and launch process."""
