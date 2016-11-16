@@ -112,3 +112,7 @@ form {
 td.th {
     font-weight:bold;
 }
+
+span.task-name {
+    font-weight:bold;
+}

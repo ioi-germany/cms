@@ -52,9 +52,16 @@ blue_code = "\033[94m"
 bold_code = "\033[1m"
 end_code = "\033[0m"
 
+_disable_color_switch = False
+
+def disable_colors():
+    global _disable_color_switch
+    _disable_color_switch = True
+
 
 def colors_enabled():
-    return sys.platform == "linux" or sys.platform == "linux2"
+    return not _disable_color_switch and (sys.platform == "linux"
+        or sys.platform == "linux2")
 
 
 def color_function(start):

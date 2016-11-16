@@ -88,6 +88,7 @@
                 
                 close_modal('col-select');
                 close_modal('row-select');
+                close_modal('error');
                 
                 fill_table(entries, desc, task_info, show_col, criteria);
             }
@@ -116,6 +117,28 @@
                         </button> 
                     </div>
                 </div>
+            </div>
+        </div>
+        
+        <div class="modal wide" id="error-dialog">
+            <div class="modal-header">
+                <button type="button" class="close" onClick="close_modal('error')">&#xD7;</button>
+                <h3>An error has occured...</h3>
+            </div>
+            <div class="modal-body">
+                <p>
+                I'm sorry, but I couldn't compile the statement for task <span id="task-name" class="task-name">???</span>. Maybe the information below helps:
+                </p>
+            
+                <h6> Error message received from server </h6>
+                <pre><code id="error-msg"></code></pre>
+                
+                <h6> Compilation log </h6>
+                <pre><code id="error-log"></code></pre>
+            </div>
+            <div class="modal-footer">
+            <button class="btn btn-primary" style="float:left;" id="retry-compilation" onClick="retry_compilation()">Retry</button>
+                <button class="btn btn-secondary" onClick="close_modal('error')">Exit</button>
             </div>
         </div>
         

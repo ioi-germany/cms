@@ -22,10 +22,14 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import logging
+import sys
 
-from threading import Thread
-from time import sleep
+from sys import exc_info
+from traceback import format_exception
+from multiprocessing import Process, Queue
+from StringIO import StringIO
 
+from cmscontrib.gerpythonformat.Messenger import disable_colors
 from cmscontrib.gerpythonformat.GerMakeTask import GerMakeTask
 
 
@@ -36,36 +40,73 @@ class TaskCompileJob:
     def __init__(self, base_dir, name):
         logger.info("loading task {} in dir {}".format(name, base_dir))
 
-        self._error = False
-        self._done = False
-        self.result = None
-        
-        def do():
-            try:
-                self.result = GerMakeTask(base_dir, name, True, False).make()
-            except:
-                self._error = True
+        self.status = { "error":  False,
+                        "done":   False,
+                        "result": None,
+                        "msg":    "Okay",
+                        "log":    "" };
 
-            if self.result is None:
-                self._error = True
-            self._done = True            
+        self.queue = Queue()
+        
+        def do(queue):
+            # stdout is process local in Python, so we can simply use this
+            # to redirect all output from GerMakeTask to a string
+            sys.stdout = StringIO()
+                   
+            # Remove color codes for the log file
+            disable_colors()
+                   
+            try:
+                result = GerMakeTask(base_dir, name, True, False).make()
+                queue.put({ "result": result })
+                
+                if result is None:
+                    queue.put({ "error": True,
+                                "msg":   "No statement found" })
+                
+                queue.put({ "result": result })
+
+            except Exception as error:
+                queue.put({ "error": True,
+                            "msg": "\n".join(format_exception(*exc_info())) })
+
+            sys.stdout.flush()
+            queue.put({ "log": sys.stdout.getvalue() })
+            queue.put({ "done": True })
+            queue.close()
             
-        self.compile_thread = Thread(target=do)
-        self.compile_thread.start()
+        self.compilation_process = Process(target=do, args = (self.queue,))
+        self.compilation_process.start()
     
+    def _update(self):
+        while not self.queue.empty():
+            self.status.update(self.queue.get(False))
+
     """ Various methods for the status
     """
     def done(self):
-        return self._done
+        self._update()
+        return self.status["done"]
     
     def error(self):
-        return self._error
+        self._update()
+        return self.status["error"]
         
     def working(self):
-        return not self._done and not self._error
+        self._update()
+        return not self.status["done"] and not self.status["error"]
     
+    def msg(self):
+        self._update()
+        return self.status["msg"]
+
+    def log(self):
+        self._update()
+        return self.status["log"]
+
     def get(self):
-        return self.result
+        self._update()
+        return self.status["result"]
 
 
 class Loader:
@@ -111,13 +152,25 @@ class Loader:
         except:
             return None
 
+    def msg(self, name):
+        try:
+            return self.jobs[name].msg()
+        except:
+            return "<missing TaskJob object>"
+
+    def log(self, name):
+        try:
+            return self.jobs[name].log()
+        except:
+            return ""
+
 
 class TaskFetch:
     loader = None
 
     @staticmethod
     def init(base_dir):
-        if TaskFetch.loader is None:
+        if TaskFetch.loader is None:        
             logger.info("initializing TaskFetch with base_dir={}".format(base_dir))
             TaskFetch.loader = Loader(base_dir)
         else:
@@ -131,7 +184,9 @@ class TaskFetch:
     def query(name):
         logger.info("querying {}".format(name))
         return { "done":   TaskFetch.loader.done(name),
-                 "error":  TaskFetch.loader.error(name) }
+                 "error":  TaskFetch.loader.error(name),
+                 "msg":    TaskFetch.loader.msg(name),
+                 "log":    TaskFetch.loader.log(name) }
 
     @staticmethod
     def get(name):
