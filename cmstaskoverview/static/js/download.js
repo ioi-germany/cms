@@ -1,5 +1,6 @@
 var __current_pdf = null;
 var __pdf_jobs = {};
+var __pdf_result = {};
             
 function _pdf_mouse_down(e)
 {
@@ -16,18 +17,8 @@ function _pdf_mouse_up(e)
     }
 }
 
-function _download_file(r)
+function _compile(p, code)
 {
-    alert(r);
-}
-            
-function _pdf_mouse_click(e)
-{
-    var p = e.target;
-    var code = p.dataset.code;
-    
-    if(code in __pdf_jobs)  return;
-    
     p.classList.remove("done");
     p.classList.remove("error");
     p.classList.add("loading");
@@ -39,12 +30,14 @@ function _pdf_mouse_click(e)
         function handle(r)
         {        
             if(r.done)
-            {
+            {       
                 window.clearInterval(__pdf_jobs[code]);
                 delete __pdf_jobs[code];
                 
+                __pdf_result[code] = r;
+                     
                 if(r.error)
-                {
+                {                
                     p.classList.remove("loading");
                     p.classList.add("error");
                 }
@@ -63,6 +56,37 @@ function _pdf_mouse_click(e)
     }
              
     __pdf_jobs[code] = window.setInterval(query, 1500);
+}
+         
+function _pdf_mouse_click(e)
+{
+    var p = e.target;
+    var code = p.dataset.code;
+    
+    if(code in __pdf_result && __pdf_result[code].error)
+    {
+        window.document.getElementById("error-msg").innerHTML = __pdf_result[code].msg;
+        window.document.getElementById("error-log").innerHTML = __pdf_result[code].log;
+        window.document.getElementById("task-name").innerHTML = code;
+        window.document.getElementById("retry-compilation").dataset.code = code;
+        open_modal("error");
+        return;
+    }
+    
+    if(code in __pdf_jobs)  return;
+    
+    _compile(p, code);
+}
+
+function retry_compilation()
+{
+    var code = window.document.getElementById("retry-compilation").dataset.code;
+    delete __pdf_result[code];
+    
+    var p = window.document.getElementById("download-" + code);
+    
+    _compile(p, code);    
+    close_modal("error");
 }
 
 function init_download_icons()

@@ -31,9 +31,16 @@ div.download-icon.loading, div.download-icon.down.loading {
     cursor:auto;
 }
 
-div.download-icon.error, div.download-icon.down.error {
+div.download-icon.error {
     background-image:url("/static/img/error.png");
-    cursor:auto;
+}
+
+div.download-icon.error:hover {
+    background-image:url("/static/img/error-hover.png");
+}
+
+div.download-icon.down.error {
+    background-image:url("/static/img/error-down.png");
 }
 
 /* Animated overlays */

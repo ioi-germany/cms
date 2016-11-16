@@ -2,7 +2,7 @@ function cell(t, entry)
 {
     if(entry == "download")
     {
-        return '<td class="download"><div class="download-icon" data-code = "' + t.code + '"></div></td>';
+        return '<td class="download"><div class="download-icon" id = "download-' + t.code + '" data-code = "' + t.code + '"></div></td>';
     }
 
     if(entry == "keywords")
