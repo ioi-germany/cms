@@ -52,7 +52,8 @@ class SingleTaskInfo:
                 "keywords":       [],
                 "uses":           [],
                 "remarks":        "",
-                "public":         False}
+                "public":         False,
+                "old":            None}
     
         try:
             i = json.loads(path.open().read())
@@ -62,6 +63,9 @@ class SingleTaskInfo:
         info.update(i)
         
         info["uses"] += info.get("previous uses", [])
+
+        if info["old"] is None:
+            info["old"] = len(info["uses"]) > 0 or info["public"]
         
         try:
             info["uses"] = [DateEntry(e[0], e[1]) for e in info["uses"]]
@@ -80,7 +84,8 @@ class SingleTaskInfo:
                 "keywords":       self.keywords,
                 "uses":           [e.to_dict() for e in self.uses],
                 "remarks":        self.remarks,
-                "public":         self.public}
+                "public":         self.public,
+                "old":            self.old}
                 
 
 

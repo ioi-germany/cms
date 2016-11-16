@@ -15,6 +15,31 @@ table.overview {
     width:99% !important;
 }
 
+table.overview tr > td:first-child {
+    position:relative;
+    overflow:hidden;
+}
+
+table.overview tr.new > td:first-child::after {
+    content:"NEW";
+    padding:2px 25px 3px 25px;
+    background-color:#c93529;
+    text-shadow:0px 0px 2px rgba(0, 0, 0, .5);
+    position:absolute;
+    right:-22px;
+    top:6px;
+    font-size:9px;
+    font-weight:bold;
+    letter-spacing:.03em;
+    line-height:10px;
+    color:white;
+    transform:rotate(45deg);
+}
+
+table.overview tr.new > td:first-child:hover::after {
+    opacity:.25;
+}
+
 ul.embedded {
     margin:0px;
     list-style-position:inside;

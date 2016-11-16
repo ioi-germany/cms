@@ -70,8 +70,10 @@ function fill_table(entries, desc, task_info, show_col, criteria)
     {
         var t = task_info[i];
         if(!relevant(t, criteria)) continue;
-                    
-        table_body += '<tr>';
+             
+        if(t.old) table_body += '<tr>';         
+        else table_body += '<tr class="new">';
+        
         for(var j = 0; j < entries.length; ++j) 
             if(show_col[entries[j]])
                 table_body += cell(t, entries[j]);
