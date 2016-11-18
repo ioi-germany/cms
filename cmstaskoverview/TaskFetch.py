@@ -28,6 +28,7 @@ from sys import exc_info
 from traceback import format_exception
 from multiprocessing import Process, Queue
 from StringIO import StringIO
+from copy import deepcopy
 
 from cmscontrib.gerpythonformat.Messenger import disable_colors
 from cmscontrib.gerpythonformat.GerMakeTask import GerMakeTask
@@ -38,15 +39,32 @@ logger = logging.getLogger(__name__)
 
 class TaskCompileJob:
     def __init__(self, base_dir, name):
-        logger.info("loading task {} in dir {}".format(name, base_dir))
-
         self.status = { "error":  False,
                         "done":   False,
                         "result": None,
                         "msg":    "Okay",
                         "log":    "" };
 
+        self.base_dir = base_dir
+        self.name = name
+
         self.queue = Queue()
+        self.current_handle = 1
+        self.backup_handle = 0
+        self.backup = None
+        
+        self._compile()
+        
+    def join(self):
+        self._update()
+    
+        if self.status["done"]:
+            self.current_handle += 1
+            self._compile()
+        return self.current_handle
+            
+    def _compile(self):
+        logger.info("loading task {} in {}".format(self.name, self.base_dir))
         
         def do(queue):
             # stdout is process local in Python, so we can simply use this
@@ -57,7 +75,8 @@ class TaskCompileJob:
             disable_colors()
                    
             try:
-                statement_file = GerMakeTask(base_dir, name, True, False).make()
+                statement_file = GerMakeTask(self.base_dir, self.name, True,
+                                             False).make()
                 
                 if statement_file is None:
                     queue.put({ "error": True,
@@ -81,119 +100,69 @@ class TaskCompileJob:
             queue.close()
             
         self.compilation_process = Process(target=do, args = (self.queue,))
+        self.compilation_process.daemon = True
         self.compilation_process.start()
     
     def _update(self):
         while not self.queue.empty():
             self.status.update(self.queue.get(False))
-
-    """ Various methods for the status
-    """
-    def done(self):
-        self._update()
-        return self.status["done"]
-    
-    def error(self):
-        self._update()
-        return self.status["error"]
         
-    def working(self):
-        self._update()
-        return not self.status["done"] and not self.status["error"]
-    
-    def msg(self):
-        self._update()
-        return self.status["msg"]
+        if self.status["done"]:
+            self.backup = deepcopy(self.status)
+            self.backup_handle = self.current_handle
 
-    def log(self):
-        self._update()
-        return self.status["log"]
-
-    def get(self):
-        self._update()
-        return self.status["result"]
-
-
-class Loader:
-    def __init__(self, base_dir):
-        self.jobs = {}
-        self.base_dir = base_dir
-    
-    def compile(self, name):
-        # We won't compile the same task twice at the same time
-        # (this would probably cause problems with programs overriding each
-        # others output -- moreover, its inefficient)
-        if self.working(name):
-            logger.info("I already have a compile job for task {}".format(name))
-            return
-
-        logger.info("Got new compile job: {}".format(name))
-
-        self.jobs[name] = TaskCompileJob(self.base_dir, name)
-
-    """ Status queries for jobs
+    """ Various query methods for the status
     """
-    def working(self, name):
-        try:
-            return self.jobs[name].working()
-        except:
-            return False
+    def done(self, handle):
+        self._update()
+        return self._choose(handle, "done")
     
-    def done(self, name):
-        try:
-            return self.jobs[name].done()
-        except:
-            return False
+    def error(self, handle):
+        self._update()
+        return self._choose(handle, "error")
+        
+    def working(self, handle):
+        return not self.done(handle)
+    
+    def msg(self, handle):
+        self._update()
+        return self._choose(handle, "msg")
 
-    def error(self, name):
-        try:
-            return self.jobs[name].error()
-        except:
-            return True
+    def log(self, handle):
+        self._update()
+        return self._choose(handle, "log")
 
-    def get(self, name):
-        try:
-            return self.jobs[name].get()
-        except:
-            return None
-
-    def msg(self, name):
-        try:
-            return self.jobs[name].msg()
-        except:
-            return "<missing TaskJob object>"
-
-    def log(self, name):
-        try:
-            return self.jobs[name].log()
-        except:
-            return ""
+    def get(self, handle):
+        self._update()
+        return self._choose(handle, "result")
+    
+    def _choose(self, handle, key):
+        return self.backup[key] if handle <= self.backup_handle else \
+               self.status[key]
 
 
 class TaskFetch:
-    loader = None
+    jobs = {}
+    base_dir = None
 
     @staticmethod
     def init(base_dir):
-        if TaskFetch.loader is None:        
-            logger.info("initializing TaskFetch with base_dir={}".format(base_dir))
-            TaskFetch.loader = Loader(base_dir)
-        else:
-            logger.error("there can be only one (call to TaskFetch.init)!")
+        logger.info("initializing TaskFetch with base_dir={}".format(base_dir))
+        TaskFetch.base_dir = base_dir
 
     @staticmethod
     def compile(name):
-        TaskFetch.loader.compile(name)
+        if not name in TaskFetch.jobs:
+            TaskFetch.jobs[name] = TaskCompileJob(TaskFetch.base_dir, name)
+        return TaskFetch.jobs[name].join()
 
     @staticmethod
-    def query(name):
-        logger.info("querying {}".format(name))
-        return { "done":   TaskFetch.loader.done(name),
-                 "error":  TaskFetch.loader.error(name),
-                 "msg":    TaskFetch.loader.msg(name),
-                 "log":    TaskFetch.loader.log(name) }
+    def query(name, handle):
+        return { "done":   TaskFetch.jobs[name].done(handle),
+                 "error":  TaskFetch.jobs[name].error(handle),
+                 "msg":    TaskFetch.jobs[name].msg(handle),
+                 "log":    TaskFetch.jobs[name].log(handle) }
 
     @staticmethod
-    def get(name):
-        logger.info("downloading statement for {}".format(name))
-        return TaskFetch.loader.get(name)
+    def get(name, handle):
+        return TaskFetch.jobs[name].get(handle)

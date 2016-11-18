@@ -51,12 +51,14 @@ class TaskOverviewHandler(RequestHandler):
 
 class TaskCompileHandler(RequestHandler):
     def get(self):        
-        self.write(TaskFetch.query(self.get_argument("code")))
+        self.write(TaskFetch.query(self.get_argument("code"),
+                                   self.get_argument("handle")))
         self.flush()
 
     def post(self):
-        TaskFetch.compile(self.get_argument("code"))
-
+        handle = TaskFetch.compile(self.get_argument("code"))
+        self.write({"handle": handle})
+        self.flush()
 
 class DownloadHandler(RequestHandler):
     def share(self, statement, code):            
@@ -65,8 +67,8 @@ class DownloadHandler(RequestHandler):
                         "attachment;filename=\"statement-{}.pdf\"".format(code))
         self.write(statement)
        
-    def get(self, code):
-        statement = TaskFetch.get(code)
+    def get(self, code, handle):
+        statement = TaskFetch.get(code, int(handle))
 
         if statement is None:
             logger.error("could not download statement")
@@ -82,7 +84,7 @@ class TaskOverviewWebServer:
     def __init__(self):
         handlers = [(r"/", TaskOverviewHandler),
                     (r"/compile", TaskCompileHandler),
-                    (r"/download/(.*)", DownloadHandler)]
+                    (r"/download/(.*)/([1-9][0-9]*)", DownloadHandler)]
     
         base = "cmstaskoverview"
         params = {"template_path": resource_filename(base, "templates"),
