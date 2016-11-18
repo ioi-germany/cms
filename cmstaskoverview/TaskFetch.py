@@ -132,9 +132,9 @@ class TaskCompileJob:
         self._update()
         return self._choose(handle, "log")
 
-    def get(self, handle):
+    def get(self):
         self._update()
-        return self._choose(handle, "result")
+        return self.backup["result"] # this will always be the most current one
     
     def _choose(self, handle, key):
         return self.backup[key] if handle <= self.backup_handle else \
@@ -164,5 +164,5 @@ class TaskFetch:
                  "log":    TaskFetch.jobs[name].log(handle) }
 
     @staticmethod
-    def get(name, handle):
-        return TaskFetch.jobs[name].get(handle)
+    def get(name):
+        return TaskFetch.jobs[name].get()
