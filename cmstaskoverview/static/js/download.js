@@ -22,40 +22,45 @@ function _compile(p, code)
     p.classList.remove("done");
     p.classList.remove("error");
     p.classList.add("loading");
-    
-    $.post("/compile", { "code": code });
              
-    function query()
-    {
-        function handle(r)
-        {        
-            if(r.done)
-            {       
-                window.clearInterval(__pdf_jobs[code]);
-                delete __pdf_jobs[code];
+    function init(s)
+    {    
+        var handle = s.handle;
+    
+        function query()
+        {
+            function download(r)
+            {        
+                if(r.done)
+                {       
+                    window.clearInterval(__pdf_jobs[code]);
+                    delete __pdf_jobs[code];
+                                        
+                    __pdf_result[code] = r;
+                         
+                    if(r.error)
+                    {                
+                        p.classList.remove("loading");
+                        p.classList.add("error");
+                    }
                 
-                __pdf_result[code] = r;
-                     
-                if(r.error)
-                {                
-                    p.classList.remove("loading");
-                    p.classList.add("error");
-                }
-            
-                else
-                {
-                    p.classList.remove("loading");
-                    p.classList.add("done");
-         
-                    window.location.href = "/download/" + code;
+                    else
+                    {
+                        p.classList.remove("loading");
+                        p.classList.add("done");
+             
+                        window.location.href = "/download/" + code + "/" + handle;
+                    }
                 }
             }
+        
+            $.get("/compile", { "code": code, "handle": handle }, download);
         }
-    
-        $.get("/compile", { "code": code }, handle);
+        
+        __pdf_jobs[code] = window.setInterval(query, 250);
     }
-             
-    __pdf_jobs[code] = window.setInterval(query, 1500);
+    
+    $.post("/compile", { "code": code }, init);             
 }
          
 function _pdf_mouse_click(e)
