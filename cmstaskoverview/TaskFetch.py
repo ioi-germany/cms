@@ -57,14 +57,19 @@ class TaskCompileJob:
             disable_colors()
                    
             try:
-                result = GerMakeTask(base_dir, name, True, False).make()
-                queue.put({ "result": result })
+                statement_file = GerMakeTask(base_dir, name, True, False).make()
                 
-                if result is None:
+                if statement_file is None:
                     queue.put({ "error": True,
                                 "msg":   "No statement found" })
+
+                else:
+                    result = None
                 
-                queue.put({ "result": result })
+                    with open(statement_file, "rb") as f:
+                        result = f.read()
+                    
+                    queue.put({ "result": result })
 
             except Exception as error:
                 queue.put({ "error": True,

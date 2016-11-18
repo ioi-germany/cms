@@ -59,30 +59,20 @@ class TaskCompileHandler(RequestHandler):
 
 
 class DownloadHandler(RequestHandler):
-    def share(self, url, code):
-        try:
-            f = open(url, "rb")
-            content = f.read()
-            
-            self.set_header("Content-Type", "application/pdf");
-            self.set_header("Content-Disposition",
-                            "attachment;filename=\"statement-{}.pdf\"".
-                                format(code))
-            self.write(content)
-            
-        except:
-            logger.error("could not download statement")
-            
-        finally:
-            f.close()
-
+    def share(self, statement, code):            
+        self.set_header("Content-Type", "application/pdf");
+        self.set_header("Content-Disposition",
+                        "attachment;filename=\"statement-{}.pdf\"".format(code))
+        self.write(statement)
+       
     def get(self, code):
-        url = TaskFetch.get(code)
+        statement = TaskFetch.get(code)
 
-        if url is None:
+        if statement is None:
             logger.error("could not download statement")
+            self.render("error.html")
         else:
-            self.share(url, code)
+            self.share(statement, code)
 
 class TaskOverviewWebServer:
     """Service running a web server that displays an overview of
