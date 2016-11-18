@@ -49,7 +49,7 @@ function _compile(p, code)
                         p.classList.remove("loading");
                         p.classList.add("done");
              
-                        window.location.href = "/download/" + code + "/" + handle;
+                        window.location.href = "/download/" + code;
                     }
                 }
             }
@@ -57,7 +57,7 @@ function _compile(p, code)
             $.get("/compile", { "code": code, "handle": handle }, download);
         }
         
-        __pdf_jobs[code] = window.setInterval(query, 250);
+        __pdf_jobs[code] = window.setInterval(query, 500);
     }
     
     $.post("/compile", { "code": code }, init);             
