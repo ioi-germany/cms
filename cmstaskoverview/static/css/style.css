@@ -146,3 +146,74 @@ pre.short {
     max-height:145px;
     overflow:scroll;
 }
+
+@keyframes
+blink {
+    0% { 
+        opacity:0;
+    }
+    
+    
+    20% {
+        opacity:.25;
+    }
+    
+    50% {
+        opacity:.25;
+    }
+    
+    100% {
+        opacity:0;
+    }
+}
+
+@keyframes
+vanish {
+    0% {
+        opacity:1;
+    }
+    
+    100% {
+    
+    }
+}
+
+tr.fresh, tr.updated, tr.removed {
+    position:relative;
+}
+
+tr.fresh::after, tr.updated::after, tr.removed::after {
+    content:"";
+    position:absolute;
+    top:0px;
+    bottom:0px;
+    left:0px;
+    right:0px;
+    animation-name:blink;
+    animation-duration:1s;
+    animation-timing-function:linear;
+    animation-fill-mode:forwards;
+}
+
+tr.fresh::after {
+    background:#55ac55;
+}
+
+tr.updated::after {
+    background:#0088cc;
+}
+
+tr.removed::after {
+    background:#bd362f;
+}
+
+tr.removed {
+    animation-name:vanish;
+    animation-duration:1s;
+    animation-timing-function:linear;
+    animation-fill-mode:forwards;
+}
+
+.hidden {
+    display:none;
+}

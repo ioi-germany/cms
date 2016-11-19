@@ -109,7 +109,7 @@ div.download-icon.done::before {
 }
 
 div.download-icon.error:before {
-     content:"";
+    content:"";
     width:100px;
     height:100px;
     opacity:.5;

@@ -27,7 +27,10 @@ import json
 
 from datetime import datetime
 from pathlib import Path
-
+from multiprocessing import Process, Queue
+from sys import exc_info
+from traceback import format_exception
+from time import sleep, time
 
 class DateEntry:
     def __init__(self, date_code, info):
@@ -86,55 +89,78 @@ class SingleTaskInfo:
                 "remarks":        self.remarks,
                 "public":         self.public,
                 "old":            self.old}
-                
 
 
 class TaskInfo:
-    def __init__(self, d):
-        self.tasks = []
-        self.dates = {}
-        directory = Path(d)
+    tasks = {}
+    queue = Queue()
+    timestamps = {}
 
-        for d in directory.iterdir():
-            if not d.is_dir():
-                continue
-                
-            info_path = d/"info.json"
-                    
-            if info_path.exists():
-                self.tasks.append(SingleTaskInfo(d.parts[-1], info_path))
-    
-            self.dates.update({e.timestamp(): e.info
-                               for e in self.tasks[-1].uses})
-
-    def interesting_dates(self):
-        raw = sorted([(key, val) for key, val in self.dates.iteritems()])
-        data = []
+    @staticmethod
+    def init(d):
+        def main_loop(directory, queue):
+            tasks = []
         
-        # Merge multiple entries for the same contest (multiple days,
-        # typos in the files etc.):
-        #
-        # If there are multiple entries with the same description at successive
-        # time points, we keep only the last one.
-        #
-        # This is of course not perfect, but it should work in most cases.
-        # Since the selection criteria are just for convenience, this should
-        # be fine (and it is certainly much better than having to sanitize all
-        # info.json files by hand)
-        for key, val in raw:
-            if len(data) > 0 and data[-1][1] == val:
-                data.pop()
-            data.append((key, val))
+            while True:
+                # Remove tasks that are no longer available
+                for t in tasks:
+                    info_path = directory/t/"info.json"
+                    
+                    if not info_path.exists():
+                        queue.put(("pop", t))
+                tasks = []
             
-        return json.dumps(data)
-    
-    def dump(self):
-        return json.dumps([t.to_dict() for t in self.tasks])
-    
-    def __iter__(self):
-        for t in self.tasks:
-            yield t
-    
+                # Load all available tasks                
+                for d in directory.iterdir():
+                    if not d.is_dir():
+                        continue
+                        
+                    # We catch all exceptions since the main loop must go on
+                    try:    
+                        info_path = d/"info.json"
+                                
+                        if info_path.exists():
+                            info = SingleTaskInfo(d.parts[-1], info_path)
+                            queue.put(("push", info.to_dict()))
+                            tasks.append(info.code)
+
+                    except:
+                        # We can't use logger since this would break
+                        # multiprocessing...
+                        print("\n".join(format_exception(*exc_info())))
+                
+                sleep(1)
+        
+        TaskInfo.info_process = Process(target=main_loop,
+                                        args=(Path(d), TaskInfo.queue))
+        TaskInfo.info_process.daemon = True
+        TaskInfo.info_process.start()
+
+    @staticmethod
+    def _update():
+        while not TaskInfo.queue.empty():
+            command, data = TaskInfo.queue.get(False)
+            
+            if command == "push":
+                if TaskInfo.tasks.get(data["code"], {}) != data:
+                    TaskInfo.tasks[data["code"]] = data
+                    TaskInfo.timestamps[data["code"]] = time()
+            if command == "pop":
+                del TaskInfo.tasks[data]
+
+    @staticmethod
+    def task_list():
+        TaskInfo._update()
+        
+        return [{"task": t, "timestamp": TaskInfo.timestamps[t]}
+                for t in TaskInfo.tasks]
+
+    @staticmethod
+    def get_info(keys):
+        TaskInfo._update()
+        
+        return {t: TaskInfo.tasks[t] for t in keys if t in TaskInfo.tasks}
+
     @staticmethod
     def entries():
         return ["code", "title", "source", "algorithm", "implementation",
