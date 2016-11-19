@@ -94,15 +94,16 @@ function retry_compilation()
     close_modal("error");
 }
 
-function init_download_icons()
-{
-    var d = document.getElementsByClassName("download-icon");
+var __mouse_up_initialized = false;
 
-    for(var i = 0; i < d.length; ++i)
-    {
-        d[i].addEventListener("mousedown", _pdf_mouse_down);
-        d[i].addEventListener("click", _pdf_mouse_click);
-    }
-                
-    window.addEventListener("mouseup", _pdf_mouse_up);
+function init_download_icon(task)
+{
+    var d = window.document.getElementById("download-" + task);
+
+    d.addEventListener("mousedown", _pdf_mouse_down);
+    d.addEventListener("click", _pdf_mouse_click);
+       
+    if(!__mouse_up_initialized) 
+        window.addEventListener("mouseup", _pdf_mouse_up);
+    __mouse_up_initialized = true;
 }

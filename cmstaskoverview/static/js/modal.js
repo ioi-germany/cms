@@ -21,4 +21,10 @@ function close_modal(s)
     dialog.classList.remove("in");
                 
     document.getElementById("modal-backdrop").classList.add("invisible");
+    __modal_opened = null;
+}
+
+function is_modal_opened()
+{
+    return __modal_opened != null;
 }

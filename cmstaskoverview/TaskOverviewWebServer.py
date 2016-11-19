@@ -37,16 +37,9 @@ from .TaskFetch import TaskFetch
 logger = logging.getLogger(__name__)
 
 
-class TaskOverviewHandler(RequestHandler):
-    def get(self):  
-        try:
-            tasks = TaskInfo(config.task_repository)
-        except:
-            logger.warning("couldn't load tasks")
-            tasks = []
-            raise
-        
-        self.render("overview.html", tasks=tasks)
+class MainHandler(RequestHandler):
+    def get(self):
+        self.render("overview.html")
 
 
 class TaskCompileHandler(RequestHandler):
@@ -60,12 +53,14 @@ class TaskCompileHandler(RequestHandler):
         self.write({"handle": handle})
         self.flush()
 
+
 class DownloadHandler(RequestHandler):
     def share(self, statement, code):            
         self.set_header("Content-Type", "application/pdf");
         self.set_header("Content-Disposition",
                         "attachment;filename=\"statement-{}.pdf\"".format(code))
         self.write(statement)
+        self.flush()
        
     def get(self, code):
         statement = TaskFetch.get(code)
@@ -76,13 +71,30 @@ class DownloadHandler(RequestHandler):
         else:
             self.share(statement, code)
 
+
+class ListHandler(RequestHandler):
+    def get(self):        
+        self.write(json.dumps(TaskInfo.task_list()))
+        self.flush()
+
+
+class InfoHandler(RequestHandler):
+    def get(self):
+        t = json.loads(self.get_argument("tasks"))
+
+        self.write(json.dumps(TaskInfo.get_info(t)))
+        self.flush()
+
+
 class TaskOverviewWebServer:
     """Service running a web server that displays an overview of
        all available tasks
     """
 
     def __init__(self):
-        handlers = [(r"/", TaskOverviewHandler),
+        handlers = [(r"/", MainHandler),
+                    (r"/list", ListHandler),
+                    (r"/info", InfoHandler),
                     (r"/compile", TaskCompileHandler),
                     (r"/download/(.*)", DownloadHandler)]
     
@@ -91,6 +103,7 @@ class TaskOverviewWebServer:
                   "static_path":   resource_filename(base, "static")}
     
         TaskFetch.init(config.task_repository)
+        TaskInfo.init(config.task_repository)
     
         self.app = Application(handlers, **params)
 

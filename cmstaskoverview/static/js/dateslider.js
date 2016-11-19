@@ -167,6 +167,8 @@ function _tag(color, label, off, id)
     return result;
 }
 
+var __date_slider_globally_initialized = false;
+
 function init_date_slider(id, data, reversed)
 {
     var s = window.document.getElementById(id);
@@ -176,7 +178,7 @@ function init_date_slider(id, data, reversed)
     var l = 0;    
     for(var i = 1; i < data.length; ++i)
     {
-        var delta = Math.sqrt(data[i][0] - data[i - 1][0]);
+        var delta = Math.sqrt(data[i].timestamp - data[i - 1].timestamp);
         t[t.length] = t[t.length - 1] + delta;
         l += delta;
     }
@@ -220,7 +222,7 @@ function init_date_slider(id, data, reversed)
     var colors = ["red", "blue", "green"];
     var tags = "";
     for(var i = 0; i < data.length; ++i)
-        tags += _tag(colors[i % colors.length], data[i][1], t[i] + outer, id_internal + "_tag_" + i);
+        tags += _tag(colors[i % colors.length], data[i].info, t[i] + outer, id_internal + "_tag_" + i);
 
     var d = [0];    
     for(var i = 1; i < t.length; ++i)
@@ -273,9 +275,9 @@ function init_date_slider(id, data, reversed)
     __date_slider_internal_id[id] = id_internal;
     __date_slider_external_id[id_internal] = id;
         
-    __date_slider_repr_val[id_internal] = [data[0][0] - 1];
+    __date_slider_repr_val[id_internal] = [data[0].timestamp - 1];
     for(var i = 0; i < data.length; ++i)
-        __date_slider_repr_val[id_internal][i + 1] = data[i][0];
+        __date_slider_repr_val[id_internal][i + 1] = data[i].timestamp;
         
     var o = window.document.getElementById(id_internal);
         
@@ -293,8 +295,13 @@ function init_date_slider(id, data, reversed)
     a.style.left = ((h - w) / 2) + "px";
     a.style.top =  ((w - h) / 2) + "px";      
     
-    window.addEventListener("mousemove", _date_slider_mouse_move);
-    window.addEventListener("mouseup", _date_slider_mouse_up);
+    if(__date_slider_globally_initialized)
+    {
+        window.addEventListener("mousemove", _date_slider_mouse_move);
+        window.addEventListener("mouseup", _date_slider_mouse_up);
+    }
+    
+    __date_slider_globally_initialized = true;
 }
 
 function date_slider_get_raw(id)
@@ -310,6 +317,6 @@ function date_slider_get_val(id)
 function date_slider_set(id, val)
 {
     var ii = __date_slider_internal_id[id];
-    __date_slider_val[ii] = val;
+    __date_slider_val[ii] = _closest(__date_slider_repr_val[ii], val);
     _snap_date_slider(window.document.getElementById(ii));
 }

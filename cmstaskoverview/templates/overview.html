@@ -22,8 +22,7 @@
         <script src="static/js/download.js"></script>
         <script src="static/js/overview.js"></script>
         
-        <script>
-            var task_info = {% raw tasks.dump() %};
+        <script>       
             var entries = {% raw json.dumps(TaskInfo.entries()) %};
             var desc = {% raw json.dumps(TaskInfo.desc()) %};
             var show_col = {};
@@ -32,8 +31,6 @@
                              show_public:  true,
                              show_private: true,
                              only_before:  Infinity };      
-                             
-            var date_slider_raw = null;   
             
             function open_col_select()
             {
@@ -49,8 +46,8 @@
                 
                 for(var i = 0; i < entries.length; ++i)
                     show_col[entries[i]] = window.document.getElementById("col-" + entries[i]).checked;
-                
-                fill_table(entries, desc, task_info, show_col, criteria);
+                update();
+                //update_table(entries, desc, show_col, criteria);
 
             }
             
@@ -58,9 +55,9 @@
             {
                 open_modal('row-select');
 
+                update_sliders();
                 range_slider_set("alg-diff", criteria.alg_diff.lower, criteria.alg_diff.upper);
                 range_slider_set("impl-diff", criteria.impl_diff.lower, criteria.impl_diff.upper);
-                date_slider_set("uses", date_slider_raw);
             }
             
             function apply_row_select()
@@ -72,25 +69,23 @@
                 criteria.show_public = window.document.getElementById("public").checked;
                 criteria.show_private = window.document.getElementById("private").checked;
                 criteria.only_before = date_slider_get_val("uses");
-                date_slider_raw = date_slider_get_raw("uses");
-                
-                fill_table(entries, desc, task_info, show_col, criteria);
+
+                update();
             }
                  
             function init()
             {
+                update(true, true);
+            
                 for(var i = 0; i < entries.length; ++i) show_col[entries[i]] = true;
 
                 init_range_sliders();
-                init_date_slider("uses", {% raw tasks.interesting_dates() %}, true);
-                criteria.only_before = date_slider_get_val("uses");  
-                date_slider_raw = date_slider_get_raw("uses");              
-                
+
                 close_modal('col-select');
                 close_modal('row-select');
                 close_modal('error');
                 
-                fill_table(entries, desc, task_info, show_col, criteria);
+                window.setInterval(function() { if(!is_modal_opened()) update(); }, 5000);
             }
             
             window.addEventListener("load", init);
