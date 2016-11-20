@@ -259,8 +259,7 @@ function update(init=false, sliders=false)
                 __task_dict[t] = available_tasks_dict[t];
             }
         }
-        
-        console.log(updated_tasks);
+
         __removed = {};
         
         for(var i = 0; i < __tasks.length; ++i)
