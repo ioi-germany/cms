@@ -108,7 +108,7 @@ class TaskOverviewWebServer:
         self.app = Application(handlers, **params)
 
     def run(self):    
-        self.app.listen(config.http_port)
+        self.app.listen(config.listen_port, address=config.listen_address)
         
         try:
             IOLoop.instance().start()
