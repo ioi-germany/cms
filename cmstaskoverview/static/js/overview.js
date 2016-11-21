@@ -84,7 +84,7 @@ function build_row(task_code)
                  
 function fill_table(new_tasks, updated_tasks, show_col, criteria, init)
 {
-    new_tasks = Array.sort(new_tasks);
+    new_tasks = new_tasks.sort();
     
     if(init)
     {
@@ -135,7 +135,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, init)
         }
     }
     
-    __tasks = Array.sort(__tasks.concat(new_tasks));
+    __tasks = __tasks.concat(new_tasks).sort();
     
     for(var i = 0; i < __tasks.length; ++i)
     {
@@ -305,7 +305,7 @@ function interesting_dates()
         return 0;
     }
     
-    raw = Array.sort(raw, my_comp);
+    raw = raw.sort(my_comp);
 
     /* Merge multiple entries for the same contest (multiple days,
        typos in the files etc.):
