@@ -178,11 +178,11 @@ vanish {
     }
 }
 
-tr.fresh, tr.updated, tr.removed {
+tr.fresh td, tr.updated td, tr.removed td {
     position:relative;
 }
 
-tr.fresh::after, tr.updated::after, tr.removed::after {
+tr.fresh td::after, tr.updated td::after, tr.removed td::after {
     content:"";
     position:absolute;
     top:0px;
@@ -195,15 +195,15 @@ tr.fresh::after, tr.updated::after, tr.removed::after {
     animation-fill-mode:forwards;
 }
 
-tr.fresh::after {
+tr.fresh td::after {
     background:#55ac55;
 }
 
-tr.updated::after {
+tr.updated td::after {
     background:#0088cc;
 }
 
-tr.removed::after {
+tr.removed td::after {
     background:#bd362f;
 }
 

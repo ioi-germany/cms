@@ -115,7 +115,7 @@ function _date_slider_scroll()
 function _date_slider_mouse_move(e)
 {
     if(__date_slider_currently_selected != null)
-    {
+    {   
         var o = __date_slider_currently_selected; 
         var c = window.document.getElementById(__date_slider_external_id[o.id]);
         
@@ -144,7 +144,9 @@ function _date_slider_click(e, id)
     var c = window.document.getElementById(__date_slider_external_id[id]);
 
     __date_slider_currently_selected = o;
-    __curr_pos = e.pageX - c.getBoundingClientRect().x + c.scrollLeft;
+    var x = c.getBoundingClientRect().x || c.getBoundingClientRect().left
+    __curr_pos = e.pageX - x + c.scrollLeft;
+
     _update_date_slider(o);
     _snap_date_slider(o);
     _date_slider_release();
