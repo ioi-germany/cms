@@ -63,10 +63,13 @@ class DownloadHandler(RequestHandler):
         self.flush()
        
     def get(self, code):
-        statement = TaskFetch.get(code)
+        try:
+            statement = TaskFetch.get(code)
 
-        if statement is None:
-            logger.error("could not download statement")
+            if statement is None:
+                raise ValueError
+        except:
+            logger.error("could not download statement for {}".format(code))
             self.render("error.html")
         else:
             self.share(statement, code)
