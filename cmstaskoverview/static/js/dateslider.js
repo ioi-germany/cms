@@ -57,6 +57,8 @@ function _update_date_slider(o)
 
 function _snap_date_slider(o)
 {
+    if(o == null) return;
+
     var b = window.document.getElementById(o.id + "_bar");
     var p = __date_slider_stops[o.id][__date_slider_val[o.id]];
 
@@ -175,6 +177,15 @@ function init_date_slider(id, data, reversed)
 {
     var s = window.document.getElementById(id);
     var id_internal = id + "__internal";
+
+    if(data.length == 0)
+    {
+        __date_slider_internal_id[id] = id_internal;
+        __date_slider_repr_val[id_internal] = [0];
+        __date_slider_val[id_internal] = 0;
+        s.innerHTML = "I'm sorry, but there are no dates to choose from. This probably means that your task directory is empty.";          
+        return;
+    }
     
     var t = [0];
     var l = 0;    
