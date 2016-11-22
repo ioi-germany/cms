@@ -39,12 +39,6 @@ logger = logging.getLogger(__name__)
 
 class TaskCompileJob:
     def __init__(self, base_dir, name):
-        self.status = { "error":  False,
-                        "done":   False,
-                        "result": None,
-                        "msg":    "Okay",
-                        "log":    "" };
-
         self.base_dir = base_dir
         self.name = name
 
@@ -64,6 +58,8 @@ class TaskCompileJob:
         return self.current_handle
             
     def _compile(self):
+        self._reset_status()
+
         logger.info("loading task {} in {}".format(self.name, self.base_dir))
         
         def do(queue):
@@ -110,6 +106,13 @@ class TaskCompileJob:
         if self.status["done"]:
             self.backup = deepcopy(self.status)
             self.backup_handle = self.current_handle
+
+    def _reset_status(self):
+        self.status = { "error":  False,
+                        "done":   False,
+                        "result": None,
+                        "msg":    "Okay",
+                        "log":    "" };
 
     """ Various query methods for the status
     """
