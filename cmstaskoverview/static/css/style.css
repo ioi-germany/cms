@@ -148,23 +148,82 @@ pre.short {
 }
 
 @keyframes
-blink {
+blink-fresh {
     0% { 
-        opacity:0;
+        background:rgba(85, 172, 85, 0);
     }
     
     
     20% {
-        opacity:.25;
+        background:rgba(85, 172, 85, .25);
     }
     
     50% {
-        opacity:.25;
+        background:rgba(85, 172, 85, .25);
     }
     
     100% {
-        opacity:0;
+        background:rgba(85, 172, 85, 0);
     }
+}
+
+tr.fresh td {
+    animation-name:blink-fresh;
+    animation-duration:1s;
+    animation-timing-function:linear;
+}
+
+@keyframes
+blink-updated {
+    0% { 
+        background:rgba(0, 112, 204, 0);
+    }
+    
+    
+    20% {
+        background:rgba(0, 112, 204, .25);
+    }
+    
+    50% {
+        background:rgba(0, 112, 204, .25);
+    }
+    
+    100% {
+        background:rgba(0, 112, 204, 0);
+    }
+}
+
+
+tr.updated td {
+    animation-name:blink-updated;
+    animation-duration:1s;
+    animation-timing-function:linear;
+}
+
+@keyframes
+blink-removed {
+    0% { 
+        background:rgba(189, 54, 47, 0);
+    }
+    
+    
+    20% {
+        background:rgba(189, 54, 47, .25);
+    }
+    
+    50% {
+        background:rgba(189, 54, 47, .25);
+    }
+    
+    100% {
+        background:rgba(189, 54, 47, 0);
+    }
+}
+
+tr.removed td {
+    animation-name:blink-removed;
+    animation-duration:1s;
+    animation-timing-function:linear;
 }
 
 @keyframes
@@ -178,34 +237,6 @@ vanish {
     }
 }
 
-tr.fresh td, tr.updated td, tr.removed td {
-    position:relative;
-}
-
-tr.fresh td::after, tr.updated td::after, tr.removed td::after {
-    content:"";
-    position:absolute;
-    top:0px;
-    bottom:0px;
-    left:0px;
-    right:0px;
-    animation-name:blink;
-    animation-duration:1s;
-    animation-timing-function:linear;
-    animation-fill-mode:forwards;
-}
-
-tr.fresh td::after {
-    background:#55ac55;
-}
-
-tr.updated td::after {
-    background:#0088cc;
-}
-
-tr.removed td::after {
-    background:#bd362f;
-}
 
 tr.removed {
     animation-name:vanish;
