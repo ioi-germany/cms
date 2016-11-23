@@ -61,7 +61,16 @@ class SingleTaskInfo:
         try:
             i = json.loads(path.open().read())
         except:
-            i = {"remarks": "{} ill-formed or missing".format(path)}
+            i = {"error": "The info.json file is corrupt."}
+        else:
+            missing = []
+            for e in ["title", "algorithm", "implementation", "public"]:
+                if e not in i:
+                    missing.append(e)
+            
+            if len(missing) > 0:
+                i["error"] = "Some important entries are missing: " + \
+                             ", ".join(missing) + "."
         
         info.update(i)
         
@@ -75,20 +84,28 @@ class SingleTaskInfo:
         except ValueError:
             info["uses"] = []
             
+            if "error" not in info:
+                info["error"] = "I couldn't parse the dates for \"(previous) uses\"."
+            
         for key, value in info.iteritems():
             setattr(self, key, value)
 
     def to_dict(self):
-        return {"code":           self.code,
-                "title":          self.title,
-                "source":         self.source,
-                "algorithm":      self.algorithm,
-                "implementation": self.implementation,
-                "keywords":       self.keywords,
-                "uses":           [e.to_dict() for e in self.uses],
-                "remarks":        self.remarks,
-                "public":         self.public,
-                "old":            self.old}
+        result = {"code":           self.code,
+                  "title":          self.title,
+                  "source":         self.source,
+                  "algorithm":      self.algorithm,
+                  "implementation": self.implementation,
+                  "keywords":       self.keywords,
+                  "uses":           [e.to_dict() for e in self.uses],
+                  "remarks":        self.remarks,
+                  "public":         self.public,
+                  "old":            self.old}
+                 
+        if hasattr(self, "error"):
+            result["error"] = self.error
+        
+        return result
 
 
 class TaskInfo:

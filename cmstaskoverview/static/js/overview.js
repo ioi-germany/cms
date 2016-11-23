@@ -48,8 +48,22 @@ function cell(t, entry)
     }
 }
 
+function inner_error_cell(t)
+{
+    if("error" in t) return "<b>ERROR!</b> " + t.error;
+    return "";
+}
+
+function error_cell(t)
+{
+    var id = "cell-" + t.code + "-error-msg";
+    return '<td id="' + id + '" class="error-msg">' + inner_error_cell(t) + '</td>';
+}
+
 function relevant(t, c)
 {
+    if("error" in t) return true;
+
     uses_ok = true;
     
     for(var i = 0; i < t.uses.length; ++i)
@@ -74,8 +88,10 @@ function build_row(task_code)
     var r = "";
     
     r += '<tr id = "row-' + t.code + '">';  
+    r += cell(t, entries[0]);
+    r += error_cell(t);
     
-    for(var j = 0; j < entries.length; ++j) 
+    for(var j = 1; j < entries.length; ++j) 
             r += cell(t, entries[j]);
     r += '</tr>';
     
@@ -137,6 +153,10 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, init)
     
     __tasks = __tasks.concat(new_tasks).sort();
     
+    var num_interesting_columns = 0;
+    for(var j = 1; j < entries.length - 1; ++j)
+        if(show_col[entries[j]]) ++num_interesting_columns;
+    
     for(var i = 0; i < __tasks.length; ++i)
     {
         // Apply row selection
@@ -163,7 +183,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, init)
         }
         
         // Highlight unused tasks
-        if(__info[__tasks[i]].old)
+        if(__info[__tasks[i]].old || "error" in __info[__tasks[i]])
             row.classList.remove("new");
         else
             row.classList.add("new");
@@ -177,7 +197,27 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, init)
                 cell.classList.remove("hidden");
             else
                 cell.classList.add("hidden");
-                
+        }
+        
+        window.document.getElementById("cell-" + __tasks[i] + "-error-msg").colSpan = num_interesting_columns;
+        
+        // Error or correct entry?
+        var t = __info[__tasks[i]];
+        
+        if("error" in t)
+        {
+            for(var j = 1; j < entries.length - 1; ++j)
+            {
+                var cell = window.document.getElementById("cell-" + __tasks[i] + "-" + entries[j]);
+                cell.classList.add("hidden");
+            }    
+            
+            window.document.getElementById("cell-" + __tasks[i] + "-error-msg").classList.remove("no-error");           
+        }
+        
+        else
+        {
+            window.document.getElementById("cell-" + __tasks[i] + "-error-msg").classList.add("no-error");       
         }
     }
     
@@ -194,11 +234,13 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, init)
         
             cell.innerHTML = inner_cell(__info[updated_tasks[i]], entries[j]);
         
-            if(show_col[entries[j]])
+            /*if(show_col[entries[j]])
                 cell.classList.remove("hidden");
             else
-                cell.classList.add("hidden");
+                cell.classList.add("hidden");*/
         }
+        
+        window.document.getElementById("cell-" + updated_tasks[i] + "-error-msg").innerHTML = inner_error_cell(__info[updated_tasks[i]]);
         
         row.classList.add("updated");
         window.setTimeout(make_class_removal_function("row-" + updated_tasks[i], "updated"), 1000);
