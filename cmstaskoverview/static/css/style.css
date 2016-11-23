@@ -167,7 +167,7 @@ blink-fresh {
     }
 }
 
-tr.fresh td {
+tr.fresh td:not(.error-msg) {
     animation-name:blink-fresh;
     animation-duration:1s;
     animation-timing-function:linear;
@@ -194,7 +194,7 @@ blink-updated {
 }
 
 
-tr.updated td {
+tr.updated td:not(.error-msg) {
     animation-name:blink-updated;
     animation-duration:1s;
     animation-timing-function:linear;
@@ -220,7 +220,7 @@ blink-removed {
     }
 }
 
-tr.removed td {
+tr.removed td:not(.error-msg) {
     animation-name:blink-removed;
     animation-duration:1s;
     animation-timing-function:linear;
@@ -243,6 +243,18 @@ tr.removed {
     animation-duration:1s;
     animation-timing-function:linear;
     animation-fill-mode:forwards;
+}
+
+td.error-msg {
+    font-family:Menlo,Monaco,Consolas,"Courier New",monospace;
+    text-align:center;
+    color:white;
+    background-color:#ad2620 !important;
+    text-shadow:0px 0px 4px rgba(0, 0, 0, .25);
+}
+
+td.no-error {
+    display:none;
 }
 
 .hidden {
