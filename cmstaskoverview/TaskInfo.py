@@ -57,21 +57,24 @@ class SingleTaskInfo:
                 "remarks":        "",
                 "public":         False,
                 "old":            None}
-    
-        try:
-            i = json.loads(path.open().read())
-        except:
-            i = {"error": "The info.json file is corrupt."}
+                
+        if not path.exists():
+            i = {"error": "The info.json file is missing."}
         else:
-            missing = []
-            for e in ["title", "algorithm", "implementation", "public"]:
-                if e not in i:
-                    missing.append(e)
+            try:
+                i = json.loads(path.open().read())
+            except:
+                i = {"error": "The info.json file is corrupt."}
+            else:
+                missing = []
+                for e in ["title", "algorithm", "implementation", "public"]:
+                    if e not in i:
+                        missing.append(e)
+                
+                if len(missing) > 0:
+                    i["error"] = "Some important entries are missing: " + \
+                                 ", ".join(missing) + "."
             
-            if len(missing) > 0:
-                i["error"] = "Some important entries are missing: " + \
-                             ", ".join(missing) + "."
-        
         info.update(i)
 
         if info["old"] is None:
@@ -134,10 +137,9 @@ class TaskInfo:
                     try:    
                         info_path = d/"info.json"
                                 
-                        if info_path.exists():
-                            info = SingleTaskInfo(d.parts[-1], info_path)
-                            queue.put(("push", info.to_dict()))
-                            tasks.append(info.code)
+                        info = SingleTaskInfo(d.parts[-1], info_path)
+                        queue.put(("push", info.to_dict()))
+                        tasks.append(info.code)
 
                     except:
                         # We can't use logger since this would break
