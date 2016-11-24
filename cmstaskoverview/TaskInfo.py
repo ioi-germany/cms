@@ -73,8 +73,6 @@ class SingleTaskInfo:
                              ", ".join(missing) + "."
         
         info.update(i)
-        
-        info["uses"] += info.get("previous uses", [])
 
         if info["old"] is None:
             info["old"] = len(info["uses"]) > 0 or info["public"]
