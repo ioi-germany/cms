@@ -47,7 +47,7 @@ class GerMakeTask:
         resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,
                                                    resource.RLIM_INFINITY))
 
-        self.wdir = os.path.join(self.odir, "build")
+        self.wdir = os.path.join(self.odir, self.task, "build")
 
         if self.clean:
             shutil.rmtree(self.wdir)
