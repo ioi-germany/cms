@@ -23,9 +23,13 @@ from __future__ import unicode_literals
 
 import io
 import json
+import logging
 import os
 import pkg_resources
 import sys
+
+
+logger = logging.getLogger(__name__)
 
 
 class Config(object):
@@ -81,13 +85,13 @@ class Config(object):
                 # We cannot access the file, we skip it.
                 pass
             except ValueError as exc:
-                print("Unable to load JSON configuration file %s, probably "
+                logger.info("Unable to load JSON configuration file %s, probably "
                       "because of a JSON decoding error.\n%r" % (conf_file,
                                                                  exc))
             else:
-                print("Using configuration file %s." % conf_file)
+                logger.info("Using configuration file %s." % conf_file)
                 return
-        print("Warning: no configuration file found.")
+        logger.info("Warning: no configuration file found.")
 
     def _load_unique(self, path):
         """Populate the Config class with everything that sits inside
