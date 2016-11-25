@@ -26,7 +26,7 @@ import sys
 
 from sys import exc_info
 from traceback import format_exception
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Manager
 from StringIO import StringIO
 from copy import deepcopy
 
@@ -42,7 +42,8 @@ class TaskCompileJob:
         self.base_dir = base_dir
         self.name = name
 
-        self.queue = Queue()
+        self.status = Manager().dict()
+
         self.current_handle = 1
         self.backup_handle = 0
         self.backup = None
@@ -62,7 +63,7 @@ class TaskCompileJob:
 
         logger.info("loading task {} in {}".format(self.name, self.base_dir))
         
-        def do(queue):
+        def do(status):
             # stdout is process local in Python, so we can simply use this
             # to redirect all output from GerMakeTask to a string
             sys.stdout = StringIO()
@@ -75,8 +76,8 @@ class TaskCompileJob:
                                              False).make()
                 
                 if statement_file is None:
-                    queue.put({ "error": True,
-                                "msg":   "No statement found" })
+                    status["error"] = True
+                    status["msg"] = "No statement found"
 
                 else:
                     result = None
@@ -84,25 +85,21 @@ class TaskCompileJob:
                     with open(statement_file, "rb") as f:
                         result = f.read()
                     
-                    queue.put({ "result": result })
+                    status["result"] = result
 
             except Exception as error:
-                queue.put({ "error": True,
-                            "msg": "\n".join(format_exception(*exc_info())) })
+                status["error"] = True
+                status["msg"] = "\n".join(format_exception(*exc_info()))
 
             sys.stdout.flush()
-            queue.put({ "log": sys.stdout.getvalue() })
-            queue.put({ "done": True })
-            queue.close()
+            status["log"] = sys.stdout.getvalue()
+            status["done"] = True
             
-        self.compilation_process = Process(target=do, args = (self.queue,))
+        self.compilation_process = Process(target=do, args = (self.status,))
         self.compilation_process.daemon = True
         self.compilation_process.start()
     
     def _update(self):
-        while not self.queue.empty():
-            self.status.update(self.queue.get(False))
-        
         if self.status["done"]:
             logger.info("Finished compilation of task {}:\n\n{}".\
                             format(self.name, self.status["log"]))
@@ -111,11 +108,11 @@ class TaskCompileJob:
             self.backup_handle = self.current_handle
 
     def _reset_status(self):
-        self.status = { "error":  False,
-                        "done":   False,
-                        "result": None,
-                        "msg":    "Okay",
-                        "log":    "" };
+        self.status.update({"error":  False,
+                            "done":   False,
+                            "result": None,
+                            "msg":    "Okay",
+                            "log":    ""})
 
     """ Various query methods for the status
     """

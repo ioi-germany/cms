@@ -27,10 +27,11 @@ import json
 
 from datetime import datetime
 from pathlib import Path
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Manager
 from sys import exc_info
 from traceback import format_exception
 from time import sleep, time
+from copy import deepcopy
 
 class DateEntry:
     def __init__(self, date_code, info):
@@ -110,23 +111,22 @@ class SingleTaskInfo:
 
 
 class TaskInfo:
-    tasks = {}
-    queue = Queue()
-    timestamps = {}
+    tasks = Manager().dict()
 
     @staticmethod
     def init(d):
-        def main_loop(directory, queue):
-            tasks = []
+        def main_loop(directory, tasks):
+            task_list = []
         
-            while True:
+            while True:            
                 # Remove tasks that are no longer available
-                for t in tasks:
+                for t in task_list:
                     info_path = directory/t
                     
                     if not info_path.exists():
-                        queue.put(("pop", t))
-                tasks = []
+                        del tasks[t]
+                
+                task_list = []
             
                 # Load all available tasks                
                 for d in directory.iterdir():
@@ -136,10 +136,18 @@ class TaskInfo:
                     # We catch all exceptions since the main loop must go on
                     try:    
                         info_path = d/"info.json"
-                                
-                        info = SingleTaskInfo(d.parts[-1], info_path)
-                        queue.put(("push", info.to_dict()))
-                        tasks.append(info.code)
+                        
+                        code = d.parts[-1]
+                        info = SingleTaskInfo(code, info_path).to_dict()
+                                                
+                        old = tasks.get(code, {"timestamp": 0})
+                        info["timestamp"] = old["timestamp"]
+                        
+                        if old != info:
+                            info["timestamp"] = time()
+                            tasks[code] = info
+                        
+                        task_list.append(code)
 
                     except:
                         # We can't use logger since this would break
@@ -149,34 +157,22 @@ class TaskInfo:
                 sleep(1)
         
         TaskInfo.info_process = Process(target=main_loop,
-                                        args=(Path(d), TaskInfo.queue))
+                                        args=(Path(d), TaskInfo.tasks))
         TaskInfo.info_process.daemon = True
         TaskInfo.info_process.start()
 
     @staticmethod
-    def _update():
-        while not TaskInfo.queue.empty():
-            command, data = TaskInfo.queue.get(False)
-            
-            if command == "push":
-                if TaskInfo.tasks.get(data["code"], {}) != data:
-                    TaskInfo.tasks[data["code"]] = data
-                    TaskInfo.timestamps[data["code"]] = time()
-            if command == "pop":
-                del TaskInfo.tasks[data]
-
-    @staticmethod
     def task_list():
-        TaskInfo._update()
-        
-        return [{"task": t, "timestamp": TaskInfo.timestamps[t]}
-                for t in TaskInfo.tasks]
+        data = deepcopy(TaskInfo.tasks)
+
+        return [{"task": data[t]["code"], "timestamp": data[t]["timestamp"]}
+                for t in data]
 
     @staticmethod
     def get_info(keys):
-        TaskInfo._update()
-        
-        return {t: TaskInfo.tasks[t] for t in keys if t in TaskInfo.tasks}
+        data = deepcopy(TaskInfo.tasks)
+    
+        return {x: data[x] for x in keys if x in data}
 
     @staticmethod
     def entries():
