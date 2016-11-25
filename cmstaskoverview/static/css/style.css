@@ -167,7 +167,7 @@ blink-fresh {
     }
 }
 
-tr.fresh td:not(.error-msg) {
+tr.fresh td {
     animation-name:blink-fresh;
     animation-duration:1s;
     animation-timing-function:linear;
@@ -194,7 +194,7 @@ blink-updated {
 }
 
 
-tr.updated td:not(.error-msg) {
+tr.updated td {
     animation-name:blink-updated;
     animation-duration:1s;
     animation-timing-function:linear;
@@ -220,7 +220,7 @@ blink-removed {
     }
 }
 
-tr.removed td:not(.error-msg) {
+tr.removed td {
     animation-name:blink-removed;
     animation-duration:1s;
     animation-timing-function:linear;
@@ -248,9 +248,11 @@ tr.removed {
 td.error-msg {
     font-family:Menlo,Monaco,Consolas,"Courier New",monospace;
     text-align:center;
-    color:white;
+   /* color:white;
     background-color:#ad2620 !important;
-    text-shadow:0px 0px 4px rgba(0, 0, 0, .25);
+    text-shadow:0px 0px 4px rgba(0, 0, 0, .25);*/
+    color:#bd362f;
+    text-shadow:0px 0px 4px #ee5f5b;
 }
 
 td.no-error {
@@ -258,5 +260,17 @@ td.no-error {
 }
 
 .hidden {
+    display:none;
+}
+
+div.json-info {
+    position:fixed;
+    right:.25%;
+    bottom:.25%;
+    max-width:400px;
+    box-shadow:20px 20px 10px 30px white;
+}
+
+div.json-info.no-errors {
     display:none;
 }

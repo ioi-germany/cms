@@ -266,6 +266,21 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, init)
         else
             cell.classList.add("hidden");     
     }
+    
+    // Create overview of problematic info.json files
+    var json_issues = [];
+    
+    for(var i = 0; i < __tasks.length; ++i)
+        if("error" in __info[__tasks[i]])
+            json_issues.push(__tasks[i]);
+    
+    if(json_issues.length == 0)
+        window.document.getElementById("json-errors").classList.add("no-errors");
+    
+    else
+        window.document.getElementById("json-errors").classList.remove("no-errors");
+        
+    window.document.getElementById("tasks-with-issues").innerHTML = json_issues.join(", ");
 }
 
 function update(init=false, sliders=false)
@@ -320,7 +335,16 @@ function update(init=false, sliders=false)
             if(sliders) update_sliders(init);
         }
     
-        $.get("/info", {"tasks": JSON.stringify(new_tasks.concat(updated_tasks))}, on_info);
+        if(new_tasks.length > 0 || updated_tasks.length > 0)
+        {
+            $.get("/info", {"tasks": JSON.stringify(new_tasks.concat(updated_tasks))}, on_info);
+        }
+        
+        else
+        {
+            fill_table(new_tasks, updated_tasks, show_col, criteria, init);
+            if(sliders) update_sliders(init);
+        }
     }
 
     $.get("/list", "", on_list);

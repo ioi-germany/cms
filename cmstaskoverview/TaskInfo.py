@@ -122,7 +122,7 @@ class TaskInfo:
             while True:
                 # Remove tasks that are no longer available
                 for t in tasks:
-                    info_path = directory/t/"info.json"
+                    info_path = directory/t
                     
                     if not info_path.exists():
                         queue.put(("pop", t))
