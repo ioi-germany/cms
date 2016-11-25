@@ -43,7 +43,7 @@ class MainHandler(RequestHandler):
 
 
 class TaskCompileHandler(RequestHandler):
-    def get(self):        
+    def get(self):
         self.write(TaskFetch.query(self.get_argument("code"),
                                    self.get_argument("handle")))
         self.flush()
