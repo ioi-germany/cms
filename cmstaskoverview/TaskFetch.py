@@ -104,6 +104,9 @@ class TaskCompileJob:
             self.status.update(self.queue.get(False))
         
         if self.status["done"]:
+            logger.info("Finished compilation of task {}:\n\n{}".\
+                            format(self.name, self.status["log"]))
+        
             self.backup = deepcopy(self.status)
             self.backup_handle = self.current_handle
 

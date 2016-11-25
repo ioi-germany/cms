@@ -70,8 +70,8 @@ function _pdf_mouse_click(e)
     
     if(code in __pdf_result && __pdf_result[code].error)
     {
-        window.document.getElementById("error-msg").innerHTML = __pdf_result[code].msg;
-        window.document.getElementById("error-log").innerHTML = __pdf_result[code].log;
+        window.document.getElementById("error-msg").textContent = __pdf_result[code].msg;
+        window.document.getElementById("error-log").textContent = __pdf_result[code].log;
         window.document.getElementById("task-name").innerHTML = code;
         window.document.getElementById("retry-compilation").dataset.code = code;
         open_modal("error");
