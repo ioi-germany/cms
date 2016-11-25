@@ -145,6 +145,11 @@ span.task-name {
 pre.short {
     max-height:145px;
     overflow:scroll;
+    line-height:14px;
+}
+
+pre.short code {
+    font-size:10px;
 }
 
 @keyframes
