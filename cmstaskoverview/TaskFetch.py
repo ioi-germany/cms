@@ -28,7 +28,7 @@ from sys import exc_info
 from traceback import format_exception
 from multiprocessing import Process, Manager
 from StringIO import StringIO
-from copy import deepcopy
+from time import sleep
 
 from cmscontrib.gerpythonformat.Messenger import disable_colors
 from cmscontrib.gerpythonformat.GerMakeTask import GerMakeTask
@@ -41,8 +41,6 @@ class TaskCompileJob:
     def __init__(self, base_dir, name):
         self.base_dir = base_dir
         self.name = name
-
-        self.status = Manager().dict()
 
         self.current_handle = 1
         self.backup_handle = 0
@@ -60,7 +58,6 @@ class TaskCompileJob:
             
     def _compile(self):
         self._reset_status()
-
         logger.info("loading task {} in {}".format(self.name, self.base_dir))
         
         def do(status):
@@ -103,11 +100,25 @@ class TaskCompileJob:
         if self.status["done"]:
             logger.info("Finished compilation of task {}:\n\n{}".\
                             format(self.name, self.status["log"]))
-        
-            self.backup = deepcopy(self.status)
+
+            self.backup = {}
+            self.backup.update(self.status)
             self.backup_handle = self.current_handle
 
+            # Release Manager subprocess for status
+            self.compilation_process.terminate()
+            del self.compilation_process
+            
+            del self.status
+            self.status = {"error":  False,
+                           "done":   False,
+                           "result": None,
+                           "msg":    "Okay",
+                           "log":    ""}
+
+
     def _reset_status(self):
+        self.status = Manager().dict()
         self.status.update({"error":  False,
                             "done":   False,
                             "result": None,
@@ -165,7 +176,7 @@ class TaskFetch:
                  "error":  TaskFetch.jobs[name].error(handle),
                  "msg":    TaskFetch.jobs[name].msg(handle),
                  "log":    TaskFetch.jobs[name].log(handle) }
-
+        
     @staticmethod
     def get(name):
         return TaskFetch.jobs[name].get()
