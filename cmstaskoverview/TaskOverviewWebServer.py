@@ -45,7 +45,7 @@ class MainHandler(RequestHandler):
 class TaskCompileHandler(RequestHandler):
     def get(self):
         self.write(TaskFetch.query(self.get_argument("code"),
-                                   self.get_argument("handle")))
+                                   int(self.get_argument("handle"))))
         self.flush()
 
     def post(self):
