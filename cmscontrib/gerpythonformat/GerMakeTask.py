@@ -41,8 +41,8 @@ class GerMakeTask:
         self.minimal = minimal
         self.clean = clean
 
-    def make(self):
-        # Unset stack size limit
+    def prepare(self):
+         # Unset stack size limit
         resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,
                                                    resource.RLIM_INFINITY))
 
@@ -59,6 +59,8 @@ class GerMakeTask:
         
         copyrecursivelyifnecessary(taskdir, wtdir, set([self.wdir]))
         self.wdir = os.path.abspath(self.wdir)
+
+    def build(self):
         filecacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
         
         try:
@@ -84,6 +86,10 @@ class GerMakeTask:
             if s.primary: 
                 return os.path.abspath(s.file_)
         return None
+
+    def make(self):
+        self.prepare()
+        self.build()
 
 def main():
     """Parse arguments and launch process."""

@@ -8,6 +8,14 @@
     
     "_help": "Directory to search for tasks (you have to fill this yourself!).",
     "task_repository": "",
+    
+    "_help": "Whether to automatically sync the task repository (only use this",
+    "_help": "for git repositories).",
+    "auto_sync": false,
+    
+    "_help": "Maximum number of simultaneous compilations (the processes will",
+    "_help": "be created regardless and will stay idle if necessary).",
+    "max_compilations": 5,
 
     "_help": "This is the end of this file."
 }

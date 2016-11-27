@@ -24,6 +24,7 @@ from __future__ import unicode_literals
 
 import os
 import json
+import logging
 
 from datetime import datetime
 from pathlib import Path
@@ -32,6 +33,11 @@ from sys import exc_info
 from traceback import format_exception
 from time import sleep, time
 from copy import deepcopy
+from math import sqrt
+
+
+logger = logging.getLogger(__name__)
+
 
 class DateEntry:
     def __init__(self, date_code, info):
@@ -114,50 +120,57 @@ class TaskInfo:
     tasks = Manager().dict()
 
     @staticmethod
-    def init(d):
-        def main_loop(directory, tasks):
+    def init(repository):
+        def main_loop(repository, tasks, waiting_time):
             task_list = []
+            directory = Path(repository.path)
         
-            while True:            
-                # Remove tasks that are no longer available
-                for t in task_list:
-                    info_path = directory/t
-                    
-                    if not info_path.exists():
-                        del tasks[t]
-                
-                task_list = []
+            while True:
+                start = time()
             
-                # Load all available tasks                
-                for d in directory.iterdir():
-                    if not d.is_dir():
-                        continue
+                with repository:
+                    # Remove tasks that are no longer available
+                    for t in task_list:
+                        info_path = directory/t
                         
-                    # We catch all exceptions since the main loop must go on
-                    try:    
-                        info_path = d/"info.json"
-                        
-                        code = d.parts[-1]
-                        info = SingleTaskInfo(code, info_path).to_dict()
-                                                
-                        old = tasks.get(code, {"timestamp": 0})
-                        info["timestamp"] = old["timestamp"]
-                        
-                        if old != info:
-                            info["timestamp"] = time()
-                            tasks[code] = info
-                        
-                        task_list.append(code)
-
-                    except:
-                        # We can't use logger since this would break
-                        # multiprocessing...
-                        print("\n".join(format_exception(*exc_info())))
+                        if not info_path.exists():
+                            del tasks[t]
+                    
+                    task_list = []
                 
-                sleep(1)
+                    # Load all available tasks                
+                    for d in directory.iterdir():
+                        if not d.is_dir():
+                            continue
+                            
+                        # We catch all exceptions since the main loop must go on
+                        try:    
+                            info_path = d/"info.json"
+                            
+                            code = d.parts[-1]
+                            info = SingleTaskInfo(code, info_path).to_dict()
+                                                    
+                            old = tasks.get(code, {"timestamp": 0})
+                            info["timestamp"] = old["timestamp"]
+                            
+                            if old != info:
+                                info["timestamp"] = time()
+                                tasks[code] = info
+                            
+                            task_list.append(code)
+
+                        except:
+                            logger.info("\n".join(
+                                            format_exception(*exc_info())))
+
+                logger.info("finished iteration of TaskInfo.main_loop in {}ms".\
+                                format(int(1000 * (time() - start))))
+
+                sleep(waiting_time)
         
         TaskInfo.info_process = Process(target=main_loop,
-                                        args=(Path(d), TaskInfo.tasks))
+                                        args=(repository, TaskInfo.tasks,
+                                              .5 * (1 + sqrt(5))))
         TaskInfo.info_process.daemon = True
         TaskInfo.info_process.start()
 

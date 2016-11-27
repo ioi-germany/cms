@@ -32,6 +32,7 @@ from tornado.web import RequestHandler, Application, asynchronous
 from .Config import config
 from .TaskInfo import TaskInfo
 from .TaskFetch import TaskFetch
+from .Repository import Repository
 
 
 logger = logging.getLogger(__name__)
@@ -105,8 +106,10 @@ class TaskOverviewWebServer:
         params = {"template_path": resource_filename(base, "templates"),
                   "static_path":   resource_filename(base, "static")}
     
-        TaskFetch.init(config.task_repository)
-        TaskInfo.init(config.task_repository)
+        repository = Repository(config.task_repository, config.auto_sync)
+    
+        TaskFetch.init(repository, config.max_compilations)
+        TaskInfo.init(repository)
     
         self.app = Application(handlers, **params)
 
