@@ -116,6 +116,7 @@ class TaskCompileJob:
 
             # Release Manager subprocess for status
             self.compilation_process.terminate()
+            self.compilation_process.join()
             del self.compilation_process
             
             del self.status
