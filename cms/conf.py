@@ -7,6 +7,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2016 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -120,6 +121,13 @@ class Config(object):
         self.max_pages_per_job = 10
         self.max_jobs_per_user = 10
         self.pdf_printing_allowed = False
+
+        # TaskOverviewWebServer
+        self.overview_listen_address = "127.0.0.1"
+        self.overview_listen_port = 8891
+        self.task_repository = None
+        self.auto_sync = False
+        self.max_compilations = 1000
 
         # Installed or from source?
         self.installed = sys.argv[0].startswith("/usr/") and \

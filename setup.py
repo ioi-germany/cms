@@ -63,6 +63,7 @@ def do_setup():
             os.path.join("static", "*.*"),
             os.path.join("templates", "contest", "*.*"),
             os.path.join("templates", "admin", "*.*"),
+            os.path.join("templates", "overview", "*.*"),
             os.path.join("templates", "ranking", "*.*"),
         ],
         "cms.service": [
@@ -72,14 +73,6 @@ def do_setup():
             os.path.join("static", "img", "*.*"),
             os.path.join("static", "lib", "*.*"),
             os.path.join("static", "*.*"),
-        ],
-        "cmstaskoverview": [
-            os.path.join("templates", "*.*"),
-            os.path.join("static", "css", "*.*"),
-            os.path.join("static", "img", "*.*"),
-            os.path.join("static", "js", "*.*"),
-            os.path.join("static", "jq", "*.*"),
-            os.path.join("static", "*.*")
         ],
         "cmscontrib": [
             os.path.join("gerpythonformat", "lib", "include", "*.*"),
@@ -130,7 +123,6 @@ def do_setup():
                     "cmscontrib.updaters",
                     "cmscontrib.gerpythonformat",
                     "cmstaskenv",
-                    "cmstaskoverview",
                     "cmstestsuite",
                     "cmstestsuite.web",
                     "cmstestsuite.tasks",
@@ -324,8 +316,7 @@ def install():
 
     print("copying configuration to /usr/local/etc/.")
     makedir(os.path.join(USR_ROOT, "etc"), root, 0755)
-    for conf_file_name in ["cms.conf", "cms.ranking.conf",
-                           "cms.taskoverview.conf"]:
+    for conf_file_name in ["cms.conf", "cms.ranking.conf"]:
         conf_file = os.path.join(USR_ROOT, "etc", conf_file_name)
         # Skip if destination is a symlink
         if os.path.islink(conf_file):

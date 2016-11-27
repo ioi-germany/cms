@@ -29,10 +29,10 @@ from tornado import template
 from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler, Application, asynchronous
 
-from .Config import config
-from .TaskInfo import TaskInfo
-from .TaskFetch import TaskFetch
-from .Repository import Repository
+from cms import config
+from cms.io.TaskInfo import TaskInfo
+from cms.io.TaskFetch import TaskFetch
+from cms.io.Repository import Repository
 
 
 logger = logging.getLogger(__name__)
@@ -101,10 +101,10 @@ class TaskOverviewWebServer:
                     (r"/info", InfoHandler),
                     (r"/compile", TaskCompileHandler),
                     (r"/download/(.*)", DownloadHandler)]
-    
-        base = "cmstaskoverview"
-        params = {"template_path": resource_filename(base, "templates"),
-                  "static_path":   resource_filename(base, "static")}
+
+        params = {"template_path": resource_filename("cms.server",
+                                                     "templates/overview"),
+                  "static_path":   resource_filename("cms.server", "static")}
     
         repository = Repository(config.task_repository, config.auto_sync)
     
@@ -114,7 +114,8 @@ class TaskOverviewWebServer:
         self.app = Application(handlers, **params)
 
     def run(self):    
-        self.app.listen(config.listen_port, address=config.listen_address)
+        self.app.listen(config.overview_listen_port,
+                        address=config.overview_listen_address)
         
         try:
             IOLoop.instance().start()
