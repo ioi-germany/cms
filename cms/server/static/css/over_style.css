@@ -36,6 +36,14 @@ table.overview tr.new > td:first-child::after {
     transform:rotate(45deg);
 }
 
+table.overview td:not(.th) {
+    height:40px;
+}
+
+td.download {
+    width:30px;
+}
+
 table.overview tr.new > td:first-child:hover::after {
     opacity:.25;
 }
@@ -136,6 +144,10 @@ form {
 
 td.th {
     font-weight:bold;
+}
+
+td.download-heading {
+    text-align:center;
 }
 
 span.task-name {

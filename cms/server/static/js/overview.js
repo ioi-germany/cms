@@ -108,7 +108,9 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, init)
                 
         table_body += '<tr id="overview-heading">';
         for(var j = 0; j < entries.length; ++j)
-            if(show_col[entries[j]])
+            if(entries[j] == "download")
+                table_body += '<td id="overview-heading-' + entries[j] + '" class="th download-heading">' + desc[entries[j]] + '</td>'; // table-bordered doesn't work with th, so we emulate it
+            else
                 table_body += '<td id="overview-heading-' + entries[j] + '" class="th">' + desc[entries[j]] + '</td>'; // table-bordered doesn't work with th, so we emulate it
         table_body += '</tr>'; 
         window.document.getElementById("overview").innerHTML = table_body;
