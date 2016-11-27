@@ -38,9 +38,10 @@ logger = logging.getLogger(__name__)
 
 
 class TaskCompileJob:
-    def __init__(self, base_dir, name):
-        self.base_dir = base_dir
+    def __init__(self, repository, name, balancer):
+        self.repository = repository
         self.name = name
+        self.balancer = balancer
 
         self.current_handle = 1
         self.backup_handle = 0
@@ -58,41 +59,49 @@ class TaskCompileJob:
             
     def _compile(self):
         self._reset_status()
-        logger.info("loading task {} in {}".format(self.name, self.base_dir))
+        logger.info("loading task {} in {}".format(self.name,
+                                                   self.repository.path))
         
-        def do(status):
+        def do(status, repository, balancer):
             # stdout is process local in Python, so we can simply use this
             # to redirect all output from GerMakeTask to a string
             sys.stdout = StringIO()
                    
             # Remove color codes for the log file
             disable_colors()
-                   
-            try:
-                statement_file = GerMakeTask(self.base_dir, self.name, True,
-                                             False).make()
+                 
+            with balancer:  
+                try:
+                    comp = GerMakeTask(repository.path, self.name, True, False)
                 
-                if statement_file is None:
-                    status["error"] = True
-                    status["msg"] = "No statement found"
+                    with repository:
+                        comp.prepare()
 
-                else:
-                    result = None
-                
-                    with open(statement_file, "rb") as f:
-                        result = f.read()
+                    statement_file = comp.build()
                     
-                    status["result"] = result
+                    if statement_file is None:
+                        status["error"] = True
+                        status["msg"] = "No statement found"
 
-            except Exception as error:
-                status["error"] = True
-                status["msg"] = "\n".join(format_exception(*exc_info()))
+                    else:
+                        result = None
+                    
+                        with open(statement_file, "rb") as f:
+                            result = f.read()
+                        
+                        status["result"] = result
+
+                except Exception as error:
+                    status["error"] = True
+                    status["msg"] = "\n".join(format_exception(*exc_info()))
 
             sys.stdout.flush()
             status["log"] = sys.stdout.getvalue()
             status["done"] = True
             
-        self.compilation_process = Process(target=do, args = (self.status,))
+        self.compilation_process = Process(target=do, args = (self.status, 
+                                                              self.repository,
+                                                              self.balancer))
         self.compilation_process.daemon = True
         self.compilation_process.start()
     
@@ -157,17 +166,22 @@ class TaskCompileJob:
 
 class TaskFetch:
     jobs = {}
-    base_dir = None
+    repository = None
+    balancer = None
 
     @staticmethod
-    def init(base_dir):
-        logger.info("initializing TaskFetch with base_dir={}".format(base_dir))
-        TaskFetch.base_dir = base_dir
+    def init(repository, max_compilations):
+        logger.info("initializing task compilation in directory {}.".\
+                        format(repository.path))
+
+        TaskFetch.repository = repository
+        TaskFetch.balancer = Manager().BoundedSemaphore(max_compilations)
 
     @staticmethod
     def compile(name):
         if not name in TaskFetch.jobs:
-            TaskFetch.jobs[name] = TaskCompileJob(TaskFetch.base_dir, name)
+            TaskFetch.jobs[name] = TaskCompileJob(TaskFetch.repository, name,
+                                                  TaskFetch.balancer)
         return TaskFetch.jobs[name].join()
 
     @staticmethod

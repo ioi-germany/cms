@@ -45,6 +45,9 @@ class Config(object):
         self.http_port = 8891
         
         self.task_repository = None
+        self.auto_sync = False
+        
+        self.max_compilations = 1000
 
         # File system.
         self.installed = sys.argv[0].startswith("/usr/") and \
