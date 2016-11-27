@@ -25,7 +25,7 @@ import logging
 import sys
 
 from cms import ConfigError
-from cmstaskoverview.TaskOverviewWebServer import TaskOverviewWebServer
+from cms.server.TaskOverviewWebServer import TaskOverviewWebServer
 
 
 logger = logging.getLogger(__name__)

@@ -29,10 +29,10 @@ from tornado import template
 from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler, Application, asynchronous
 
-from .Config import config
-from .TaskInfo import TaskInfo
-from .TaskFetch import TaskFetch
-from .Repository import Repository
+from cms import config
+from cms.io.TaskInfo import TaskInfo
+from cms.io.TaskFetch import TaskFetch
+from cms.io.Repository import Repository
 
 
 logger = logging.getLogger(__name__)
@@ -56,13 +56,13 @@ class TaskCompileHandler(RequestHandler):
 
 
 class DownloadHandler(RequestHandler):
-    def share(self, statement, code):            
+    def share(self, statement, code):
         self.set_header("Content-Type", "application/pdf");
         self.set_header("Content-Disposition",
                         "attachment;filename=\"statement-{}.pdf\"".format(code))
         self.write(statement)
         self.flush()
-       
+
     def get(self, code):
         try:
             statement = TaskFetch.get(code)
@@ -77,7 +77,7 @@ class DownloadHandler(RequestHandler):
 
 
 class ListHandler(RequestHandler):
-    def get(self):        
+    def get(self):
         self.write(json.dumps(TaskInfo.task_list()))
         self.flush()
 
@@ -101,21 +101,22 @@ class TaskOverviewWebServer:
                     (r"/info", InfoHandler),
                     (r"/compile", TaskCompileHandler),
                     (r"/download/(.*)", DownloadHandler)]
-    
-        base = "cmstaskoverview"
-        params = {"template_path": resource_filename(base, "templates"),
-                  "static_path":   resource_filename(base, "static")}
-    
+
+        params = {"template_path": resource_filename("cms.server",
+                                                     "templates/overview"),
+                  "static_path":   resource_filename("cms.server", "taskoverview/static")}
+
         repository = Repository(config.task_repository, config.auto_sync)
-    
+
         TaskFetch.init(repository, config.max_compilations)
         TaskInfo.init(repository)
-    
+
         self.app = Application(handlers, **params)
 
-    def run(self):    
-        self.app.listen(config.listen_port, address=config.listen_address)
-        
+    def run(self):
+        self.app.listen(config.overview_listen_port,
+                        address=config.overview_listen_address)
+
         try:
             IOLoop.instance().start()
         except KeyboardInterrupt:

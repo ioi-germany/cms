@@ -57,6 +57,7 @@ PACKAGE_DATA = {
         os.path.join("contest", "static", "img", "mimetypes", "*.*"),
         os.path.join("contest", "static", "js", "*.*"),
         os.path.join("contest", "templates", "*.*"),
+        os.path.join("taskoverview", "templates", "*.*"),
     ],
     "cms.service": [
         os.path.join("templates", "printing", "*.*"),
@@ -74,14 +75,6 @@ PACKAGE_DATA = {
         os.path.join("static", "img", "*.*"),
         os.path.join("static", "lib", "*.*"),
         os.path.join("static", "*.*"),
-    ],
-    "cmstaskoverview": [
-        os.path.join("templates", "*.*"),
-        os.path.join("static", "css", "*.*"),
-        os.path.join("static", "img", "*.*"),
-        os.path.join("static", "jq", "*.*"),
-        os.path.join("static", "js", "*.*"),
-        os.path.join("static", "*.*")
     ],
     "cmstestsuite": [
         os.path.join("code", "*.*"),
