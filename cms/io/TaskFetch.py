@@ -28,7 +28,6 @@ from sys import exc_info
 from traceback import format_exception
 from multiprocessing import Process, Manager
 from StringIO import StringIO
-from time import sleep
 
 from cmscontrib.gerpythonformat.Messenger import disable_colors
 from cmscontrib.gerpythonformat.GerMakeTask import GerMakeTask
@@ -91,7 +90,7 @@ class TaskCompileJob:
                         
                         status["result"] = result
 
-                except Exception as error:
+                except Exception:
                     status["error"] = True
                     status["msg"] = "\n".join(format_exception(*exc_info()))
 
