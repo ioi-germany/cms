@@ -114,7 +114,6 @@ class TaskCompileJob:
             self.backup_handle = self.current_handle
 
             # Release Manager subprocess for status
-            self.compilation_process.terminate()
             self.compilation_process.join()
             del self.compilation_process
             
@@ -133,35 +132,30 @@ class TaskCompileJob:
                             "result": None,
                             "msg":    "Okay",
                             "log":    ""})
-
-    """ Various query methods for the status
-    """
-    def done(self, handle):
+                            
+    def info(self, handle):
         self._update()
-        return self._choose(handle, "done")
     
-    def error(self, handle):
-        self._update()
-        return self._choose(handle, "error")
+        if handle > self.current_handle:
+            return {"error": True,
+                    "done":  True,
+                    "msg":   "I couldn't find your compile job. Usually this "
+                             "means that the server has been restarted in the"
+                             "meantime. Please try again.",
+                    "log":   ""}
         
-    def working(self, handle):
-        return not self.done(handle)
-    
-    def msg(self, handle):
-        self._update()
-        return self._choose(handle, "msg")
+        return {"error": self._choose(handle, "error"),
+                "done":  self._choose(handle, "done"),
+                "msg":   self._choose(handle, "msg"),
+                "log":   self._choose(handle, "log")}
 
-    def log(self, handle):
-        self._update()
-        return self._choose(handle, "log")
+    def _choose(self, handle, key):
+        return self.backup[key] if handle <= self.backup_handle else \
+               self.status[key]
 
     def get(self):
         self._update()
         return self.backup["result"] # this will always be the most current one
-    
-    def _choose(self, handle, key):
-        return self.backup[key] if handle <= self.backup_handle else \
-               self.status[key]
 
 
 class TaskFetch:
@@ -186,10 +180,15 @@ class TaskFetch:
 
     @staticmethod
     def query(name, handle):
-        return { "done":   TaskFetch.jobs[name].done(handle),
-                 "error":  TaskFetch.jobs[name].error(handle),
-                 "msg":    TaskFetch.jobs[name].msg(handle),
-                 "log":    TaskFetch.jobs[name].log(handle) }
+        if not name in TaskFetch.jobs:
+            return {"error": True,
+                    "done":  True,
+                    "msg":   "I couldn't find your compile job. Usually this "
+                             "means that the server has been restarted in the "
+                             "meantime. Please try again.",
+                    "log":   ""}
+    
+        return TaskFetch.jobs[name].info(handle)
         
     @staticmethod
     def get(name):
