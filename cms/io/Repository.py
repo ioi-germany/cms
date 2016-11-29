@@ -21,10 +21,16 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import logging
+
 from multiprocessing import Manager
 from subprocess import call
 
 from cmscontrib.gerpythonformat.LocationStack import chdir
+
+
+logger = logging.getLogger(__name__)
+
 
 class Repository:
     """ Class to synchronize all accesses to our task repository (from TaskInfo
@@ -49,4 +55,7 @@ class Repository:
             print("Synchronizing {}".format(self.path))
         
             with chdir(self.path):
-                call(["git", "pull"])
+                try:
+                    call(["git", "pull"])
+                except:
+                    logger.error("Couldn't sync with repository")
