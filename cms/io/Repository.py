@@ -55,6 +55,8 @@ class Repository:
             logger.info("Synchronizing {}".format(self.path))
 
             with chdir(self.path):
+                gitout = ""
+            
                 try:
                     gitout = check_output(["git", "pull"])
                 except:
