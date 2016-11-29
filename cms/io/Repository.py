@@ -25,7 +25,6 @@ import logging
 
 from multiprocessing import Manager
 from subprocess import check_output
-from StringIO import StringIO
 
 from cmscontrib.gerpythonformat.LocationStack import chdir
 
