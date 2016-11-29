@@ -144,7 +144,7 @@ class TaskInfo:
                         logger.info("\n".join(format_exception(*exc_info())))
     
         def main_loop(repository, tasks, waiting_time):
-            task_list = [code for code in tasks]
+            task_list = tasks.keys()
             directory = Path(repository.path)
         
             while True:
