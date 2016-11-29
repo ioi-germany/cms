@@ -24,7 +24,8 @@ from __future__ import unicode_literals
 import logging
 
 from multiprocessing import Manager
-from subprocess import call
+from subprocess import check_output
+from StringIO import StringIO
 
 from cmscontrib.gerpythonformat.LocationStack import chdir
 
@@ -52,10 +53,14 @@ class Repository:
     
     def _sync(self):
         if self.auto_sync:
-            print("Synchronizing {}".format(self.path))
-        
+            logger.info("Synchronizing {}".format(self.path))
+
             with chdir(self.path):
                 try:
-                    call(["git", "pull"])
+                    gitout = check_output(["git", "pull"])
                 except:
-                    logger.error("Couldn't sync with repository")
+                    logger.error("Couldn't sync with repository: " + \
+                                 "{}".format(gitout))
+                else:
+                    logger.info("Finished synchronization: " + \
+                                "{}".format(gitout))
