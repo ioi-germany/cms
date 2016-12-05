@@ -45,13 +45,14 @@ class TaskCompileJob:
         self.current_handle = 1
         self.backup_handle = 0
         self.backup = None
+        self.idle = False
         
         self._compile()
         
     def join(self):
         self._update()
     
-        if self.status["done"]:
+        if self.idle:
             self.current_handle += 1
             self._compile()
         return self.current_handle
@@ -123,6 +124,7 @@ class TaskCompileJob:
                            "result": None,
                            "msg":    "Okay",
                            "log":    ""}
+            self.idle = True
 
 
     def _reset_status(self):
@@ -132,6 +134,7 @@ class TaskCompileJob:
                             "result": None,
                             "msg":    "Okay",
                             "log":    ""})
+        self.idle = False
                             
     def info(self, handle):
         self._update()
