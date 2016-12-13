@@ -40,6 +40,8 @@ CMS is composed of several services, that can be run on a single or on many serv
 
 - AdminWebServer: the webserver to control and modify the parameters of the contests.
 
+TaskOverviewWebServer is a webserver showing an overview of all tasks in a directory (mainly to simplify task selection). ResourceService doesn't start the TaskOverviewWebServer, so it has to be started manually.
+
 Finally, RankingWebServer, whose duty is of course to show the ranking. This webserver is - on purpose - separated from the inner core of CMS in order to ease the creation of mirrors and restrict the number of people that can access services that are directly connected to the database.
 
 There are also other services for testing, importing and exporting contests.
