@@ -29,6 +29,8 @@ from traceback import format_exception
 from multiprocessing import Process, Manager
 from StringIO import StringIO
 
+from cms.io.TaskInfo import TaskInfo
+
 from cmscontrib.gerpythonformat.Messenger import disable_colors
 from cmscontrib.gerpythonformat.GerMakeTask import GerMakeTask
 
@@ -176,6 +178,8 @@ class TaskFetch:
 
     @staticmethod
     def compile(name):
+        if not name in TaskInfo.tasks:
+            raise KeyError("No such task")
         if not name in TaskFetch.jobs:
             TaskFetch.jobs[name] = TaskCompileJob(TaskFetch.repository, name,
                                                   TaskFetch.balancer)
