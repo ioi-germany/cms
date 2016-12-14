@@ -6,7 +6,7 @@ div.download-icon {
     display:flex;
     align-items:center;
     justify-content:center;
-    background-image:url("/static/img/download.png");
+    background-image:url("./../img/download.png");
     background-repeat:no-repeat;
     background-position:center;
     position:absolute;
@@ -19,11 +19,11 @@ div.download-icon {
 }
 
 div.download-icon:hover {
-    background-image:url("/static/img/download-hover.png");
+    background-image:url("./../img/download-hover.png");
 }
 
 div.download-icon.down {
-    background-image:url("/static/img/download-pressed.png");
+    background-image:url("./../img/download-pressed.png");
 }
 
 div.download-icon.loading, div.download-icon.down.loading {
@@ -32,15 +32,15 @@ div.download-icon.loading, div.download-icon.down.loading {
 }
 
 div.download-icon.error {
-    background-image:url("/static/img/error.png");
+    background-image:url("./../img/error.png");
 }
 
 div.download-icon.error:hover {
-    background-image:url("/static/img/error-hover.png");
+    background-image:url("./../img/error-hover.png");
 }
 
 div.download-icon.down.error {
-    background-image:url("/static/img/error-down.png");
+    background-image:url("./../img/error-down.png");
 }
 
 /* Animated overlays */
@@ -54,7 +54,7 @@ div.download-icon.loading::before {
     content:"";
     width:20px;
     height:20px;
-    background-image:url("/static/img/loading.png");
+    background-image:url("./../img/loading.png");
     background-repeat:no-repeat;
     background-position:center;
     animation-name:rotating;
@@ -82,7 +82,7 @@ div.download-icon.done::before {
     content:"";
     width:100px;
     height:100px;
-    background-image:url("/static/img/download-flat.png");
+    background-image:url("./../img/download-flat.png");
     background-repeat:no-repeat;
     background-position:center;
     animation-name:download-completed;
@@ -113,7 +113,7 @@ div.download-icon.error:before {
     width:100px;
     height:100px;
     opacity:.5;
-    background-image:url("/static/img/error-flat.png");
+    background-image:url("./../img/error-flat.png");
     background-repeat:no-repeat;
     background-position:center;
     animation-name:download-error;
