@@ -49,10 +49,12 @@ function _compile(p, code)
                         p.classList.remove("loading");
                         p.classList.add("done");
              
-                        window.location.href = "/download/" + code;
+                        window.location.href = __url_root + "/download/" + code;
                     }
                 }
             }
+            
+            console.log("...");
         
             $.get(__url_root + "/compile", { "code": code, "handle": handle }, download);
         }
