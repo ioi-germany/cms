@@ -27,7 +27,7 @@
         <script src="static/js/overview.js"></script>
         
         <script>       
-            var __url_root = "{% raw url_root %}";
+            var __url_root = ".";
             var entries = {% raw json.dumps(TaskInfo.entries()) %};
             var desc = {% raw json.dumps(TaskInfo.desc()) %};
             var show_col = {};
