@@ -27,6 +27,7 @@
         <script src="static/js/overview.js"></script>
         
         <script>       
+            var __url_root = "{% raw url_root %}";
             var entries = {% raw json.dumps(TaskInfo.entries()) %};
             var desc = {% raw json.dumps(TaskInfo.desc()) %};
             var show_col = {};
@@ -79,6 +80,9 @@
                  
             function init()
             {
+                if(__url_root[__url_root.length - 1] == '/')
+                    __url_root = __url_root.substring(0, __url_root.length - 1);
+
                 update(true, true);
             
                 for(var i = 0; i < entries.length; ++i) show_col[entries[i]] = true;

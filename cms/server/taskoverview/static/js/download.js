@@ -54,13 +54,13 @@ function _compile(p, code)
                 }
             }
         
-            $.get("/compile", { "code": code, "handle": handle }, download);
+            $.get(__url_root + "/compile", { "code": code, "handle": handle }, download);
         }
         
         __pdf_jobs[code] = window.setInterval(query, 500);
     }
     
-    $.post("/compile", { "code": code }, init);             
+    $.post(__url_root + "/compile", { "code": code }, init);             
 }
          
 function _pdf_mouse_click(e)

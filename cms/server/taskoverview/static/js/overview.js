@@ -339,7 +339,7 @@ function update(init=false, sliders=false)
     
         if(new_tasks.length > 0 || updated_tasks.length > 0)
         {
-            $.get("/info", {"tasks": JSON.stringify(new_tasks.concat(updated_tasks))}, on_info);
+            $.get(__url_root + "/info", {"tasks": JSON.stringify(new_tasks.concat(updated_tasks))}, on_info);
         }
         
         else
@@ -349,7 +349,7 @@ function update(init=false, sliders=false)
         }
     }
 
-    $.get("/list", "", on_list);
+    $.get(__url_root + "/list", "", on_list);
 }
 
 function update_sliders(init=false)

@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 class MainHandler(RequestHandler):
     def get(self):
-        self.render("overview.html")
+        self.render("overview.html", url_root=self.request.path)
 
 
 class TaskCompileHandler(RequestHandler):
