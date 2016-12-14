@@ -51,7 +51,6 @@ class TaskCompileHandler(RequestHandler):
     def post(self):
         handle = TaskFetch.compile(self.get_argument("code"))
         self.write({"handle": handle})
-        self.flush()
 
 
 class DownloadHandler(RequestHandler):
