@@ -32,7 +32,9 @@ function _compile(p, code)
             function download(r)
             {        
                 if(r.done)
-                {       
+                {   
+                    if(!(code in __pdf_jobs)) return;
+                
                     window.clearInterval(__pdf_jobs[code]);
                     delete __pdf_jobs[code];
                                         
@@ -53,8 +55,6 @@ function _compile(p, code)
                     }
                 }
             }
-            
-            console.log("...");
         
             $.get(__url_root + "/compile", { "code": code, "handle": handle }, download);
         }
