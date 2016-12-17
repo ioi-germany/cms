@@ -49,7 +49,7 @@ function _compile(p, code)
                         p.classList.remove("loading");
                         p.classList.add("done");
              
-                        window.location.href = __url_root + "/download/" + code;
+                        window.document.getElementById("fr-download-helper").src = __url_root + "/download/" + code;
                     }
                 }
             }
