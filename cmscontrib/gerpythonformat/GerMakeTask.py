@@ -64,7 +64,7 @@ class GerMakeTask:
         try:
             with chdir(self.wdir):
                 cc = ContestConfig(os.path.join(self.wdir, ".rules"),
-                                   "hidden contest", minimal=True)
+                                   "hidden contest", minimal=self.minimal)
                 copyifnecessary(os.path.join(cc._get_ready_dir(),
                                              "contest-template.py"),
                                 os.path.join(self.wdir, "c.py"))
