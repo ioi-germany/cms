@@ -86,21 +86,21 @@ def main():
                     "test submissions, ...)",
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("import_directory",
-                        help="source directory",
-                        type=utf8_decoder)
-    parser.add_argument("task", help="name of the task to compile",
+                        help="directory where config.py is located",
                         type=utf8_decoder)
     parser.add_argument("-m", "--minimal", action="store_true",
-                        help="attempt to only compile statement (and everything "
-                        "required for this) -- not implemented yet")
+                        help="attempt to only compile statement (and "
+                        "everything required for this, e.g. sample cases)")
     parser.add_argument("-c", "--clean", action="store_true",
                         help="clean the build directory (forcing a complete "
                         "rebuild)")
 
     args = parser.parse_args()
 
-    GerMakeTask(os.path.abspath(args.import_directory),
-                args.task, args.minimal, args.clean).make()
+    full_dir = os.path.abspath(args.import_directory)
+    source_dir, task = os.path.split(full_dir)
+
+    GerMakeTask(source_dir, task, args.minimal, args.clean).make()
 
 
 if __name__ == "__main__":
