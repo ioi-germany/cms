@@ -64,13 +64,12 @@ class GerMakeTask:
         try:
             with chdir(self.wdir):
                 cc = ContestConfig(os.path.join(self.wdir, ".rules"),
-                                   "hidden contest")
+                                   "hidden contest", minimal=True)
                 copyifnecessary(os.path.join(cc._get_ready_dir(),
                                              "contest-template.py"),
                                 os.path.join(self.wdir, "c.py"))
                 cc._readconfig("c.py")
-                cc._task(self.task, cc.exported["full_feedback"],
-                         self.minimal)
+                cc._task(self.task, cc._dummy_feedback, self.minimal)
 
                 if not self.minimal:
                     cc._makecontest()

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2016 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -78,7 +78,7 @@ class ContestConfig(CommonConfig):
     This object is exported as a variable called :samp:`contest`.
     """
     def __init__(self, rules, name, ignore_latex=False, onlytask=None,
-                 make_datasets=True):
+                 make_datasets=True, minimal=False):
         """
         Initialize.
 
@@ -118,6 +118,9 @@ class ContestConfig(CommonConfig):
         self.exported["token_feedback"] = self._token_feedback
         self.exported["std_token_feedback"] = self._token_feedback(3, 2)
 
+        # Feedback for minimal mode (inaccessible from config.py)
+        self._dummy_feedback = ("dummy", lambda _: None)
+
         # Default submission limits
         self.submission_limits(None, None)
         self.user_test_limits(None, None)
@@ -137,9 +140,14 @@ class ContestConfig(CommonConfig):
         self.wdir = os.getcwd()
 
         self.ontasks = []
+        
+        self.minimal = minimal
 
     def _readconfig(self, filename):
-        print_msg("Loading contest {}".format(self.contestname), headerdepth=1)
+        if not self.minimal:
+            print_msg("Loading contest {}".format(self.contestname),
+                      headerdepth=1)
+
         super(ContestConfig, self)._readconfig(filename)
         self._initialize_ranking()
 
@@ -203,7 +211,8 @@ class ContestConfig(CommonConfig):
         s (unicode): contest description
 
         """
-        print_msg("Setting description to {}".format(s), headerdepth=10)
+        if not self.minimal:
+            print_msg("Setting description to {}".format(s), headerdepth=10)
         self._description = s
 
     @exported_function
@@ -214,7 +223,8 @@ class ContestConfig(CommonConfig):
         s (unicode): contest time zone (e.g. Europe/Berlin)
 
         """
-        print_msg("Setting timezone to {}".format(s), headerdepth=10)
+        if not self.minimal:        
+            print_msg("Setting timezone to {}".format(s), headerdepth=10)
         self._timezone = s
 
     @exported_function
@@ -256,6 +266,9 @@ class ContestConfig(CommonConfig):
         return (MyGroup): object representing the created group
 
         """
+        if self.minimal:
+            return
+        
         usaco_mode_str = ""
         if per_user_time is not None:
             usaco_mode_str = \
@@ -320,6 +333,9 @@ class ContestConfig(CommonConfig):
         return (MyUser): object representing the created user
 
         """
+        if self.minimal:
+            return
+
         if group is None:
             if self.defaultgroup is None:
                 raise Exception("You have to specify a group")

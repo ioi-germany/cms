@@ -574,7 +574,7 @@ class TaskConfig(CommonConfig, Scope):
         # Score mode
         self._score_mode = None
         
-        # Only compile statement (and everything necessary for this?)
+        # Only compile statement (and hopefully everything necessary for this)
         self.minimal = minimal
 
     @property
