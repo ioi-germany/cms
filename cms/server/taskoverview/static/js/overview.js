@@ -106,7 +106,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, init)
     {
         var table_body = "";
                 
-        table_body += '<tr id="overview-heading">';
+        table_body += '<tr id="overview-heading" class="odd">';
         for(var j = 0; j < entries.length; ++j)
             if(entries[j] == "download")
                 table_body += '<td id="overview-heading-' + entries[j] + '" class="th download-heading">' + desc[entries[j]] + '</td>'; // table-bordered doesn't work with th, so we emulate it
@@ -267,6 +267,67 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, init)
             cell.classList.remove("hidden");
         else
             cell.classList.add("hidden");     
+    }
+    
+    // Coloring and rounded borders
+    var count = 0;
+    var prefix = "overview-heading";
+    
+    for(var j = 0; j < entries.length; ++j)
+    {
+        var id = prefix + "-" + entries[j];
+        var cell = window.document.getElementById(id);
+        cell.classList.remove("lower-left");
+        cell.classList.remove("lower-right");
+        cell.classList.remove("upper-left");
+        cell.classList.remove("upper-right");
+    }
+    
+    for(var i = 0; i < __tasks.length; ++i)
+    {
+        var id = "row-" + __tasks[i];
+        var row = window.document.getElementById(id);
+        
+        if(row.classList.contains("hidden")) continue;
+        
+        if(count % 2 == 0) row.classList.remove("odd");
+        else               row.classList.add("odd");
+        
+        ++count;
+        prefix = "cell-" + __tasks[i];
+        
+        for(var j = 0; j < entries.length; ++j)
+        {
+            var id = prefix + "-" + entries[j];
+            var cell = window.document.getElementById(id);
+            cell.classList.remove("lower-left");
+            cell.classList.remove("lower-right");
+            cell.classList.remove("upper-left");
+            cell.classList.remove("upper-right");
+        }
+    }
+    
+    var first_col = null;
+    var last_col = null;
+    
+    for(var j = 0; j < entries.length; ++j)
+    {
+        var id = prefix + "-" + entries[j];
+        var cell = window.document.getElementById(id);
+            
+        if(cell.classList.contains("hidden")) continue;
+            
+        if(first_col == null) first_col = entries[j];
+        last_col = entries[j];
+    }
+        
+    if(last_col != null)
+    {
+        window.document.getElementById(prefix + "-" + first_col).classList.add("lower-left");
+        window.document.getElementById(prefix + "-" + last_col).classList.add("lower-right");
+        
+        window.document.getElementById("overview-heading-" + first_col).classList.add("upper-left");
+        window.document.getElementById("overview-heading-" + last_col).classList.add("upper-right");
     }
     
     // Create overview of problematic info.json files
