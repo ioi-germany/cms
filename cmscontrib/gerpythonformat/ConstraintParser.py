@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2014 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2016 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -30,23 +30,50 @@ class Constraint(object):
         self.max = max
 
     def uncompress(self):
-        return {v: [self.min, self.max] for v in self.variables}
+        return {v: [Constraint.eval(self.min), 
+                    Constraint.eval(self.max)] for v in self.variables}
 
     def latex(self):
         s = "$"
         if self.max is None:
             s += ", ".join(self.variables)
-            s += r"\ge {}".format(self.pretty(self.min))
+            s += r"\ge {}".format(Constraint.pretty(self.min))
         else:
             if self.min is not None:
                 s += r"{}\le ".format(self.min)
             s += ", ".join(self.variables)
-            s += r"\le {}".format(self.pretty(self.max))
+            s += r"\le {}".format(Constraint.pretty(self.max))
         s += "$"
         return s
 
-    def pretty(self, a):
-        s = "{}".format(a)
+    @staticmethod
+    def pretty(s):
+        """
+        Try to apply digit grouping to numbers for TeX display
+        
+        This is of course not perfect, for example one can trick it using
+        something like 1{}000
+        """
+        l = []
+        curr_token = ""
+        num_mode = False
+
+        digits = [chr(ord('0') + i) for i in range(0, 10)]
+        
+        for c in s:
+            if (c in digits) ^ num_mode:
+                l.append(Constraint.grp(curr_token) if num_mode else curr_token)
+                curr_token = ""
+                num_mode = not num_mode
+
+            curr_token += c
+
+        l.append(Constraint.grp(curr_token) if num_mode else curr_token)
+
+        return "".join(l)
+    
+    @staticmethod
+    def grp(s):
         m = len(s) % 3
 
         t = ""
@@ -55,6 +82,20 @@ class Constraint(object):
                 t += "\,"
             t += s[i]
         return t
+
+    @staticmethod
+    def eval(s):
+        if s is None:
+            return None
+    
+        coding = {"^": "**",
+                  "{": "(",
+                  "}": ")"}
+
+        for old, new in coding.iteritems():
+            s = s.replace(old, new)
+    
+        return eval(s)
 
 
 class ConstraintList(object):
@@ -116,7 +157,6 @@ class ConstraintList(object):
             if min == ",":
                 min = None
             else:
-                min = int(min)
                 if tokens.pop() != ",":
                     raise ValueError("Malformed constraint string.")
 
@@ -124,7 +164,6 @@ class ConstraintList(object):
             if max == "]":
                 max = None
             else:
-                max = int(max)
                 if tokens.pop() != "]":
                     raise ValueError("Malformed constraint string.")
 
