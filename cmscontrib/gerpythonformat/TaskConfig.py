@@ -264,6 +264,13 @@ class MyGroup(Scope):
             res = merge_constraints(res, c.uncompress())
         return res
 
+    def _dummy_case(self, name):    
+        if name is None:
+            name = "t" + str(len(self.cases))
+
+        setattr(self, name, None)
+        self.cases.append(None)
+
     @exported_function
     def add_testcase(self, case, feedback=False, save=False, name=None,
                      must_still_be_checked=True):
@@ -998,6 +1005,7 @@ class TaskConfig(CommonConfig, Scope):
         """
         if not kwargs.get("save") and self.minimal:
             print_msg("Skipping testcase (minimal mode)")
+            self.group_stack[-1]._dummy_case(kwargs.get("name"))
             return
         
         if len(self.group_stack) == 0:
@@ -1126,6 +1134,9 @@ class TaskConfig(CommonConfig, Scope):
                                   the memory limit for this task)
 
         """
+        if self.minimal:
+            return
+
         print_msg("Added test submission {}"
                   .format([self.contest.short_path(s) for s in args]),
                   headerdepth=10)
