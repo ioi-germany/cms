@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2016 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2016-2017 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2016 Simon Bürger <simon.buerger@rwth-aachen.de>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -80,6 +80,24 @@ class SingleTaskInfo:
                 if len(missing) > 0:
                     i["error"] = "Some important entries are missing: " + \
                                  ", ".join(missing) + "."
+                else:
+                    def bad(x):
+                        try:
+                            y = int(x)
+                        except:
+                            return True
+                        else:
+                            return y < 0 or y > 10
+                    
+                    if bad(i["algorithm"]):
+                        i["algorithm"] = 0
+                        i["error"] = "Invalid value for \"algorithm\": " \
+                                     "expected an integer between 0 and 10."
+                    
+                    if bad(i["implementation"]):
+                        i["implementation"] = 0
+                        i["error"] = "Invalid value for \"implementation\": " \
+                                     "expected an integer between 0 and 10."
             
         info.update(i)
 
@@ -92,7 +110,8 @@ class SingleTaskInfo:
             info["uses"] = []
             
             if "error" not in info:
-                info["error"] = "I couldn't parse the dates for \"(previous) uses\"."
+                info["error"] = "I couldn't parse the dates for " \
+                                "\"(previous) uses\"."
             
         for key, value in info.iteritems():
             setattr(self, key, value)
