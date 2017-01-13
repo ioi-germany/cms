@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2016 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -40,7 +40,7 @@ class Constraint(object):
             s += r"\ge {}".format(Constraint.pretty(self.min))
         else:
             if self.min is not None:
-                s += r"{}\le ".format(self.min)
+                s += r"{}\le ".format(Constraint.pretty(self.min))
             s += ", ".join(self.variables)
             s += r"\le {}".format(Constraint.pretty(self.max))
         s += "$"
@@ -58,10 +58,10 @@ class Constraint(object):
         curr_token = ""
         num_mode = False
 
-        digits = [chr(ord('0') + i) for i in range(0, 10)]
+        digits = {chr(ord('0') + i) for i in range(0, 10)}
         
         for c in s:
-            if (c in digits) ^ num_mode:
+            if (c in digits) != num_mode:
                 l.append(Constraint.grp(curr_token) if num_mode else curr_token)
                 curr_token = ""
                 num_mode = not num_mode
@@ -74,6 +74,10 @@ class Constraint(object):
     
     @staticmethod
     def grp(s):
+        """
+        Group s into blocks of three characters each, separated by 1/6th quad
+        This should be applied to numbers
+        """
         m = len(s) % 3
 
         t = ""
