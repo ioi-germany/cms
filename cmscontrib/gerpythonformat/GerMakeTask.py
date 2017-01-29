@@ -35,10 +35,11 @@ import shutil
 
 
 class GerMakeTask:
-    def __init__(self, odir, task, minimal, clean):
+    def __init__(self, odir, task, minimal, submission, clean):
         self.odir = odir
         self.task = task
         self.minimal = minimal
+        self.submission = submission
         self.clean = clean
 
     def make(self):
@@ -74,7 +75,7 @@ class GerMakeTask:
                 if not self.minimal:
                     cc._makecontest()
                     for u in cc.users: cc._makeuser(u.username)
-                    cc._maketask(filecacher, self.task, local_test=True)
+                    cc._maketask(filecacher, self.task, local_test=(True if self.submission is None else self.submission))
 
         finally:
             filecacher.destroy_cache()
@@ -91,6 +92,10 @@ def main():
     parser.add_argument("-m", "--minimal", action="store_true",
                         help="attempt to only compile statement (and "
                         "everything required for this, e.g. sample cases)")
+    parser.add_argument("-s", "--submission",
+                           help="only test submissions whose file names all"
+                           "contain this string",
+                           type=utf8_decoder)
     parser.add_argument("-c", "--clean", action="store_true",
                         help="clean the build directory (forcing a complete "
                         "rebuild)")
@@ -100,7 +105,7 @@ def main():
     full_dir = os.path.abspath(args.import_directory)
     source_dir, task = os.path.split(full_dir)
 
-    GerMakeTask(source_dir, task, args.minimal, args.clean).make()
+    GerMakeTask(source_dir, task, args.minimal, args.submission, args.clean).make()
 
 
 if __name__ == "__main__":
