@@ -11,7 +11,7 @@
 {% if any(".cpp" in get_language(lang).source_extensions for lang in contest.languages) %}
 <h3>C++</h3>
 
-<p><a href="{{ contest_url("stl", "index.html") }}">{{ _("Standard Template Library") }}</a></p>
+<p><a href="http://en.cppreference.com/w/">{{ _("Standard Template Library") }}</a></p>
 {% end %}
 
 {% if any(".java" in get_language(lang).source_extensions for lang in contest.languages) %}
@@ -19,7 +19,6 @@
 
 <p>{{ _("The main Java class of the solution should have exactly the same name as the task.") }}</p>
 {% end %}
-
 
 <h2>{{ _("Submission details for compilation") }}</h2>
 
