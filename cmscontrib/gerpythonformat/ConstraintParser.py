@@ -35,7 +35,11 @@ class Constraint(object):
 
     def latex(self):
         s = "$"
-        if self.max is None:
+        if self.max is not None and self.max == self.min:
+            s += ", ".join(self.variables)
+            s += r"= {}".format(Constraint.pretty(self.min))
+        
+        elif self.max is None:
             s += ", ".join(self.variables)
             s += r"\ge {}".format(Constraint.pretty(self.min))
         else:
