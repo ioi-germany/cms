@@ -275,6 +275,13 @@ class ContestConfig(CommonConfig):
                 " in USACO mode with time {}".format(per_user_time)
         print_msg("Creating user group {} (working from {} to {}{})"
                   .format(s, start, stop, usaco_mode_str), headerdepth=10)
+        
+        # We allow specifying an integer or a  timedelta
+        try:
+            per_user_time = per_user_time.seconds
+        except AttributeError:
+            pass
+                  
         r = MyGroup(s, start, stop, per_user_time)
         self.groups.append(r)
         if s == "main":
