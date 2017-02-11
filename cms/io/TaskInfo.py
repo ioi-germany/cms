@@ -163,7 +163,6 @@ class TaskInfo:
                         logger.info("\n".join(format_exception(*exc_info())))
     
         def main_loop(repository, tasks, waiting_time):
-            task_list = tasks.keys()
             directory = Path(repository.path)
         
             while True:
@@ -171,7 +170,7 @@ class TaskInfo:
             
                 with repository:
                     # Remove tasks that are no longer available
-                    for t in task_list:
+                    for t in tasks.keys():
                         info_path = directory/t
                         
                         if not info_path.exists():
