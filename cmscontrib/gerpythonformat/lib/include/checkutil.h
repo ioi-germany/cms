@@ -50,15 +50,8 @@ template<> pair<int, int> get_constraint(const string &name) {
 }
 
 /* Register an automatic constraint */
-template<typename T> void put_constraint(const string &name, T min, T max) {
-    cerr << "you have to write a specialization of put_constraing yourself!" << endl;
-    exit(42);
-}
-template<> void put_constraint(const string &name, long long min, long long max) {
+void put_constraint(const string &name, long long min, long long max) {
     constraints_ll[name] = make_pair(min, max);
-}
-template<> void put_constraint(const string &name, int min, int max) {
-    put_constraint(name, (long long) min, (long long) max);
 }
 
 /* Read constraints from a command line array, interpreting them as integers
@@ -67,7 +60,7 @@ template<> void put_constraint(const string &name, int min, int max) {
 void read_some_constraints(char **argv, int count, int start = 0) {
     for (int i = 0; i < count; ++i) {
         string name = argv[start + 3 * i], min = argv[start + 3 * i + 1], max = argv[start + 3 * i + 2];
-        put_constraint<long long> (name, from_string_or_fail<long long> (min), from_string_or_fail<long long> (max));
+        put_constraint(name, from_string_or_fail<long long> (min), from_string_or_fail<long long> (max));
     }
 }
 
