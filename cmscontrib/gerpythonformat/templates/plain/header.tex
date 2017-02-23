@@ -4,7 +4,10 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 
+\let\oldscdefault=\scdefault
 \usepackage[charter]{mathdesign} % math font
+\let\scdefault=\oldscdefault
+
 \usepackage{libertine} % sans serif font
 \usepackage{charter} % text font
 \usepackage{inconsolata} % typewriter font
