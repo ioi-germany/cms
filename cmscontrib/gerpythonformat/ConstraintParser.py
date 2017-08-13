@@ -32,6 +32,13 @@ class Constraint(object):
     def uncompress(self):
         return {v: [Constraint.eval(self.min), 
                     Constraint.eval(self.max)] for v in self.variables}
+    
+    def merge(self, rhs):
+        if rhs.min is not None:
+            self.min = rhs.min
+        
+        if rhs.max is not None:
+            self.max = rhs.max
 
     def latex(self):
         s = "$"

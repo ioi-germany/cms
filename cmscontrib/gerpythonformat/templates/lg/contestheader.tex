@@ -9,7 +9,10 @@ Aufgabe: {\bfseries \taskname}\vss}}
 \def\sthelper#1#2{{\sffamily\bfseries Teilaufgabe\ #1 (#2 Punkte).\enspace}}
 \newcount\stcount
 \stcount=0
-\def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \removelastskip\smallskip\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}
+\def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \ifdim\lastskip<\smallskipamount\removelastskip\par\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}
+\def\subtask{\count1=\stcount \advance\count1 by 1 \st{\subtaskpoints{\the\count1}}}
+\def\currconstraint#1{\scopedconstraint{\the\stcount}{#1}}
+\def\currconstraints{\currconstraint{@ll}}
 
 \def\showcases{\ifnum\numsamples=1\sheading{Beispiel}\else\sheading{Beispiele}\fi\testcasetable}
 \def\showlimits{\sheading{Limits}%
