@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
+# Copyright © 2017 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,3 +20,9 @@
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
+
+from .CEOITemplate import *
+
+def load(contest, day=0):
+    contest.day = day
+    CEOITemplate(contest)

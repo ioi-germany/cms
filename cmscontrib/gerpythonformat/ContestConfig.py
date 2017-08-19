@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2016 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -31,6 +31,7 @@ from cms.db import Contest, User, Group
 import os
 import shutil
 from datetime import datetime, timedelta
+from importlib import import_module
 import pytz
 import json
 
@@ -173,6 +174,14 @@ class ContestConfig(CommonConfig):
         """
         return ("token", TaskConfig.tokens, gen_initial, gen_number, gen_interval,
                 gen_max, min_interval, max_number)
+
+    @exported_function
+    def load_template(self, name, **kwargs):
+        """
+        Load the template of the given name
+        """
+        tm = import_module("cmscontrib.gerpythonformat.templates." + name)
+        tm.load(self, **kwargs)
 
     @exported_function
     def ontask(self, f):
