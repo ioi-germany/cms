@@ -28,15 +28,17 @@ from .Messenger import print_msg, print_block, header, red, green, blue, box, \
 from .CommonConfig import exported_function, CommonConfig
 from .Executable import ExitCodeException
 from .ConstraintParser import ConstraintList, merge_constraints
-from cms import SOURCE_EXT_TO_LANGUAGE_MAP, SCORE_MODE_MAX_TOKENED_LAST, \
+from cms import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX
 from cms.db import Task, Statement, Testcase, Dataset, \
     SubmissionFormatElement, Attachment, Manager, Submission, File, \
     SubmissionResult
 from cms.grading.scoretypes import get_score_type
 from cms.grading.tasktypes import get_task_type
-from cms.grading.Job import JobGroup
+from cms.grading.languagemanager import filename_to_language
+from cms.grading.Job import CompilationJob, EvaluationJob
 from cms.rules.Rule import JobRule, ZipRule
+from cms.service.esoperations import ESOperation
 from cmscommon.datetime import make_timestamp
 from datetime import datetime
 import json
@@ -197,7 +199,7 @@ class MySubtask(Scope):
             return
         if points is None:
             points = sum(g.points for g in self.groups)
-        with self.task.subtask(description, name=name, public=True, 
+        with self.task.subtask(description, name=name, public=True,
                                partial=True) as s:
             with s.group(points) as g:
                 for case in self.feedbackcases:
@@ -264,7 +266,7 @@ class MyGroup(Scope):
             res = merge_constraints(res, c.uncompress())
         return res
 
-    def _dummy_case(self, name):    
+    def _dummy_case(self, name):
         if name is None:
             name = "t" + str(len(self.cases))
 
@@ -410,7 +412,7 @@ class MyCase(object):
 
 
 class MySubmission(object):
-    def __init__(self, task, filenames, score, public_score, 
+    def __init__(self, task, filenames, score, public_score,
                  partial_score=0, expected={},
                  weak_time_limit=None, strong_time_limit=None,
                  weak_mem_limit=None, strong_mem_limit=None):
@@ -580,7 +582,7 @@ class TaskConfig(CommonConfig, Scope):
 
         # Score mode
         self._score_mode = None
-        
+
         # Only compile statement (and hopefully everything necessary for this)
         self.minimal = minimal
 
@@ -834,32 +836,32 @@ class TaskConfig(CommonConfig, Scope):
             with open(filename) as fi:
                 shutil.copyfileobj(fi, stdout)
         return self.encapsulate(f)
-        
+
     @exported_function
     def verbatim(self, *args, **kwargs):
         """
         Helper function for testcases which are hardcoded in the config file
         (should be only used for very small testcases)
-        
+
         You can pass any sequence of variables (that can be meaningfully
         converted to strings) to this method, they will be separated by
         blank spaces.
-        
+
         The input is terminated with a newline unless you add flush=False
         as a parameter.
         """
         flush = True
-        
+
         try:
             flush = kwargs["flush"]
         except:
             pass
-    
+
         def curried(stdout=None, **kwargs):
             stdout.write(" ".join(["{}".format(x) for x in args]))
             if flush:
                 stdout.write("\n")
-            
+
         return self.encapsulate(curried)
 
     @exported_function
@@ -898,7 +900,7 @@ class TaskConfig(CommonConfig, Scope):
         counts for private (bool): whether the subtask counts toward private
                        score
                        if the value is None this is set to not public
-                       
+
         partial(bool): is this a partial feedback subtask?
 
         return (MySubtask): object representing the created subtask
@@ -1007,7 +1009,7 @@ class TaskConfig(CommonConfig, Scope):
             print_msg("Skipping testcase (minimal mode)")
             self.group_stack[-1]._dummy_case(kwargs.get("name"))
             return
-        
+
         if len(self.group_stack) == 0:
             raise Exception("testcase() called outside group")
         return self.group_stack[-1].testcase(*args, **kwargs)
@@ -1015,7 +1017,7 @@ class TaskConfig(CommonConfig, Scope):
     def _check(self, checker, infile, outfile, caseno, check_counter):
         if self.minimal:
             return
-    
+
         try:
             checker(outfile, stdin=infile, dependencies=[outfile])
         except ExitCodeException:
@@ -1080,7 +1082,7 @@ class TaskConfig(CommonConfig, Scope):
 
     def no_feedback(self):
         pass
-        
+
     def _activate_feedback(self):
         func = self._feedback_param[1]
         args = (self, ) + self._feedback_param[2:]
@@ -1177,7 +1179,7 @@ class TaskConfig(CommonConfig, Scope):
     def _printresult(self):
         if self.minimal:
             return
-    
+
         with header("Statistics", depth=3):
             print_msg("Taskname: {}".format(self.name))
             sts = ["{} {}{}".format(l, self.short_path(s.file_),
@@ -1238,7 +1240,7 @@ class TaskConfig(CommonConfig, Scope):
         """
         return self.contest.short_path(f)
 
-    def _makedbobject(self, file_cacher, local_test):
+    def _makedbobject(self, contest, file_cacher, local_test):
         """
         Return a Task object which can be saved to the database.
         TODO What exactly happens to test submissions? Can we still add them
@@ -1270,6 +1272,7 @@ class TaskConfig(CommonConfig, Scope):
         tdb = Task(name=self.name,
                    title=self._title,
                    num=self.num)
+        tdb.contest = contest
         if self.contest._analysis:
             self.infinite_tokens()
         self._set_tokens(tdb)
@@ -1286,8 +1289,8 @@ class TaskConfig(CommonConfig, Scope):
         else:
             tdb.submission_format = [
                 SubmissionFormatElement("%s.%%l" % self.name)]
-        tdb.attachments = []
-        tdb.statements = []
+        tdb.attachments = {}
+        tdb.statements = {}
         primary_statements = []
 
         # Add statements
@@ -1324,16 +1327,17 @@ class TaskConfig(CommonConfig, Scope):
             sdb = self._makesubmission(s, self.upstream.testuser, tdb)
             # dummy id, the correct value is inserted by GerImporter.py
             sdb.task_id = 0
+            sdb.task = tdb
 
             if s._should_test(local_test):
                 code = ", ".join(self.short_path(f) for f in s.filenames)
-            
+
                 sdb.id = 1
                 with header("Running solution {}".format(code),
                             depth=3):
                     if not self._do_test_submission(sdb, ddb):
                         failed.append(code)
-                    
+
                     unit_tests.append(code)
 
         if len(self.testsubmissions) == 0:
@@ -1342,7 +1346,7 @@ class TaskConfig(CommonConfig, Scope):
                 red("You should define some unit tests for this task!"),
                 double = True)
             print()
-            
+
         elif len(unit_tests) != 0:
             print()
             box(" Unit Test Statistics for Task \"{}\" ".format(self._title),
@@ -1405,13 +1409,13 @@ class TaskConfig(CommonConfig, Scope):
 
         return ddb
 
-    def _makesubmission(self, submission, user, tdb):
+    def _makesubmission(self, submission, participation, tdb):
         """
         Create and return a test submission database object.
 
         submission (MySubmission): configuration object for this submission
 
-        user (User): database object for the test user
+        participation (Participation): database object for the test participation
 
         tdb (Task): database object for the task
 
@@ -1448,19 +1452,6 @@ class TaskConfig(CommonConfig, Scope):
         # filenames, the user has one amongst ".cpp", ".c", or ".pas,
         # and that all these are the same (i.e., no mixed-language
         # submissions).
-        def which_language(user_filename):
-            """Determine the language of user_filename from its
-            extension.
-
-            user_filename (string): the file to test.
-            return (string): the extension of user_filename, or None
-                             if it is not a recognized language.
-
-            """
-            for source_ext, language in SOURCE_EXT_TO_LANGUAGE_MAP.iteritems():
-                if user_filename.endswith(source_ext):
-                    return language
-            return None
 
         for user_filename in files:
             if len(files) == 1:
@@ -1468,7 +1459,7 @@ class TaskConfig(CommonConfig, Scope):
             else:
                 our_filename = user_filename
             if our_filename.find(".%l") != -1:
-                lang = which_language(user_filename)
+                lang = filename_to_language(user_filename).name
                 if lang is None:
                     raise Exception("Cannot recognize submission's language.")
                 elif submission_lang is not None and \
@@ -1479,9 +1470,9 @@ class TaskConfig(CommonConfig, Scope):
                     submission_lang = lang
 
         # Create submission object
-        sdb = Submission(datetime.utcnow(),
-                         submission_lang,
-                         user=user)
+        sdb = Submission(timestamp=datetime.utcnow(),
+                         language=submission_lang,
+                         participation=participation)
         sdb.task = tdb
         sdb.timestamp = datetime.utcnow()
         sdb.language = submission_lang
@@ -1493,7 +1484,7 @@ class TaskConfig(CommonConfig, Scope):
             digest = self.file_cacher.put_file_from_path(
                 f,
                 "Submission file %s sent by %s at %d." %
-                (our_filename, user.username,
+                (our_filename, participation.user.username,
                     make_timestamp(sdb.timestamp)))
             sdb.files[our_filename] = File(our_filename, digest,
                                            submission=sdb)
@@ -1534,10 +1525,10 @@ class TaskConfig(CommonConfig, Scope):
         submission_result = SubmissionResult(submission=sdb,
                                              dataset=ddb)
         # Compile
-        compile_job_group = \
-            JobGroup.from_submission_compilation(sdb, ddb)
-        self._run_job_group(compile_job_group)
-        compile_job_group.to_submission_compilation(submission_result)
+        compile_operation = ESOperation(ESOperation.COMPILATION, -1, -1)
+        compile_job = CompilationJob.from_submission(compile_operation, sdb, ddb)
+        compile_job = self._run_job(compile_job)
+        compile_job.to_submission(submission_result)
         if submission_result.compilation_outcome != "ok":
             print_msg("Compile error:")
             if submission_result.compilation_stdout is not None:
@@ -1551,14 +1542,15 @@ class TaskConfig(CommonConfig, Scope):
                 print_block(submission_result.compilation_stderr)
             # Evaluate
             for testcase_codename in sorted(ddb.testcases.iterkeys()):
-                evaluation_job_group = \
-                    JobGroup.from_submission_evaluation(sdb,
-                                                        ddb,
-                                                        testcase_codename,
-                                                        submission_result)
-                self._run_job_group(evaluation_job_group)
-                evaluation_job_group.to_submission_evaluation(
+                evaluation_operation = ESOperation(ESOperation.EVALUATION, -1, -1,
+                                                   testcase_codename)
+                evaluation_job = EvaluationJob.from_submission(
+                    evaluation_operation,
+                    sdb,
+                    ddb,
                     submission_result)
+                evaluation_job = self._run_job(evaluation_job)
+                evaluation_job.to_submission(submission_result)
             submission_result.set_evaluation_outcome()
 
         # Judge unit test
@@ -1648,24 +1640,15 @@ class TaskConfig(CommonConfig, Scope):
         box(" Overall verdict ", green(verd[1]) if verd[0] == 1
             else red(verd[1]))
         print()
-        
+
         return verd[0] == 1
 
-    def _run_job_group(self, job_group):
+    def _run_job(self, job):
         """
-        Run the given job group and save the results to it.
+        Run the given job and save the results to it.
 
-        job_group (JobGroup): the job group
+        job (Job): the job
 
         """
-        for k in job_group.jobs.keys():
-            job = job_group.jobs[k]
-            job._key = k  # Hack for output-only tasks
-            r = JobRule(self.rules, job, self.file_cacher).ensure()
-            job = r.job
-            job_group.jobs[k] = job
-            if not job.success:
-                job_group.success = False
-                break
-        else:
-            job_group.success = True
+        r = JobRule(self.rules, job, self.file_cacher).ensure()
+        return r.job

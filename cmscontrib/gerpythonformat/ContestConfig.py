@@ -26,8 +26,7 @@ from .Messenger import print_msg
 from .CommonConfig import exported_function, CommonConfig
 from .TaskConfig import TaskConfig
 from .LocationStack import chdir
-from cms import DEFAULT_LANGUAGES
-from cms.db import Contest, User, Group
+from cms.db import Contest, User, Group, Participation
 import os
 import shutil
 from datetime import datetime, timedelta
@@ -101,7 +100,7 @@ class ContestConfig(CommonConfig):
         self.contestname = name
 
         self._allowed_localizations = []
-        self._languages = DEFAULT_LANGUAGES
+        self._languages = ["C++11 / g++"]
 
         self.tasks = []
 
@@ -141,7 +140,7 @@ class ContestConfig(CommonConfig):
         self.wdir = os.getcwd()
 
         self.ontasks = []
-        
+
         self.minimal = minimal
 
     def _readconfig(self, filename):
@@ -232,7 +231,7 @@ class ContestConfig(CommonConfig):
         s (unicode): contest time zone (e.g. Europe/Berlin)
 
         """
-        if not self.minimal:        
+        if not self.minimal:
             print_msg("Setting timezone to {}".format(s), headerdepth=10)
         self._timezone = s
 
@@ -277,20 +276,20 @@ class ContestConfig(CommonConfig):
         """
         if self.minimal:
             return
-        
+
         usaco_mode_str = ""
         if per_user_time is not None:
             usaco_mode_str = \
                 " in USACO mode with time {}".format(per_user_time)
         print_msg("Creating user group {} (working from {} to {}{})"
                   .format(s, start, stop, usaco_mode_str), headerdepth=10)
-        
+
         # We allow specifying an integer or a  timedelta
         try:
             per_user_time = per_user_time.seconds
         except AttributeError:
             pass
-                  
+
         r = MyGroup(s, start, stop, per_user_time)
         self.groups.append(r)
         if s == "main":
@@ -374,7 +373,7 @@ class ContestConfig(CommonConfig):
                      folder with the same name
         feedback:    type of feedback (one of the variables no_feedback,
                      full_feedback, partial_feedback)
-        minimal (bool): only try to compile statement?     
+        minimal (bool): only try to compile statement?
 
         """
         # Check if this task should be ignored
@@ -417,7 +416,7 @@ class ContestConfig(CommonConfig):
         s (unicode): task name; the task description has to reside in the
                      folder with the same name
         feedback:    type of feedback (one of the variables no_feedback,
-                     full_feedback, partial_feedback) 
+                     full_feedback, partial_feedback)
 
         """
         self._task(s, feedback, False)
@@ -498,6 +497,7 @@ class ContestConfig(CommonConfig):
         cdb.main_group = self.groupsdb[self.defaultgroup.name]
 
         self.usersdb = {}
+        self.participationsdb = {}
 
         self.cdb = cdb
 
@@ -505,7 +505,7 @@ class ContestConfig(CommonConfig):
 
     @property
     def testuser(self):
-        return self._makeuser(self._mytestuser.username)
+        return self._makeuser(self._mytestuser.username)[1]
 
     def _makeuser(self, username):
         """
@@ -514,11 +514,11 @@ class ContestConfig(CommonConfig):
 
         username (unicode): the name of the user to generate
 
-        return (User): database object for the user
+        return (User,Participation): database object for the user
 
         """
         if username in self.usersdb:
-            return self.usersdb[username]
+            return self.usersdb[username], self.participationsdb[username]
 
         for user in self.users:  # FIXME This could be done faster...
             if user.username == username:
@@ -531,13 +531,15 @@ class ContestConfig(CommonConfig):
                            password=user.password,
                            first_name=user.firstname,
                            last_name=user.lastname,
-                           ip=user.ip,
-                           hidden=user.hidden,
-                           group=self.groupsdb[user.group.name],
                            timezone=user.timezone,
-                           primary_statements=json.dumps(primary_statements))
+                           preferred_languages=json.dumps(primary_statements))
+                pdb = Participation(user=udb,
+                                    group=self.groupsdb[user.group.name],
+                                    ip=user.ip,
+                                    hidden=user.hidden)
                 self.usersdb[username] = udb
-                return udb
+                self.participationsdb[username] = pdb
+                return udb, pdb
         raise KeyError
 
     def _maketask(self, file_cacher, taskname, local_test=False):
@@ -556,7 +558,7 @@ class ContestConfig(CommonConfig):
         """
         for task in self.tasks:  # FIXME This could be done faster...
             if task.name == taskname:
-                tdb = task._makedbobject(file_cacher, local_test)
+                tdb = task._makedbobject(self.cdb, file_cacher, local_test)
                 return tdb
         raise KeyError
 

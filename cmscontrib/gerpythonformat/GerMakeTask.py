@@ -54,16 +54,16 @@ class GerMakeTask:
 
         if not os.path.exists(self.wdir):
             os.mkdir(self.wdir)
-        
+
         taskdir = os.path.join(self.odir, self.task)
         wtdir = os.path.join(self.wdir, self.task)
-        
+
         copyrecursivelyifnecessary(taskdir, wtdir, set([self.wdir]))
         self.wdir = os.path.abspath(self.wdir)
 
     def build(self):
         filecacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
-        
+
         try:
             with chdir(self.wdir):
                 cc = ContestConfig(os.path.join(self.wdir, ".rules"),
@@ -81,9 +81,9 @@ class GerMakeTask:
 
         finally:
             filecacher.destroy_cache()
-        
+
         for _, s in cc.tasks[0]._statements.iteritems():
-            if s.primary: 
+            if s.primary:
                 return os.path.abspath(s.file_)
         return None
 

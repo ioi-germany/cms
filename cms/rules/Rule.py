@@ -547,8 +547,7 @@ class JobRule(Rule):
 
     def mission(self):
         return {'type': 'job',
-                'job': self.job.export_to_dict(),
-                '_key': self.job._key}
+                'job': self.job.export_to_dict()}
 
     def run(self):
         from cms.grading.Job import Job
@@ -557,7 +556,6 @@ class JobRule(Rule):
                                   self.job.task_type_parameters)
         # Crazy workaround to clone the job
         jobresult = Job.import_from_dict_with_type(self.job.export_to_dict())
-        jobresult._key = self.job._key
         task_type.execute_job(jobresult, self.file_cacher)
         self.result.log['job'] = jobresult.export_to_dict()
 
@@ -565,7 +563,6 @@ class JobRule(Rule):
         from cms.grading.Job import Job
         self.result.job = \
             Job.import_from_dict_with_type(self.result.log['job'])
-        self.result.job._key = self.job._key
 
 
 class ZipRule(Rule):
