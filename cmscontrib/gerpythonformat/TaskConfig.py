@@ -1348,12 +1348,15 @@ class TaskConfig(CommonConfig, Scope):
             if submission_result.compilation_stderr is not None:
                 print_block(submission_result.compilation_stderr)
             # Evaluate
-            evaluation_job_group = \
-                JobGroup.from_submission_evaluation(sdb,
-                                                    ddb,
-                                                    submission_result)
-            self._run_job_group(evaluation_job_group)
-            evaluation_job_group.to_submission_evaluation(submission_result)
+            for ifpublic in [True, False]:
+                evaluation_job_group = \
+                    JobGroup.from_submission_evaluation(sdb,
+                                                        ddb,
+                                                        ifpublic,
+                                                        submission_result)
+                self._run_job_group(evaluation_job_group)
+                evaluation_job_group.to_submission_evaluation(
+                    submission_result, ifpublic)
             for ev in sorted(submission_result.evaluations,
                              key=lambda ev: ev.testcase.codename):
                 with header("Test case {}"
@@ -1391,8 +1394,10 @@ class TaskConfig(CommonConfig, Scope):
 
         # Assign score to the submission.
         score_type = get_score_type(dataset=ddb)
-        score, details, public_score, public_details, ranking_details = \
-            score_type.compute_score(submission_result)
+        public_score, public_details = \
+            score_type.compute_score(submission_result, True)
+        score, details, ranking_details = \
+            score_type.compute_score(submission_result, False)
         print_msg("Score: %.1f" % score)
         print_msg("Public score: %.1f" % public_score)
         expected_score = float(additional_info["expected_score"])
