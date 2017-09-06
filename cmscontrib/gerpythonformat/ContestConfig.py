@@ -100,7 +100,8 @@ class ContestConfig(CommonConfig):
         self.contestname = name
 
         self._allowed_localizations = []
-        self._languages = ["C++11 / g++"]
+        # FIXME If we don't allow Java submissions, all Java test submissions will fail (even locally) since multithreading is not allowed.
+        self._languages = ["C++11 / g++", "Java / JDK"]
 
         self.tasks = []
 
