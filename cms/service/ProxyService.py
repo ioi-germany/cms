@@ -331,8 +331,8 @@ class ProxyService(TriggeredService):
             contest_id = encode_id(contest.name)
             contest_data = {
                 "name": contest.description,
-                "begin": int(make_timestamp(contest.start)),
-                "end": int(make_timestamp(contest.stop)),
+                "begin": int(make_timestamp(contest.main_group.start)),
+                "end": int(make_timestamp(contest.main_group.stop)),
                 "score_precision": contest.score_precision}
 
             users = dict()

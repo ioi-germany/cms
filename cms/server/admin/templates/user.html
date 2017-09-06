@@ -13,12 +13,14 @@
   <form action="{{ url("user", user.id, "add_participation") }}" method="POST">
     {% module xsrf_form_html() %}
     Add a new participation:
-    <select name="contest_id">
-      <option value="null" selected>Select a contest</option>
+    <select name="group_id">
+      <option value="null" selected>Select a contest and a group</option>
       {% for c in unassigned_contests %}
-      <option value="{{ c.id }}">
-        {{ c.name }}
+      {% for g in c.groups %}
+      <option value="{{ g.id }}">
+        {{ c.name }} : {{ g.name }}
       </option>
+      {% end %}
       {% end %}
     </select>
     <input type="checkbox" name="hidden" id="hidden" /><label for="hidden">Hidden</label>
@@ -42,6 +44,7 @@
           <th>Unrestricted?</th>
           <th>Contest</th>
           <th>Contest description</th>
+          <th>Group</th>
         </tr>
       </thead>
       <tbody>
@@ -55,6 +58,7 @@
           <td>{{ p.unrestricted }}</td>
           <td><a href="{{ url("contest", p.contest.id) }}">{{ p.contest.name }}</a></td>
           <td>{{ p.contest.description }}</td>
+          <td>{{ p.group.name }}</td>
         </tr>
         {% end %}
       </tbody>

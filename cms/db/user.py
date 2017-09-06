@@ -30,7 +30,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy.schema import Column, ForeignKey, CheckConstraint, \
     UniqueConstraint
@@ -42,6 +42,100 @@ from sqlalchemy.dialects.postgresql import CIDR
 from cmscommon.crypto import generate_random_password, build_password
 
 from . import Base, Contest, CastingArray, CodenameConstraint
+
+
+class Group(Base):
+    """Class to store a group of users (for timing, etc.).
+
+    """
+    __tablename__ = 'group'
+    __table_args__ = (
+        UniqueConstraint('contest_id', 'name'),
+        CheckConstraint("start <= stop"),
+        CheckConstraint("stop <= analysis_start"),
+        CheckConstraint("analysis_start <= analysis_stop"),
+    )
+
+    # Auto increment primary key.
+    id = Column(
+        Integer,
+        primary_key=True)
+
+    name = Column(
+        Unicode,
+        nullable=False)
+
+    # Beginning and ending of the contest.
+    start = Column(
+        DateTime,
+        nullable=False,
+        default=datetime(2000, 1, 1))
+    stop = Column(
+        DateTime,
+        nullable=False,
+        default=datetime(2100, 1, 1))
+
+    # Beginning and ending of the contest anaylsis mode.
+    analysis_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=False)
+    analysis_start = Column(
+        DateTime,
+        nullable=False,
+        default=datetime(2100, 1, 1))
+    analysis_stop = Column(
+        DateTime,
+        nullable=False,
+        default=datetime(2100, 1, 1))
+
+    # Max contest time for each user in seconds.
+    per_user_time = Column(
+        Interval,
+        CheckConstraint("per_user_time >= '0 seconds'"),
+        nullable=True)
+
+    # Contest (id and object) to which this user group belongs.
+    contest_id = Column(
+        Integer,
+        ForeignKey(Contest.id,
+                   onupdate="CASCADE", ondelete="CASCADE"),
+        index=True) # nullable=True does not work due to a circular dependency
+    contest = relationship(
+        Contest,
+        backref=backref('groups',
+                        cascade="all, delete-orphan",
+                        passive_deletes=True),
+        primaryjoin="Contest.id==Group.contest_id",
+        post_update=True)
+
+    def phase(self, timestamp):
+        """Return: -1 if contest isn't started yet at time timestamp,
+                    0 if the contest is active at time timestamp,
+                    1 if the contest has ended but analysis mode
+                      hasn't started yet
+                    2 if the contest has ended and analysis mode is active
+                    3 if the contest has ended and analysis mode is disabled or
+                      has ended
+
+        timestamp (datetime): the time we are iterested in.
+        return (int): contest phase as above.
+
+        """
+        if timestamp < self.start:
+            return -1
+        if timestamp <= self.stop:
+            return 0
+        if self.analysis_enabled:
+            if timestamp < self.analysis_start:
+                return 1
+            elif timestamp <= self.analysis_stop:
+                return 2
+        return 3
+
+    # Follows the description of the fields automatically added by
+    # SQLAlchemy.
+    # participations (list of Participation objects)
 
 
 class User(Base):
@@ -225,6 +319,19 @@ class Participation(Base):
                         cascade="all, delete-orphan",
                         passive_deletes=True))
     __table_args__ = (UniqueConstraint('contest_id', 'user_id'),)
+
+    # Group this user belongs to
+    group_id = Column(
+        Integer,
+        ForeignKey(Group.id,
+                   onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=False,
+        index=True)
+    group = relationship(
+        Group,
+        backref=backref("participations",
+                        cascade="all, delete-orphan",
+                        passive_deletes=True))
 
     # Team (id and object) that the user is representing with this
     # participation.

@@ -1,0 +1,61 @@
+{% extends base.html %}
+
+{% block core %}
+<div class="core_title">
+  <h1>Groups list</h1>
+</div>
+
+<form action="{{ url("contest", contest.id, "groups", "add") }}" method="POST">
+  {% module xsrf_form_html() %}
+  Add a new group named
+  <input type="text" name="name"/>
+  <input type="submit"
+{% if not current_user.permission_all %}
+         disabled
+{% end %}
+         value="Add group" />
+</form>
+
+<form action="{{ url("contest", contest.id, "groups") }}" method="POST">
+  {% module xsrf_form_html() %}
+  Edit selected group:
+  <input type="submit"
+         name="operation"
+         value="Remove from contest"
+{% if not current_user.permission_all %}
+         disabled
+{% end %}
+         />
+  <table class="bordered">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Name</th>
+        <th>Start (in UTC)</th>
+        <th>End (in UTC)</th>
+        <th>Max. contest length (in seconds)</th>
+        <th>Analysis</th>
+        <th>Analysis start</th>
+        <th>Analysis end</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in sorted(contest.groups, cmp = lambda x, y: cmp(x.name, y.name)) %}
+      <tr>
+        <td>
+          <input type="radio" name="group_id" value="{{ g.id }}"/>
+        </td>
+        <td><a href="{{ url("contest", contest.id, "group", g.id, "edit") }}">{{ g.name }}</a></td>
+        <td>{{ str(g.start) }}</td>
+        <td>{{ str(g.stop) }}</td>
+        <td>{{ int(g.per_user_time.total_seconds()) if g.per_user_time is not None else "" }}</td>
+        <td><input type="checkbox" disabled{{ " checked" if g.analysis_enabled else "" }}></td>
+        <td>{{ str(g.analysis_start) }}</td>
+        <td>{{ str(g.analysis_stop) }}</td>
+      </tr>
+      {% end %}
+    </tbody>
+  </table>
+</form>
+
+{% end %}

@@ -18,6 +18,14 @@
     </option>
     {% end %}
   </select>
+  <select name="group_id">
+    <option value="null" selected>Select a group</option>
+    {% for g in contest.groups %}
+    <option value="{{ g.id }}">
+      {{ g.name }}
+    </option>
+    {% end %}
+  </select>
   <input type="submit"
 {% if not current_user.permission_all %}
          disabled
@@ -42,6 +50,7 @@
         <th>Username</th>
         <th>First name</th>
         <th>Last name</th>
+        <th>Group</th>
       </tr>
     </thead>
     <tbody>
@@ -53,6 +62,7 @@
         <td><a href="{{ url("contest", contest.id, "user", p.user.id, "edit") }}">{{ p.user.username }}</a></td>
         <td>{{ p.user.first_name }}</td>
         <td>{{ p.user.last_name }}</td>
+        <td>{{ p.group.name }}</td>
       </tr>
       {% end %}
     </tbody>

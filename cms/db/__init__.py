@@ -60,7 +60,7 @@ __all__ = [
     # contest
     "Contest", "Announcement",
     # user
-    "User", "Team", "Participation", "Message", "Question",
+    "User", "Team", "Participation", "Message", "Question", "Group",
     # admin
     "Admin",
     # task
@@ -101,7 +101,7 @@ from .fsobject import FSObject
 from .validation import CodenameConstraint, FilenameConstraint, \
     DigestConstraint
 from .contest import Contest, Announcement
-from .user import User, Team, Participation, Message, Question
+from .user import User, Team, Participation, Message, Question, Group
 from .admin import Admin
 from .task import Task, Statement, Attachment, SubmissionFormatElement, \
     Dataset, Manager, Testcase

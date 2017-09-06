@@ -347,7 +347,10 @@ class ContestHandler(BaseHandler):
         if hasattr(self, "contest_url"):
             ret["contest_url"] = self.contest_url
 
-        ret["phase"] = self.contest.phase(self.timestamp)
+        if self.current_user is None:
+            ret["phase"] = self.contest.main_group.phase(self.timestamp)
+        else:
+            ret["phase"] = self.current_user.group.phase(self.timestamp)
 
         ret["printing_enabled"] = (config.printer is not None)
         ret["questions_enabled"] = self.contest.allow_questions
@@ -355,14 +358,15 @@ class ContestHandler(BaseHandler):
 
         if self.current_user is not None:
             participation = self.current_user
+            group = participation.group
 
             res = compute_actual_phase(
-                self.timestamp, self.contest.start, self.contest.stop,
-                self.contest.analysis_start if self.contest.analysis_enabled
+                self.timestamp, group.start, group.stop,
+                group.analysis_start if group.analysis_enabled
                 else None,
-                self.contest.analysis_stop if self.contest.analysis_enabled
+                group.analysis_stop if group.analysis_enabled
                 else None,
-                self.contest.per_user_time, participation.starting_time,
+                group.per_user_time, participation.starting_time,
                 participation.delay_time, participation.extra_time)
 
             ret["actual_phase"], ret["current_phase_begin"], \
