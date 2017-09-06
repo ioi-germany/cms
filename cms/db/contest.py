@@ -227,11 +227,12 @@ class Contest(Base):
         Integer,
         ForeignKey("group.id", use_alter=True, name="fk_contest_main_group_id",
                    onupdate="CASCADE", ondelete="SET NULL"),
-        nullable=False,
+        #nullable=False,  # This would fail with post_update=True.
         index=True)
     main_group = relationship(
         "Group",
-        primaryjoin="Group.id==Contest.main_group_id")
+        primaryjoin="Group.id==Contest.main_group_id",
+        post_update=True)
 
     # Follows the description of the fields automatically added by
     # SQLAlchemy.

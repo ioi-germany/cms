@@ -100,15 +100,14 @@ class Group(Base):
         Integer,
         ForeignKey(Contest.id,
                    onupdate="CASCADE", ondelete="CASCADE"),
-        nullable=False,
+        #nullable=False,
         index=True)
     contest = relationship(
         Contest,
         backref=backref('groups',
                         cascade="all, delete-orphan",
                         passive_deletes=True),
-        primaryjoin="Contest.id==Group.contest_id",
-        post_update=True)
+        primaryjoin="Contest.id==Group.contest_id")
 
     def phase(self, timestamp):
         """Return: -1 if contest isn't started yet at time timestamp,
