@@ -462,7 +462,7 @@ class ContestConfig(CommonConfig):
         """
         return os.path.relpath(os.path.abspath(f), self.wdir)
 
-    def _makecontest(self):
+    def _makecontest(self, cdb=None):
         """
         Return a Contest object which can be saved to the database.
 
@@ -471,7 +471,12 @@ class ContestConfig(CommonConfig):
         """
         if self.defaultgroup is None:
             raise Exception("You have to specify a default group")
-        cdb = Contest(name=self.contestname, description=self._description)
+        if cdb is None:
+            cdb = Contest(name=self.contestname, description=self._description)
+        else:
+            cdb.name = self.contestname
+            cdb.description = self._description
+
         cdb.timezone = self._timezone
         cdb.allowed_localizations = self._allowed_localizations
         cdb.languages = self._languages
@@ -487,7 +492,7 @@ class ContestConfig(CommonConfig):
         for g in self.groups:
             if g.name in self.groupsdb:
                 raise Exception("Group {} specified multiple times")
-            gdb = Group(name=g.name)
+            gdb = cdb.group(g.name)
             gdb.start = g.start
             gdb.stop = g.stop
             gdb.per_user_time = None if g.per_user_time is None else \

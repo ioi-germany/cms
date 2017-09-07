@@ -23,25 +23,27 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from .ContestConfig import ContestConfig
+from .CommonConfig import DatabaseProxyContest
 from .LocationStack import chdir
 from cms import utf8_decoder
+from cms.db import SessionGen, Contest
 from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
+from cmscontrib import BaseImporter
 import argparse
 import os
 import resource
 import shutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-class GerMake:
-    def __init__(self, odir, task, no_test, submission, no_latex, clean):
+class GerImport(BaseImporter):
+    def __init__(self, odir, clean):
         self.odir = odir
-        self.task = task
-        self.local_test = not no_test
-        if self.local_test and submission is not None:
-            self.local_test = submission
-        self.no_latex = no_latex
         self.clean = clean
+        self.file_cacher = FileCacher()
 
     def make(self):
         # Unset stack size limit
@@ -57,61 +59,53 @@ class GerMake:
             os.mkdir(self.wdir)
         copyrecursivelyifnecessary(self.odir, self.wdir, set([self.wdir]))
         self.wdir = os.path.abspath(self.wdir)
-        filecacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
-        try:
-            with chdir(self.wdir):
-                contestconfig = ContestConfig(
-                    os.path.join(self.wdir, ".rules"),
-                    os.path.basename(self.odir),
-                    ignore_latex=self.no_latex,
-                    onlytask=self.task)
-                contestconfig._readconfig("contest-config.py")
-                if self.task is not None and \
-                        not any(True for t in contestconfig.tasks):
-                    raise Exception("Task {} not found".format(self.task))
-                contestconfig._makecontest()
-                for u in contestconfig.users:
-                    contestconfig._makeuser(u.username)
-                for t in contestconfig.tasks:
-                    contestconfig._maketask(filecacher, t.name,
-                                            local_test=self.local_test)
-        finally:
-            filecacher.destroy_cache()
+        with chdir(self.wdir):
+            contestconfig = ContestConfig(
+                os.path.join(self.wdir, ".rules"),
+                os.path.basename(self.odir))
+            contestconfig._readconfig("contest-config.py")
+            #users = {}
+            #participations = {}
+            #tasks = {}
+            #for u in contestconfig.users:
+                #users[u.username], participations[u.username] = contestconfig._makeuser(u.username)
+                #participations[u.username].contest = contest
+            #for t in contestconfig.tasks:
+                #tasks[t.name] = contestconfig._maketask(self.file_cacher, t.name)
+
+            with SessionGen() as session:
+                # Check whether the contest already exists
+                old_contest = session.query(Contest) \
+                                    .filter(Contest.name == contestconfig.contestname).first()
+                if old_contest is not None:
+                    old_contest = DatabaseProxyContest(old_contest)
+                    logger.warning("Contest already exists")
+                    #return
+
+                contest = contestconfig._makecontest(old_contest)
+                session.add(contest)
+
+                session.commit()
+                logger.info("Import finished (new contest id: %s).", contest.id)
 
 
 def main():
     """Parse arguments and launch process."""
     parser = argparse.ArgumentParser(
-        description="Prepare a contest (generate test cases, statements, test "
+        description="Import a contest (generate test cases, statements, test "
                     "test submissions, ...)",
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("import_directory",
                         help="source directory",
                         type=utf8_decoder)
-    parser.add_argument("-t", "--task", action="store",
-                        help="omit all tasks except this one",
-                        type=utf8_decoder)
-    testgroup = parser.add_mutually_exclusive_group()
-    testgroup.add_argument("-nt", "--no-test", action="store_true",
-                           help="do not run test submissions")
-    testgroup.add_argument("-s", "--submission",
-                           help="only test submissions whose file names all"
-                           "contain this string",
-                           type=utf8_decoder)
-    parser.add_argument("-nl", "--no-latex", action="store_true",
-                        help="do not compile latex documents")
     parser.add_argument("-c", "--clean", action="store_true",
                         help="clean the build directory (forcing a complete"
                         "rebuild)")
 
     args = parser.parse_args()
 
-    GerMake(os.path.abspath(args.import_directory),
-            args.task,
-            args.no_test,
-            args.submission,
-            args.no_latex,
-            args.clean).make()
+    GerImport(os.path.abspath(args.import_directory),
+              args.clean).make()
 
 
 if __name__ == "__main__":
