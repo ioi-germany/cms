@@ -549,6 +549,14 @@ tr:hover td.unit_test_ok {
     background-color: hsla(120, 100%, 50%, 0.5) !important;
 }
 
+td.unit_test_mid {
+    background-color: rgba(237, 212, 0, 0.4) !important;
+}
+
+tr:hover td.unit_test_mid {
+    background-color: rgba(237, 212, 0, 0.5) !important;
+}
+
 #submission_list td.total_score.undefined,
 #unit_test_list td.total_score.undefined,
 td.no_expectations {

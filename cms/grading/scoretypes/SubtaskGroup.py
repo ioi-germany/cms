@@ -6,7 +6,7 @@
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2013-2016 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -257,7 +257,9 @@ class SubtaskGroup(ScoreType):
 <br><br>
 
 {% for st in details["subtasks"] %}
-    {% if st["status"][0] > 0 %}
+    {% if st["status"][0] == 1337%}
+<div class="subtask partiallycorrect">
+    {% elif st["status"][0] > 0 %}
 <div class="subtask correct">
     {% else %}
 <div class="subtask notcorrect">
@@ -323,7 +325,8 @@ class SubtaskGroup(ScoreType):
                     </td>
             {% if first %}
                     <td rowspan={{len(g["cases"])}}
-                     class="{{"unit_test_ok" if g["verdict"][0] > 0 else \
+                     class="{{"unit_test_mid" if g["verdict"][0] == 1337 else \
+                              "unit_test_ok" if g["verdict"][0] > 0 else \
                               "unit_test_failed"}}">
 
                 {% set x = g["verdict"][1].split(chr(10)) %}
@@ -358,6 +361,17 @@ class SubtaskGroup(ScoreType):
 
         if self.feedback() == "partial":
             public = submission_info.get("expected_partial_score", 0)
+
+        return public, private
+
+    def unit_test_expected_scores_info(self, submission_info):
+        submission_info = json.loads(submission_info)
+
+        public = submission_info.get("expected_public_score_info", 0)
+        private = submission_info.get("expected_score_info", 0)
+        
+        if self.feedback() == "partial":
+            public = submission_info.get("expected_partial_score_info", 0)
 
         return public, private
 
@@ -499,6 +513,8 @@ class SubtaskGroup(ScoreType):
 
         wanted_public, wanted_private = \
             self.unit_test_expected_scores(submission_info)
+        wanted_public_info, wanted_private_info = \
+            self.unit_test_expected_scores_info(submission_info)
 
         submission_info = json.loads(submission_info)
 
@@ -517,7 +533,6 @@ class SubtaskGroup(ScoreType):
                         in submission_info["expected"].iteritems()}
         case_expectations = submission_info["expected_case"]
         possible_task = expectations[()]
-        extra = []
         subtasks_failed = False
 
         for subtask in self.parameters["tcinfo"]:
@@ -532,6 +547,7 @@ class SubtaskGroup(ScoreType):
             group_score = 0
 
             worst_group = (1, "okay")
+            group_status = []
 
             for i, g in enumerate(subtask["groups"]):
                 # There are no expectations for partial feedback subtasks
@@ -545,7 +561,6 @@ class SubtaskGroup(ScoreType):
                 subtasks[-1]["groups"].append({"verdict": (42, ""),
                                                "cases": []})
                 min_f = 1.0  # Minimum "score" of a test case in this group
-                extra = []
 
                 cases_failed = False
 
@@ -590,7 +605,7 @@ class SubtaskGroup(ScoreType):
 
                 status, short, desc = \
                     UnitTest.judge_group(case_results, extended_results,
-                                         possible, extra)
+                                         possible, [])
 
                 if cases_failed:
                     if status > 0:
@@ -605,6 +620,7 @@ class SubtaskGroup(ScoreType):
 
                 subtasks[-1]["groups"][-1]["verdict"] = (status, desc)
                 worst_group = min(worst_group, (status, short))
+                group_status.append(status)
 
             if subtask["for_public_score"]:
                 public_score += group_score
@@ -613,23 +629,35 @@ class SubtaskGroup(ScoreType):
 
             subtasks[-1]["status"] = (worst_group[0], worst_group[1].upper())
 
+            if all(s == 1337 for s in group_status):
+                subtasks[-1]["status"] = (1337, "IGNORED")
+            elif subtasks[-1]["status"][0] > 0 and any(s == 1337
+                                                       for s in group_status):
+                    subtasks[-1]["status"] = (1337, "PARTIALLY IGNORED")
+
+            if len(group_status) == 0:
+                subtasks[-1]["status"] = (1337, "EMPTY")
+
             # we ignore partial feedback subtasks (except for the score)
             if subtask["partial"]:
                 subtasks.pop()
             elif subtasks[-1]["status"][0] <= 0:
                 subtasks_failed = True
 
-        private_score_okay = (private_score == wanted_private)
-        public_score_okay = (public_score == wanted_public)
+        def is_in(x, l):
+            return l[0] <= x <= l[1]
+
+        private_score_okay = is_in(private_score, wanted_private)
+        public_score_okay = is_in(public_score, wanted_public)
 
         details = {"unit_test": True, "subtasks": subtasks,
                    "private_score_okay": private_score_okay,
                    "public_score_okay": None if self.feedback() == "full"
                    else public_score_okay,
                    "public": public_score,
-                   "wanted_public": wanted_public,
+                   "wanted_public": wanted_public_info,
                    "private": private_score,
-                   "wanted_private": wanted_private}
+                   "wanted_private": wanted_private_info}
 
         okay = private_score_okay and \
             (public_score_okay or self.feedback() == "full") \

@@ -10,7 +10,7 @@
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
-# Copyright © 2014-2015 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2014-2017 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -991,23 +991,31 @@ class UnitTest:
                 result.append("memory?")
 
         # check solution (if possible)
-        if float(evaluation.outcome) < 1 and UnitTest.meaningful_score(result):
+        if UnitTest.meaningful_score(result):
             result.append(evaluation.outcome)
 
         return result
 
     @staticmethod
     def ignore(x, l):
-        try:
-            return float(x) >= UnitTest.score(l)
-        except ValueError:
-            pass
+        return UnitTest.is_score(x) or ("time" in l and x == "time?") or\
+                                       ("memory" in l and x == "memory?")
 
-        if "time" in l and x == "time?":
+    @staticmethod
+    def is_score(x):
+        try:
+            float(x)
             return True
-        if "memory" in l and x == "memory?":
-            return True
-        return False
+        except:
+            return False
+
+    @staticmethod
+    def get_scores(l):
+        return [float(x) for x in l if UnitTest.is_score(x)]
+
+    @staticmethod
+    def remove_scores(l):
+        return [x for x in l if not UnitTest.is_score(x)]
 
     @staticmethod
     def score(results):
@@ -1019,15 +1027,15 @@ class UnitTest:
         return (float): minimum score (1.0 if no score is present)
 
         """
-        s = 1.0
+        return min(UnitTest.get_scores(results) + [1.0])
 
-        for r in results:
-            try:
-                s = min(s, float(r))
-            except ValueError:
-                pass
-
-        return s
+    @staticmethod
+    def compare_score(score, interval):
+        if score < interval[0]:
+            return -1
+        if score > interval[1]:
+            return 1
+        return 0
 
     @staticmethod
     def meaningful_score(results):
@@ -1036,13 +1044,30 @@ class UnitTest:
         return not('time' in results or 'memory' in results)
 
     @staticmethod
-    def case_line(results, mandatory, optional, c=['✓', '≈', '✗', '―']):
+    def is_interval(x):
+        if not isinstance(x, list):
+            return False
+        if len(x) != 2:
+            return False
+
+        return UnitTest.is_score(x[0]) and UnitTest.is_score(x[1])
+
+    @staticmethod
+    def get_intervals(l):
+        return [x for x in l if UnitTest.is_interval(x)]
+
+    @staticmethod
+    def remove_intervals(l):
+        return [x for x in l if not UnitTest.is_interval(x)]
+
+    @staticmethod
+    def case_line(results, mandatory, _optional, c=['✓', '≈', '✗', '―']):
         """Information about a single testcase as part of a group
            This function returns a list of pairs, where the first entry
            visualises the respective result and the second one is >0
            iff the result is as expected
         """
-        optional = optional + mandatory
+        optional = _optional + mandatory
 
         def badness(key, r):
             if key in r:
@@ -1066,27 +1091,74 @@ class UnitTest:
                               badness(x, results) <= badness(x, optional))))
 
         if UnitTest.meaningful_score(results):
-            L.append((UnitTest.score(results),
-                      get_int(UnitTest.score(optional) <=
-                              UnitTest.score(results) <=
-                              UnitTest.score(mandatory))))
+            s = UnitTest.score(results)
+
+            optional_intervals = UnitTest.get_intervals(optional)
+            if len(optional_intervals) == 0:
+                optional_intervals = [[1.0, 1.0]]
+
+            score_okay = all(UnitTest.compare_score(s, i) == 0
+                             for i in UnitTest.get_intervals(mandatory)) and \
+                         all(UnitTest.compare_score(s, i) != -1
+                             for i in optional_intervals)
+            L.append((s, get_int(score_okay)))
         else:
             L.append((c[-1], 0))
+
+        if "arbitrary" in optional:
+            for i in range(0, len(L)):
+                L[i] = (L[i][0], 0)
 
         return L
 
     @staticmethod
-    def judge_group(results, extended_results, mandatory, optional):
+    def judge_score(x, intervals):
+        l = [UnitTest.compare_score(x, i) for i in intervals]
+
+        if any(x < 0 for x in l):
+            return -1
+        if any(x > 0 for x in l):
+            return 1
+        return 0
+
+    @staticmethod
+    def judge_scores(scores, intervals):
+        if len(scores) == 0:
+            return 0
+        else:
+            return min(UnitTest.judge_score(s, intervals) for s in scores)
+
+    @staticmethod
+    def judge_group(results, _extended_results, mandatory, _optional):
         """Judge a whole group given a concatenated list of the results of
            the individual cases
            extended_results contains results of testcases with explicit
            expectations
         """
-        optional = optional + mandatory
-        extended_results = results + extended_results
+        optional = _optional + mandatory
+        extended_results = results + _extended_results
 
-        if any(x not in optional for x in results
-               if not UnitTest.ignore(x, optional + ['time', 'memory'])):
+        if "arbitrary" in mandatory:
+            return (1337, "ignored", "You specified that this specific "
+                    "outcome should be ignored (please only do this if you're "
+                    "really sure that's what you want).")
+
+        if "arbitrary" in optional and len(mandatory) != 0:
+            raise Exception("Undefined behaviour: you specified the outcome of "
+                            "a group as arbitrary while giving specific "
+                            "expectations for at least one testcase in this "
+                            "group. I don't know what to do.")
+
+        scores = UnitTest.get_scores(results)
+
+        # When checking whether the score is too low we also care about the
+        # optional score constraints
+        intervals = UnitTest.get_intervals(optional) or [[1.0, 1.0]]
+        score_verdict = UnitTest.judge_scores(scores, intervals)
+
+        if score_verdict == -1 or any(x not in optional for x in results
+                                      if not UnitTest.ignore(x,
+                                          ['time', 'memory'])):
             return (-2, "failed", "The submission failed for a reason "
                     "you did not expect (or score too low).")
 
@@ -1095,8 +1167,16 @@ class UnitTest:
             return (0, "ambiguous", "It is not clear whether the submission "
                        "respects the limits.")
 
-        if len(mandatory) == 0 or any(x in extended_results
-                                      for x in mandatory):
+        # When checking whether the score is too high we only care about the
+        # mandatory score constraints
+        intervals = UnitTest.get_intervals(mandatory) or [[1.0, 1.0]]
+        score_verdict = UnitTest.judge_scores(scores, intervals)
+
+        mandatory = UnitTest.remove_intervals(mandatory)
+
+        if (score_verdict == 0 and (len(mandatory) == 0 or
+                                    UnitTest.score(results) != 1.0)) or\
+           any(x in extended_results for x in mandatory):
             return (1, "okay", "... all shall be well.")
 
         return (-1, "failed",
@@ -1104,22 +1184,12 @@ class UnitTest:
                 "(or score too high).")
 
     @staticmethod
-    def is_score(x):
-        try:
-            float(x)
-            return True
-        except:
-            return False
-
-    @staticmethod
-    def remove_scores(l):
-        return [x for x in l if not UnitTest.is_score(x)]
-
-    @staticmethod
     def judge_case(results, mandatory, optional):
         """Judge a single testcase
         """
-        optional = UnitTest.remove_scores(optional)
+        if "arbitrary" in mandatory:
+            raise Exception("Undefined behaviour: you specified the outcome of "
+                            "a testcase as arbitrary. I don't know what to do")
 
         a, b, c = UnitTest.judge_group(results, [], mandatory, optional)
         return a, c

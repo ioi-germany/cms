@@ -48,6 +48,7 @@ line_length = min(get_terminal_line_length(), 140)
 red_code = "\033[91m"
 green_code = "\033[92m"
 yellow_code = "\033[93m"
+gray_code = "\033[90m" # no pun intended
 blue_code = "\033[94m"
 bold_code = "\033[1m"
 end_code = "\033[0m"
@@ -81,6 +82,7 @@ def color_function(start):
 red = color_function(red_code)
 green = color_function(green_code)
 yellow = color_function(yellow_code)
+gray = color_function(gray_code)
 blue = color_function(blue_code)
 bold = color_function(bold_code)
 

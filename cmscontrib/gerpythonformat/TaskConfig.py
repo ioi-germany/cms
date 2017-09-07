@@ -22,9 +22,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from .Messenger import print_msg, print_block, header, red, green, blue, box, \
-    side_by_side, pad_left, add_line_breaks, remaining_line_length, indent, \
-    yellow
+from .Messenger import print_msg, print_block, header, red, green, gray, blue, \
+    yellow, box, side_by_side, pad_left, add_line_breaks, \
+    remaining_line_length, indent
 from .CommonConfig import exported_function, CommonConfig
 from .Executable import ExitCodeException
 from .ConstraintParser import ConstraintList, merge_constraints
@@ -421,9 +421,14 @@ class MySubmission(object):
                  weak_mem_limit=None, strong_mem_limit=None):
         self.task = task
         self.filenames = filenames
-        self.score = score
-        self.public_score = public_score
-        self.partial_score = partial_score
+        self.score = MySubmission.score_machine_readable(score)
+        self.score_info = MySubmission.score_human_readable(score)
+        self.public_score = MySubmission.score_machine_readable(public_score)
+        self.public_score_info = MySubmission.score_human_readable(public_score)
+        self.partial_score = MySubmission.score_machine_readable(partial_score)
+        self.partial_score_info = \
+            MySubmission.score_human_readable(partial_score)
+
         if weak_time_limit is None:
             weak_time_limit = task.weak_time_limit
         self.weak_time_limit = weak_time_limit
@@ -442,14 +447,29 @@ class MySubmission(object):
                 "Weird limits for unit test; strong limits should be > 1 "
                 "and weak limits should be < 1")
         self.expected = expected
+        
+        keywords = {"arbitrary": ["arbitrary"],
+                    "time":      ["time"],
+                    "memory":    ["memory"],
+                    "time?":     ["time?"],
+                    "memory?":   ["memory?"],
+                    "wrong":     [MySubmission.score_machine_readable(0.0)],
+                    "fail":      ["time", "memory",
+                                  MySubmission.score_machine_readable(0.0)],
+                    "resources": ["time", "memory"]}
+
+        def encode(key):
+            try:
+                return keywords[key]
+            except KeyError:
+                return [MySubmission.score_machine_readable(json.loads(key))]
 
         # Check if the expected make sense
         for k in self.expected:
             try:
-                float(k)
+                encode(k)
             except:
-                if k not in ["time", "memory", "time?", "memory?", "wrong"]:
-                    raise Exception("Unknown expected result '{}'".format(k))
+                raise Exception("Unknown expected result '{}'".format(k))
 
         self.expectations = {(): []}
 
@@ -463,19 +483,23 @@ class MySubmission(object):
 
         for c in self.task.cases:
             self.case_expectations[c.codename] = []
+            
+        def encode(key):
+            try:
+                return keywords[key]
+            except KeyError:
+                return [MySubmission.score_machine_readable(json.loads(key))]
 
         # Convert the given lists of expected events to something more
         # readable for ScoreTypes
         for key, items in self.expected.iteritems():
-            simplified_key = key if key != "wrong" else "0.0"
             for item in items:
                 if isinstance(item, MyCase):
-                    self.case_expectations[item.codename].\
-                        append(simplified_key)
+                    self.case_expectations[item.codename] += encode(key)
                 else:
-                    self.expectations[item.unique_name].append(simplified_key)
+                    self.expectations[item.unique_name] += encode(key)
 
-        # JSON doesn't allow lists nor tuples as keys
+        # JSON doesn't allow lists nor tuples as keys so we dump them, too
         self.expectations = {json.dumps(key): val for key, val
                              in self.expectations.iteritems()}
 
@@ -498,6 +522,30 @@ class MySubmission(object):
         else:
             return all(local_test in self.task.short_path(f)
                        for f in self.filenames)
+
+    @staticmethod
+    def score_machine_readable(x):
+        """
+        Turn the score expectation as indicated by the user into something
+        that is easily comprehensable by the score type
+        """
+        if x == "arbitrary":
+            return [float("-inf"), float("inf")]
+    
+        try:
+            float(x)
+            return [float(x), float(x)]
+        except TypeError:
+            pass
+            
+        return x
+    
+    @staticmethod
+    def score_human_readable(x):
+        """
+        Pretty print the score expectation as indicated by the user
+        """
+        return str(x)
 
 
 class MyStatement(object):
@@ -575,6 +623,7 @@ class TaskConfig(CommonConfig, Scope):
 
         # utils
         self.exported["token_equ"] = self.upstream.token_equ_fp
+        self.exported["arbitrary"] = "arbitrary"
 
         # Get data from upstream, but not the other way round
         self.inheriting = True
@@ -1533,8 +1582,11 @@ class TaskConfig(CommonConfig, Scope):
              "expected": submission.expectations,
              "expected_case": submission.case_expectations,
              "expected_score": submission.score,
+             "expected_score_info": submission.score_info,
              "expected_public_score": submission.public_score,
+             "expected_public_score_info": submission.public_score_info,
              "expected_partial_score": submission.partial_score,
+             "expected_partial_score_info": submission.partial_score_info,
              "task_name": self.name})
 
         return sdb
@@ -1590,16 +1642,18 @@ class TaskConfig(CommonConfig, Scope):
         details = score_type.compute_unit_test_score(submission_result,
                                                      sdb.additional_info)
         expected_public, expected_private = \
-            score_type.unit_test_expected_scores(sdb.additional_info)
+            score_type.unit_test_expected_scores_info(sdb.additional_info)
 
         def v((accepted, desc), z=False):
             d = desc  # .replace("<br>", "\n")
 
+            if accepted == 1337:
+                return yellow(d)
             if accepted == 42:
-                return blue(d)
+                return gray(d)
             elif accepted <= 0:
                 if z and accepted == 0:
-                    return d
+                    return gray(d)
                 return red(d)
             else:
                 return green(d)
@@ -1651,17 +1705,17 @@ class TaskConfig(CommonConfig, Scope):
             print()
 
         public_score = green("{}".format(public_score)) if \
-            public_score == expected_public else \
+            details["public_score_okay"] else \
             red("{}".format(public_score))
         score = green("{}".format(score)) if \
-            score == expected_private else \
+            details["private_score_okay"] else \
             red("{}".format(score))
 
         if score_type.feedback() != "full":
-            print_msg("Public Score: {} (expected: {})".
+            print_msg("Public Score: {}; expected: {}".
                       format(public_score, expected_public))
 
-        print_msg("Total Score: {} (expected: {})".format(score,
+        print_msg("Total Score: {}; expected: {}".format(score,
                                                           expected_private))
         print()
         verd = details["verdict"]
