@@ -1,10 +1,26 @@
 \basicheader
 \usepackage{colortbl}
+\usepackage[math]{kurier}
+\usepackage[sfdefault,tabular,lining,scaled=.9]{FiraSans}
+%\usepackage[scaled=0.85,lining]{FiraMono}
+\usepackage[italic,nolessnomore]{mathastext}
 
-\rhead{\vbox to \headh{\vbox to 0pt{\vskip-.98in\hbox to 0pt{\hskip\hsize\hskip-1in\includegraphics{\barpdf}}}\includegraphics[height=.75\headh]{\logopng}\quad\null}}
-\lhead{\vbox to \headh{\sffamily
-\contestname\\
-Aufgabe: {\bfseries \taskname}\vss}}
+% this is evil: we reload the FiraSans package with slightly different parameters
+% in order to use oldstyle figures in text and lining figures in math mode
+\makeatletter
+\count1=\the\catcode`\.
+\catcode`\.=11
+\let\ver@FiraSans.sty = \undefined
+\let\opt@FiraSans.sty = \undefined
+\let\FiraSans@scale = \undefined
+\let\FiraSansOT@scale = \undefined
+\catcode`\.=\count1
+\makeatother
+\usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
+
+
+\rhead{\vbox to \headh{\vbox to 0pt{\vskip-2in\hbox to 0pt{\hskip\hsize\hskip-1.5in\includegraphics{\barpdf}}}\quad\null}}
+\lhead{}
 
 \def\sthelper#1#2{{\sffamily\bfseries Teilaufgabe\ #1 (#2 Punkte).\enspace}}
 \newcount\stcount

@@ -34,13 +34,6 @@ class LgTemplate(PlainTemplate):
         super(LgTemplate, self).__init__(contest)
         self.contest = contest
 
-        # Compile bar.asy
-        shutil.copyfile(os.path.join(os.path.dirname(__file__), "bar.asy"),
-                        "bar.asy")
-        contest.supply_asy("lg", contest.simple_query("lg"))
-        contest.supplement_file("asy", "info.asy")
-        contest.compile("bar.asy")
-
     def ontask(self, task):
         """ Some additional supplies for the latex format
         """
@@ -51,13 +44,19 @@ class LgTemplate(PlainTemplate):
                     os.path.join(task.wdir, "taskheader.tex"))
         task.supply("latex", def_latex("taskheader",
                                        input_latex("taskheader.tex")))
-        # Tell Latex where logopng can be found
-        shutil.copy(os.path.join(os.path.dirname(__file__), "logo.png"),
-                    os.path.join(task.wdir, "logo.png"))
-        task.supply("latex", def_latex("logopng", "logo.png"))
+        # Compile bar.asy
+        shutil.copyfile(os.path.join(os.path.dirname(__file__), "lgstyle.asy"),
+                        "lgstyle.asy")
+        shutil.copyfile(os.path.join(os.path.dirname(__file__), "logo.eps"),
+                        "logo.eps")
+        shutil.copyfile(os.path.join(os.path.dirname(__file__), "bar.asy"),
+                        "bar.asy")
+        task.supply_asy("lg", self.contest.simple_query("lg"))
+        task.supply_asy("taskname", task.simple_query("name"))
+        task.supplement_file("asy", "info.asy")
+        task.compile("bar.asy")
+        
         # Tell Latex where bar.pdf can be found
-        shutil.copy(os.path.join(self.contest.wdir, "bar.pdf"),
-                    os.path.join(task.wdir, "bar.pdf"))
         task.supply("latex", def_latex("barpdf", "bar.pdf"))
         task.supply("latex", def_latex("feedback", task.feedback))
         self.mktestcasetable(task)
