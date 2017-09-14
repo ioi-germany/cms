@@ -24,7 +24,7 @@ from __future__ import unicode_literals
 
 from .Messenger import print_msg, print_block, header
 from .Executable import CPPProgram, InternalPython, ExternalScript, \
-    ExternalPython, keyword_list
+    ExternalPython, keyword_list, asy_keyword_list
 from cms.rules.Rule import LaTeXRule, CommandRule
 from .Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
 import inspect
@@ -355,9 +355,9 @@ class CommonConfig(object):
 
             r = CommandRule(self.rules,
                             ["asy"] + (["-f", "pdf"] if pdf else []) +
-                            ["-o", output] + keyword_list(kwargs) + [source],
-                            stdin=stdin, dependencies=dep, outputs=[output],
-                            dependonexe=False).ensure()
+                            ["-o", output] + asy_keyword_list(kwargs) +
+                            [source], stdin=stdin, dependencies=dep,
+                            outputs=[output], dependonexe=False).ensure()
             print_block(r.out)
             print_block(r.err)
             if r.code != 0:

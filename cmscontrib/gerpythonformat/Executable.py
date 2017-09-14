@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -175,6 +175,16 @@ def keyword_list(kwords):
     for elem in kwords:
         L += ["-" + str(elem), str(kwords[elem])]
     return L
+
+
+def asy_keyword_list(kwords):
+    """ Convert a keyword dictionary to something readable by
+    asymptote on the command line
+    """
+    def encode(key, val):
+        return ("-" if val else "-no") + str(key)
+
+    return [encode(key, val) for key, val in kwords.items()]    
 
 
 class CPPProgram(Executable):
