@@ -45,8 +45,8 @@ class LgTemplate(PlainTemplate):
         task.supply("latex", def_latex("taskheader",
                                        input_latex("taskheader.tex")))
         # Compile bar.asy
-        shutil.copyfile(os.path.join(os.path.dirname(__file__), "lgstyle.asy"),
-                        "lgstyle.asy")
+        shutil.copyfile(os.path.join(os.path.dirname(__file__), "mystyle.asy"),
+                        "mystyle.asy")
         shutil.copyfile(os.path.join(os.path.dirname(__file__), "logo.eps"),
                         "logo.eps")
         shutil.copyfile(os.path.join(os.path.dirname(__file__), "bar.asy"),

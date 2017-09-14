@@ -1,5 +1,5 @@
 import info;
-import lgstyle;
+import mystyle;
 
 pair P = (350.794, 102.062);
 pair Q = (-P.y, P.x);
