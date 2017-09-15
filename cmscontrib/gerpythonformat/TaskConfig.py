@@ -705,7 +705,7 @@ class TaskConfig(CommonConfig, Scope):
 
         return (string): LaTeX string
         """
-        return "{}$\,$s".format(self._timelimit)
+        return "${}\,$s".format(self._timelimit)
 
     @exported_function
     def memorylimit(self, s):
@@ -723,7 +723,7 @@ class TaskConfig(CommonConfig, Scope):
 
         return (string): LaTeX string
         """
-        return "{}$\,$MB".format(self._memorylimit)
+        return "${}\,$MB".format(self._memorylimit)
 
     @exported_function
     def statement(self, s, language="en", primary=None):

@@ -1,9 +1,11 @@
 \basicheader
+\usepackage[ngerman]{babel}
+\usepackage{ifpdf}
 \usepackage{colortbl}
 \usepackage[math]{kurier}
 \usepackage[sfdefault,tabular,lining,scaled=.9]{FiraSans}
 %\usepackage[scaled=0.85,lining]{FiraMono}
-\usepackage[italic,nolessnomore]{mathastext}
+\usepackage[italic,nolessnomore,noplusnominus,noequal]{mathastext}
 
 % this is evil: we reload the FiraSans package with slightly different parameters
 % in order to use oldstyle figures in text and lining figures in math mode
@@ -18,6 +20,9 @@
 \makeatother
 \usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
 
+\ifpdf
+\usepackage{microtype}
+\fi
 
 \rhead{\vbox to \headh{\vbox to 0pt{\vskip-2in\hbox to 0pt{\hskip\hsize\hskip-1.5in\includegraphics{\barpdf}}}\quad\null}}
 \lhead{}
