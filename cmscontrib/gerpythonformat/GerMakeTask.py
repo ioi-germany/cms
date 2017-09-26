@@ -35,11 +35,14 @@ import shutil
 
 
 class GerMakeTask:
-    def __init__(self, odir, task, minimal, submission, clean):
+    def __init__(self, odir, task, minimal, no_test, submission, no_latex, clean):
         self.odir = odir
         self.task = task
         self.minimal = minimal
-        self.submission = submission
+        self.local_test = not no_test
+        if self.local_test and submission is not None:
+            self.local_test = submission
+        self.no_latex = no_latex
         self.clean = clean
 
     def prepare(self):
@@ -62,30 +65,38 @@ class GerMakeTask:
         self.wdir = os.path.abspath(self.wdir)
 
     def build(self):
-        filecacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
+        file_cacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
 
         try:
             with chdir(self.wdir):
-                cc = ContestConfig(os.path.join(self.wdir, ".rules"),
+                contestconfig = ContestConfig(os.path.join(self.wdir, ".rules"),
                                    "hidden contest", minimal=self.minimal)
-                copyifnecessary(os.path.join(cc._get_ready_dir(),
+                copyifnecessary(os.path.join(contestconfig._get_ready_dir(),
                                              "contest-template.py"),
                                 os.path.join(self.wdir, "c.py"))
-                cc._readconfig("c.py")
-                cc._task(self.task, cc._dummy_feedback, self.minimal)
+                contestconfig._readconfig("c.py")
+                contestconfig._task(self.task, contestconfig._dummy_feedback, self.minimal)
 
                 if not self.minimal:
-                    cc._makecontest()
-                    for u in cc.users: cc._makeuser(u.username)
-                    cc._maketask(filecacher, self.task, local_test=(True if self.submission is None else self.submission))
+                    cdb = contestconfig._makecontest()
+                    test_udb = contestconfig._makeuser(contestconfig._mytestuser.username)
+                    test_gdb = contestconfig._makegroup(contestconfig._mytestuser.group.name, cdb)
+                    # We're not putting the test user on any team for testing (shouldn't be needed).
+                    test_pdb = contestconfig._makeparticipation(contestconfig._mytestuser.username, cdb, test_udb, test_gdb, None)
+                    for t in contestconfig.tasks.values():
+                        tdb = t._makedbobject(cdb, file_cacher)
+                        t._make_test_submissions(test_pdb, tdb, self.local_test)
 
         finally:
-            filecacher.destroy_cache()
+            file_cacher.destroy_cache()
 
-        for _, s in cc.tasks[0]._statements.iteritems():
-            if s.primary:
-                return os.path.abspath(s.file_)
-        return None
+        primary_statements = [s for s in contestconfig.tasks.values()[0]._statements.values() if s.primary]
+        if len(primary_statements) == 0:
+            return None
+        elif len(primary_statements) == 1:
+            return os.path.abspath(primary_statements[0].file_)
+        else:
+            raise Exception("More than one primary statement")
 
     def make(self):
         self.prepare()
@@ -103,10 +114,15 @@ def main():
     parser.add_argument("-m", "--minimal", action="store_true",
                         help="attempt to only compile statement (and "
                         "everything required for this, e.g. sample cases)")
-    parser.add_argument("-s", "--submission",
-                           help="only test submissions whose file names all"
+    testgroup = parser.add_mutually_exclusive_group()
+    testgroup.add_argument("-nt", "--no-test", action="store_true",
+                           help="do not run test submissions")
+    testgroup.add_argument("-s", "--submission",
+                           help="only test submissions whose file names all "
                            "contain this string",
                            type=utf8_decoder)
+    parser.add_argument("-nl", "--no-latex", action="store_true",
+                        help="do not compile latex documents")
     parser.add_argument("-c", "--clean", action="store_true",
                         help="clean the build directory (forcing a complete "
                         "rebuild)")
@@ -116,7 +132,13 @@ def main():
     full_dir = os.path.abspath(args.import_directory)
     source_dir, task = os.path.split(full_dir)
 
-    GerMakeTask(source_dir, task, args.minimal, args.submission, args.clean).make()
+    GerMakeTask(source_dir,
+                task,
+                args.minimal,
+                args.no_test,
+                args.submission,
+                args.no_latex,
+                args.clean).make()
 
 
 if __name__ == "__main__":

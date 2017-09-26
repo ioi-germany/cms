@@ -57,7 +57,7 @@ class GerMake:
             os.mkdir(self.wdir)
         copyrecursivelyifnecessary(self.odir, self.wdir, set([self.wdir]))
         self.wdir = os.path.abspath(self.wdir)
-        filecacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
+        file_cacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
         try:
             with chdir(self.wdir):
                 contestconfig = ContestConfig(
@@ -66,17 +66,18 @@ class GerMake:
                     ignore_latex=self.no_latex,
                     onlytask=self.task)
                 contestconfig._readconfig("contest-config.py")
-                if self.task is not None and \
-                        not any(True for t in contestconfig.tasks):
+                if self.task is not None and len(contestconfig.tasks) == 0:
                     raise Exception("Task {} not found".format(self.task))
-                contestconfig._makecontest()
-                for u in contestconfig.users:
-                    contestconfig._makeuser(u.username)
-                for t in contestconfig.tasks:
-                    contestconfig._maketask(filecacher, t.name,
-                                            local_test=self.local_test)
+                cdb = contestconfig._makecontest()
+                test_udb = contestconfig._makeuser(contestconfig._mytestuser.username)
+                test_gdb = contestconfig._makegroup(contestconfig._mytestuser.group.name, cdb)
+                # We're not putting the test user on any team for testing (shouldn't be needed).
+                test_pdb = contestconfig._makeparticipation(contestconfig._mytestuser.username, cdb, test_udb, test_gdb, None)
+                for t in contestconfig.tasks.values():
+                    tdb = t._makedbobject(cdb, file_cacher)
+                    t._make_test_submissions(test_pdb, tdb, self.local_test)
         finally:
-            filecacher.destroy_cache()
+            file_cacher.destroy_cache()
 
 
 def main():
@@ -95,13 +96,13 @@ def main():
     testgroup.add_argument("-nt", "--no-test", action="store_true",
                            help="do not run test submissions")
     testgroup.add_argument("-s", "--submission",
-                           help="only test submissions whose file names all"
+                           help="only test submissions whose file names all "
                            "contain this string",
                            type=utf8_decoder)
     parser.add_argument("-nl", "--no-latex", action="store_true",
                         help="do not compile latex documents")
     parser.add_argument("-c", "--clean", action="store_true",
-                        help="clean the build directory (forcing a complete"
+                        help="clean the build directory (forcing a complete "
                         "rebuild)")
 
     args = parser.parse_args()

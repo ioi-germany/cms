@@ -549,6 +549,7 @@ tr:hover td.unit_test_ok {
     background-color: hsla(120, 100%, 50%, 0.5) !important;
 }
 
+#submission_list td.unit_test.undefined,
 #submission_list td.total_score.undefined,
 #unit_test_list td.total_score.undefined,
 td.no_expectations {
@@ -565,26 +566,32 @@ th.short {
     text-align:center;
 }
 
+#submission_list td.unit_test.score_0,
 #submission_list td.total_score.score_0 {
     background-color: hsla(0, 100%, 50%, 0.7);
 }
 
+#submission_list tr:hover td.unit_test.score_0,
 #submission_list tr:hover td.total_score.score_0 {
     background-color: hsla(0, 100%, 50%, 0.8);
 }
 
+#submission_list td.unit_test.score_0_100,
 #submission_list td.total_score.score_0_100 {
     background-color: hsla(60, 100%, 50%, 0.7);
 }
 
+#submission_list tr:hover td.unit_test.score_0_100,
 #submission_list tr:hover td.total_score.score_0_100 {
     background-color: hsla(60, 100%, 50%, 0.8);
 }
 
+#submission_list td.unit_test.score_100,
 #submission_list td.total_score.score_100 {
     background-color: hsla(120, 100%, 50%, 0.7);
 }
 
+#submission_list tr:hover td.unit_test.score_100,
 #submission_list tr:hover td.total_score.score_100 {
     background-color: hsla(120, 100%, 50%, 0.8);
 }

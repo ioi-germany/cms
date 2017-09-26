@@ -48,49 +48,49 @@ class TaskCompileJob:
         self.backup_handle = 0
         self.backup = None
         self.idle = False
-        
+
         self._compile()
-        
+
     def join(self):
         self._update()
-    
+
         if self.idle:
             self.current_handle += 1
             self._compile()
         return self.current_handle
-            
+
     def _compile(self):
         self._reset_status()
         logger.info("loading task {} in {}".format(self.name,
                                                    self.repository.path))
-        
+
         def do(status, repository, balancer):
             # stdout is process local in Python, so we can simply use this
             # to redirect all output from GerMakeTask to a string
             sys.stdout = StringIO()
-                   
+
             # Remove color codes for the log file
             disable_colors()
-                 
-            with balancer:  
+
+            with balancer:
                 try:
-                    comp = GerMakeTask(repository.path, self.name, True, None, False)
-                
+                    comp = GerMakeTask(repository.path, self.name, True, True, None, False, False)
+
                     with repository:
                         comp.prepare()
 
                     statement_file = comp.build()
-                    
+
                     if statement_file is None:
                         status["error"] = True
                         status["msg"] = "No statement found"
 
                     else:
                         result = None
-                    
+
                         with open(statement_file, "rb") as f:
                             result = f.read()
-                        
+
                         status["result"] = result
 
                 except Exception:
@@ -100,13 +100,13 @@ class TaskCompileJob:
             sys.stdout.flush()
             status["log"] = sys.stdout.getvalue()
             status["done"] = True
-            
-        self.compilation_process = Process(target=do, args = (self.status, 
+
+        self.compilation_process = Process(target=do, args = (self.status,
                                                               self.repository,
                                                               self.balancer))
         self.compilation_process.daemon = True
         self.compilation_process.start()
-    
+
     def _update(self):
         if self.status["done"]:
             logger.info("Finished compilation of task {}:\n\n{}".\
@@ -119,7 +119,7 @@ class TaskCompileJob:
             # Release Manager subprocess for status
             self.compilation_process.join()
             del self.compilation_process
-            
+
             del self.status
             self.status = {"error":  False,
                            "done":   False,
@@ -137,10 +137,10 @@ class TaskCompileJob:
                             "msg":    "Okay",
                             "log":    ""})
         self.idle = False
-                            
+
     def info(self, handle):
         self._update()
-    
+
         if handle > self.current_handle:
             return {"error": True,
                     "done":  True,
@@ -148,7 +148,7 @@ class TaskCompileJob:
                              "means that the server has been restarted in the"
                              "meantime. Please try again.",
                     "log":   ""}
-        
+
         return {"error": self._choose(handle, "error"),
                 "done":  self._choose(handle, "done"),
                 "msg":   self._choose(handle, "msg"),
@@ -194,9 +194,9 @@ class TaskFetch:
                              "means that the server has been restarted in the "
                              "meantime. Please try again.",
                     "log":   ""}
-    
+
         return TaskFetch.jobs[name].info(handle)
-        
+
     @staticmethod
     def get(name):
         return TaskFetch.jobs[name].get()

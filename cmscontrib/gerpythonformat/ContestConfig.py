@@ -26,7 +26,8 @@ from .Messenger import print_msg
 from .CommonConfig import exported_function, CommonConfig
 from .TaskConfig import TaskConfig
 from .LocationStack import chdir
-from cms.db import Contest, User, Group, Participation
+from cms.db import Contest, User, Group, Participation, Team
+from cmscommon.crypto import generate_random_password, build_password
 import os
 import shutil
 from datetime import datetime, timedelta
@@ -44,14 +45,14 @@ class MyGroup(object):
 
 
 class MyTeam(object):
-    def __init__(self, shortname, longname):
-        self.shortname = shortname
-        self.longname = longname
+    def __init__(self, code, name):
+        self.code = code
+        self.name = name
 
 
 class MyUser(object):
     def __init__(self, username, password, group, firstname, lastname,
-                 ip, hidden, timezone, primary_statements, team):
+                 ip, hidden, unrestricted, timezone, primary_statements, team):
         self.username = username
         self.password = password
         self.group = group
@@ -59,6 +60,7 @@ class MyUser(object):
         self.lastname = lastname
         self.ip = ip
         self.hidden = hidden
+        self.unrestricted = unrestricted
         self.timezone = timezone
         self.primary_statements = primary_statements
         self.team = team
@@ -103,12 +105,12 @@ class ContestConfig(CommonConfig):
         # FIXME If we don't allow Java submissions, all Java test submissions will fail (even locally) since multithreading is not allowed.
         self._languages = ["C++11 / g++", "Java / JDK"]
 
-        self.tasks = []
+        self.tasks = {}
 
-        self.groups = []
+        self.groups = {}
         self.defaultgroup = None
         self.teams = {}
-        self.users = []
+        self.users = {}
 
         # Export variables
         self.exported["contest"] = self
@@ -199,7 +201,7 @@ class ContestConfig(CommonConfig):
 
         s (string): time to convert in the format %Y-%m-%d %H:%M:%S
 
-        timezone (string): time zone to convert to (by default the contest
+        timezone (string): time zone to convert from (by default the contest
                            time zone)
 
         return (string): string representing the time in UTC
@@ -210,7 +212,7 @@ class ContestConfig(CommonConfig):
         time = datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
         tz = pytz.timezone(timezone)
         convtime = tz.normalize(tz.localize(time)).astimezone(pytz.utc)
-        return str(convtime)
+        return convtime.replace(tzinfo=None)
 
     @exported_function
     def description(self, s):
@@ -275,6 +277,9 @@ class ContestConfig(CommonConfig):
         return (MyGroup): object representing the created group
 
         """
+        if s in self.groups:
+            raise Exception("Group {} specified multiple times".format(s))
+
         if self.minimal:
             return
 
@@ -285,38 +290,38 @@ class ContestConfig(CommonConfig):
         print_msg("Creating user group {} (working from {} to {}{})"
                   .format(s, start, stop, usaco_mode_str), headerdepth=10)
 
-        # We allow specifying an integer or a  timedelta
+        # We allow specifying an integer or a timedelta
         try:
             per_user_time = per_user_time.seconds
         except AttributeError:
             pass
 
-        r = MyGroup(s, start, stop, per_user_time)
-        self.groups.append(r)
+        self.groups[s] = r = MyGroup(s, start, stop, per_user_time)
         if s == "main":
             self.defaultgroup = r
         return r
 
     @exported_function
-    def team(self, shortname, longname):
+    def team(self, code, name):
         """
         Add a team (currently only used to generate a RWS directory).
 
-        shortname (unicode): a short name (used to find the flag)
+        code (unicode): a short name (used to find the flag)
 
-        longname (unicode): a longer name (displayed in RWS)
+        name (unicode): a longer name (displayed in RWS)
 
         return (MyTeam): object representing the created team
 
         """
-        team = MyTeam(shortname, longname)
-        self.teams[shortname] = team
+        if code in self.teams:
+            raise Exception("Team {} specified multiple times".format(code))
+        self.teams[code] = team = MyTeam(code, name)
         return team
 
     @exported_function
     def user(self, username, password, firstname, lastname, group=None,
-             ip=None, hidden=False, timezone=None, primary_statements=[],
-             team=None):
+             ip=None, hidden=False, unrestricted=False,timezone=None,
+             primary_statements=[], team=None):
         """
         Add a user.
 
@@ -324,18 +329,21 @@ class ContestConfig(CommonConfig):
 
         password (unicode): password
 
-        group (MyGroup): the group to add this user to (by default the
-                         default group, which is usually called main)
-
         firstname (unicode): first name
 
         lastname (unicode): last name
+
+        group (MyGroup): the group to add this user to (by default the
+                         default group, which is usually called main)
 
         ip (unicode): ip address the user must log in from (if this feature
                       is enabled in CMS)
 
         hidden (bool): whether this user is hidden (not shown on the official
                        scoreboard)
+
+        unrestricted (bool): whether this user is unrestricted (can submit at
+                             any time)
 
         timezone (unicode): time zone for this user (if different from contest
                             time zone)
@@ -352,6 +360,8 @@ class ContestConfig(CommonConfig):
         if self.minimal:
             return
 
+        if username in self.users:
+            raise Exception("User {} specified multiple times".format(username))
         if group is None:
             if self.defaultgroup is None:
                 raise Exception("You have to specify a group")
@@ -360,11 +370,12 @@ class ContestConfig(CommonConfig):
             team = self.teams[team]
         print_msg("Adding user {} to group {}".format(username, group.name),
                   headerdepth=10)
-        self.users.append(MyUser(username, password, group,
-                                 firstname, lastname,
-                                 ip, hidden, timezone, primary_statements,
-                                 team))
-        return self.users[-1]
+        self.users[username] = user = \
+            MyUser(username, password, group,
+                   firstname, lastname,
+                   ip, hidden, unrestricted, timezone, primary_statements,
+                   team)
+        return user
 
     def _task(self, s, feedback, minimal):
         """
@@ -384,6 +395,9 @@ class ContestConfig(CommonConfig):
         if not os.path.isdir(s):
             raise Exception("No directory found for task {}".format(s))
 
+        if s in self.tasks:
+            raise Exception("Task {} specified multiple times".format(s))
+
         with chdir(s):
             if not os.path.isfile("config.py"):
                 raise Exception("Couldn't find task config file. Make sure it "
@@ -402,7 +416,7 @@ class ContestConfig(CommonConfig):
                 taskconfig._readconfig("config.py")
                 taskconfig._activate_feedback()
                 taskconfig._printresult()
-                self.tasks.append(taskconfig)
+                self.tasks[s] = taskconfig
             if minimal:
                 print_msg("Statement for task {} generated successfully".\
                           format(s), success=True)
@@ -462,7 +476,7 @@ class ContestConfig(CommonConfig):
         """
         return os.path.relpath(os.path.abspath(f), self.wdir)
 
-    def _makecontest(self, cdb=None):
+    def _makecontest(self):
         """
         Return a Contest object which can be saved to the database.
 
@@ -471,11 +485,7 @@ class ContestConfig(CommonConfig):
         """
         if self.defaultgroup is None:
             raise Exception("You have to specify a default group")
-        if cdb is None:
-            cdb = Contest(name=self.contestname, description=self._description)
-        else:
-            cdb.name = self.contestname
-            cdb.description = self._description
+        cdb = Contest(name=self.contestname, description=self._description)
 
         cdb.timezone = self._timezone
         cdb.allowed_localizations = self._allowed_localizations
@@ -488,30 +498,34 @@ class ContestConfig(CommonConfig):
         cdb.max_user_test_number = self.max_user_test_number
         cdb.min_user_test_interval = self.min_user_test_interval
 
-        self.groupsdb = {}
-        for g in self.groups:
-            if g.name in self.groupsdb:
-                raise Exception("Group {} specified multiple times")
-            gdb = cdb.group(g.name)
-            gdb.start = g.start
-            gdb.stop = g.stop
-            gdb.per_user_time = None if g.per_user_time is None else \
-                                timedelta(seconds=g.per_user_time)
-            self.groupsdb[g.name] = gdb
-            cdb.groups.append(gdb)
-
-        cdb.main_group = self.groupsdb[self.defaultgroup.name]
-
         self.usersdb = {}
         self.participationsdb = {}
 
         self.cdb = cdb
 
+        gdbs = {}
+        for g in self.groups:
+            gdbs[g] = gdb = self._makegroup(g, cdb)
+        cdb.main_group = gdbs[self.defaultgroup.name]
+
         return cdb
 
-    @property
-    def testuser(self):
-        return self._makeuser(self._mytestuser.username)[1]
+    def _makegroup(self, groupname, cdb):
+        group = self.groups[groupname]
+        gdb = Group(name=groupname, contest=cdb)
+        gdb.start = group.start
+        gdb.stop = group.stop
+        gdb.per_user_time = None if group.per_user_time is None else \
+                            timedelta(seconds=group.per_user_time)
+        return gdb
+
+    def _maketeam(self, teamname):
+        team = self.teams[teamname]
+
+        teamdb = Team(code=team.code,
+                      name=team.name)
+
+        return teamdb
 
     def _makeuser(self, username):
         """
@@ -523,64 +537,43 @@ class ContestConfig(CommonConfig):
         return (User,Participation): database object for the user
 
         """
-        if username in self.usersdb:
-            return self.usersdb[username], self.participationsdb[username]
+        user = self.users[username]
 
-        for user in self.users:  # FIXME This could be done faster...
-            if user.username == username:
-                if isinstance(user.primary_statements, list):
-                    primary_statements = {t.name: user.primary_statements
-                                          for t in self.tasks}
-                else:
-                    primary_statements = user.primary_statements
-                udb = User(username=user.username,
-                           password=user.password,
-                           first_name=user.firstname,
-                           last_name=user.lastname,
-                           timezone=user.timezone,
-                           preferred_languages=json.dumps(primary_statements))
-                pdb = Participation(user=udb,
-                                    group=self.groupsdb[user.group.name],
-                                    ip=user.ip,
-                                    hidden=user.hidden)
-                self.usersdb[username] = udb
-                self.participationsdb[username] = pdb
-                return udb, pdb
-        raise KeyError
+        # We give the user a random password.
+        # He should never use this password, because we set different
+        # passwords for each participation.
+        udb = User(username=user.username,
+                   first_name=user.firstname,
+                   last_name=user.lastname,
+                   password=build_password(generate_random_password()))
 
-    def _maketask(self, file_cacher, taskname, local_test=False):
-        """
-        Return a Task object for the specified task which can be saved
-        to the database.
+        udb.timezone = user.timezone
+        udb.preferred_languages = json.dumps(user.primary_statements)
 
-        file_cacher (FileCacher): for saving files (test cases,
-                                  attachments, ...)
+        return udb
 
-        taskname (unicode): name of the task to create
+    def _makeparticipation(self, username, cdb, udb, gdb, teamdb):
+        user = self.users[username]
 
-        local_test (bool|string): specifies which submissions should be tested
-                                  locally (cf. MySubmission.should_test)
+        pdb = Participation(user=udb, contest=cdb)
 
-        """
-        for task in self.tasks:  # FIXME This could be done faster...
-            if task.name == taskname:
-                tdb = task._makedbobject(self.cdb, file_cacher, local_test)
-                return tdb
-        raise KeyError
+        pdb.password = build_password(user.password)
+        pdb.group = gdb
 
-    def _makedataset(self, file_cacher, taskname):
-        for task in self.tasks:  # FIXME This could be done faster...
-            if task.name == taskname:
-                tdb = task._makedataset(file_cacher)
-                return tdb
-        raise KeyError
+        pdb.ip = user.ip
+        pdb.hidden = user.hidden
+        pdb.unrestricted = user.unrestricted
+
+        pdb.team = teamdb
+
+        return pdb
 
     def _initialize_ranking(self):
         directory = os.path.join(self.wdir, "ranking_conf")
         if os.path.exists(directory):
             shutil.rmtree(directory)
         os.mkdir(directory)
-        for d in ["teams", "users", "flags", "faces"]:
+        for d in ["flags", "faces"]:
             dd = os.path.join(directory, d)
             os.mkdir(dd)
 
@@ -592,25 +585,13 @@ class ContestConfig(CommonConfig):
                     shutil.copyfile(origin, target)
                     return
 
-        def save_json(basename, data):
-            file_ = os.path.join(directory, basename+".json")
-            with open(file_, 'wb') as f:
-                json.dump(data, f)
-
         copy_ranking_file("logo", "logo")
 
         for team in self.teams.values():
-            save_json(os.path.join("teams", team.shortname),
-                      {"name": team.longname})
-            copy_ranking_file("flag-"+team.shortname,
-                              os.path.join("flags", team.shortname))
+            copy_ranking_file("flag-"+team.code,
+                              os.path.join("flags", team.code))
 
-        for user in self.users:
+        for user in self.users.values():
             if not user.hidden:
                 copy_ranking_file("face-"+user.username,
                                   os.path.join("faces", user.username))
-                save_json(os.path.join("users", user.username),
-                          {"f_name": user.firstname,
-                           "l_name": user.lastname,
-                           "team": user.team.shortname
-                           if user.team is not None else None})

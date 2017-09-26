@@ -1240,7 +1240,7 @@ class TaskConfig(CommonConfig, Scope):
         """
         return self.contest.short_path(f)
 
-    def _makedbobject(self, contest, file_cacher, local_test):
+    def _makedbobject(self, contest, file_cacher):
         """
         Return a Task object which can be saved to the database.
         TODO What exactly happens to test submissions? Can we still add them
@@ -1255,12 +1255,17 @@ class TaskConfig(CommonConfig, Scope):
         return (Task): database object for the task
 
         """
+        tdb = Task(name=self.name,
+                   title=self._title,
+                   num=self.num,
+                   contest=contest)
+
         # Are we allowed to use tokens?
         if self.token_mode != "disabled" and \
            self.upstream.token_mode != "disabled":
             self.feedback = "token"
 
-        # Automatically make a ZIP file containing the save test cases
+        # Automatically make a ZIP file containing the saved test cases
         self._makesavedzip()
         if self.contest._analysis:
             self._makeallzip()
@@ -1269,10 +1274,6 @@ class TaskConfig(CommonConfig, Scope):
         self.file_cacher = file_cacher
         if self.tasktype is None:
             raise Exception("You have to specify a task type")
-        tdb = Task(name=self.name,
-                   title=self._title,
-                   num=self.num)
-        tdb.contest = contest
         if self.contest._analysis:
             self.infinite_tokens()
         self._set_tokens(tdb)
@@ -1312,10 +1313,62 @@ class TaskConfig(CommonConfig, Scope):
                 "Attachment %s to task %s" % (name, self.name))
             tdb.attachments[name] = Attachment(filename=name, digest=digest)
 
-        if self.make_datasets:
-            ddb = self._makedataset(file_cacher)
-            ddb.task = tdb
-            tdb.active_dataset = ddb
+        tdb.active_dataset = self._makedataset(file_cacher, tdb)
+
+        return tdb
+
+    def _makedataset(self, file_cacher, tdb):
+        score_type_parameters = json.dumps(
+            {'feedback': self.feedback,
+            'tcinfo':
+            [{'name': s.description,
+                'key': s.unique_name,
+                'public': s.public,
+                'for_public_score': s.for_public_score,
+                'for_private_score': s.for_private_score,
+                'partial': s.partial,
+                'groups': [{'points': g.points,
+                            'key': g.unique_name,
+                            'cases': [c.codename for c
+                                    in g.cases]}
+                        for g in s.groups]}
+            for s in self.subtasks]})
+        ddb = Dataset(task=tdb,
+                      description="imported",
+                      task_type=self.tasktype,
+                      task_type_parameters=self.tasktypeparameters,
+                      score_type="SubtaskGroup",
+                      score_type_parameters=score_type_parameters)
+        ddb.time_limit=float(self._timelimit)
+        ddb.memory_limit=self._memorylimit
+
+        # Add test cases
+        for c in self.cases:
+            input_digest = file_cacher.put_file_from_path(
+                os.path.join(self.wdir, c.infile),
+                "Input %s for task %s" % (c.codename, self.name))
+            output_digest = file_cacher.put_file_from_path(
+                os.path.join(self.wdir, c.outfile),
+                "Output %s for task %s" % (c.codename, self.name))
+            tcdb = Testcase(codename=c.codename,
+                            input=input_digest,
+                            output=output_digest,
+                            public=c.public)
+            ddb.testcases[c.codename] = tcdb
+
+        # Add managers
+        for name, file in self.managers.iteritems():
+            digest = file_cacher.put_file_from_path(
+                file,
+                "Manager %s for task %s" % (name, self.name))
+            ddb.managers[name] = Manager(filename=name, digest=digest)
+
+        return ddb
+
+    def _make_test_submissions(self, pdb, tdb, local_test):
+        ddb = tdb.active_dataset
+
+        sdbs = []
 
         failed = []
         unit_tests = []
@@ -1324,10 +1377,12 @@ class TaskConfig(CommonConfig, Scope):
         for s in self.testsubmissions:  # submissions are saved because they
                                         # are referenced through the user
                                         # object
-            sdb = self._makesubmission(s, self.upstream.testuser, tdb)
+            sdb = self._makesubmission(s, pdb, tdb)
             # dummy id, the correct value is inserted by GerImporter.py
             sdb.task_id = 0
             sdb.task = tdb
+
+            sdbs.append(sdb)
 
             if s._should_test(local_test):
                 code = ", ".join(self.short_path(f) for f in s.filenames)
@@ -1359,55 +1414,7 @@ class TaskConfig(CommonConfig, Scope):
                  else ""), double = True)
             print()
 
-        return tdb
-
-    def _makedataset(self, file_cacher):
-        ddb = Dataset(description="imported",
-                      task_type=self.tasktype,
-                      task_type_parameters=self.tasktypeparameters,
-                      score_type="SubtaskGroup",
-                      score_type_parameters=json.dumps(
-                          {'feedback': self.feedback,
-                           'tcinfo':
-                           [{'name': s.description,
-                             'key': s.unique_name,
-                             'public': s.public,
-                             'for_public_score': s.for_public_score,
-                             'for_private_score': s.for_private_score,
-                             'partial': s.partial,
-                             'groups': [{'points': g.points,
-                                         'key': g.unique_name,
-                                         'cases': [c.codename for c
-                                                   in g.cases]}
-                                        for g in s.groups]}
-                            for s in self.subtasks]}),
-                      time_limit=float(self._timelimit),
-                      memory_limit=self._memorylimit
-                      )
-
-        # Add test cases
-        for c in self.cases:
-            input_digest = file_cacher.put_file_from_path(
-                os.path.join(self.wdir, c.infile),
-                "Input %s for task %s" % (c.codename, self.name))
-            output_digest = file_cacher.put_file_from_path(
-                os.path.join(self.wdir, c.outfile),
-                "Output %s for task %s" % (c.codename, self.name))
-            tcdb = None
-            tcdb = Testcase(codename=c.codename,
-                            input=input_digest,
-                            output=output_digest,
-                            public=c.public)
-            ddb.testcases[c.codename] = tcdb
-
-        # Add managers
-        for name, file in self.managers.iteritems():
-            digest = file_cacher.put_file_from_path(
-                file,
-                "Manager %s for task %s" % (name, self.name))
-            ddb.managers[name] = Manager(filename=name, digest=digest)
-
-        return ddb
+        return sdbs
 
     def _makesubmission(self, submission, participation, tdb):
         """
@@ -1472,7 +1479,8 @@ class TaskConfig(CommonConfig, Scope):
         # Create submission object
         sdb = Submission(timestamp=datetime.utcnow(),
                          language=submission_lang,
-                         participation=participation)
+                         participation=participation,
+                         comment="%s" % (", ".join(os.path.basename(f) for f in files)))
         sdb.task = tdb
         sdb.timestamp = datetime.utcnow()
         sdb.language = submission_lang
@@ -1483,9 +1491,8 @@ class TaskConfig(CommonConfig, Scope):
                 our_filename = os.path.basename(f)
             digest = self.file_cacher.put_file_from_path(
                 f,
-                "Submission file %s sent by %s at %d." %
-                (our_filename, participation.user.username,
-                    make_timestamp(sdb.timestamp)))
+                "Test submission %s." %
+                (os.path.basename(f) for f in files))
             sdb.files[our_filename] = File(our_filename, digest,
                                            submission=sdb)
 

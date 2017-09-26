@@ -199,7 +199,7 @@ class SubtaskGroup(ScoreType):
     <div class="subtask correct">
         <div class="subtask-head">
             <span class="title" style="margin-top:-2px">
-                Public score 
+                Public score
             </span>
             <span class="score">
                 ———
@@ -320,26 +320,26 @@ class SubtaskGroup(ScoreType):
                                  if c["verdict"][0] == 42 else \
                                  "unit_test_ok" if c["verdict"][0] > 0 else \
                                  "unit_test_failed"}}">
-                                 
+
             {% set x = c["verdict"][1].split(chr(10)) %}
-            {% for i,t in enumerate(x) %}                                
+            {% for i,t in enumerate(x) %}
                         {{t}}
                 {% if i < len(x) - 1 %}
                         <br>
-                {% end %}            
+                {% end %}
             {% end %}
                     </td>
             {% if first %}
                     <td rowspan={{len(g["cases"])}}
                      class="{{"unit_test_ok" if g["verdict"][0] > 0 else \
                               "unit_test_failed"}}">
-                        
+
                 {% set x = g["verdict"][1].split(chr(10)) %}
-                {% for i,t in enumerate(x) %}                                
+                {% for i,t in enumerate(x) %}
                         {{t}}
                     {% if i < len(x) - 1 %}
                         <br>
-                    {% end %}            
+                    {% end %}
                 {% end %}
                     </td>
             {% end %}
@@ -363,7 +363,7 @@ class SubtaskGroup(ScoreType):
 
         public = submission_info.get("expected_public_score", 0)
         private = submission_info.get("expected_score", 0)
-        
+
         if self.feedback() == "partial":
             public = submission_info.get("expected_partial_score", 0)
 
@@ -528,15 +528,15 @@ class SubtaskGroup(ScoreType):
         extra = []
         subtasks_failed = False
 
-        for subtask in self.parameters["tcinfo"]:       
+        for subtask in self.parameters["tcinfo"]:
             subtasks.append({"name": subtask["name"], "groups": []})
-            
+
             # There are no expectations for partial feedback subtasks
             if subtask["partial"]:
                 possible_subtask = []
             else:
                 possible_subtask = expectations[tuple(subtask["key"])]
-                
+
             group_score = 0
 
             worst_group = (1, "okay")
@@ -547,7 +547,7 @@ class SubtaskGroup(ScoreType):
                     possible_group = []
                 else:
                     possible_group = expectations[tuple(g["key"])]
-                
+
                 possible = possible_task + possible_subtask + possible_group
 
                 subtasks[-1]["groups"].append({"verdict": (42, ""),

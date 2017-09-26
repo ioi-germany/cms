@@ -9,7 +9,7 @@
         <title> Overview of Available Tasks </title>
 
         <link rel="stylesheet" href="static/css/bootstrap.css">
-        <link rel="stylesheet" href="static/cws_style.css">
+        <link rel="stylesheet" href="static/css/cws_style.css">
         <link rel="stylesheet" href="static/css/over_style.css">
         <link rel="stylesheet" href="static/css/download.css">
         <link rel="stylesheet" href="static/css/slider.css">
@@ -17,7 +17,7 @@
         <link rel="stylesheet" href="static/css/tags.css">
         <link rel="stylesheet" href="static/css/rangeslider.css">
         <link rel="stylesheet" href="static/css/checkbox.css">
-        
+
         <script src="static/jq/jquery-1.7.1.min.js"></script>
         <script src="static/js/slider.js"></script>
         <script src="static/js/dateslider.js"></script>
@@ -25,8 +25,8 @@
         <script src="static/js/modal.js"></script>
         <script src="static/js/download.js"></script>
         <script src="static/js/overview.js"></script>
-        
-        <script>       
+
+        <script>
             var __url_root = ".";
             var entries = {% raw json.dumps(TaskInfo.entries()) %};
             var desc = {% raw json.dumps(TaskInfo.desc()) %};
@@ -35,27 +35,27 @@
                              impl_diff:    { lower: 0, upper: 10 },
                              show_public:  true,
                              show_private: true,
-                             only_before:  Infinity };      
-            
+                             only_before:  Infinity };
+
             function open_col_select()
             {
                 open_modal('col-select');
-                
+
                 for(var i = 0; i < entries.length; ++i)
                     window.document.getElementById("col-" + entries[i]).checked = show_col[entries[i]];
             }
-            
+
             function apply_col_select()
             {
                 close_modal('col-select');
-                
+
                 for(var i = 0; i < entries.length; ++i)
                     show_col[entries[i]] = window.document.getElementById("col-" + entries[i]).checked;
                 update();
                 //update_table(entries, desc, show_col, criteria);
 
             }
-            
+
             function open_row_select()
             {
                 open_modal('row-select');
@@ -64,11 +64,11 @@
                 range_slider_set("alg-diff", criteria.alg_diff.lower, criteria.alg_diff.upper);
                 range_slider_set("impl-diff", criteria.impl_diff.lower, criteria.impl_diff.upper);
             }
-            
+
             function apply_row_select()
             {
                 close_modal('row-select');
-                
+
                 criteria.alg_diff = range_slider_get("alg-diff");
                 criteria.impl_diff = range_slider_get("impl-diff");
                 criteria.show_public = window.document.getElementById("public").checked;
@@ -77,14 +77,14 @@
 
                 update();
             }
-                 
+
             function init()
             {
                 if(__url_root[__url_root.length - 1] == '/')
                     __url_root = __url_root.substring(0, __url_root.length - 1);
 
                 update(true, true);
-            
+
                 for(var i = 0; i < entries.length; ++i) show_col[entries[i]] = true;
 
                 init_range_sliders();
@@ -92,17 +92,17 @@
                 close_modal('col-select');
                 close_modal('row-select');
                 close_modal('error');
-                
+
                 window.setInterval(function() { if(!is_modal_opened()) update(); }, 5000);
             }
-            
+
             window.addEventListener("load", init);
         </script>
     </head>
-    
+
     <body>
         <iframe id="fr-download-helper" src="./static/dummy.html" style="display:none"></iframe>
-    
+
         <div class="modal-backdrop invisible" id="modal-backdrop"></div>
         <div class="navbar header">
             <div class="navbar-inner header-inner">
@@ -116,15 +116,15 @@
                         <button class="btn btn-primary btn-large" onclick="open_col_select()">
                             Select columns
                         </button>
-                        
+
                         <button class="btn btn-primary btn-large" onclick="open_row_select()">
                             Add/Remove Search Criteria
-                        </button> 
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <div class="modal wide" id="error-dialog">
             <div class="modal-header">
                 <button type="button" class="close" onClick="close_modal('error')">&#xD7;</button>
@@ -134,10 +134,10 @@
                 <p>
                 I'm sorry, but I couldn't compile the statement for task <span id="task-name" class="task-name">???</span>. Maybe the information below helps:
                 </p>
-            
+
                 <h6> Error message received from server </h6>
                 <pre class="short"><code id="error-msg"></code></pre>
-                
+
                 <h6> Compilation log </h6>
                 <pre class="short"><code id="error-log"></code></pre>
             </div>
@@ -146,7 +146,7 @@
                 <button class="btn btn-secondary" onClick="close_modal('error')">Exit</button>
             </div>
         </div>
-        
+
         <div class="modal wide" id="col-select-dialog">
             <div class="modal-header unselectable">
                 <button type="button" class="close" onClick="close_modal('col-select')">&#xD7;</button>
@@ -168,7 +168,7 @@
                                     </div>
                                 {% end %}
                                 </div>
-                                
+
                                 <div>
                                 {% for key in TaskInfo.entries()[len(TaskInfo.entries()) / 2:] %}
                                     <div class="checkbox">
@@ -189,16 +189,16 @@
                     <button class="btn btn-secondary" onClick="close_modal('col-select')">Cancel</button>
             </div>
         </div>
-        
+
         <div class="modal wide unselectable" id="row-select-dialog">
             <div class="modal-header">
                 <button type="button" class="close" onClick="close_modal('row-select')">&#xD7;</button>
                 <h3>Add/Remove Search Criteria</h3>
             </div>
             <div class="modal-body">
-                <form name="row-select">  
-                    <div class="control-table">     
-                        <div class="two-cols">            
+                <form name="row-select">
+                    <div class="control-table">
+                        <div class="two-cols">
                             <div>
                                 <div class="control-panel">
                                     <h6> Algorithmic Difficulty </h6>
@@ -219,7 +219,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                             <div>
                                 <div class="control-panel">
                                     <h6> Last used </h6>
@@ -228,20 +228,20 @@
                                     </div>
                                 </div>
                             </div>
-            
+
                             <div>
                                 <div class="control-panel">
                                     <h6> Public vs. private </h6>
                                     <div class="mini-table">
                                         <div class="two-cols">
                                             <div class="checkbox">
-                                                <input type="checkbox" id="private" value="private" checked>                                        
+                                                <input type="checkbox" id="private" value="private" checked>
                                                 <label for="private">
                                                     Show private tasks
                                                 </label>
                                             </div>
                                             <div class="checkbox">
-                                                <input type="checkbox" id="public" value="public" checked>                                        
+                                                <input type="checkbox" id="public" value="public" checked>
                                                 <label for="public">
                                                     Show public tasks
                                                 </label>
@@ -250,7 +250,7 @@
                                     </div>
                                 </div>
                             </div>
-                       
+
                 </form>
             </div>
             <div class="modal-footer">
@@ -258,11 +258,11 @@
                     <button class="btn btn-secondary" onclick="close_modal('row-select')">Cancel</button>
             </div>
         </div>
-        
+
         <table class="table table-bordered overview" id="overview">
             <!-- data insert via javascript:fill_table() -->
         </table>
-        
+
         <div id = "json-errors" class="alert alert-block alert-error notification json-info no-errors">
             <h4 class="alert-heading"> WARNING! </h4>
             <p style="margin-top:5px;"> The info.json files for the following tasks have issues:</p>

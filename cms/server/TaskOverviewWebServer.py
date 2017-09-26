@@ -101,7 +101,7 @@ class TaskOverviewWebServer:
                     (r"/download/(.*)", DownloadHandler)]
 
         params = {"template_path": resource_filename("cms.server",
-                                                     "templates/overview"),
+                                                     "taskoverview/templates"),
                   "static_path":   resource_filename("cms.server", "taskoverview/static")}
 
         repository = Repository(config.task_repository, config.auto_sync)
