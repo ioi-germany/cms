@@ -100,7 +100,7 @@ class Group(Base):
         Integer,
         ForeignKey(Contest.id,
                    onupdate="CASCADE", ondelete="CASCADE"),
-        #nullable=False,
+        # nullable=False,
         index=True)
     contest = relationship(
         Contest,

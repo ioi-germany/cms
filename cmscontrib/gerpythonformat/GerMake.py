@@ -76,7 +76,8 @@ class GerMake:
                 # We're not putting the test user on any team for testing
                 # (shouldn't be needed).
                 test_pdb = contestconfig._makeparticipation(
-                    contestconfig._mytestuser.username, cdb, test_udb, test_gdb, None)
+                    contestconfig._mytestuser.username, cdb,
+                    test_udb, test_gdb, None)
                 for t in contestconfig.tasks.values():
                     tdb = t._makedbobject(cdb, file_cacher)
                     t._make_test_submissions(test_pdb, tdb, self.local_test)

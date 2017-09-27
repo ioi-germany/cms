@@ -174,8 +174,8 @@ class ContestConfig(CommonConfig):
         total (int): maximum number of tokens the user can use in total
 
         """
-        return ("token", TaskConfig.tokens, gen_initial, gen_number, gen_interval,
-                gen_max, min_interval, max_number)
+        return ("token", TaskConfig.tokens, gen_initial, gen_number,
+                gen_interval, gen_max, min_interval, max_number)
 
     @exported_function
     def load_template(self, name, **kwargs):
@@ -381,7 +381,8 @@ class ContestConfig(CommonConfig):
 
     def _task(self, s, feedback, minimal):
         """
-        Add a task to this contest (full version, not accessible from config.py).
+        Add a task to this contest (full version, not accessible from
+        config.py).
 
         s (unicode): task name; the task description has to reside in the
                      folder with the same name
@@ -506,7 +507,7 @@ class ContestConfig(CommonConfig):
 
         gdbs = {}
         for g in self.groups:
-            gdbs[g] = gdb = self._makegroup(g, cdb)
+            gdbs[g] = self._makegroup(g, cdb)
         cdb.main_group = gdbs[self.defaultgroup.name]
 
         return cdb

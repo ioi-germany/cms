@@ -378,22 +378,25 @@ class AddGroupHandler(BaseHandler):
             return
 
         self.try_commit()
-        self.redirect(self.url("contest", contest_id, "group", group.id, "edit"))
+        self.redirect(self.url("contest", contest_id,
+                               "group", group.id, "edit"))
 
 
 class RemoveGroupHandler(BaseHandler):
-    """Delete actually removes the group from CMS assuming it contains no participations.
+    """Delete actually removes the group from CMS assuming it contains no
+    participations.
 
     """
     @require_permission(BaseHandler.PERMISSION_ALL)
     def delete(self, group_id):
-        fallback_page = self.url("contest", group.contest_id, "groups")
-
         group = self.safe_get_item(User, group_id)
+
+        fallback_page = self.url("contest", group.contest_id, "groups")
 
         if len(group.participations) != 0:
             self.application.service.add_notification(
-                make_datetime(), "Cannot delete group because it contains users.")
+                make_datetime(),
+                "Cannot delete group because it contains users.")
             self.redirect(fallback_page)
             return
 
@@ -419,7 +422,8 @@ class GroupHandler(BaseHandler):
 
     @require_permission(BaseHandler.PERMISSION_ALL)
     def post(self, contest_id, group_id):
-        fallback_page = self.url("contest", contest_id, "group", group_id, "edit")
+        fallback_page = self.url("contest", contest_id,
+                                 "group", group_id, "edit")
 
         self.contest = self.safe_get_item(Contest, contest_id)
         group = self.safe_get_item(Group, group_id)

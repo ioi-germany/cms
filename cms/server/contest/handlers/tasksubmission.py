@@ -35,6 +35,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import io
+import json
 import logging
 import os
 import pickle
@@ -479,7 +480,8 @@ class SubmissionStatusHandler(ContestHandler):
             else:
                 if score_type.max_public_score > 0:
                     data["max_public_score"] = \
-                        round(score_type.max_public_score, task.score_precision)
+                        round(score_type.max_public_score,
+                              task.score_precision)
                     data["public_score"] = \
                         round(sr.public_score, task.score_precision)
                     data["public_score_message"] = score_type.format_score(

@@ -268,9 +268,13 @@ class Communication(TaskType):
             args = []
             if num_processes != 1:
                 args.append(str(i))
+            if self.parameters[0] == "grader":
+                main = "stub"
+            else:
+                main = executable_filename
             commands = language.get_evaluation_commands(
                 executable_filename,
-                main="stub" if self.parameters[0] == "grader" else executable_filename,
+                main=main,
                 args=args)
             user_allow_dirs = [fifo_dir[i]]
             # Assumes that the actual execution of the user solution

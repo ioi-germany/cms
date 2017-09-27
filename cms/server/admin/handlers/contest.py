@@ -128,14 +128,8 @@ class ContestHandler(SimpleContestHandler("contest.html")):
             self.get_string(attrs, "timezone", empty=None)
             self.get_int(attrs, "score_precision")
 
-            try:
-                main_group_id = self.get_argument("main_group_id")
-                assert main_group_id != "null", "Please select a valid main group"
-            except Exception as error:
-                self.application.service.add_notification(
-                    make_datetime(), "Invalid field(s)", repr(error))
-                self.redirect(fallback_page)
-                return
+            main_group_id = self.get_argument("main_group_id")
+            assert main_group_id != "null", "Please select a valid main group"
 
             attrs["main_group"] = self.safe_get_item(Group, main_group_id)
 

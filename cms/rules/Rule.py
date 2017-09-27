@@ -195,19 +195,19 @@ class RuleResult(object):
         # only has a precision of 1 second. But on all systems, it returns a
         # floating point number and has therefore rounding errors!
 
-        #filename = os.path.abspath(filename)
-        #hasher = hashlib.sha256()
-        #hasher.update(json.dumps({'type': 'filehash',
-                                  #'file': filename,
-                                  #'ctime': os.path.getctime(filename)}))
-        #hashfile = os.path.join(self.rulesdir, hasher.hexdigest())
-        #if os.path.exists(hashfile):
-            #return readfile(hashfile)
-        #else:
-            #hash_ = compute_file_hash(filename)
-            #with io.open(hashfile, 'wb') as f:
-                #f.write(hash_)
-            #return hash_
+        # filename = os.path.abspath(filename)
+        # hasher = hashlib.sha256()
+        # hasher.update(json.dumps({'type': 'filehash',
+        #                           'file': filename,
+        #                           'ctime': os.path.getctime(filename)}))
+        # hashfile = os.path.join(self.rulesdir, hasher.hexdigest())
+        # if os.path.exists(hashfile):
+        #     return readfile(hashfile)
+        # else:
+        #     hash_ = compute_file_hash(filename)
+        #     with io.open(hashfile, 'wb') as f:
+        #         f.write(hash_)
+        #     return hash_
 
     def add_dependency(self, filename):
         """Add a file using its current hash value.

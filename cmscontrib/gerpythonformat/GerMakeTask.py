@@ -47,7 +47,7 @@ class GerMakeTask:
         self.clean = clean
 
     def prepare(self):
-         # Unset stack size limit
+        # Unset stack size limit
         resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,
                                                    resource.RLIM_INFINITY))
 
@@ -70,8 +70,9 @@ class GerMakeTask:
 
         try:
             with chdir(self.wdir):
-                contestconfig = ContestConfig(os.path.join(self.wdir, ".rules"),
-                                              "hidden contest", minimal=self.minimal)
+                contestconfig = \
+                    ContestConfig(os.path.join(self.wdir, ".rules"),
+                                  "hidden contest", minimal=self.minimal)
                 copyifnecessary(os.path.join(contestconfig._get_ready_dir(),
                                              "contest-template.py"),
                                 os.path.join(self.wdir, "c.py"))
@@ -88,7 +89,8 @@ class GerMakeTask:
                     # We're not putting the test user on any team for testing
                     # (shouldn't be needed).
                     test_pdb = contestconfig._makeparticipation(
-                        contestconfig._mytestuser.username, cdb, test_udb, test_gdb, None)
+                        contestconfig._mytestuser.username, cdb,
+                        test_udb, test_gdb, None)
                     for t in contestconfig.tasks.values():
                         tdb = t._makedbobject(cdb, file_cacher)
                         t._make_test_submissions(

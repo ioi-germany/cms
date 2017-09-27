@@ -56,8 +56,9 @@ class TaskCompileHandler(RequestHandler):
 class DownloadHandler(RequestHandler):
     def share(self, statement, code):
         self.set_header("Content-Type", "application/pdf")
-        self.set_header("Content-Disposition",
-                        "attachment;filename=\"statement-{}.pdf\"".format(code))
+        self.set_header(
+            "Content-Disposition",
+            "attachment;filename=\"statement-{}.pdf\"".format(code))
         self.write(statement)
         self.flush()
 
@@ -102,7 +103,8 @@ class TaskOverviewWebServer:
 
         params = {"template_path": resource_filename("cms.server",
                                                      "taskoverview/templates"),
-                  "static_path":   resource_filename("cms.server", "taskoverview/static")}
+                  "static_path":   resource_filename("cms.server",
+                                                     "taskoverview/static")}
 
         repository = Repository(config.task_repository, config.auto_sync)
 

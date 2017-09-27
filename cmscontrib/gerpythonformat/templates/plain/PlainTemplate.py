@@ -187,7 +187,7 @@ class PlainTemplate(Template):
                r"constr@int__#1__#2__\endcsname}" + "\n"
 
         res += self.make_scoped_constraints(0, task.constraints)
-        for i, s in enumerate([s for s in task.subtasks if not s.public]):
+        for i, s in enumerate([s2 for s2 in task.subtasks if not s2.public]):
             res += self.make_scoped_constraints(i + 1, s.constraints)
 
         return res

@@ -23,10 +23,11 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from .ContestConfig import ContestConfig
-from .CommonConfig import DatabaseProxyContest, DatabaseProxy
 from .LocationStack import chdir
 from cms import utf8_decoder, ServiceCoord
-from cms.db import SessionGen, Contest, User, Participation, Group, Task, Dataset, Submission, Team, Testcase, Manager, Attachment, SubmissionFormatElement, Statement
+from cms.db import Attachment, Contest, Dataset, Group, Manager, \
+    Participation, SessionGen, Statement, Submission, \
+    SubmissionFormatElement, Task, Team, Testcase, User
 from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 from cmscontrib import BaseImporter, _is_rel
@@ -90,7 +91,8 @@ class GerImport(BaseImporter, Service):
 
         return old_object
 
-    def _update_dict(self, old_value, new_value, delete=True, creator_function=None):
+    def _update_dict(self, old_value, new_value, delete=True,
+                     creator_function=None):
         old_keys = set(old_value.keys())
         new_keys = set(new_value.keys())
         # delete
@@ -151,9 +153,6 @@ class GerImport(BaseImporter, Service):
         self._update_columns(old_object, new_object)
 
         for prp in old_object._rel_props:
-            old_value = getattr(old_object, prp.key)
-            new_value = getattr(new_object, prp.key)
-
             if _is_rel(prp, User.participations):
                 pass
             else:
@@ -165,9 +164,6 @@ class GerImport(BaseImporter, Service):
         self._update_columns(old_object, new_object)
 
         for prp in old_object._rel_props:
-            old_value = getattr(old_object, prp.key)
-            new_value = getattr(new_object, prp.key)
-
             if _is_rel(prp, Group.contest):
                 pass
             elif _is_rel(prp, Group.participations):
@@ -181,9 +177,6 @@ class GerImport(BaseImporter, Service):
         self._update_columns(old_object, new_object)
 
         for prp in old_object._rel_props:
-            old_value = getattr(old_object, prp.key)
-            new_value = getattr(new_object, prp.key)
-
             if _is_rel(prp, Contest.announcements):
                 pass
             elif _is_rel(prp, Contest.tasks):
@@ -202,9 +195,11 @@ class GerImport(BaseImporter, Service):
         old_groups = {g.name: g for g in old_object.groups}
         new_groups = {g.name: g for g in new_object.groups}
         self._update_dict(old_groups, new_groups, delete=True,
-                          creator_function=lambda _, v: old_object.groups.append(v))
+                          creator_function=lambda _, v:
+                              old_object.groups.append(v))
 
-        if old_object.main_group is None or old_object.main_group.name != new_object.main_group.name:
+        if old_object.main_group is None or \
+                old_object.main_group.name != new_object.main_group.name:
             old_object.main_group = old_object.get_group(
                 new_object.main_group.name)
 
@@ -212,16 +207,12 @@ class GerImport(BaseImporter, Service):
         self._update_columns(old_object, new_object)
 
         for prp in old_object._rel_props:
-            old_value = getattr(old_object, prp.key)
-            new_value = getattr(new_object, prp.key)
-
             if _is_rel(prp, Participation.contest):
                 pass
             elif _is_rel(prp, Participation.user):
                 pass
             elif _is_rel(prp, Participation.group):
-                old_object.group = old_object.contest.get_group(
-                    new_object.group.name)
+                pass
             elif _is_rel(prp, Participation.team):
                 pass
             elif _is_rel(prp, Participation.messages):
@@ -238,6 +229,7 @@ class GerImport(BaseImporter, Service):
                 raise RuntimeError(
                     "Unknown type of relationship for %s.%s." %
                     (prp.parent.class_.__name__, prp.key))
+        old_object.group = old_object.contest.get_group(new_object.group.name)
 
     def _update_task(self, old_object, new_object):
         self._update_columns(old_object, new_object)
@@ -271,7 +263,8 @@ class GerImport(BaseImporter, Service):
         new_datasets = {g.description: g for g in new_object.datasets}
         assert len(new_datasets) == 1
         self._update_dict(old_datasets, new_datasets, delete=False,
-                          creator_function=lambda _, v: old_object.datasets.append(v))
+                          creator_function=lambda _, v:
+                              old_object.datasets.append(v))
 
     def _update_dataset(self, old_object, new_object):
         self._update_columns(old_object, new_object)
@@ -295,9 +288,6 @@ class GerImport(BaseImporter, Service):
         self._update_columns(old_object, new_object)
 
         for prp in old_object._rel_props:
-            old_value = getattr(old_object, prp.key)
-            new_value = getattr(new_object, prp.key)
-
             if _is_rel(prp, Team.participations):
                 pass
             else:
@@ -330,7 +320,8 @@ class GerImport(BaseImporter, Service):
 
             with SessionGen() as session:
                 # Create users in the database.
-                # FIXME This has running time proportional to the total number of users, not just the number of users for this contest.
+                # FIXME This has running time proportional to the total number
+                # of users, not just the number of users for this contest.
                 udbs = {u: contestconfig._makeuser(
                     u) for u in contestconfig.users}
                 udb1s = {u.username: u for u in session.query(User).all()}
@@ -367,11 +358,17 @@ class GerImport(BaseImporter, Service):
                         return None
                     else:
                         return teamdb1s[t.code]
-                pdbs = {u: contestconfig._makeparticipation(u, cdb, udbs[u], cdb.get_group(
-                    contestconfig.users[u].group.name), user_team(u)) for u in contestconfig.users}
+
+                def make_participation(u):
+                    gdb = cdb.get_group(contestconfig.users[u].group.name)
+                    return contestconfig._makeparticipation(u, cdb, udbs[u],
+                                                            gdb, user_team(u))
+
+                pdbs = {u: make_participation(u) for u in contestconfig.users}
                 pdb1s = {p.user.username: p for p in cdb1.participations}
-                self._update_dict(
-                    pdb1s, pdbs, delete=True, creator_function=lambda _, v: cdb1.participations.append(v))
+                self._update_dict(pdb1s, pdbs, delete=True,
+                                  creator_function=lambda _, v:
+                                      cdb1.participations.append(v))
                 for username, u in pdb1s.iteritems():
                     u.user = udb1s[username]
                     u.group = cdb1.get_group(
@@ -383,23 +380,27 @@ class GerImport(BaseImporter, Service):
                 test_pdb1 = pdb1s[contestconfig._mytestuser.username]
 
                 # FIXME
-                # This is an ugly hack to prevent problems when reordering or adding tasks.
-                # Since we delete after adding and updating, there might otherwise at one point be two tasks with the same number.
+                # This is an ugly hack to prevent problems when reordering or
+                # adding tasks. Since we delete after adding and updating,
+                # there might otherwise at one point be two tasks with the same
+                # number.
                 for t in cdb1.tasks:
                     t.num += len(contestconfig.tasks) + len(cdb1.tasks)
                 session.flush()
                 tdbs = {n: t._makedbobject(cdb, self.file_cacher)
                         for n, t in contestconfig.tasks.iteritems()}
                 tdb1s = {t.name: t for t in cdb1.tasks}
-                # We only set the active dataset when importing a new task
-                # Afterwards, the active dataset has to be set using the web interface.
+                # We only set the active dataset when importing a new task.
+                # Afterwards, the active dataset has to be set using the web
+                # interface.
 
                 def task_creator(name, v):
                     tdb = tdbs[name]
                     cdb1.tasks.append(v)
                     ddb1 = session.query(Dataset) \
                         .filter(Dataset.task == v) \
-                        .filter(Dataset.description == tdb.active_dataset.description).first()
+                        .filter(Dataset.description ==
+                                tdb.active_dataset.description).first()
                     assert ddb1 is not None
                     v.active_dataset = ddb1
                 self._update_dict(tdb1s, tdbs, delete=True,

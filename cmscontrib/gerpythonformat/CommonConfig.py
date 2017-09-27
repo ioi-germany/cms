@@ -25,7 +25,6 @@ from __future__ import unicode_literals
 from .Messenger import print_msg, print_block, header
 from .Executable import CPPProgram, InternalPython, ExternalScript, \
     ExternalPython, keyword_list
-from cms.db import Group
 from cms.rules.Rule import LaTeXRule, CommandRule
 from .Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
 import inspect
@@ -49,56 +48,6 @@ def exported_function(f):
         f.__doc__ = ""
     f.__doc__ = "@exported_function\n\n" + f.__doc__
     return f
-
-
-class DatabaseProxy(object):
-    _initialized = False
-
-    def __init__(self, obj):
-        self._obj = obj
-        self._initialized = True
-
-    def __getattr__(self, name):
-        return getattr(self._obj, name)
-
-    def __setattr__(self, name, value):
-        if not self._initialized:
-            return dict.__setattr__(self, name, value)
-        elif name in self.__dict__:
-            return dict.__setattr__(self, name, value)
-        prev_value = getattr(self._obj, name)
-        if prev_value != value:
-            logger.info("Changing {} from {} to {}".format(
-                name, prev_value, value))
-            setattr(self._obj, name, value)
-
-
-class DatabaseProxyContest(DatabaseProxy):
-    def __init__(self, obj):
-        self._prevgroups = {g.name: g for g in obj.groups}
-        self._curgroups = set()
-        super(DatabaseProxyContest, self).__init__(obj)
-
-    def group(self, name):
-        self._curgroups.add(name)
-        logger.info("Group {}".format(name))
-        try:
-            return DatabaseProxy(self._prevgroups[name])
-        except KeyError:
-            logger.info("Adding group {}".format(name))
-            return Group(name=name)
-
-    def set_main_group(self, group):
-        if self._obj.main_group.name != group.name:
-            logger.info("Changing main_group from {} to {}".format(
-                name, self.main_group.name, group.name))
-            self._obj.main_group = group
-
-    def __setattr__(self, name, value):
-        if name == "main_group":
-            return self.set_main_group(value)
-        else:
-            return super(DatabaseProxyContest, self).__setattr__(name, value)
 
 
 class Supplement(object):

@@ -74,8 +74,8 @@ class TaskCompileJob:
 
             with balancer:
                 try:
-                    comp = GerMakeTask(
-                        repository.path, self.name, True, True, None, False, False)
+                    comp = GerMakeTask(repository.path, self.name, True, True,
+                                       None, False, False)
 
                     with repository:
                         comp.prepare()
@@ -179,16 +179,16 @@ class TaskFetch:
 
     @staticmethod
     def compile(name):
-        if not name in TaskInfo.tasks:
+        if name not in TaskInfo.tasks:
             raise KeyError("No such task")
-        if not name in TaskFetch.jobs:
+        if name not in TaskFetch.jobs:
             TaskFetch.jobs[name] = TaskCompileJob(TaskFetch.repository, name,
                                                   TaskFetch.balancer)
         return TaskFetch.jobs[name].join()
 
     @staticmethod
     def query(name, handle):
-        if not name in TaskFetch.jobs:
+        if name not in TaskFetch.jobs:
             return {"error": True,
                     "done":  True,
                     "msg":   "I couldn't find your compile job. Usually this "

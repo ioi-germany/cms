@@ -38,7 +38,8 @@ import logging
 
 import tornado.web
 
-from cms.db import Contest, Group, Message, Participation, Submission, User, Team
+from cms.db import Contest, Group, Message, Participation, Submission, User, \
+    Team
 from cmscommon.datetime import make_datetime
 
 from .base import BaseHandler, require_permission
@@ -160,7 +161,8 @@ class AddContestUserHandler(BaseHandler):
         group = self.safe_get_item(Group, group_id)
 
         # Create the participation.
-        participation = Participation(contest=self.contest, user=user, group=group)
+        participation = Participation(contest=self.contest,
+                                      user=user, group=group)
         self.sql_session.add(participation)
 
         if self.try_commit():

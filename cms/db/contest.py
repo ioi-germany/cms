@@ -31,7 +31,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from sqlalchemy.schema import Column, ForeignKey, CheckConstraint
 from sqlalchemy.types import Integer, Unicode, DateTime, Interval, Enum, \
@@ -227,7 +227,7 @@ class Contest(Base):
         Integer,
         ForeignKey("group.id", use_alter=True, name="fk_contest_main_group_id",
                    onupdate="CASCADE", ondelete="SET NULL"),
-        #nullable=False,  # This would fail with post_update=True.
+        # nullable=False,  # This would fail with post_update=True.
         index=True)
     main_group = relationship(
         "Group",

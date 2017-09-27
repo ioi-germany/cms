@@ -39,7 +39,6 @@ from cms.grading.languagemanager import filename_to_language
 from cms.grading.Job import CompilationJob, EvaluationJob
 from cms.rules.Rule import JobRule, ZipRule
 from cms.service.esoperations import ESOperation
-from cmscommon.datetime import make_timestamp
 from datetime import datetime
 import json
 import os
@@ -1440,7 +1439,8 @@ class TaskConfig(CommonConfig, Scope):
 
         submission (MySubmission): configuration object for this submission
 
-        participation (Participation): database object for the test participation
+        participation (Participation): database object for the test
+                                       participation
 
         tdb (Task): database object for the task
 
@@ -1495,10 +1495,11 @@ class TaskConfig(CommonConfig, Scope):
                     submission_lang = lang
 
         # Create submission object
-        sdb = Submission(timestamp=datetime.utcnow(),
-                         language=submission_lang,
-                         participation=participation,
-                         comment="%s" % (", ".join(os.path.basename(f) for f in files)))
+        sdb = Submission(
+            timestamp=datetime.utcnow(),
+            language=submission_lang,
+            participation=participation,
+            comment="%s" % (", ".join(os.path.basename(f) for f in files)))
         sdb.task = tdb
         sdb.timestamp = datetime.utcnow()
         sdb.language = submission_lang
@@ -1568,7 +1569,8 @@ class TaskConfig(CommonConfig, Scope):
                 print_block(submission_result.compilation_stderr)
             # Evaluate
             for testcase_codename in sorted(ddb.testcases.iterkeys()):
-                evaluation_operation = ESOperation(ESOperation.EVALUATION, -1, -1,
+                evaluation_operation = ESOperation(ESOperation.EVALUATION,
+                                                   -1, -1,
                                                    testcase_codename)
                 evaluation_job = EvaluationJob.from_submission(
                     evaluation_operation,
