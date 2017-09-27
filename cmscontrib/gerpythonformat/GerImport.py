@@ -26,7 +26,7 @@ from .ContestConfig import ContestConfig
 from .CommonConfig import DatabaseProxyContest, DatabaseProxy
 from .LocationStack import chdir
 from cms import utf8_decoder, ServiceCoord
-from cms.db import SessionGen, Contest, User, Participation, Group, Task, Dataset, Submission, Team
+from cms.db import SessionGen, Contest, User, Participation, Group, Task, Dataset, Submission, Team, Testcase, Manager, Attachment, SubmissionFormatElement, Statement
 from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 from cmscontrib import BaseImporter, _is_rel
@@ -51,11 +51,17 @@ class GerImport(BaseImporter, Service):
 
         Service.__init__(self)
 
-    # Copy scalar properties from new_object to old_object.
-    def _update_columns(self, old_object, new_object):
+    def _update_columns(self, old_object, new_object, ignore=None):
+        ignore = ignore if ignore is not None else set()
         for prp in old_object._col_props:
+            if prp.key in ignore:
+                continue
             if hasattr(new_object, prp.key):
-                setattr(old_object, prp.key, getattr(new_object, prp.key))
+                old_value = getattr(old_object, prp.key)
+                new_value = getattr(new_object, prp.key)
+                if old_value != new_value:
+                    logger.info("Changing {} from {} to {}".format(prp.key, old_value, new_value))
+                    setattr(old_object, prp.key, getattr(new_object, prp.key))
 
     # Create a recursive copy of a database object.
     # Subobjects contained in a dict or list relation are copied recursively.
@@ -83,25 +89,32 @@ class GerImport(BaseImporter, Service):
 
         return old_object
 
-    def _update_dict(self, old_value, new_value):
+    def _update_dict(self, old_value, new_value, delete=True, creator_function=None):
         old_keys = set(old_value.keys())
         new_keys = set(new_value.keys())
         # delete
-        for key in old_keys - new_keys:
-            self.to_delete.append(old_value[key])
+        if delete:
+            for key in sorted(old_keys - new_keys):
+                logger.info("Deleting {} {}".format(type(old_value[key]).__name__, key))
+                self.to_delete.append(old_value[key])
         # create
-        for key in new_keys - old_keys:
-            old_value[key] = self._copy(new_value[key])
+        for key in sorted(new_keys - old_keys):
+            logger.info("Creating {} {}".format(type(new_value[key]).__name__, key))
+            v = self._copy(new_value[key])
+            old_value[key] = v
+            if creator_function is not None:
+                creator_function(key, v)
         # update
-        for key in new_keys & old_keys:
-            self._update_object(old_value[key], new_value[key])  # TODO Do we always want default behavior?
+        for key in sorted(new_keys & old_keys):
+            logger.info("Updating {} {}".format(type(old_value[key]).__name__, key))
+            self._update_dispatcher(old_value[key], new_value[key])
 
     def _update_list(self, old_value, new_value):
         old_len = len(old_value)
         new_len = len(new_value)
         # update
         for i in xrange(min(old_len, new_len)):
-            self._update_object(old_value[i], new_value[i])  # TODO Do we always want default behavior?
+            self._update_dispatcher(old_value[i], new_value[i])
         if old_len > new_len:
             # delete
             for v in old_value[new_len:]:
@@ -110,6 +123,24 @@ class GerImport(BaseImporter, Service):
             # create
             for v in new_value[old_len:]:
                 old_value.append(self._copy(v))
+
+    def _update_dispatcher(self, old_value, new_value):
+        bla = {# Custom update
+               User : self._update_user,
+               Group : self._update_group,
+               Contest : self._update_contest,
+               Participation : self._update_participation,
+               Task : self._update_task,
+               Dataset : self._update_dataset,
+               Team : self._update_team,
+               # Default update
+               Testcase : self._update_object,
+               Manager : self._update_object,
+               Attachment : self._update_object,
+               SubmissionFormatElement : self._update_object,
+               Statement : self._update_object,
+               }
+        bla[type(old_value)](old_value, new_value)
 
     def _update_user(self, old_object, new_object):
         self._update_columns(old_object, new_object)
@@ -155,28 +186,17 @@ class GerImport(BaseImporter, Service):
             elif _is_rel(prp, Contest.participations):
                 pass
             elif _is_rel(prp, Contest.groups):
-                old_groups = {g.name : g for g in old_value}
-                new_groups = {g.name : g for g in new_value}
-                delete = set(old_groups.keys()) - set(new_groups.keys())
-                if len(delete) > 0:
-                    logger.warning("Deleting groups {}".format(", ".join(delete)))
-                    for key in delete:
-                        self.to_delete.append(old_groups[key])
-                add = set(new_groups.keys()) - set(old_groups.keys())
-                if len(add) > 0:
-                    logger.info("Adding groups {}".format(", ".join(add)))
-                    for key in add:
-                        old_groups[key] = self._copy(new_groups[key])
-                change = set(old_groups.keys()) & set(new_groups.keys())
-                for key in change:
-                    self._update_group(old_groups[key], new_groups[key])
-                old_object.groups = old_groups.values()
+                pass
             elif _is_rel(prp, Contest.main_group):
                 pass
             else:
                 raise RuntimeError(
                     "Unknown type of relationship for %s.%s." %
                     (prp.parent.class_.__name__, prp.key))
+
+        old_groups = {g.name : g for g in old_object.groups}
+        new_groups = {g.name : g for g in new_object.groups}
+        self._update_dict(old_groups, new_groups, delete=True, creator_function=lambda _,v : old_object.groups.append(v))
 
         if old_object.main_group is None or old_object.main_group.name != new_object.main_group.name:
             old_object.main_group = old_object.get_group(new_object.main_group.name)
@@ -227,17 +247,7 @@ class GerImport(BaseImporter, Service):
             elif _is_rel(prp, Task.user_tests):
                 pass
             elif _is_rel(prp, Task.datasets):
-                assert len(new_object.datasets) == 1
-                new_dataset = new_object.datasets[0]
-                found = False
-                for d in old_object.datasets:
-                    if d.description == new_dataset.description:
-                        logger.info("Updating dataset {}".format(new_dataset.description))
-                        self._update_dataset(d, new_dataset)
-                        found = True
-                if not found:
-                    logger.info("Creating dataset {}".format(new_dataset.description))
-                    old_object.datasets.append(new_dataset)
+                pass
             elif _is_rel(prp, Task.statements):
                 self._update_dict(old_value, new_value)
             elif _is_rel(prp, Task.attachments):
@@ -248,6 +258,11 @@ class GerImport(BaseImporter, Service):
                 raise RuntimeError(
                     "Unknown type of relationship for %s.%s." %
                     (prp.parent.class_.__name__, prp.key))
+
+        old_datasets = {g.description : g for g in old_object.datasets}
+        new_datasets = {g.description : g for g in new_object.datasets}
+        assert len(new_datasets) == 1
+        self._update_dict(old_datasets, new_datasets, delete=False, creator_function=lambda _,v : old_object.datasets.append(v))
 
     def _update_dataset(self, old_object, new_object):
         self._update_columns(old_object, new_object)
@@ -306,112 +321,74 @@ class GerImport(BaseImporter, Service):
 
             with SessionGen() as session:
                 # Create users in the database.
-                udbs = {}
-                udb1s = {}
-                for u in contestconfig.users:
-                    udb = contestconfig._makeuser(u)
+                # FIXME This has running time proportional to the total number of users, not just the number of users for this contest.
+                udbs = {u : contestconfig._makeuser(u) for u in contestconfig.users}
+                udb1s = {u.username : u for u in session.query(User).all()}
+                self._update_dict(udb1s, udbs, delete=False, creator_function=lambda _,v : session.add(v))
 
-                    udb1 = session.query(User) \
-                        .filter(User.username == udb.username).first()
-                    if udb1 is not None:
-                        logger.info("Updating user {}".format(u))
-                        self._update_user(udb1, udb)
-                    else:
-                        logger.info("Creating user {}".format(u))
-                        udb1 = self._copy(udb)
-                        session.add(udb1)
-                    udbs[u] = udb
-                    udb1s[u] = udb1
+                # Create teams in the database.
+                teamdbs = {t : contestconfig._maketeam(t) for t in contestconfig.teams}
+                teamdb1s = {t.code : t for t in session.query(Team)}
+                self._update_dict(teamdb1s, teamdbs, delete=False, creator_function=lambda _,v : session.add(v))
 
                 # Create contest in the database.
                 cdb = contestconfig._makecontest()
-
-                cdb1 = session.query(Contest) \
-                    .filter(Contest.name == cdb.name).first()
-                if cdb1 is not None:
-                    logger.info("Updating contest {}".format(cdb.name))
-                    self._update_contest(cdb1, cdb)
-                else:
-                    logger.info("Creating contest {}".format(cdb.name))
-                    cdb1 = self._copy(cdb)
-                    cdb1.main_group = cdb1.get_group(cdb.main_group.name)
-                    session.add(cdb1)
-
-                # Create teams in the database.
-                teamdbs = {}
-                teamdb1s = {}
-                for t in contestconfig.teams:
-                    teamdb = contestconfig._maketeam(t)
-
-                    teamdb1 = session.query(Team) \
-                        .filter(Team.code == teamdb.code).first()
-                    if teamdb1 is not None:
-                        logger.info("Updating team {}".format(t))
-                        self._update_team(teamdb1, teamdb)
-                    else:
-                        logger.info("Creating team {}".format(t))
-                        teamdb1 = self._copy(teamdb)
-                        session.add(teamdb1)
-                    teamdbs[t] = teamdb
-                    teamdb1s[t] = teamdb1
+                cdbs = {cdb.name : cdb}
+                cdb1s = {c.name : c for c in session.query(Contest).all()}
+                self._update_dict(cdb1s, cdbs, delete=False, creator_function=lambda _,v : session.add(v))
+                cdb1 = cdb1s[cdb.name]
+                cdb1.main_group = cdb1.get_group(cdb.main_group.name)
 
                 # Create participations in the database.
-                pdbs = {}
-                pdb1s = {}
-                for u in contestconfig.users:
-                    udb = udbs[u]
-                    udb1 = udb1s[u]
-
-                    teamcode = None if contestconfig.users[u].team is None else contestconfig.users[u].team.code
-                    pdb = contestconfig._makeparticipation(u, cdb, udb, cdb.get_group(contestconfig.users[u].group.name), None if teamcode is None else teamdbs[teamcode])
-
-                    pdb1 = None if cdb1 is None or udb1 is None else session.query(Participation) \
-                        .filter(Participation.contest == cdb1) \
-                        .filter(Participation.user == udb1).first()
-                    if pdb1 is not None:
-                        logger.info("Updating participation {}".format(u))
-                        self._update_participation(pdb1, pdb)
-                        pdb1.team = None if teamcode is None else teamdb1s[teamcode]
+                def user_team(u):
+                    t = contestconfig.users[u].team
+                    if t is None:
+                        return None
                     else:
-                        logger.info("Creating participation {}".format(u))
-                        pdb1 = self._copy(pdb)
-                        pdb1.contest = cdb1
-                        pdb1.user = udb1
-                        pdb1.group = cdb1.get_group(pdb.group.name)
-                        pdb1.team = None if teamcode is None else teamdb1s[teamcode]
-                        session.add(pdb1)
-
-                    pdbs[u] = pdb
-                    pdb1s[u] = pdb1
+                        return teamdbs[t.code]
+                def user_team1(u):
+                    t = contestconfig.users[u].team
+                    if t is None:
+                        return None
+                    else:
+                        return teamdb1s[t.code]
+                pdbs = {u : contestconfig._makeparticipation(u, cdb, udbs[u], cdb.get_group(contestconfig.users[u].group.name), user_team(u)) for u in contestconfig.users}
+                pdb1s = {p.user.username : p for p in cdb1.participations}
+                self._update_dict(pdb1s, pdbs, delete=True, creator_function=lambda _,v : cdb1.participations.append(v))
+                for username, u in pdb1s.iteritems():
+                    u.user = udb1s[username]
+                    u.group = cdb1.get_group(contestconfig.users[username].group.name)
+                    u.team = user_team1(username)
 
                 # The test user participation.
                 test_pdb = pdbs[contestconfig._mytestuser.username]
                 test_pdb1 = pdb1s[contestconfig._mytestuser.username]
 
-                # TODO Remove tasks, participations, ...
-                for t in contestconfig.tasks:
-                    # Create task in the database.
-                    tdb = contestconfig.tasks[t]._makedbobject(cdb, self.file_cacher)
+                # FIXME
+                # This is an ugly hack to prevent problems when reordering or adding tasks.
+                # Since we delete after adding and updating, there might otherwise at one point be two tasks with the same number.
+                for t in cdb1.tasks:
+                    t.num += len(contestconfig.tasks) + len(cdb1.tasks)
+                session.flush()
+                tdbs = {n : t._makedbobject(cdb, self.file_cacher) for n,t in contestconfig.tasks.iteritems()}
+                tdb1s = {t.name : t for t in cdb1.tasks}
+                # We only set the active dataset when importing a new task
+                # Afterwards, the active dataset has to be set using the web interface.
+                def task_creator(name, v):
+                    tdb = tdbs[name]
+                    cdb1.tasks.append(v)
+                    ddb1 = session.query(Dataset) \
+                        .filter(Dataset.task == v) \
+                        .filter(Dataset.description == tdb.active_dataset.description).first()
+                    assert ddb1 is not None
+                    v.active_dataset = ddb1
+                self._update_dict(tdb1s, tdbs, delete=True, creator_function=task_creator)
 
-                    tdb1 = session.query(Task) \
-                        .filter(Task.name == tdb.name).first()
-                    if tdb1 is not None:
-                        if cdb1 is None or tdb1.contest != cdb1:
-                            raise Exception("Task {} already exists, but is not assigned to this contest".format(t))
-                        logger.info("Updating task {}".format(t))
-                        self._update_task(tdb1, tdb)
-                        ddb1 = session.query(Dataset) \
-                            .filter(Dataset.task == tdb1) \
-                                .filter(Dataset.description == tdb.active_dataset.description).first()
-                        assert ddb1 is not None
-                        tdb1.active_dataset = ddb1
-                    else:
-                        logger.info("Creating task {}".format(t))
-                        tdb2 = self._copy(tdb)
-                        tdb2.contest = cdb1
-                        session.add(tdb2)
-
-                    if not self.no_test:
+                sdb1ss = {}
+                if not self.no_test:
+                    for t in contestconfig.tasks:
+                        tdb = tdbs[t]
+                        tdb1 = tdb1s[t]
                         # Mark old test submissions for deletion.
                         sdb1s = session.query(Submission) \
                             .filter(Submission.participation == test_pdb1) \
@@ -429,6 +406,7 @@ class GerImport(BaseImporter, Service):
                             sdb1.participation = test_pdb1
                             session.add(sdb1)
                             sdb1s.append(sdb1)
+                        sdb1ss[t] = sdb1s
 
                 # Delete marked objects
                 for v in self.to_delete:
@@ -437,12 +415,15 @@ class GerImport(BaseImporter, Service):
                 session.commit()
 
                 if not self.no_test:
-                    # Notify EvaluationService of the new test submissions.
                     evaluation_service = self.connect_to(
                         ServiceCoord("EvaluationService", 0))
-                    for sdb1 in sdb1s:
-                        evaluation_service.new_submission(
-                            submission_id=sdb1.id)
+                    for t in contestconfig.tasks:
+                        sdb1s = sdb1ss[t]
+                        # Notify EvaluationService of the new test submissions.
+                        for sdb1 in sdb1s:
+                            evaluation_service.new_submission(
+                                submission_id=sdb1.id)
+                    evaluation_service.disconnect()
 
                 logger.info("Import finished (new contest id: %s).", cdb.id if cdb1 is None else cdb1.id)
 

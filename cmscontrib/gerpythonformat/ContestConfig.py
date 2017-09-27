@@ -27,7 +27,7 @@ from .CommonConfig import exported_function, CommonConfig
 from .TaskConfig import TaskConfig
 from .LocationStack import chdir
 from cms.db import Contest, User, Group, Participation, Team
-from cmscommon.crypto import generate_random_password, build_password
+from cmscommon.crypto import build_password
 import os
 import shutil
 from datetime import datetime, timedelta
@@ -80,7 +80,7 @@ class ContestConfig(CommonConfig):
     This object is exported as a variable called :samp:`contest`.
     """
     def __init__(self, rules, name, ignore_latex=False, onlytask=None,
-                 make_datasets=True, minimal=False):
+                 minimal=False):
         """
         Initialize.
 
@@ -96,8 +96,6 @@ class ContestConfig(CommonConfig):
         self.infinite_tokens()
 
         self.onlytask = onlytask
-
-        self.make_datasets = make_datasets
 
         self.contestname = name
 
@@ -323,11 +321,12 @@ class ContestConfig(CommonConfig):
              ip=None, hidden=False, unrestricted=False,timezone=None,
              primary_statements=[], team=None):
         """
-        Add a user.
+        Add a user participating in this contest.
 
         username (unicode): user name (for login)
 
-        password (unicode): password
+        password (unicode): password used both for the user and for the
+                            participation
 
         firstname (unicode): first name
 
@@ -407,7 +406,6 @@ class ContestConfig(CommonConfig):
 
             with TaskConfig(self, os.path.abspath(".rules"),
                             s, len(self.tasks),
-                            self.make_datasets,
                             feedback,
                             ignore_latex=self.ignore_latex,
                             minimal=minimal) as taskconfig:
@@ -512,7 +510,8 @@ class ContestConfig(CommonConfig):
 
     def _makegroup(self, groupname, cdb):
         group = self.groups[groupname]
-        gdb = Group(name=groupname, contest=cdb)
+        gdb = Group(name=groupname)
+        gdb.contest = cdb
         gdb.start = group.start
         gdb.stop = group.stop
         gdb.per_user_time = None if group.per_user_time is None else \
@@ -539,13 +538,12 @@ class ContestConfig(CommonConfig):
         """
         user = self.users[username]
 
-        # We give the user a random password.
-        # He should never use this password, because we set different
-        # passwords for each participation.
+        # The user should never actually use this password, because we set
+        # different passwords for each participation.
         udb = User(username=user.username,
                    first_name=user.firstname,
                    last_name=user.lastname,
-                   password=build_password(generate_random_password()))
+                   password=build_password(user.password))
 
         udb.timezone = user.timezone
         udb.preferred_languages = json.dumps(user.primary_statements)

@@ -519,7 +519,7 @@ class TaskConfig(CommonConfig, Scope):
 
     This object is exported as a variable called :samp:`task`.
     """
-    def __init__(self, upstream, rules, name, num, make_datasets, feedback,
+    def __init__(self, upstream, rules, name, num, feedback,
                  ignore_latex=False, minimal=False):
         super(TaskConfig, self).__init__(rules, ignore_latex)
         self.no_tokens()
@@ -539,7 +539,7 @@ class TaskConfig(CommonConfig, Scope):
         self.name = name
         self.num = num
 
-        self.make_datasets = make_datasets
+        self._dataset = "imported"
 
         self.subtasks = []
         self.subtask_stack = []
@@ -622,6 +622,19 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         self._title = s
+
+    @exported_function
+    def dataset(self, s):
+        """
+        Set the description of the dataset to import to.
+        If a dataset with this description already exists, it is overwritten.
+        Otherwise, a new dataset is created.
+        The active dataset is left unchanged when reimporting a contest.
+
+        s (unicode): dataset description
+
+        """
+        self._dataset = s
 
     @exported_function
     def timelimit(self, s):
@@ -772,7 +785,7 @@ class TaskConfig(CommonConfig, Scope):
         compilation_param = "alone"
         if stub:
             compilation_param = "stub"
-        self.tasktypeparameters = json.dumps([compilation_param])
+        self.tasktypeparameters = json.dumps([compilation_param, 1])
 
     @exported_function
     def output_generator(self, s):
@@ -1140,7 +1153,7 @@ class TaskConfig(CommonConfig, Scope):
             return
 
         print_msg("Added test submission {}"
-                  .format([self.contest.short_path(s) for s in args]),
+                  .format(", ".join(self.contest.short_path(s) for s in args)),
                   headerdepth=10)
         self.testsubmissions.append(
             MySubmission(self, [os.path.abspath(s) for s in args], **kwargs))
@@ -1334,7 +1347,7 @@ class TaskConfig(CommonConfig, Scope):
                         for g in s.groups]}
             for s in self.subtasks]})
         ddb = Dataset(task=tdb,
-                      description="imported",
+                      description=self._dataset,
                       task_type=self.tasktype,
                       task_type_parameters=self.tasktypeparameters,
                       score_type="SubtaskGroup",

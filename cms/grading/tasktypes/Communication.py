@@ -94,7 +94,7 @@ class Communication(TaskType):
         for language in LANGUAGES:
             source_ext = language.source_extension
             source_filenames = []
-            if self.parameters[0] == "stub":
+            if self.parameters[0] == "grader":
                 source_filenames.append("stub%s" % source_ext)
             executable_filename = \
                 "_".join(pattern.replace(".%l", "")
@@ -132,7 +132,7 @@ class Communication(TaskType):
         source_filenames = []
         # Stub.
         stub_filename = "stub%s" % source_ext
-        if self.parameters[0] == "stub":
+        if self.parameters[0] == "grader":
             source_filenames.append(stub_filename)
             files_to_get[stub_filename] = job.managers[stub_filename].digest
         # User's submission.
@@ -185,10 +185,10 @@ class Communication(TaskType):
 
     def evaluate(self, job, file_cacher):
         """See TaskType.evaluate."""
-        if len(self.parameters) <= 0:
+        if len(self.parameters) <= 1:
             num_processes = 1
         else:
-            num_processes = self.parameters[0]
+            num_processes = self.parameters[1]
         indices = range(num_processes)
         # Create sandboxes and FIFOs
         sandbox_mgr = create_sandbox(file_cacher, job.multithreaded_sandbox)
@@ -265,12 +265,12 @@ class Communication(TaskType):
         language = get_language(job.language)
         processes = [None for i in indices]
         for i in indices:
-            args = [fifo_out[i], fifo_in[i]]
+            args = []
             if num_processes != 1:
                 args.append(str(i))
             commands = language.get_evaluation_commands(
                 executable_filename,
-                main="stub",
+                main="stub" if self.parameters[0] == "grader" else executable_filename,
                 args=args)
             user_allow_dirs = [fifo_dir[i]]
             # Assumes that the actual execution of the user solution
@@ -284,8 +284,8 @@ class Communication(TaskType):
                 job.time_limit,
                 job.memory_limit,
                 allow_dirs=user_allow_dirs,
-                stdin_redirect=fifo_in,
-                stdout_redirect=fifo_out)
+                stdin_redirect=fifo_in[i],
+                stdout_redirect=fifo_out[i])
 
         # Manager still running but wants to quit
         if solution_quitter.read() == "<3":
