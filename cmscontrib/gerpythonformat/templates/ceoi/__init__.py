@@ -23,6 +23,7 @@ from __future__ import unicode_literals
 
 from .CEOITemplate import *
 
+
 def load(contest, day=0):
     contest.day = day
     CEOITemplate(contest)

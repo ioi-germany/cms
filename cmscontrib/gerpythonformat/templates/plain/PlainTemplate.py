@@ -81,7 +81,7 @@ class PlainTemplate(Template):
                           functools.partial(self.inputwidth, task))
         task.supply_latex("outputwidth",
                           functools.partial(self.outputwidth, task))
-                
+
         self.initconstraint(task)
         self.initsubtaskinfo(task)
         self.mktestcasetable(task)
@@ -117,26 +117,26 @@ class PlainTemplate(Template):
             for g in s.groups:
                 res += g.constraints
         return res
-        
+
     def make_scoped_constraints(self, i, constraint_lists):
         l = []
         for cl in constraint_lists:
             if not cl.silent:
                 l += cl.constraints
-        
+
         d = {}
-        
+
         # Two auxiliary generators
         def inj(l):
             yield []
-            
+
             for i in range(0, len(l)):
                 _l = l[:]
                 first = _l.pop(i)
-                
+
                 for rest in inj(_l):
                     yield [first] + rest
-        
+
         def restrictions(c):
             for v in inj(c.variables):
                 if v:
@@ -149,22 +149,23 @@ class PlainTemplate(Template):
             # argument parsing) instead?
             for c in restrictions(_c):
                 v = ",".join(c.variables)
-                
+
                 if v in d:
                     d[v].merge(c)
                 else:
                     d[v] = c
-        
-        res = ""        
+
+        res = ""
         for v, c in d.iteritems():
             res += r"\makescopedconstraint{" + "{}".format(i) + "}{" + v + \
                    "}{" + c.latex() + "}\n"
-        
-        # Collection of all constraints in this scope, as appearing in the input
+
+        # Collection of all constraints in this scope, as appearing in the
+        # input
         res += r"\makescopedconstraint{" + "{}".format(i) + "}{" + "@ll" + "}{"
         keys = OrderedDict.fromkeys(",".join(c.variables) for c in l)
         res += ", ".join(d[v].latex() for v in keys)
-        res += "}\n"            
+        res += "}\n"
         return res
 
     def latex_constraints(self, task):
@@ -178,34 +179,34 @@ class PlainTemplate(Template):
                 res += r"\expandafter\expandafter\def\csname conshelper" \
                     + str(nr) + r"\endcsname{" + s + "}\n"
                 nr += 1
-                
+
         # Constraints grouped per scope and variable
         res += r"\def\makescopedconstraint#1#2#3{\expandafter\xdef\csname " \
                r"constr@int__#1__#2__\endcsname{#3}}" + "\n" + \
                r"\def\scopedconstraint#1#2{\expandafter\csname " \
                r"constr@int__#1__#2__\endcsname}" + "\n"
-        
+
         res += self.make_scoped_constraints(0, task.constraints)
         for i, s in enumerate([s for s in task.subtasks if not s.public]):
             res += self.make_scoped_constraints(i + 1, s.constraints)
-        
+
         return res
 
     def initsubtaskinfo(self, task):
         def points(s):
             return "{}".format(sum(g.points for g in s.groups))
-    
+
         def subtaskinfo():
             r = r"\def\subtaskpoints#1{\expandafter\csname " \
                 r"stphelper__#1\endcsname}"
             st = [s for s in task.subtasks if not s.public]
-            
+
             for i, s in enumerate(st):
                 r += r"\expandafter\def\csname stphelper__" + \
                      "{}".format(i + 1) + r"\endcsname{" + points(s) + "}\n"
-                
+
             return r
-        
+
         task.supply("latex", subtaskinfo)
 
     def supply_case_table(self, task,
@@ -229,9 +230,10 @@ class PlainTemplate(Template):
                 r += aftereachline
             r += end
             return r
-            
+
         def tcn():
-            return "\\newcount\\numsamples \\numsamples={}".format(len(task.saved))
+            return "\\newcount\\numsamples \\numsamples={}".format(
+                len(task.saved))
 
         task.supply("latex", def_latex("testcasetable", tct))
         task.supply("latex", tcn)

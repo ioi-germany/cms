@@ -60,14 +60,15 @@ class GerImport(BaseImporter, Service):
                 old_value = getattr(old_object, prp.key)
                 new_value = getattr(new_object, prp.key)
                 if old_value != new_value:
-                    logger.info("Changing {} from {} to {}".format(prp.key, old_value, new_value))
+                    logger.info("Changing {} from {} to {}".format(
+                        prp.key, old_value, new_value))
                     setattr(old_object, prp.key, getattr(new_object, prp.key))
 
     # Create a recursive copy of a database object.
     # Subobjects contained in a dict or list relation are copied recursively.
     def _copy(self, new_object):
         # Copy scalar properties.
-        di = {prp.key : getattr(new_object, prp.key)
+        di = {prp.key: getattr(new_object, prp.key)
               for prp in new_object._col_props}
         old_object = type(new_object)(**di)
 
@@ -95,18 +96,21 @@ class GerImport(BaseImporter, Service):
         # delete
         if delete:
             for key in sorted(old_keys - new_keys):
-                logger.info("Deleting {} {}".format(type(old_value[key]).__name__, key))
+                logger.info("Deleting {} {}".format(
+                    type(old_value[key]).__name__, key))
                 self.to_delete.append(old_value[key])
         # create
         for key in sorted(new_keys - old_keys):
-            logger.info("Creating {} {}".format(type(new_value[key]).__name__, key))
+            logger.info("Creating {} {}".format(
+                type(new_value[key]).__name__, key))
             v = self._copy(new_value[key])
             old_value[key] = v
             if creator_function is not None:
                 creator_function(key, v)
         # update
         for key in sorted(new_keys & old_keys):
-            logger.info("Updating {} {}".format(type(old_value[key]).__name__, key))
+            logger.info("Updating {} {}".format(
+                type(old_value[key]).__name__, key))
             self._update_dispatcher(old_value[key], new_value[key])
 
     def _update_list(self, old_value, new_value):
@@ -125,21 +129,22 @@ class GerImport(BaseImporter, Service):
                 old_value.append(self._copy(v))
 
     def _update_dispatcher(self, old_value, new_value):
-        bla = {# Custom update
-               User : self._update_user,
-               Group : self._update_group,
-               Contest : self._update_contest,
-               Participation : self._update_participation,
-               Task : self._update_task,
-               Dataset : self._update_dataset,
-               Team : self._update_team,
-               # Default update
-               Testcase : self._update_object,
-               Manager : self._update_object,
-               Attachment : self._update_object,
-               SubmissionFormatElement : self._update_object,
-               Statement : self._update_object,
-               }
+        bla = {
+            # Custom update
+            User: self._update_user,
+            Group: self._update_group,
+            Contest: self._update_contest,
+            Participation: self._update_participation,
+            Task: self._update_task,
+            Dataset: self._update_dataset,
+            Team: self._update_team,
+            # Default update
+            Testcase: self._update_object,
+            Manager: self._update_object,
+            Attachment: self._update_object,
+            SubmissionFormatElement: self._update_object,
+            Statement: self._update_object,
+        }
         bla[type(old_value)](old_value, new_value)
 
     def _update_user(self, old_object, new_object):
@@ -194,12 +199,14 @@ class GerImport(BaseImporter, Service):
                     "Unknown type of relationship for %s.%s." %
                     (prp.parent.class_.__name__, prp.key))
 
-        old_groups = {g.name : g for g in old_object.groups}
-        new_groups = {g.name : g for g in new_object.groups}
-        self._update_dict(old_groups, new_groups, delete=True, creator_function=lambda _,v : old_object.groups.append(v))
+        old_groups = {g.name: g for g in old_object.groups}
+        new_groups = {g.name: g for g in new_object.groups}
+        self._update_dict(old_groups, new_groups, delete=True,
+                          creator_function=lambda _, v: old_object.groups.append(v))
 
         if old_object.main_group is None or old_object.main_group.name != new_object.main_group.name:
-            old_object.main_group = old_object.get_group(new_object.main_group.name)
+            old_object.main_group = old_object.get_group(
+                new_object.main_group.name)
 
     def _update_participation(self, old_object, new_object):
         self._update_columns(old_object, new_object)
@@ -213,7 +220,8 @@ class GerImport(BaseImporter, Service):
             elif _is_rel(prp, Participation.user):
                 pass
             elif _is_rel(prp, Participation.group):
-                old_object.group = old_object.contest.get_group(new_object.group.name)
+                old_object.group = old_object.contest.get_group(
+                    new_object.group.name)
             elif _is_rel(prp, Participation.team):
                 pass
             elif _is_rel(prp, Participation.messages):
@@ -259,10 +267,11 @@ class GerImport(BaseImporter, Service):
                     "Unknown type of relationship for %s.%s." %
                     (prp.parent.class_.__name__, prp.key))
 
-        old_datasets = {g.description : g for g in old_object.datasets}
-        new_datasets = {g.description : g for g in new_object.datasets}
+        old_datasets = {g.description: g for g in old_object.datasets}
+        new_datasets = {g.description: g for g in new_object.datasets}
         assert len(new_datasets) == 1
-        self._update_dict(old_datasets, new_datasets, delete=False, creator_function=lambda _,v : old_object.datasets.append(v))
+        self._update_dict(old_datasets, new_datasets, delete=False,
+                          creator_function=lambda _, v: old_object.datasets.append(v))
 
     def _update_dataset(self, old_object, new_object):
         self._update_columns(old_object, new_object)
@@ -322,20 +331,25 @@ class GerImport(BaseImporter, Service):
             with SessionGen() as session:
                 # Create users in the database.
                 # FIXME This has running time proportional to the total number of users, not just the number of users for this contest.
-                udbs = {u : contestconfig._makeuser(u) for u in contestconfig.users}
-                udb1s = {u.username : u for u in session.query(User).all()}
-                self._update_dict(udb1s, udbs, delete=False, creator_function=lambda _,v : session.add(v))
+                udbs = {u: contestconfig._makeuser(
+                    u) for u in contestconfig.users}
+                udb1s = {u.username: u for u in session.query(User).all()}
+                self._update_dict(udb1s, udbs, delete=False,
+                                  creator_function=lambda _, v: session.add(v))
 
                 # Create teams in the database.
-                teamdbs = {t : contestconfig._maketeam(t) for t in contestconfig.teams}
-                teamdb1s = {t.code : t for t in session.query(Team)}
-                self._update_dict(teamdb1s, teamdbs, delete=False, creator_function=lambda _,v : session.add(v))
+                teamdbs = {t: contestconfig._maketeam(
+                    t) for t in contestconfig.teams}
+                teamdb1s = {t.code: t for t in session.query(Team)}
+                self._update_dict(teamdb1s, teamdbs, delete=False,
+                                  creator_function=lambda _, v: session.add(v))
 
                 # Create contest in the database.
                 cdb = contestconfig._makecontest()
-                cdbs = {cdb.name : cdb}
-                cdb1s = {c.name : c for c in session.query(Contest).all()}
-                self._update_dict(cdb1s, cdbs, delete=False, creator_function=lambda _,v : session.add(v))
+                cdbs = {cdb.name: cdb}
+                cdb1s = {c.name: c for c in session.query(Contest).all()}
+                self._update_dict(cdb1s, cdbs, delete=False,
+                                  creator_function=lambda _, v: session.add(v))
                 cdb1 = cdb1s[cdb.name]
                 cdb1.main_group = cdb1.get_group(cdb.main_group.name)
 
@@ -346,18 +360,22 @@ class GerImport(BaseImporter, Service):
                         return None
                     else:
                         return teamdbs[t.code]
+
                 def user_team1(u):
                     t = contestconfig.users[u].team
                     if t is None:
                         return None
                     else:
                         return teamdb1s[t.code]
-                pdbs = {u : contestconfig._makeparticipation(u, cdb, udbs[u], cdb.get_group(contestconfig.users[u].group.name), user_team(u)) for u in contestconfig.users}
-                pdb1s = {p.user.username : p for p in cdb1.participations}
-                self._update_dict(pdb1s, pdbs, delete=True, creator_function=lambda _,v : cdb1.participations.append(v))
+                pdbs = {u: contestconfig._makeparticipation(u, cdb, udbs[u], cdb.get_group(
+                    contestconfig.users[u].group.name), user_team(u)) for u in contestconfig.users}
+                pdb1s = {p.user.username: p for p in cdb1.participations}
+                self._update_dict(
+                    pdb1s, pdbs, delete=True, creator_function=lambda _, v: cdb1.participations.append(v))
                 for username, u in pdb1s.iteritems():
                     u.user = udb1s[username]
-                    u.group = cdb1.get_group(contestconfig.users[username].group.name)
+                    u.group = cdb1.get_group(
+                        contestconfig.users[username].group.name)
                     u.team = user_team1(username)
 
                 # The test user participation.
@@ -370,10 +388,12 @@ class GerImport(BaseImporter, Service):
                 for t in cdb1.tasks:
                     t.num += len(contestconfig.tasks) + len(cdb1.tasks)
                 session.flush()
-                tdbs = {n : t._makedbobject(cdb, self.file_cacher) for n,t in contestconfig.tasks.iteritems()}
-                tdb1s = {t.name : t for t in cdb1.tasks}
+                tdbs = {n: t._makedbobject(cdb, self.file_cacher)
+                        for n, t in contestconfig.tasks.iteritems()}
+                tdb1s = {t.name: t for t in cdb1.tasks}
                 # We only set the active dataset when importing a new task
                 # Afterwards, the active dataset has to be set using the web interface.
+
                 def task_creator(name, v):
                     tdb = tdbs[name]
                     cdb1.tasks.append(v)
@@ -382,7 +402,8 @@ class GerImport(BaseImporter, Service):
                         .filter(Dataset.description == tdb.active_dataset.description).first()
                     assert ddb1 is not None
                     v.active_dataset = ddb1
-                self._update_dict(tdb1s, tdbs, delete=True, creator_function=task_creator)
+                self._update_dict(tdb1s, tdbs, delete=True,
+                                  creator_function=task_creator)
 
                 sdb1ss = {}
                 if not self.no_test:
@@ -398,7 +419,8 @@ class GerImport(BaseImporter, Service):
                             self.to_delete.append(sdb1)
 
                         # Create test submissions in the database.
-                        sdbs = contestconfig.tasks[t]._make_test_submissions(test_pdb, tdb, False)
+                        sdbs = contestconfig.tasks[t]._make_test_submissions(
+                            test_pdb, tdb, False)
                         sdb1s = []
                         for sdb in sdbs:
                             sdb1 = self._copy(sdb)
@@ -425,7 +447,8 @@ class GerImport(BaseImporter, Service):
                                 submission_id=sdb1.id)
                     evaluation_service.disconnect()
 
-                logger.info("Import finished (new contest id: %s).", cdb.id if cdb1 is None else cdb1.id)
+                logger.info("Import finished (new contest id: %s).",
+                            cdb.id if cdb1 is None else cdb1.id)
 
 
 def main():

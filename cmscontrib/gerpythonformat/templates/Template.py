@@ -25,6 +25,7 @@ from __future__ import unicode_literals
 class Template(object):
     """Class for template configuration files.
     """
+
     def __init__(self, contest):
         self.contest = contest
         self.contest.ontask(self.ontask)

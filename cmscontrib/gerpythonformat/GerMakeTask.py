@@ -27,7 +27,7 @@ from .LocationStack import chdir
 from cms import utf8_decoder
 from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary, \
-                                       copyifnecessary
+    copyifnecessary
 import argparse
 import os
 import resource
@@ -35,7 +35,8 @@ import shutil
 
 
 class GerMakeTask:
-    def __init__(self, odir, task, minimal, no_test, submission, no_latex, clean):
+    def __init__(self, odir, task, minimal, no_test,
+                 submission, no_latex, clean):
         self.odir = odir
         self.task = task
         self.minimal = minimal
@@ -70,27 +71,34 @@ class GerMakeTask:
         try:
             with chdir(self.wdir):
                 contestconfig = ContestConfig(os.path.join(self.wdir, ".rules"),
-                                   "hidden contest", minimal=self.minimal)
+                                              "hidden contest", minimal=self.minimal)
                 copyifnecessary(os.path.join(contestconfig._get_ready_dir(),
                                              "contest-template.py"),
                                 os.path.join(self.wdir, "c.py"))
                 contestconfig._readconfig("c.py")
-                contestconfig._task(self.task, contestconfig._dummy_feedback, self.minimal)
+                contestconfig._task(
+                    self.task, contestconfig._dummy_feedback, self.minimal)
 
                 if not self.minimal:
                     cdb = contestconfig._makecontest()
-                    test_udb = contestconfig._makeuser(contestconfig._mytestuser.username)
-                    test_gdb = contestconfig._makegroup(contestconfig._mytestuser.group.name, cdb)
-                    # We're not putting the test user on any team for testing (shouldn't be needed).
-                    test_pdb = contestconfig._makeparticipation(contestconfig._mytestuser.username, cdb, test_udb, test_gdb, None)
+                    test_udb = contestconfig._makeuser(
+                        contestconfig._mytestuser.username)
+                    test_gdb = contestconfig._makegroup(
+                        contestconfig._mytestuser.group.name, cdb)
+                    # We're not putting the test user on any team for testing
+                    # (shouldn't be needed).
+                    test_pdb = contestconfig._makeparticipation(
+                        contestconfig._mytestuser.username, cdb, test_udb, test_gdb, None)
                     for t in contestconfig.tasks.values():
                         tdb = t._makedbobject(cdb, file_cacher)
-                        t._make_test_submissions(test_pdb, tdb, self.local_test)
+                        t._make_test_submissions(
+                            test_pdb, tdb, self.local_test)
 
         finally:
             file_cacher.destroy_cache()
 
-        primary_statements = [s for s in contestconfig.tasks.values()[0]._statements.values() if s.primary]
+        primary_statements = [s for s in contestconfig.tasks.values()[
+            0]._statements.values() if s.primary]
         if len(primary_statements) == 0:
             return None
         elif len(primary_statements) == 1:
@@ -101,6 +109,7 @@ class GerMakeTask:
     def make(self):
         self.prepare()
         self.build()
+
 
 def main():
     """Parse arguments and launch process."""

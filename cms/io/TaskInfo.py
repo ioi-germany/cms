@@ -42,10 +42,10 @@ class DateEntry:
     def __init__(self, date_code, info):
         self.date = datetime.strptime(date_code, "%Y-%m-%d").date()
         self.info = info + " {}".format(self.date.year)
-    
+
     def timestamp(self):
         return self.date.toordinal()
-    
+
     def to_dict(self):
         return {"timestamp": self.timestamp(),
                 "info":      self.info}
@@ -63,7 +63,7 @@ class SingleTaskInfo:
                 "remarks":        "",
                 "public":         False,
                 "old":            None}
-                
+
         if not path.exists():
             i = {"error": "The info.json file is missing."}
         else:
@@ -76,7 +76,7 @@ class SingleTaskInfo:
                 for e in ["title", "algorithm", "implementation", "public"]:
                     if e not in i:
                         missing.append(e)
-                
+
                 if len(missing) > 0:
                     i["error"] = "Some important entries are missing: " + \
                                  ", ".join(missing) + "."
@@ -88,31 +88,31 @@ class SingleTaskInfo:
                             return True
                         else:
                             return y < 0 or y > 10
-                    
+
                     if bad(i["algorithm"]):
                         i["algorithm"] = 0
                         i["error"] = "Invalid value for \"algorithm\": " \
                                      "expected an integer between 0 and 10."
-                    
+
                     if bad(i["implementation"]):
                         i["implementation"] = 0
                         i["error"] = "Invalid value for \"implementation\": " \
                                      "expected an integer between 0 and 10."
-            
+
         info.update(i)
 
         if info["old"] is None:
             info["old"] = len(info["uses"]) > 0 or info["public"]
-        
+
         try:
             info["uses"] = [DateEntry(e[0], e[1]) for e in info["uses"]]
         except ValueError:
             info["uses"] = []
-            
+
             if "error" not in info:
                 info["error"] = "I couldn't parse the dates for " \
                                 "\"(previous) uses\"."
-            
+
         for key, value in info.iteritems():
             setattr(self, key, value)
 
@@ -127,10 +127,10 @@ class SingleTaskInfo:
                   "remarks":        self.remarks,
                   "public":         self.public,
                   "old":            self.old}
-                 
+
         if hasattr(self, "error"):
             result["error"] = self.error
-        
+
         return result
 
 
@@ -140,58 +140,58 @@ class TaskInfo:
     @staticmethod
     def init(repository):
         def load(directory, tasks):
-            # Load all available tasks                
+            # Load all available tasks
             for d in directory.iterdir():
                 if not d.is_dir():
                     continue
-                                
+
                 # We catch all exceptions since the main loop must go on
-                try:    
-                    info_path = d/"info.json"
-                                
+                try:
+                    info_path = d / "info.json"
+
                     code = d.parts[-1]
                     info = SingleTaskInfo(code, info_path).to_dict()
-     
+
                     old = tasks.get(code, {"timestamp": 0})
                     info["timestamp"] = old["timestamp"]
-                                
+
                     if old != info:
                         info["timestamp"] = time()
                         tasks[code] = info
 
                 except:
-                        logger.info("\n".join(format_exception(*exc_info())))
-    
+                    logger.info("\n".join(format_exception(*exc_info())))
+
         def main_loop(repository, tasks, waiting_time):
             directory = Path(repository.path)
-        
+
             while True:
                 start = time()
-            
+
                 with repository:
                     # Remove tasks that are no longer available
                     for t in tasks.keys():
-                        info_path = directory/t
-                        
+                        info_path = directory / t
+
                         if not info_path.exists():
                             del tasks[t]
-                
+
                     load(directory, tasks)
 
-                logger.info("finished iteration of TaskInfo.main_loop in {}ms".\
-                                format(int(1000 * (time() - start))))
+                logger.info("finished iteration of TaskInfo.main_loop in {}ms".
+                            format(int(1000 * (time() - start))))
 
                 sleep(waiting_time)
-                
-        # Load data once on start-up (otherwise tasks might get removed when 
+
+        # Load data once on start-up (otherwise tasks might get removed when
         # the server is restarted)
         with repository:
             load(Path(repository.path), TaskInfo.tasks)
-        
+
         TaskInfo.info_process = Process(target=main_loop,
                                         args=(repository, TaskInfo.tasks,
                                               .5 * (1 + sqrt(5))))
-        TaskInfo.info_process.daemon = True        
+        TaskInfo.info_process.daemon = True
         TaskInfo.info_process.start()
 
     @staticmethod
@@ -204,7 +204,7 @@ class TaskInfo:
     @staticmethod
     def get_info(keys):
         data = deepcopy(TaskInfo.tasks)
-    
+
         return {x: data[x] for x in keys if x in data}
 
     @staticmethod

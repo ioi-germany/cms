@@ -74,7 +74,8 @@ class TaskCompileJob:
 
             with balancer:
                 try:
-                    comp = GerMakeTask(repository.path, self.name, True, True, None, False, False)
+                    comp = GerMakeTask(
+                        repository.path, self.name, True, True, None, False, False)
 
                     with repository:
                         comp.prepare()
@@ -101,16 +102,16 @@ class TaskCompileJob:
             status["log"] = sys.stdout.getvalue()
             status["done"] = True
 
-        self.compilation_process = Process(target=do, args = (self.status,
-                                                              self.repository,
-                                                              self.balancer))
+        self.compilation_process = Process(target=do, args=(self.status,
+                                                            self.repository,
+                                                            self.balancer))
         self.compilation_process.daemon = True
         self.compilation_process.start()
 
     def _update(self):
         if self.status["done"]:
-            logger.info("Finished compilation of task {}:\n\n{}".\
-                            format(self.name, self.status["log"]))
+            logger.info("Finished compilation of task {}:\n\n{}".
+                        format(self.name, self.status["log"]))
 
             self.backup = {}
             self.backup.update(self.status)
@@ -127,7 +128,6 @@ class TaskCompileJob:
                            "msg":    "Okay",
                            "log":    ""}
             self.idle = True
-
 
     def _reset_status(self):
         self.status = Manager().dict()
@@ -156,11 +156,12 @@ class TaskCompileJob:
 
     def _choose(self, handle, key):
         return self.backup[key] if handle <= self.backup_handle else \
-               self.status[key]
+            self.status[key]
 
     def get(self):
         self._update()
-        return self.backup["result"] # this will always be the most current one
+        # this will always be the most current one
+        return self.backup["result"]
 
 
 class TaskFetch:
@@ -170,8 +171,8 @@ class TaskFetch:
 
     @staticmethod
     def init(repository, max_compilations):
-        logger.info("initializing task compilation in directory {}.".\
-                        format(repository.path))
+        logger.info("initializing task compilation in directory {}.".
+                    format(repository.path))
 
         TaskFetch.repository = repository
         TaskFetch.balancer = Manager().BoundedSemaphore(max_compilations)

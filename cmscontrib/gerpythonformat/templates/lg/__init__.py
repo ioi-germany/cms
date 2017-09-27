@@ -23,6 +23,7 @@ from __future__ import unicode_literals
 
 from .LgTemplate import *
 
+
 def load(contest, short_name="~"):
     contest.lg = short_name
     LgTemplate(contest)

@@ -38,7 +38,8 @@ class Repository:
 
         You have to use one repository object for all of these!
     """
-    def __init__(self, path, auto_sync = False):
+
+    def __init__(self, path, auto_sync=False):
         self.lock = Manager().Lock()
         self.path = path
         self.auto_sync = auto_sync
@@ -46,22 +47,22 @@ class Repository:
     def __enter__(self):
         self.lock.acquire()
         self._sync()
-    
+
     def __exit__(self, type, value, traceback):
         self.lock.release()
-    
+
     def _sync(self):
         if self.auto_sync:
             logger.info("Synchronizing {}".format(self.path))
 
             with chdir(self.path):
                 gitout = ""
-            
+
                 try:
                     gitout = check_output(["git", "pull"])
                 except:
-                    logger.error("Couldn't sync with repository: " + \
+                    logger.error("Couldn't sync with repository: " +
                                  "{}".format(gitout))
                 else:
-                    logger.info("Finished synchronization: " + \
+                    logger.info("Finished synchronization: " +
                                 "{}".format(gitout))

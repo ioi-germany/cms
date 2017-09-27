@@ -28,6 +28,7 @@ import os
 class WorkingDirectory:
     """Class responsible for maintaining a stack of working directories.
     """
+
     def __init__(self, path):
         """Change the working directory to path.
         """

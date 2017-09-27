@@ -436,7 +436,7 @@ class SubtaskGroup(ScoreType):
                               }
                         if first:
                             first = False
-                            tc["groupnr"] = groupnr+1
+                            tc["groupnr"] = groupnr + 1
                             tc["grouplen"] = len(group["cases"])
 
                         testcases.append(tc)
@@ -451,14 +451,14 @@ class SubtaskGroup(ScoreType):
                     "score": st_score,
                     "max_score": st_maxscore,
                     "testcases": testcases,
-                    })
+                })
                 if not public:
                     ranking_details.append("%lg" % round(st_score, 2))
             else:
                 subtasks.append({
                     "name": subtask["name"],
                     "testcases": [],
-                    })
+                })
 
         details = {"unit_test": False, "subtasks": subtasks}
 
@@ -632,8 +632,8 @@ class SubtaskGroup(ScoreType):
 
         details = {"unit_test": True, "subtasks": subtasks,
                    "private_score_okay": private_score_okay,
-                   "public_score_okay" : None if self.feedback() == "full"
-                                         else public_score_okay,
+                   "public_score_okay": None if self.feedback() == "full"
+                   else public_score_okay,
                    "public": public_score,
                    "wanted_public": wanted_public,
                    "private": private_score,

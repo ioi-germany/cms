@@ -50,6 +50,7 @@ class Scope(object):
     """
     Base class for tasks, subtasks and groups.
     """
+
     def __init__(self, upscope=None):
         self.upscope = upscope
         self.checkers = []
@@ -104,6 +105,7 @@ class MySubtask(Scope):
     :ivar groups: Groups contained in this subtask
     :ivar partial: Is this a partial feedback subtask?
     """
+
     def __init__(self, task, description, name, public,
                  for_public_score, for_private_score, partial):
         super(MySubtask, self).__init__(task)
@@ -226,6 +228,7 @@ class MyGroup(Scope):
     :ivar name: Internal (short) name of this group
     :ivar cases: Test cases contained in this group
     """
+
     def __init__(self, task, subtask, points, name):
         super(MyGroup, self).__init__(subtask)
         self.task = task
@@ -302,7 +305,7 @@ class MyGroup(Scope):
             self.task.everything_checked = False
         for i, checker in enumerate(checkers):
             self.task._check(checker, case.infile, case.outfile,
-                             case.codename, i+1)
+                             case.codename, i + 1)
         self.task.current_group = None
 
         if name is None:
@@ -363,6 +366,7 @@ class MyCase(object):
     :ivar codename: The code name of this test case (usually a four-digit
     number).
     """
+
     def __init__(self, task, codename):
         self.task = task
         self.codename = codename
@@ -519,6 +523,7 @@ class TaskConfig(CommonConfig, Scope):
 
     This object is exported as a variable called :samp:`task`.
     """
+
     def __init__(self, upstream, rules, name, num, feedback,
                  ignore_latex=False, minimal=False):
         super(TaskConfig, self).__init__(rules, ignore_latex)
@@ -730,8 +735,8 @@ class TaskConfig(CommonConfig, Scope):
         if library:
             grader_param = "grader"
             for end in ["c", "cpp", "pas"]:
-                self.managers["grader."+end] = \
-                    os.path.join(self.wdir, "interface."+end)
+                self.managers["grader." + end] = \
+                    os.path.join(self.wdir, "interface." + end)
             if os.path.exists(os.path.join(self.wdir, "lib.h")):
                 self.managers["%s.h" % self.name] = \
                     os.path.join(self.wdir, "lib.h")
@@ -778,9 +783,9 @@ class TaskConfig(CommonConfig, Scope):
         """
         self.tasktype = "Communication"
         for end in ["c", "cpp", "pas"]:
-            interfacefile = os.path.join(self.wdir, "interface."+end)
+            interfacefile = os.path.join(self.wdir, "interface." + end)
             if stub:
-                self.managers["stub."+end] = interfacefile
+                self.managers["stub." + end] = interfacefile
         self.managers["manager"] = manager.get_path()
         compilation_param = "alone"
         if stub:
@@ -820,7 +825,7 @@ class TaskConfig(CommonConfig, Scope):
         prog (Executable): program to run to generate the test case
 
         """
-        codename = "%.04d" % (len(self.cases)+1)
+        codename = "%.04d" % (len(self.cases) + 1)
 
         with header("Generating test case {}".format(codename), depth=5):
             case = MyCase(self, codename)
@@ -1212,8 +1217,8 @@ class TaskConfig(CommonConfig, Scope):
         zipname = os.path.join(self.wdir, "savedcases.zip")
         contents = {}
         for i, c in enumerate(self.saved):
-            contents["%d.in" % (i+1)] = c.infile
-            contents["%d.out" % (i+1)] = c.outfile
+            contents["%d.in" % (i + 1)] = c.infile
+            contents["%d.out" % (i + 1)] = c.outfile
         ZipRule(self.rules, zipname, contents).ensure()
         self.attachment(zipname, "%s.zip" % self.name)
 
@@ -1224,8 +1229,8 @@ class TaskConfig(CommonConfig, Scope):
         zipname = os.path.join(self.wdir, "allcases.zip")
         contents = {}
         for i, c in enumerate(self.cases):
-            contents["%d.in" % (i+1)] = c.infile
-            contents["%d.out" % (i+1)] = c.outfile
+            contents["%d.in" % (i + 1)] = c.infile
+            contents["%d.out" % (i + 1)] = c.outfile
         ZipRule(self.rules, zipname, contents).ensure()
         self.attachment(zipname, "%s_all.zip" % self.name)
 
@@ -1333,27 +1338,27 @@ class TaskConfig(CommonConfig, Scope):
     def _makedataset(self, file_cacher, tdb):
         score_type_parameters = json.dumps(
             {'feedback': self.feedback,
-            'tcinfo':
-            [{'name': s.description,
-                'key': s.unique_name,
-                'public': s.public,
-                'for_public_score': s.for_public_score,
-                'for_private_score': s.for_private_score,
-                'partial': s.partial,
-                'groups': [{'points': g.points,
-                            'key': g.unique_name,
-                            'cases': [c.codename for c
-                                    in g.cases]}
-                        for g in s.groups]}
-            for s in self.subtasks]})
+             'tcinfo':
+             [{'name': s.description,
+               'key': s.unique_name,
+               'public': s.public,
+               'for_public_score': s.for_public_score,
+               'for_private_score': s.for_private_score,
+               'partial': s.partial,
+               'groups': [{'points': g.points,
+                           'key': g.unique_name,
+                           'cases': [c.codename for c
+                                     in g.cases]}
+                          for g in s.groups]}
+              for s in self.subtasks]})
         ddb = Dataset(task=tdb,
                       description=self._dataset,
                       task_type=self.tasktype,
                       task_type_parameters=self.tasktypeparameters,
                       score_type="SubtaskGroup",
                       score_type_parameters=score_type_parameters)
-        ddb.time_limit=float(self._timelimit)
-        ddb.memory_limit=self._memorylimit
+        ddb.time_limit = float(self._timelimit)
+        ddb.memory_limit = self._memorylimit
 
         # Add test cases
         for c in self.cases:
@@ -1412,7 +1417,7 @@ class TaskConfig(CommonConfig, Scope):
             print()
             box(" No Unit Tests for Task \"{}\"! ".format(self._title),
                 red("You should define some unit tests for this task!"),
-                double = True)
+                double=True)
             print()
 
         elif len(unit_tests) != 0:
@@ -1420,11 +1425,11 @@ class TaskConfig(CommonConfig, Scope):
             box(" Unit Test Statistics for Task \"{}\" ".format(self._title),
                 (green("All unit tests passed.") if len(failed) == 0
                  else red("{} unit test{} failed:\n".format(len(failed),
-                     "s" if len(failed) > 1 else "") +
-                     "\n".join(red(f) for f in failed))) +
+                                                            "s" if len(failed) > 1 else "") +
+                          "\n".join(red(f) for f in failed))) +
                 ("\n\n" + yellow("There are some additional (non-local) "
-                 "unit tests!") if len(unit_tests) != len(self.testsubmissions)
-                 else ""), double = True)
+                                 "unit tests!") if len(unit_tests) != len(self.testsubmissions)
+                 else ""), double=True)
             print()
 
         return sdbs
@@ -1546,7 +1551,8 @@ class TaskConfig(CommonConfig, Scope):
                                              dataset=ddb)
         # Compile
         compile_operation = ESOperation(ESOperation.COMPILATION, -1, -1)
-        compile_job = CompilationJob.from_submission(compile_operation, sdb, ddb)
+        compile_job = CompilationJob.from_submission(
+            compile_operation, sdb, ddb)
         compile_job = self._run_job(compile_job)
         compile_job.to_submission(submission_result)
         if submission_result.compilation_outcome != "ok":
@@ -1585,7 +1591,7 @@ class TaskConfig(CommonConfig, Scope):
             score_type.unit_test_expected_scores(sdb.additional_info)
 
         def v((accepted, desc), z=False):
-            d = desc#.replace("<br>", "\n")
+            d = desc  # .replace("<br>", "\n")
 
             if accepted == 42:
                 return blue(d)
@@ -1605,7 +1611,7 @@ class TaskConfig(CommonConfig, Scope):
             base_space = remaining_line_length() - 15
             space = base_space - len(name) - len(desc)
 
-            return header(name + " " + (space - 2)*"═" + " " +
+            return header(name + " " + (space - 2) * "═" + " " +
                           v(status), depth=3)
 
         # Present verdict
@@ -1627,7 +1633,7 @@ class TaskConfig(CommonConfig, Scope):
                             if c["memory"] is None:
                                 fmem = "??? MB"
                             else:
-                                fmem = "%.1fMB" % (float(c["memory"])/2**20)
+                                fmem = "%.1fMB" % (float(c["memory"]) / 2**20)
                             ftime = w(ftime, l[0], 8, z=True)
                             fmem = w(fmem, l[1], 10, z=True)
                             fans = v(l[2], z=True)

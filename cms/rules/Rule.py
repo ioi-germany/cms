@@ -59,6 +59,7 @@ def deletefile(filename):
 class Rule(object):
     """Base class for make-like rules.
     """
+
     def __init__(self, rulesdir):
         """Initializes a rule.
 

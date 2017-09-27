@@ -36,6 +36,7 @@ class Executable(object):
     Executables can be called with function-like syntax: a(5, 7, p="x")
 
     """
+
     def __init__(self):
         pass
 
@@ -120,6 +121,7 @@ class Executable(object):
 class ParamsExecutable(Executable):
     """Helper class for specifying additional command line arguments.
     """
+
     def __init__(self, parent, args=tuple(), kwargs={},
                  stdin=None, stdinstring=None):
         """Initialize.
@@ -149,7 +151,7 @@ class ParamsExecutable(Executable):
             stdin = self.stdin
         if stdinstring is None:
             stdinstring = self.stdinstring
-        self.parent.run(args+self.args, k, stdin=stdin,
+        self.parent.run(args + self.args, k, stdin=stdin,
                         stdinstring=stdinstring, stdout=stdout,
                         stderr=stderr, dependencies=dependencies)
 
@@ -191,6 +193,7 @@ class CPPProgram(Executable):
     an exception is thrown.
 
     """
+
     def __init__(self, rulesdir, conf, executable, sources=None):
         """Initialize.
 
@@ -222,7 +225,7 @@ class CPPProgram(Executable):
         """Return the file name of the executable file (including the version
         number).
         """
-        return self.executable+".version"+str(self.nr)
+        return self.executable + ".version" + str(self.nr)
 
     def compilerule(self):
         """Return a rule for compiling the sources.
@@ -281,6 +284,7 @@ class InternalPython(Executable):
 
     File descriptors for stdin, stdout and stderr are passed to the function.
     """
+
     def __init__(self, f=None):
         self.f = f
         self.path = str(f)
@@ -317,6 +321,7 @@ class ExternalPython(Executable):
     Other imported python modules that might change MUST be specified in the
     dependencies array or the function will not be re-run when they change.
     """
+
     def __init__(self, rulesdir, source, function="gen"):
         """Initialize.
 
@@ -372,6 +377,7 @@ class ExternalScript(Executable):
     an exception is thrown.
 
     """
+
     def __init__(self, rules, path=None):
         """Initialize.
 

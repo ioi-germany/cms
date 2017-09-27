@@ -79,6 +79,7 @@ class ContestConfig(CommonConfig):
 
     This object is exported as a variable called :samp:`contest`.
     """
+
     def __init__(self, rules, name, ignore_latex=False, onlytask=None,
                  minimal=False):
         """
@@ -100,7 +101,8 @@ class ContestConfig(CommonConfig):
         self.contestname = name
 
         self._allowed_localizations = []
-        # FIXME If we don't allow Java submissions, all Java test submissions will fail (even locally) since multithreading is not allowed.
+        # FIXME If we don't allow Java submissions, all Java test submissions
+        # will fail (even locally) since multithreading is not allowed.
         self._languages = ["C++11 / g++", "Java / JDK"]
 
         self.tasks = {}
@@ -318,7 +320,7 @@ class ContestConfig(CommonConfig):
 
     @exported_function
     def user(self, username, password, firstname, lastname, group=None,
-             ip=None, hidden=False, unrestricted=False,timezone=None,
+             ip=None, hidden=False, unrestricted=False, timezone=None,
              primary_statements=[], team=None):
         """
         Add a user participating in this contest.
@@ -360,7 +362,8 @@ class ContestConfig(CommonConfig):
             return
 
         if username in self.users:
-            raise Exception("User {} specified multiple times".format(username))
+            raise Exception(
+                "User {} specified multiple times".format(username))
         if group is None:
             if self.defaultgroup is None:
                 raise Exception("You have to specify a group")
@@ -416,7 +419,7 @@ class ContestConfig(CommonConfig):
                 taskconfig._printresult()
                 self.tasks[s] = taskconfig
             if minimal:
-                print_msg("Statement for task {} generated successfully".\
+                print_msg("Statement for task {} generated successfully".
                           format(s), success=True)
             else:
                 print_msg("Task {} loaded completely".format(s), success=True)
@@ -515,7 +518,7 @@ class ContestConfig(CommonConfig):
         gdb.start = group.start
         gdb.stop = group.stop
         gdb.per_user_time = None if group.per_user_time is None else \
-                            timedelta(seconds=group.per_user_time)
+            timedelta(seconds=group.per_user_time)
         return gdb
 
     def _maketeam(self, teamname):
@@ -577,8 +580,8 @@ class ContestConfig(CommonConfig):
 
         def copy_ranking_file(basename, target_basename):
             for ext in [".png", ".jpg", ".gif", ".bmp"]:
-                origin = os.path.join(self.wdir, basename+ext)
-                target = os.path.join(directory, target_basename+ext)
+                origin = os.path.join(self.wdir, basename + ext)
+                target = os.path.join(directory, target_basename + ext)
                 if os.path.exists(origin):
                     shutil.copyfile(origin, target)
                     return
@@ -586,10 +589,10 @@ class ContestConfig(CommonConfig):
         copy_ranking_file("logo", "logo")
 
         for team in self.teams.values():
-            copy_ranking_file("flag-"+team.code,
+            copy_ranking_file("flag-" + team.code,
                               os.path.join("flags", team.code))
 
         for user in self.users.values():
             if not user.hidden:
-                copy_ranking_file("face-"+user.username,
+                copy_ranking_file("face-" + user.username,
                                   os.path.join("faces", user.username))

@@ -54,6 +54,7 @@ end_code = "\033[0m"
 
 _disable_color_switch = False
 
+
 def disable_colors():
     global _disable_color_switch
     _disable_color_switch = True
@@ -61,7 +62,7 @@ def disable_colors():
 
 def colors_enabled():
     return not _disable_color_switch and (sys.platform == "linux"
-        or sys.platform == "linux2")
+                                          or sys.platform == "linux2")
 
 
 def color_function(start):
@@ -162,7 +163,7 @@ def pad_center(string, length, filler=' '):
     r = length - estimate_len(string)
     if r < 0:
         return string
-    return filler*(r/2) + string + filler*((r+1)/2)
+    return filler * (r / 2) + string + filler * ((r + 1) / 2)
 
 
 @apply_to_lines
@@ -182,7 +183,7 @@ def pad_left(string, length, filler=' '):
     r = length - estimate_len(string)
     if r < 0:
         return string
-    return filler*r + string
+    return filler * r + string
 
 
 @apply_to_lines
@@ -202,7 +203,7 @@ def pad_right(string, length, filler=' '):
     r = length - estimate_len(string)
     if r < 0:
         return string
-    return string + filler*r
+    return string + filler * r
 
 
 @apply_to_lines
@@ -242,10 +243,11 @@ def indent(string, filler=' '):
     return (unicode): the indented string
 
     """
-    return filler * (IndentManager.indent*2) + string
+    return filler * (IndentManager.indent * 2) + string
 
 
-def center_line(l, filler=' ', outer_left=None, outer_right=None, make_bold=False):
+def center_line(l, filler=' ', outer_left=None,
+                outer_right=None, make_bold=False):
     if outer_left is None:
         outer_left = filler
     if outer_right is None:
@@ -273,11 +275,13 @@ def box(title, content, double=False):
     """
     if double:
         center_line(title, '═', '╔', '╗', True)
-        for s in content.split('\n'): center_line(s, ' ', '║', None, True)
-        center_line("", '═', '╚', '╝', True)    
+        for s in content.split('\n'):
+            center_line(s, ' ', '║', None, True)
+        center_line("", '═', '╚', '╝', True)
     else:
         center_line(title, '─', '╭', '╮', True)
-        for s in content.split('\n'): center_line(s, ' ', '│', None, True)
+        for s in content.split('\n'):
+            center_line(s, ' ', '│', None, True)
         center_line("", '─', '╰', '╯', True)
 
 
@@ -306,7 +310,7 @@ def side_by_side(strings, offsets):
         for istring, o in zip(xrange(len(strings)), offsets):
             if len(line) > 0:
                 line += " "
-            line += " "*max(o-estimate_len(line), 0)
+            line += " " * max(o - estimate_len(line), 0)
             if iline < len(lines[istring]):
                 line += lines[istring][iline]
         res.append(line)
@@ -337,7 +341,7 @@ def add_line_breaks(l, length, hanging_indent=0):
         return l
 
     def flush_line():
-        result.append(" "*data.indent + data.curr_line.rstrip())
+        result.append(" " * data.indent + data.curr_line.rstrip())
         data.indent = next_indent
         data.rem_width = length - data.indent
         data.curr_line = ""
@@ -411,7 +415,7 @@ def print_msg(message, headerdepth=None,
         fill_character = s
     rem_length = remaining_line_length() - estimate_len(left)
 
-    res = add_line_breaks(message, rem_length-1, hanging_indent)
+    res = add_line_breaks(message, rem_length - 1, hanging_indent)
     res = add_right(res, " ")
     res = pad_right(res, rem_length, fill_character)
     res = add_left(res, left)

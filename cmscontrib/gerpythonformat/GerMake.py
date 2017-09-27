@@ -69,10 +69,14 @@ class GerMake:
                 if self.task is not None and len(contestconfig.tasks) == 0:
                     raise Exception("Task {} not found".format(self.task))
                 cdb = contestconfig._makecontest()
-                test_udb = contestconfig._makeuser(contestconfig._mytestuser.username)
-                test_gdb = contestconfig._makegroup(contestconfig._mytestuser.group.name, cdb)
-                # We're not putting the test user on any team for testing (shouldn't be needed).
-                test_pdb = contestconfig._makeparticipation(contestconfig._mytestuser.username, cdb, test_udb, test_gdb, None)
+                test_udb = contestconfig._makeuser(
+                    contestconfig._mytestuser.username)
+                test_gdb = contestconfig._makegroup(
+                    contestconfig._mytestuser.group.name, cdb)
+                # We're not putting the test user on any team for testing
+                # (shouldn't be needed).
+                test_pdb = contestconfig._makeparticipation(
+                    contestconfig._mytestuser.username, cdb, test_udb, test_gdb, None)
                 for t in contestconfig.tasks.values():
                     tdb = t._makedbobject(cdb, file_cacher)
                     t._make_test_submissions(test_pdb, tdb, self.local_test)

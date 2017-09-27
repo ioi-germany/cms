@@ -30,13 +30,13 @@ class Constraint(object):
         self.max = max
 
     def uncompress(self):
-        return {v: [Constraint.eval(self.min), 
+        return {v: [Constraint.eval(self.min),
                     Constraint.eval(self.max)] for v in self.variables}
-    
+
     def merge(self, rhs):
         if rhs.min is not None:
             self.min = rhs.min
-        
+
         if rhs.max is not None:
             self.max = rhs.max
 
@@ -45,7 +45,7 @@ class Constraint(object):
         if self.max is not None and self.max == self.min:
             s += ", ".join(self.variables)
             s += r"= {}".format(Constraint.pretty(self.min))
-        
+
         elif self.max is None:
             s += ", ".join(self.variables)
             s += r"\ge {}".format(Constraint.pretty(self.min))
@@ -61,7 +61,7 @@ class Constraint(object):
     def pretty(s):
         """
         Try to apply digit grouping to numbers for TeX display
-        
+
         This is of course not perfect, for example one can trick it using
         something like 1{}000
         """
@@ -70,10 +70,11 @@ class Constraint(object):
         num_mode = False
 
         digits = {chr(ord('0') + i) for i in range(0, 10)}
-        
+
         for c in s:
             if (c in digits) != num_mode:
-                l.append(Constraint.grp(curr_token) if num_mode else curr_token)
+                l.append(Constraint.grp(curr_token)
+                         if num_mode else curr_token)
                 curr_token = ""
                 num_mode = not num_mode
 
@@ -82,7 +83,7 @@ class Constraint(object):
         l.append(Constraint.grp(curr_token) if num_mode else curr_token)
 
         return "".join(l)
-    
+
     @staticmethod
     def grp(s):
         """
@@ -102,14 +103,14 @@ class Constraint(object):
     def eval(s):
         if s is None:
             return None
-    
+
         coding = {"^": "**",
                   "{": "(",
                   "}": ")"}
 
         for old, new in coding.iteritems():
             s = s.replace(old, new)
-    
+
         return eval(s)
 
 

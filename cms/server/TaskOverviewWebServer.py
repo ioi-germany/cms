@@ -55,7 +55,7 @@ class TaskCompileHandler(RequestHandler):
 
 class DownloadHandler(RequestHandler):
     def share(self, statement, code):
-        self.set_header("Content-Type", "application/pdf");
+        self.set_header("Content-Type", "application/pdf")
         self.set_header("Content-Disposition",
                         "attachment;filename=\"statement-{}.pdf\"".format(code))
         self.write(statement)
@@ -119,4 +119,3 @@ class TaskOverviewWebServer:
             IOLoop.instance().start()
         except KeyboardInterrupt:
             pass
-

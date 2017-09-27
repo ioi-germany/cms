@@ -53,27 +53,32 @@ def exported_function(f):
 
 class DatabaseProxy(object):
     _initialized = False
+
     def __init__(self, obj):
         self._obj = obj
         self._initialized = True
+
     def __getattr__(self, name):
         return getattr(self._obj, name)
+
     def __setattr__(self, name, value):
         if not self._initialized:
             return dict.__setattr__(self, name, value)
-        elif self.__dict__.has_key(name):
+        elif name in self.__dict__:
             return dict.__setattr__(self, name, value)
         prev_value = getattr(self._obj, name)
         if prev_value != value:
-            logger.info("Changing {} from {} to {}".format(name, prev_value, value))
+            logger.info("Changing {} from {} to {}".format(
+                name, prev_value, value))
             setattr(self._obj, name, value)
 
 
 class DatabaseProxyContest(DatabaseProxy):
     def __init__(self, obj):
-        self._prevgroups = {g.name : g for g in obj.groups}
+        self._prevgroups = {g.name: g for g in obj.groups}
         self._curgroups = set()
         super(DatabaseProxyContest, self).__init__(obj)
+
     def group(self, name):
         self._curgroups.add(name)
         logger.info("Group {}".format(name))
@@ -82,10 +87,13 @@ class DatabaseProxyContest(DatabaseProxy):
         except KeyError:
             logger.info("Adding group {}".format(name))
             return Group(name=name)
+
     def set_main_group(self, group):
         if self._obj.main_group.name != group.name:
-            logger.info("Changing main_group from {} to {}".format(name, self.main_group.name, group.name))
+            logger.info("Changing main_group from {} to {}".format(
+                name, self.main_group.name, group.name))
             self._obj.main_group = group
+
     def __setattr__(self, name, value):
         if name == "main_group":
             return self.set_main_group(value)
@@ -114,6 +122,7 @@ class CommonConfig(object):
     available to the configuration file. Provides basic functions for the
     querying system.
     """
+
     def __init__(self, rules, ignore_latex=False):
         self.upstream = None
         self.rules = rules
@@ -329,8 +338,8 @@ class CommonConfig(object):
         return (string): file name of the generated pdf file
 
         """
-        source = basename+".tex"
-        output = basename+".pdf"
+        source = basename + ".tex"
+        output = basename + ".pdf"
 
         if self.ignore_latex:
             return output
@@ -347,12 +356,12 @@ class CommonConfig(object):
                 raise Exception("Compilation failed")
 
             # Create "translation kit" containing all important dependencies
-            kit_directory = basename+".kit"
+            kit_directory = basename + ".kit"
             if os.path.exists(kit_directory):
                 shutil.rmtree(kit_directory)
             for dep in r.dependencies:
                 depabs = os.path.abspath(dep)
-                wdirpath = os.path.abspath(self.wdir)+'/'
+                wdirpath = os.path.abspath(self.wdir) + '/'
                 # We don't want to include global latex style files, etc.
                 if depabs.startswith(wdirpath):
                     basefile = depabs[len(wdirpath):]
@@ -380,7 +389,7 @@ class CommonConfig(object):
         arguments.
 
         """
-        source = basename+".asy"
+        source = basename + ".asy"
         if output is None:
             output = basename + ".pdf"
 
@@ -421,7 +430,7 @@ class CommonConfig(object):
 
         basename, extension = os.path.splitext(filename)
         if extension == "":
-            ok = [e for e in extmap if os.path.isfile(filename+e)]
+            ok = [e for e in extmap if os.path.isfile(filename + e)]
             if len(ok) == 0:
                 raise Exception("Could not find a suitable extension for {}"
                                 .format(filename))
