@@ -58,7 +58,7 @@ class SubtaskGroup(ScoreType):
     TEMPLATE = """\
 {% from cms.grading import format_status_text %}
 {% from cms.server import format_size %}
-{% if not details["unit_test"] %}
+{% if not details["unit_test"] %}{# Normal submission #}
 {% for st in details["subtasks"] %}
     {% if "score" in st and "max_score" in st %}
         {% if st["score"] >= st["max_score"] %}
@@ -68,14 +68,10 @@ class SubtaskGroup(ScoreType):
         {% else %}
 <div class="subtask partiallycorrect">
         {% end %}
-    {% else %}
-<div style="height:0px;display:none;">
-    {% end %}
     <div class="subtask-head">
         <span class="title" style="margin-top:-2px;">
             {{ st["name"] }}
         </span>
-    {% if "score" in st and "max_score" in st %}
         <span class="score">
             {% if st["public"] and not st["for_public_score"] %}
                 {% if st["score"] >= st["max_score"] %}
@@ -89,11 +85,6 @@ class SubtaskGroup(ScoreType):
                 {{ '%g' % round(st["score"], 2) }} / {{ st["max_score"] }}
             {% end %}
         </span>
-    {% else %}
-        <span class="score">
-            {{ _("N/A") }}
-        </span>
-    {% end %}
     </div>
     <div class="subtask-body">
         <table class="testcase-list">
@@ -107,48 +98,49 @@ class SubtaskGroup(ScoreType):
                 </tr>
             </thead>
             <tbody>
-    {% for tc in st["testcases"] %}
-        {% if "outcome" in tc and "text" in tc %}
-            {% if tc["outcome"] == "Correct" %}
+        {% for tc in st["testcases"] %}
+            {% if "outcome" in tc and "text" in tc %}
+                {% if tc["outcome"] == "Correct" %}
                 <tr class="correct">
-            {% elif tc["outcome"] == "Not correct" %}
+                {% elif tc["outcome"] == "Not correct" %}
                 <tr class="notcorrect">
-            {% else %}
+                {% else %}
                 <tr class="partiallycorrect">
-            {% end %}
+                {% end %}
                     <td>{{ _(tc["outcome"]) }}</td>
                     <td>{{ format_status_text(tc["text"], _) }}</td>
                     <td>
-            {% if "time" in tc and tc["time"] is not None %}
+                {% if "time" in tc and tc["time"] is not None %}
                         {{ "%(seconds)0.3f s" % {'seconds': tc["time"]} }}
-            {% else %}
+                {% else %}
                         {{ _("N/A") }}
-            {% end %}
+                {% end %}
                     </td>
                     <td>
-            {% if "memory" in tc and tc["memory"] is not None %}
+                {% if "memory" in tc and tc["memory"] is not None %}
                         {{ format_size(tc["memory"]) }}
-            {% else %}
+                {% else %}
                         {{ _("N/A") }}
-            {% end %}
+                {% end %}
                     </td>
-            {% if "grouplen" in tc %}
+                {% if "grouplen" in tc %}
                     <td rowspan="{{ tc["grouplen"] }}">{{ tc["groupnr"] }}</td>
-            {% end %}
-        {% else %}
+                {% end %}
+            {% else %}
                 <tr class="undefined">
                     <td colspan="5">
                         {{ _("N/A") }}
                     </td>
                 </tr>
+            {% end %}
         {% end %}
-    {% end %}
             </tbody>
         </table>
     </div>
 </div>
+    {% end %}
 {% end %}
-{% else %}
+{% else %}{# Unit test #}
 {% if details["public_score_okay"] == True %}
     <div class="subtask correct">
         <div class="subtask-head">
