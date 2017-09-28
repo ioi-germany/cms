@@ -398,7 +398,7 @@ class SubtaskGroup(ScoreType):
 
         """
         # Actually, this means it didn't even compile!
-        if not submission_result.evaluated(public):
+        if not submission_result.evaluated():
             if public:
                 return 0.0, json.dumps({"unit_test": False, "subtasks": []})
             else:
@@ -511,7 +511,7 @@ class SubtaskGroup(ScoreType):
         submission_info = json.loads(submission_info)
 
         # Actually, this means it didn't even compile!
-        if not submission_result.evaluated(False):
+        if not submission_result.evaluated():
             return json.dumps({"unit_test": True, 'subtasks': [],
                                'verdict': (-1, "Compilation failed")})
 

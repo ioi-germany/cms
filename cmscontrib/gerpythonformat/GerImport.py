@@ -22,6 +22,13 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import argparse
+import logging
+import os
+import resource
+import shutil
+import sys
+
 from .ContestConfig import ContestConfig
 from .LocationStack import chdir
 from cms import utf8_decoder, ServiceCoord
@@ -32,20 +39,16 @@ from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 from cmscontrib import BaseImporter, _is_rel
 from cms.io import Service
-import argparse
-import os
-import resource
-import shutil
-import logging
 
 logger = logging.getLogger(__name__)
 
 
 class GerImport(BaseImporter, Service):
-    def __init__(self, odir, no_test, clean):
+    def __init__(self, odir, no_test, clean, force):
         self.odir = odir
         self.no_test = no_test
         self.clean = clean
+        self.force = force
         self.file_cacher = FileCacher()
 
         self.to_delete = []
@@ -114,6 +117,7 @@ class GerImport(BaseImporter, Service):
             logger.info("Updating {} {}".format(
                 type(old_value[key]).__name__, key))
             self._update_dispatcher(old_value[key], new_value[key])
+        return {key: old_value[key] for key in new_value}
 
     def _update_list(self, old_value, new_value):
         old_len = len(old_value)
@@ -366,9 +370,9 @@ class GerImport(BaseImporter, Service):
 
                 pdbs = {u: make_participation(u) for u in contestconfig.users}
                 pdb1s = {p.user.username: p for p in cdb1.participations}
-                self._update_dict(pdb1s, pdbs, delete=True,
-                                  creator_function=lambda _, v:
-                                      cdb1.participations.append(v))
+                pdb1s = self._update_dict(pdb1s, pdbs, delete=True,
+                                          creator_function=lambda _, v:
+                                              cdb1.participations.append(v))
                 for username, u in pdb1s.iteritems():
                     u.user = udb1s[username]
                     u.group = cdb1.get_group(
@@ -386,7 +390,7 @@ class GerImport(BaseImporter, Service):
                 # number.
                 for t in cdb1.tasks:
                     t.num += len(contestconfig.tasks) + len(cdb1.tasks)
-                session.flush()
+
                 tdbs = {n: t._makedbobject(cdb, self.file_cacher)
                         for n, t in contestconfig.tasks.iteritems()}
                 tdb1s = {t.name: t for t in cdb1.tasks}
@@ -408,6 +412,7 @@ class GerImport(BaseImporter, Service):
 
                 sdb1ss = {}
                 if not self.no_test:
+                    logger.warning("Replacing test submissions")
                     for t in contestconfig.tasks:
                         tdb = tdbs[t]
                         tdb1 = tdb1s[t]
@@ -417,6 +422,7 @@ class GerImport(BaseImporter, Service):
                             .filter(Submission.task == tdb1) \
                             .filter(Submission.additional_info != None).all()
                         for sdb1 in sdb1s:
+                            assert sdb1.is_unit_test()
                             self.to_delete.append(sdb1)
 
                         # Create test submissions in the database.
@@ -430,6 +436,39 @@ class GerImport(BaseImporter, Service):
                             session.add(sdb1)
                             sdb1s.append(sdb1)
                         sdb1ss[t] = sdb1s
+
+                for v in self.to_delete:
+                    if isinstance(v, Task):
+                        logger.warning("Removing task {}"
+                                       .format(v.name))
+                        if any(not s.is_unit_test() for s in v.submissions):
+                            logger.warning(
+                                "There are submissions for task {}."
+                                .format(v.name))
+                            if not self.force:
+                                logger.error("Aborting. Run with -f to force "
+                                             "deletion.")
+                                return
+                    elif isinstance(v, Participation):
+                        logger.warning("Removing participation {}"
+                                       .format(v.user.username))
+                        if any(not s.is_unit_test() for s in v.submissions):
+                            logger.warning(
+                                "There are submissions for participation {}."
+                                .format(v.user.username))
+                            if not self.force:
+                                logger.error("Aborting. Run with -f to force "
+                                             "deletion.")
+                                return
+
+                if self.force:
+                    logger.warning("Force flace -f set.")
+
+                print("Proceed? [y/N] ", end='')
+                ans = sys.stdin.readline().strip().lower()
+                if ans not in ["y", "yes"]:
+                    logger.error("Aborting.")
+                    return
 
                 # Delete marked objects
                 for v in self.to_delete:
@@ -468,12 +507,16 @@ def main():
     parser.add_argument("-c", "--clean", action="store_true",
                         help="clean the build directory (forcing a complete "
                         "rebuild)")
+    parser.add_argument("-f", "--force", action="store_true",
+                        help="force deletion of tasks and participations with "
+                        "submissions")
 
     args = parser.parse_args()
 
     GerImport(os.path.abspath(args.import_directory),
               args.no_test,
-              args.clean).make()
+              args.clean,
+              args.force).make()
 
 
 if __name__ == "__main__":

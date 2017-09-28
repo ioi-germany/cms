@@ -114,7 +114,7 @@ class Submission(Base):
         """The first line of the comment."""
         return self.comment.split("\n", 1)[0]
 
-    # Additional parameters
+    # Unit test parameters (None if the submission is not a unit test)
     additional_info = Column(
         String,
         nullable=True)
@@ -181,7 +181,8 @@ class Submission(Base):
             return False
 
         ai = json.loads(self.additional_info)
-        return ai.get("unit_test", False)
+        assert ai["unit_test"] is True
+        return True
 
 
 class File(Base):
@@ -510,7 +511,7 @@ class SubmissionResult(Base):
         """
         return SubmissionResult.compilation_outcome == "ok"
 
-    def evaluated(self, public=False):  # TODO
+    def evaluated(self):
         """Return whether the submission result has been evaluated.
 
         return (bool): True if evaluated, False otherwise.

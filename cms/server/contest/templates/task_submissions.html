@@ -2,8 +2,7 @@
 
 {% block additional_js %}
 
-{% for x in ["submission_list", "unit_test_list"] %}
-$(document).on("click", "#{{x}} tbody tr td.status .details", function (event) {
+$(document).on("click", "#submission_list tbody tr td.status .details", function (event) {
     var submission_id = $(this).parent().parent().attr("data-submission");
     var modal = $("#submission_detail");
     var modal_body = modal.children(".modal-body");
@@ -27,7 +26,6 @@ $(document).on("click", "#{{x}} tbody tr td.status .details", function (event) {
     });
     modal.modal("show");
 });
-{% end %}
 
 function get_score_class (score, max_score) {
     if (score <= 0) {
