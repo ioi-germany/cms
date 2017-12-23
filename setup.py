@@ -37,7 +37,6 @@ from __future__ import print_function
 import io
 import re
 import os
-
 from setuptools import setup, find_packages
 
 
@@ -125,7 +124,8 @@ setup(
              "scripts/cmsRankingWebServer",
              "scripts/cmsTaskOverviewWebServer",
              "scripts/cmsInitDB",
-             "scripts/cmsDropDB"],
+             "scripts/cmsDropDB",
+             "scripts/cmsTelegramBotService"],
     entry_points={
         "console_scripts": [
             "cmsRunTests=cmstestsuite.RunTests:main",
