@@ -96,6 +96,7 @@ class QuestionReplyHandler(BaseHandler):
             question.reply_text = ""
 
         question.reply_timestamp = make_datetime()
+        question.reply_source = "web"
 
         if self.try_commit():
             logger.info("Reply sent to user %s in contest %s for "

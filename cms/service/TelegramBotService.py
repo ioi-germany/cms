@@ -67,52 +67,79 @@ class WithDatabaseAccess(object):
 class MyQuestion(WithDatabaseAccess):
     """ Thin wrapper around question
     """
-    def __init__(self, question, sql_session):
+    def __init__(self, question):
         self.question = question
-        self.answered_via_telegram = False
-        super(MyQuestion, self).__init__(sql_session)
+        super(MyQuestion, self).__init__(Session.object_session(self.question))
 
     def answer(self, a):
         self.question.reply_timestamp = make_datetime()
         self.question.reply_subject = ""
         self.question.reply_text = a
-        self.answered_via_telegram = True
+        self.question.reply_source = "telegram"
         
         return self._commit()
     
     def get_answer(self):
-        q = Question.get_from_id(self.question.id, Session())
-        return q.reply_subject, q.reply_text
+        return self.question.reply_subject, self.question.reply_text
     
-    def __getattr__(self, attr):    
+    def __getattr__(self, attr):
         return self.question.__getattribute__(attr)
-        
 
 class QuestionList:
-    """ Keeps track of all the currently unanswered questions
+    """ Keeps track of all questions
     """
-    def __init__(self):
-        self.known_unanswered = []
+    def __init__(self, contest_id):
+        self.sql_session = Session()
+        self.contest_id = contest_id
     
-    def update(self, unanswered):
-        all_unanswered_ids = {q.id for q in unanswered}
-        known_unanswered_ids = {q.id for q in self.known_unanswered}
+        self.question_times = {}
+        self.reply_times = {}
+    
+    def poll(self):
+        question_list = self._get_questions()
+    
+        new_questions = []
+        new_answers = []
+        updated_answers = []
+    
+        for q in question_list:
+            # Case 1: new question
+            if q.id not in self.question_times:
+                # We don't mention questions that are already replied to or
+                # marked as ignored
+                # TODO: handle them seperately?
+                if not q.ignored and q.reply_timestamp is None:
+                    new_questions.append(MyQuestion(q))
+            
+            # Case 2: old question
+            elif q.reply_source == "web":
+                # Case 2a: first answer
+                if self.reply_times[q.id] is None:
+                    new_answers.append(MyQuestion(q))
+            
+                # Case 2b: edited answer
+                elif self.reply_times[q.id] != q.reply_timestamp:
+                    updated_answers.append(MyQuestion(q))    
+            
+            # TODO: deleted answers, ignored questions?
+            
+            self.question_times[q.id] = q.question_timestamp
+            self.reply_times[q.id] = q.reply_timestamp
         
-        new_questions = [q for q in unanswered 
-                                 if q.id not in known_unanswered_ids]
-        
-        external_answers = [q for q in self.known_unanswered
-                                    if q.id not in all_unanswered_ids and
-                                       not q.answered_via_telegram]
-        
-        self.known_unanswered = [q for q in self.known_unanswered
-                                         if q.id in all_unanswered_ids] + \
-                                new_questions
-        
-        return new_questions, external_answers
+        return new_questions, new_answers, updated_answers
     
     def open_questions(self):
-        return self.known_unanswered[:]
+        return [MyQuestion(q) for q in self._get_questions() 
+                              if q.reply_timestamp is None and not q.ignored]
+
+    def _new_session(self):
+        self.sql_session = Session()
+
+    def _get_questions(self):
+        self._new_session()
+    
+        return self.sql_session.query(Question).join(User)\
+                   .filter(User.contest_id == self.contest_id)
 
 
 class MyContest(WithDatabaseAccess):
@@ -123,23 +150,20 @@ class MyContest(WithDatabaseAccess):
 
         self.contest_id = contest_id
         self.contest = Contest.get_from_id(contest_id, self.sql_session)
-        self.questions = QuestionList()
+        self.questions = QuestionList(self.contest_id)
 
     def announce(self, header, body):
         ann = Announcement(make_datetime(), header, body, contest=self.contest)
         return self._commit()
 
     def poll_questions(self):
-        unanswered = self.sql_session.query(Question).join(User)\
-                         .filter(User.contest_id == self.contest_id)\
-                         .filter(Question.reply_timestamp == None)\
-                         .filter(Question.ignored == False)
-        
-        return self.questions.update([MyQuestion(q, self.sql_session)
-                                      for q in unanswered])
+        return self.questions.poll()
 
     def get_all_open_questions(self):
         return self.questions.open_questions()
+
+    # TODO: Notifications about announcements via web interface
+
 
 class TelegramBot:
     """ A telegram bot that allows easy access to all the communication
@@ -229,7 +253,7 @@ class TelegramBot:
                              "announcement in another chat!")
             return
         
-        header,msg = split_off_header(strip_cmd(update.message.text))
+        header, msg = split_off_header(strip_cmd(update.message.text))
         
         if self.contest.announce(header, msg):
             update.message.reply_text("I have announced the following:\n\n" + 
@@ -249,14 +273,15 @@ class TelegramBot:
                                parse_mode="Markdown")
         self.questions[msg.message_id] = q
         self.q_notifications[q.id] = msg
-        
-        logger.info(self.q_notifications)
     
-    def _notify_answer(self, q):
+    def _notify_answer(self, q, new):
         msg = self.q_notifications[q.id]
         rep_subject, rep_text = q.get_answer()
         
-        msg.reply_text(text="This question has been answered via CMS:\n\n" +
+        notification = "This question has been answered via CMS:\n\n" if new \
+                       else "The answer has been edited via CMS:\n\n"
+        
+        msg.reply_text(text=notification +
                             (bold(rep_subject) if rep_subject else rep_text),
                        quote=True,
                        parse_mode="Markdown")
@@ -267,13 +292,16 @@ class TelegramBot:
         if self.id is None:
             return
         
-        unanswered, answered_in_system = self.contest.poll_questions()
+        new_qs, new_as, updated_as = self.contest.poll_questions()
         
-        for q in unanswered:
+        for q in new_qs:
             self._notify_question(bot, q, True)
 
-        for q in answered_in_system:
-            self._notify_answer(q)
+        for q in new_as:
+            self._notify_answer(q, True)
+            
+        for q in updated_as:
+            self._notify_answer(q, False) 
 
     def list_open_questions(self, bot, update):
         if self.id is None:
@@ -294,11 +322,11 @@ class TelegramBot:
         notification = ""
         
         if len(qs) == 1:
-            notification = "There is currently *1* open question"
+            notification = "There is currently *1* open question:"
         else:
             notification = "There are currently " + \
                            bold("no" if len(qs) == 0 else str(len(qs))) + \
-                           " open questions"
+                           " open questions" + ("" if len(qs) == 0 else ":")
         
         bot.send_message(chat_id=self.id,
                          text=notification,
@@ -344,9 +372,9 @@ class TelegramBot:
                            "question from my fixed chat in a DIFFERENT chat)")
             bot.send_message(chat_id=self.id,
                              text="Warning! Someone tried to reply to a "
-                                  "message outside of the chat I'm bound to "
+                                  "message outside of this chat "
                                   "(or magically answered to a question from "
-                                  "my fixed chat in a DIFFERENT chat)")
+                                  "this chat in a DIFFERENT chat)")
             return
         
         msg_id = orig_msg.message_id

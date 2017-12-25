@@ -7,7 +7,9 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2015 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2015 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
+# Copyright © 2017 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -439,6 +441,11 @@ class Question(Base):
         Unicode,
         nullable=True)
     reply_text = Column(
+        Unicode,
+        nullable=True)
+
+    # Source of the answer (web / telegram)
+    reply_source = Column(
         Unicode,
         nullable=True)
 
