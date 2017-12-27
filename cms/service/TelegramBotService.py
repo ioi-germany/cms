@@ -172,7 +172,7 @@ class AnnouncementList(ListOfDatabaseEntries):
         return r
     
     def all(self):
-        return [(a.subject, a.text) for a in self._get_announcements]
+        return [(a.subject, a.text) for a in self._get_announcements()]
     
     def _get_announcements(self):
         self._new_session()
@@ -237,6 +237,8 @@ class TelegramBot:
                                                    self.list_open_questions))
         self.dispatcher.add_handler(CommandHandler('allquestions',
                                                    self.list_all_questions))
+        self.dispatcher.add_handler(CommandHandler('allannouncements',
+                                                   self.list_all_announcements))
         self.dispatcher.add_handler(CommandHandler('help', self.help))
         self.dispatcher.add_handler(MessageHandler(Filters.reply,
                                                    self.on_reply))
@@ -347,9 +349,9 @@ class TelegramBot:
         
         self.questions[reply.message_id] = q
     
-    def _notify_announcement(self, bot, a):
+    def _notify_announcement(self, bot, a, new):
         bot.send_message(chat_id=self.id,
-                         text="New announcement:\n\n" + \
+                         text=("New announcement:\n\n" if new else "") +\
                               self._format_announcement(a),
                          parse_mode="Markdown")
     
@@ -373,7 +375,7 @@ class TelegramBot:
         new_announcements = self.contest.poll_announcements()
         
         for a in new_announcements:
-            self._notify_announcement(bot, a)
+            self._notify_announcement(bot, a, True)
 
     def list_open_questions(self, bot, update):
         if self.id is None:
@@ -423,14 +425,12 @@ class TelegramBot:
 
         qs = self.contest.get_all_questions()
         
-        notification = ""
-        
         if len(qs) == 1:
             notification = "There is currently *1* question:"
         else:
             notification = "There are currently " + \
-                           bold("no" if len(qs) == 0 else str(len(qs))) + \
-                           " questions" + ("" if len(qs) == 0 else ":")
+                           bold("no" if len(qs) == 0 else str(len(qs))) + " "\
+                           "questions" + ("" if len(qs) == 0 else ":")
         
         bot.send_message(chat_id=self.id,
                          text=notification,
@@ -438,7 +438,39 @@ class TelegramBot:
         
         for q in qs:
             self._notify_question(bot, q, False, True)
-  
+
+    def list_all_announcements(self, bot, update):
+        if self.id is None:
+            update.message.reply_text("You have to register me first (using "
+                                      "the /start command).")
+            return
+            
+        if self.id != update.message.chat_id:
+            logger.warning("Warning! Someone tried to list all announcements "
+                           "in a chat I'm not registered in!")
+            bot.send_message(chat_id=self.id,
+                             text="Warning! Someone tried to list all "
+                             "announcements in another chat!")
+            return
+        
+        announcements = self.contest.get_all_announcements()
+        
+        if len(announcements) == 1:
+            notification = "There is currently *1* announcement:"
+        else:
+            notification = "There are currently " +\
+                           bold("no" if len(announcements) == 0
+                                     else str(len(announcements))) + " "\
+                           "announcements" + ("" if len(announcements) == 0
+                                                 else ":")
+        
+        bot.send_message(chat_id=self.id,
+                         text=notification,
+                         parse_mode="Markdown")
+        
+        for a in announcements:
+            self._notify_announcement(bot, a, False)
+              
     def help(self, bot, update):
         update.message.reply_text("A bot allowing to access clarification "
                                   "requests and announcements of a CMS contest "
