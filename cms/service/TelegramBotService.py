@@ -79,6 +79,9 @@ class MyQuestion(WithDatabaseAccess):
         
         return self._commit()
     
+    def answered(self):
+        return self.ignored or self.reply_timestamp is not None
+    
     def get_answer(self):
         return self.question.reply_subject, self.question.reply_text
     
@@ -132,6 +135,9 @@ class QuestionList:
         return [MyQuestion(q) for q in self._get_questions() 
                               if q.reply_timestamp is None and not q.ignored]
 
+    def all(self):
+        return [MyQuestion(q) for q in self._get_questions()]
+
     def _new_session(self):
         self.sql_session = Session()
 
@@ -162,6 +168,9 @@ class MyContest(WithDatabaseAccess):
     def get_all_open_questions(self):
         return self.questions.open_questions()
 
+    def get_all_questions(self):
+        return self.questions.all()
+
     # TODO: Notifications about announcements via web interface
 
 
@@ -187,6 +196,8 @@ class TelegramBot:
         self.dispatcher.add_handler(CommandHandler('announce', self.announce))
         self.dispatcher.add_handler(CommandHandler('openquestions',
                                                    self.list_open_questions))
+        self.dispatcher.add_handler(CommandHandler('allquestions',
+                                                   self.list_all_questions))
         self.dispatcher.add_handler(CommandHandler('help', self.help))
         self.dispatcher.add_handler(MessageHandler(Filters.reply,
                                                    self.on_reply))
@@ -261,29 +272,34 @@ class TelegramBot:
                                       parse_mode="Markdown")
         else:
             update.message.reply_text("Sorry, this didn't work...")
+
+    def _format_answer(self, (reply_subject, reply_text)):
+        return bold(reply_subject) if reply_subject else reply_text
             
-    def _notify_question(self, bot, q, new):
+    def _notify_question(self, bot, q, new, show_status):
+        status = italic("This question has been answered:\n\n") + \
+                     self._format_answer(q.get_answer()) if q.answered() \
+                     else italic("This question is open.")
+    
         msg = bot.send_message(chat_id=self.id,
                                text=("New question" if new else "Question") + 
                                     " by " + italic(q.user.username) +
                                     " (Timestamp: {}):\n\n".\
                                        format(q.question_timestamp) +
-                                    bold(q.subject) + "\n" +
-                                    q.text,
+                                    (bold(q.subject) + "\n" + q.text).strip() +
+                                    "\n\n" +  (status if show_status else ""),
                                parse_mode="Markdown")
         self.questions[msg.message_id] = q
         self.q_notifications[q.id] = msg
     
     def _notify_answer(self, q, new):
         msg = self.q_notifications[q.id]
-        rep_subject, rep_text = q.get_answer()
+        answer = q.get_answer()
         
         notification = "This question has been answered via CMS:\n\n" if new \
                        else "The answer has been edited via CMS:\n\n"
         
-        reply = msg.reply_text(text=notification + (bold(rep_subject) 
-                                                    if rep_subject
-                                                    else rep_text),
+        reply = msg.reply_text(text=notification + self._format_answer(answer),
                                quote=True,
                                parse_mode="Markdown")
         
@@ -298,7 +314,7 @@ class TelegramBot:
         new_qs, new_as, updated_as = self.contest.poll_questions()
         
         for q in new_qs:
-            self._notify_question(bot, q, True)
+            self._notify_question(bot, q, True, False)
 
         for q in new_as:
             self._notify_answer(q, True)
@@ -336,7 +352,39 @@ class TelegramBot:
                          parse_mode="Markdown")
         
         for q in qs:
-            self._notify_question(bot, q, False)
+            self._notify_question(bot, q, False, False)
+
+    def list_all_questions(self, bot, update):
+        if self.id is None:
+            update.message.reply_text("You have to register me first (using "
+                                      "the /start command).")
+            return
+            
+        if self.id != update.message.chat_id:
+            logger.warning("Warning! Someone tried to list all questions in "
+                           "a chat I'm not registered in!")
+            bot.send_message(chat_id=self.id,
+                             text="Warning! Someone tried to list all "
+                             "questions in another chat!")
+            return
+
+        qs = self.contest.get_all_questions()
+        
+        notification = ""
+        
+        if len(qs) == 1:
+            notification = "There is currently *1* question:"
+        else:
+            notification = "There are currently " + \
+                           bold("no" if len(qs) == 0 else str(len(qs))) + \
+                           " questions" + ("" if len(qs) == 0 else ":")
+        
+        bot.send_message(chat_id=self.id,
+                         text=notification,
+                         parse_mode="Markdown")
+        
+        for q in qs:
+            self._notify_question(bot, q, False, True)
   
     def help(self, bot, update):
         update.message.reply_text("A bot allowing to access clarification "
@@ -350,6 +398,7 @@ class TelegramBot:
                                   "an announcement to the current contest.\n"
                                   "/openquestions - shows all unanswered "
                                   "questions\n"
+                                  "/allquestions - shows all questions\n"
                                   "/help - shows this message\n\n"
                                   "In addition this bot will post all new "
                                   "questions appearing in the system. You can "
