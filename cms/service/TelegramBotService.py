@@ -281,10 +281,13 @@ class TelegramBot:
         notification = "This question has been answered via CMS:\n\n" if new \
                        else "The answer has been edited via CMS:\n\n"
         
-        msg.reply_text(text=notification +
-                            (bold(rep_subject) if rep_subject else rep_text),
-                       quote=True,
-                       parse_mode="Markdown")
+        reply = msg.reply_text(text=notification + (bold(rep_subject) 
+                                                    if rep_subject
+                                                    else rep_text),
+                               quote=True,
+                               parse_mode="Markdown")
+        
+        self.questions[reply.message_id] = q
     
     def update_questions(self, bot, job):
         """ Check for new questions and answers
@@ -351,7 +354,10 @@ class TelegramBot:
                                   "In addition this bot will post all new "
                                   "questions appearing in the system. You can "
                                   "answer them by replying to the "
-                                  "corresponding post.")
+                                  "corresponding post. Moreover, all answers "
+                                  "given via the web interface will also be "
+                                  "posted and you can edit them by replying to "
+                                  "the corresponding message")
     
     def on_reply(self, bot, update):
         """ Replying to a user question posted in the chat uploads the reply as
@@ -392,7 +398,8 @@ class TelegramBot:
         """
         q.answer(a)
         
-        update.message.reply_text("I have added your answer!", quote=True)
+        msg = update.message.reply_text("I have added your answer!", quote=True)
+        self.questions[msg.message_id] = q
     
     def run(self):
         self.updater.start_polling()
