@@ -50,7 +50,7 @@ class AddAnnouncementHandler(BaseHandler):
         subject = self.get_argument("subject", "")
         text = self.get_argument("text", "")
         if subject != "":
-            ann = Announcement(make_datetime(), subject, text,
+            ann = Announcement(make_datetime(), subject, text, "web",
                                contest=self.contest)
             self.sql_session.add(ann)
             self.try_commit()

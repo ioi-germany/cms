@@ -87,13 +87,22 @@ class MyQuestion(WithDatabaseAccess):
     
     def __getattr__(self, attr):
         return self.question.__getattribute__(attr)
+        
 
-class QuestionList:
-    """ Keeps track of all questions
-    """
+class ListOfDatabaseEntries(object):
     def __init__(self, contest_id):
         self.sql_session = Session()
         self.contest_id = contest_id
+    
+    def _new_session(self):
+        self.sql_session = Session()
+
+
+class QuestionList(ListOfDatabaseEntries):
+    """ Keeps track of all questions
+    """
+    def __init__(self, contest_id):
+        super(QuestionList, self).__init__(contest_id)
     
         self.question_times = {}
         self.reply_times = {}
@@ -138,14 +147,38 @@ class QuestionList:
     def all(self):
         return [MyQuestion(q) for q in self._get_questions()]
 
-    def _new_session(self):
-        self.sql_session = Session()
-
     def _get_questions(self):
         self._new_session()
     
         return self.sql_session.query(Question).join(User)\
                    .filter(User.contest_id == self.contest_id)
+
+
+class AnnouncementList(ListOfDatabaseEntries):
+    """ Keeps track of all announcements
+    """
+    def __init__(self, contest_id):
+        super(AnnouncementList, self).__init__(contest_id)
+        self.announcements = set()
+    
+    def poll(self):
+        r = []
+        
+        for a in self._get_announcements():
+            if a.id not in self.announcements and a.src == "web":
+                self.announcements.add(a.id)
+                r.append((a.subject, a.text))
+            
+        return r
+    
+    def all(self):
+        return [(a.subject, a.text) for a in self._get_announcements]
+    
+    def _get_announcements(self):
+        self._new_session()
+        
+        return self.sql_session.query(Announcement)\
+                   .filter(Announcement.contest_id == self.contest_id)
 
 
 class MyContest(WithDatabaseAccess):
@@ -157,9 +190,11 @@ class MyContest(WithDatabaseAccess):
         self.contest_id = contest_id
         self.contest = Contest.get_from_id(contest_id, self.sql_session)
         self.questions = QuestionList(self.contest_id)
+        self.announcements = AnnouncementList(self.contest_id)
 
     def announce(self, header, body):
-        ann = Announcement(make_datetime(), header, body, contest=self.contest)
+        ann = Announcement(make_datetime(), header, body, "telegram", 
+                           contest=self.contest)
         return self._commit()
 
     def poll_questions(self):
@@ -171,7 +206,11 @@ class MyContest(WithDatabaseAccess):
     def get_all_questions(self):
         return self.questions.all()
 
-    # TODO: Notifications about announcements via web interface
+    def poll_announcements(self):
+        return self.announcements.poll()
+    
+    def get_all_announcements(self):
+        return self.announcements.all()
 
 
 class TelegramBot:
@@ -202,7 +241,7 @@ class TelegramBot:
         self.dispatcher.add_handler(MessageHandler(Filters.reply,
                                                    self.on_reply))
        
-        self.job_queue.run_repeating(self.update_questions, interval=5, first=0)
+        self.job_queue.run_repeating(self.update, interval=5, first=0)
         
     def start(self, bot, update, args=None):
         """ The registration process
@@ -275,7 +314,10 @@ class TelegramBot:
 
     def _format_answer(self, (reply_subject, reply_text)):
         return bold(reply_subject) if reply_subject else reply_text
-            
+    
+    def _format_announcement(self, (header, body)):
+        return bold(header) + "\n" + body
+    
     def _notify_question(self, bot, q, new, show_status):
         status = italic("This question has been answered:\n\n") + \
                      self._format_answer(q.get_answer()) if q.answered() \
@@ -305,8 +347,14 @@ class TelegramBot:
         
         self.questions[reply.message_id] = q
     
-    def update_questions(self, bot, job):
-        """ Check for new questions and answers
+    def _notify_announcement(self, bot, a):
+        bot.send_message(chat_id=self.id,
+                         text="New announcement:\n\n" + \
+                              self._format_announcement(a),
+                         parse_mode="Markdown")
+    
+    def update(self, bot, job):
+        """ Check for new questions, answers, and announcements
         """
         if self.id is None:
             return
@@ -321,6 +369,11 @@ class TelegramBot:
             
         for q in updated_as:
             self._notify_answer(q, False) 
+        
+        new_announcements = self.contest.poll_announcements()
+        
+        for a in new_announcements:
+            self._notify_announcement(bot, a)
 
     def list_open_questions(self, bot, update):
         if self.id is None:
