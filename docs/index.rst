@@ -4,6 +4,7 @@ Welcome to CMS's documentation!
 .. toctree::
    :maxdepth: 2
 
+   German System Info
    Introduction
    Installation
    Running CMS
