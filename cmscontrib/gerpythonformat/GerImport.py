@@ -52,7 +52,12 @@ class GerImport(BaseImporter, Service):
 
         self.to_delete = []
 
+        self.update_prefix = []
+
         Service.__init__(self)
+
+    def attrstr(self, a):
+        return ".".join(self.update_prefix + [a])
 
     def _update_columns(self, old_object, new_object, ignore=None):
         ignore = ignore if ignore is not None else set()
@@ -64,7 +69,7 @@ class GerImport(BaseImporter, Service):
                 new_value = getattr(new_object, prp.key)
                 if old_value != new_value:
                     logger.info("Changing {} from {} to {}".format(
-                        prp.key, old_value, new_value))
+                        self.attrstr(prp.key), old_value, new_value))
                     setattr(old_object, prp.key, getattr(new_object, prp.key))
 
     # Create a recursive copy of a database object.
@@ -100,22 +105,22 @@ class GerImport(BaseImporter, Service):
         # delete
         if delete:
             for key in sorted(old_keys - new_keys):
-                logger.info("Deleting {} {}".format(
-                    type(old_value[key]).__name__, key))
+                logger.info("Deleting {}".format(
+                    self.attrstr("{}({})".format(type(old_value[key]).__name__, key))))
                 self.to_delete.append(old_value[key])
         # create
         for key in sorted(new_keys - old_keys):
-            logger.info("Creating {} {}".format(
-                type(new_value[key]).__name__, key))
+            logger.info("Creating {}".format(
+                self.attrstr("{}({})".format(type(new_value[key]).__name__, key))))
             v = self._copy(new_value[key])
             old_value[key] = v
             if creator_function is not None:
                 creator_function(key, v)
         # update
         for key in sorted(new_keys & old_keys):
-            logger.info("Updating {} {}".format(
-                type(old_value[key]).__name__, key))
+            self.update_prefix.append("{}({})".format(type(old_value[key]).__name__, key))
             self._update_dispatcher(old_value[key], new_value[key])
+            self.update_prefix.pop()
         return {key: old_value[key] for key in new_value}
 
     def _update_list(self, old_value, new_value):
