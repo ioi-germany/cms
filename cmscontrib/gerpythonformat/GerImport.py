@@ -49,7 +49,6 @@ class GerImport(BaseImporter, Service):
         self.no_test = no_test
         self.clean = clean
         self.force = force
-        self.file_cacher = FileCacher()
 
         self.to_delete = []
 
@@ -300,6 +299,13 @@ class GerImport(BaseImporter, Service):
                     (prp.parent.class_.__name__, prp.key))
 
     def make(self):
+        self.file_cacher = FileCacher()
+        try:
+            self.make_helper()
+        finally:
+            self.file_cacher.destroy_cache()
+
+    def make_helper(self):
         # Unset stack size limit
         resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,
                                                    resource.RLIM_INFINITY))
