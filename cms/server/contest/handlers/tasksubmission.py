@@ -460,7 +460,6 @@ class SubmissionStatusHandler(ContestHandler):
                 self._("Evaluated"), self._("details"))
 
             score_type = get_score_type(dataset=task.active_dataset)
-            logger.warning("Hi {}".format(submission.is_unit_test()))
             if submission.is_unit_test():
                 utd = json.loads(sr.unit_test_score_details)
                 data["expected_public"], data["expected_private"] = \
