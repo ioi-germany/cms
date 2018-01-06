@@ -4,6 +4,7 @@
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2016 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2018 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -38,9 +39,11 @@ gevent.monkey.patch_all()
 import argparse
 import logging
 import sys
+import getpass
 
 from cms import ConfigError
-from cms.db import test_db_connection, init_db
+from cms.db import test_db_connection, init_db, Admin
+from cmscontrib.AddAdmin import add_admin
 
 
 logger = logging.getLogger(__name__)
@@ -56,6 +59,39 @@ def main():
     args = parser.parse_args()
 
     success = init_db()
+    if success is not True: return 1
+    
+    first = True
+    
+    while True:
+        print(("Do you want to add {} admin account (alternatively you can use "
+               "cmsAddAdmin)? [y/n] ").format("an" if first else "another"),
+              end="")
+        
+        ans = sys.stdin.readline().strip().lower()
+        
+        if ans not in ["y", "yes"]:
+            break
+        
+        print("Enter user name: ", end="")
+        username = sys.stdin.readline().strip()
+        
+        print("Enter human readable name: ", end="")
+        readable_name = sys.stdin.readline().strip()
+
+        password = getpass.getpass("Enter password: ")        
+        repeated_password = getpass.getpass("Enter again: ")
+        print("")
+        
+        if password == repeated_password:
+            if add_admin(username, password, readable_name):
+                first = False                  
+        
+        else:
+            logger.error("Passwords don't agree.")
+
+        print("")
+    
     return 0 if success is True else 1
 
 

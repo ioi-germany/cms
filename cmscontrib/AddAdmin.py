@@ -3,6 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2015-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2018 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -44,13 +45,13 @@ from sqlalchemy.exc import IntegrityError
 logger = logging.getLogger(__name__)
 
 
-def add_admin(username, password=None):
+def add_admin(username, password=None, real_name=None):
     logger.info("Creating the admin on the database.")
     if password is None:
         password = generate_random_password()
     admin = Admin(username=username,
                   authentication=hash_password(password.encode("utf-8")),
-                  name=username,
+                  name=real_name or username,
                   permission_all=True)
     try:
         with SessionGen() as session:
@@ -60,11 +61,8 @@ def add_admin(username, password=None):
         logger.error("An admin with the given username already exists.")
         return False
 
-    logger.info("Admin with complete access added. "
-                "Login with username %s and password %s",
-                username, password)
+    logger.info("Admin '%s' with complete access added. ", username)
     return True
-
 
 def main():
     """Parse arguments and launch process.
@@ -83,3 +81,4 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
