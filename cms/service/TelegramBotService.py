@@ -24,6 +24,7 @@ from __future__ import unicode_literals
 import logging
 import json
 
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import *
 
 from cms import config
@@ -54,14 +55,15 @@ class WithDatabaseAccess(object):
         self.sql_session = sql_session or Session()
 
     def _commit(self):
-        try:
+        self.sql_session.commit()
+        """try:
             self.sql_session.commit()
         except IntegrityError as e:
             logger.error("Couldn't apply commit to database. Message: {}".\
                              format(e))
             return False
         else:
-            return True
+            return True"""
 
 
 class MyQuestion(WithDatabaseAccess):
@@ -72,22 +74,37 @@ class MyQuestion(WithDatabaseAccess):
         super(MyQuestion, self).__init__(Session.object_session(self.question))
 
     def answer(self, a):
-        self.question.reply_timestamp = make_datetime()
+        self.question.last_action = make_datetime()
+        self.question.reply_timestamp = self.question.last_action
         self.question.reply_subject = ""
         self.question.reply_text = a
+        self.question.reply_source = "telegram"
+        self.question.ignored = False
+        
+        return self._commit()
+    
+    def ignore(self):
+        self.question.last_action = make_datetime()
+        self.question.ignored = True
         self.question.reply_source = "telegram"
         
         return self._commit()
     
     def answered(self):
-        return self.ignored or self.reply_timestamp is not None
+        return self.question.reply_timestamp is not None
+    
+    def update(self):
+        self.question = Question.get_from_id(self.question.id, self.sql_session)
+    
+    def ignored(self):   
+        return self.question.ignored
+    
+    def handled(self):
+        return self.ignored() or self.answered()   
     
     def get_answer(self):
         return self.question.reply_subject, self.question.reply_text
-    
-    def __getattr__(self, attr):
-        return self.question.__getattribute__(attr)
-        
+
 
 class ListOfDatabaseEntries(object):
     def __init__(self, contest_id):
@@ -95,8 +112,8 @@ class ListOfDatabaseEntries(object):
         self.contest_id = contest_id
     
     def _new_session(self):
+        self.sql_session.commit()
         self.sql_session.expire_all()
-#        self.sql_session = Session()
 
 
 class QuestionList(ListOfDatabaseEntries):
@@ -106,13 +123,15 @@ class QuestionList(ListOfDatabaseEntries):
         super(QuestionList, self).__init__(contest_id)
     
         self.question_times = {}
-        self.reply_times = {}
+        self.action_times = {}
     
     def poll(self):
         question_list = self._get_questions()
     
         new_questions = []
         new_answers = []
+        ignores = []
+        unignores = []
         updated_answers = []
     
         for q in question_list:
@@ -120,26 +139,37 @@ class QuestionList(ListOfDatabaseEntries):
             if q.id not in self.question_times:
                 # We don't mention questions that are already replied to or
                 # marked as ignored
-                # TODO: handle them seperately?
                 if not q.ignored and q.reply_timestamp is None:
                     new_questions.append(MyQuestion(q))
             
             # Case 2: old question
             elif q.reply_source == "web":
-                # Case 2a: first answer
-                if self.reply_times[q.id] is None:
-                    new_answers.append(MyQuestion(q))
+                old_last_action = self.action_times.get(q.id)
             
-                # Case 2b: edited answer
-                elif self.reply_times[q.id] != q.reply_timestamp:
-                    updated_answers.append(MyQuestion(q))    
-            
-            # TODO: deleted answers, ignored questions?
+                # Case 2.1: ignored
+                if q.ignored:                 
+                    if q.last_action != old_last_action:
+                        ignores.append(MyQuestion(q))
+                
+                # Case 2.2: answered
+                elif q.reply_timestamp is not None:
+                    # Case 2.2.1: first answer
+                    if self.action_times[q.id] is None:
+                        new_answers.append(MyQuestion(q))
+                
+                    # Case 2.2.2: edited answer
+                    elif q.last_action != old_last_action:
+                        updated_answers.append(MyQuestion(q))
+                
+                # Case 2.3: unignored
+                else:            
+                    if q.last_action != old_last_action:
+                        unignores.append(MyQuestion(q))
             
             self.question_times[q.id] = q.question_timestamp
-            self.reply_times[q.id] = q.reply_timestamp
+            self.action_times[q.id] = q.last_action
         
-        return new_questions, new_answers, updated_answers
+        return new_questions, new_answers, updated_answers, ignores, unignores
     
     def open_questions(self):
         return [MyQuestion(q) for q in self._get_questions() 
@@ -245,6 +275,7 @@ class TelegramBot:
         self.dispatcher.add_handler(CommandHandler('help', self.help))
         self.dispatcher.add_handler(MessageHandler(Filters.reply,
                                                    self.on_reply))
+        self.dispatcher.add_handler(CallbackQueryHandler(self.button_callback))
        
         self.job_queue.run_repeating(self.update, interval=5, first=0)
         
@@ -322,26 +353,65 @@ class TelegramBot:
     
     def _format_announcement(self, (header, body)):
         return bold(header) + "\n" + body
+        
+    def button_callback(self, bot, update):
+        cq = update.callback_query
+    
+        if cq.message.chat.id != self.id:
+            logger.warning("Warning! Someone tried to use the inline keyboard "
+                           "in a chat I'm not registered in!")
+            
+            if self.id is not None:
+                bot.send_message(chat_id=self.id,
+                                 text="Warning! Someone tried to use the "
+                                      "inline keyboard in another chat!")
+            return
+
+        a = cq.data
+        msg_id = cq.message.message_id
+        q = self.questions[msg_id]
+    
+        self.reply_question(cq, q, a)
     
     def _notify_question(self, bot, q, new, show_status):
-        status = italic("This question has been answered:\n\n") + \
-                     self._format_answer(q.get_answer()) if q.answered() \
-                     else italic("This question is open.")
+        if q.answered():
+            status = italic("This question has been answered:\n\n") + \
+                         self._format_answer(q.get_answer())
+        elif q.ignored():
+            status = italic("This question has been ignored.")
+        else:
+            status = italic("This question is open.")
+    
+        kb =  [[InlineKeyboardButton(text="Yes", callback_data="Yes"), 
+                InlineKeyboardButton(text="No",  callback_data="No")],
+               [InlineKeyboardButton(text="Answered in task description",
+                                     callback_data="Answered in task "
+                                                   "description")],
+               [InlineKeyboardButton(text="No comment",
+                                     callback_data="No comment"),
+                InlineKeyboardButton(text="Invalid question",
+                                     callback_data="Invalid question")],
+               [InlineKeyboardButton(text="〈ignore question〉",
+                                     parse_mode="Markdown",
+                                     callback_data="/ignore")]]
+    
+        Q = q.question
     
         msg = bot.send_message(chat_id=self.id,
                                text=("New question" if new else "Question") + 
                                     " by " + 
-                                    italic(q.participation.user.username) +
+                                    italic(Q.participation.user.username) +
                                     " (Timestamp: {}):\n\n".\
-                                       format(q.question_timestamp) +
-                                    (bold(q.subject) + "\n" + q.text).strip() +
+                                       format(Q.question_timestamp) +
+                                    (bold(Q.subject) + "\n" + Q.text).strip() +
                                     "\n\n" +  (status if show_status else ""),
-                               parse_mode="Markdown")
+                               parse_mode="Markdown",
+                               reply_markup=InlineKeyboardMarkup(kb))
         self.questions[msg.message_id] = q
-        self.q_notifications[q.id] = msg
+        self.q_notifications[Q.id] = msg
     
     def _notify_answer(self, q, new):
-        msg = self.q_notifications[q.id]
+        msg = self.q_notifications[q.question.id]
         answer = q.get_answer()
         
         notification = "This question has been answered via CMS:\n\n" if new \
@@ -352,6 +422,19 @@ class TelegramBot:
                                parse_mode="Markdown")
         
         self.questions[reply.message_id] = q
+    
+    def _notify_question_ignore(self, q, ignore):
+        msg = self.q_notifications[q.question.id]
+    
+        notification = italic("This question has been "
+                              "{}ignored.\n\n".format("" if ignore else "un"))
+        
+        reply = msg.reply_text(text=notification,
+                               quote=True,
+                               parse_mode="Markdown")
+        
+        self.questions[reply.message_id] = q
+        
     
     def _notify_announcement(self, bot, a, new):
         bot.send_message(chat_id=self.id,
@@ -365,8 +448,9 @@ class TelegramBot:
         if self.id is None:
             return
         
-        new_qs, new_as, updated_as = self.contest.poll_questions()
-        
+        new_qs, new_as, updated_as, ignored_qs, unignored_qs = \
+            self.contest.poll_questions()
+
         for q in new_qs:
             self._notify_question(bot, q, True, False)
 
@@ -375,6 +459,12 @@ class TelegramBot:
             
         for q in updated_as:
             self._notify_answer(q, False) 
+        
+        for q in ignored_qs:
+            self._notify_question_ignore(q, True)
+        
+        for q in unignored_qs:
+            self._notify_question_ignore(q, False)
         
         new_announcements = self.contest.poll_announcements()
         
@@ -534,6 +624,21 @@ class TelegramBot:
     def reply_question(self, update, q, a):
         """ Reply to the user question q with the answer a
         """
+        # q.update()
+        
+        if a.strip() == "/ignore":
+            if q.answered():
+                update.message.reply_text("This question is already answered; I "
+                                          "can't ignore it any more ☹ .",
+                                          quote=True)
+        
+            else:
+                q.ignore()            
+                update.message.reply_text("I have ignored this question!",
+                                          quote=True)
+                
+            return
+
         q.answer(a)
         
         msg = update.message.reply_text("I have added your answer!", quote=True)

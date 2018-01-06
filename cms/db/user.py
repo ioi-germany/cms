@@ -428,6 +428,11 @@ class Question(Base):
     reply_timestamp = Column(
         DateTime,
         nullable=True)
+    
+    # Last time something about the answer changed
+    last_action = Column(
+        DateTime,
+        nullable=True)
 
     # Has this message been ignored by the admins?
     ignored = Column(
