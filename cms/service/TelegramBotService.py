@@ -27,7 +27,7 @@ import json
 from telegram.ext import *
 
 from cms import config
-from cms.db import Session, Contest, Question, User, Announcement
+from cms.db import Session, Contest, Question, Participation, Announcement
 from cms.io import Service
 from cmscommon.datetime import make_datetime
 
@@ -95,7 +95,8 @@ class ListOfDatabaseEntries(object):
         self.contest_id = contest_id
     
     def _new_session(self):
-        self.sql_session = Session()
+        self.sql_session.expire_all()
+#        self.sql_session = Session()
 
 
 class QuestionList(ListOfDatabaseEntries):
@@ -149,9 +150,11 @@ class QuestionList(ListOfDatabaseEntries):
 
     def _get_questions(self):
         self._new_session()
-    
-        return self.sql_session.query(Question).join(User)\
-                   .filter(User.contest_id == self.contest_id)
+        
+        return self.sql_session.query(Question).join(Participation)\
+                   .filter(Participation.contest_id == self.contest_id)\
+                   .order_by(Question.question_timestamp.desc())\
+                   .order_by(Question.id).all()
 
 
 class AnnouncementList(ListOfDatabaseEntries):
@@ -327,7 +330,8 @@ class TelegramBot:
     
         msg = bot.send_message(chat_id=self.id,
                                text=("New question" if new else "Question") + 
-                                    " by " + italic(q.user.username) +
+                                    " by " + 
+                                    italic(q.participation.user.username) +
                                     " (Timestamp: {}):\n\n".\
                                        format(q.question_timestamp) +
                                     (bold(q.subject) + "\n" + q.text).strip() +
