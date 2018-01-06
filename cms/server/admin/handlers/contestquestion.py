@@ -95,8 +95,10 @@ class QuestionReplyHandler(BaseHandler):
                 QuestionReplyHandler.QUICK_ANSWERS[reply_subject_code]
             question.reply_text = ""
 
-        question.reply_timestamp = make_datetime()
+        question.last_action = make_datetime()
+        question.reply_timestamp = question.last_action
         question.reply_source = "web"
+        question.ignored = False
 
         if self.try_commit():
             logger.info("Reply sent to user %s in contest %s for "
@@ -127,6 +129,11 @@ class QuestionIgnoreHandler(BaseHandler):
 
         # Commit the change.
         question.ignored = should_ignore
+        question.last_action = make_datetime()
+        question.reply_source = "web"
+        question.reply_subject = None
+        question.reply_text = None
+
         if self.try_commit():
             logger.info("Question '%s' by user %s in contest %s has "
                         "been %s",
