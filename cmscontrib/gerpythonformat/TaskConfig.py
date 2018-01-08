@@ -1715,10 +1715,10 @@ class TaskConfig(CommonConfig, Scope):
 
             if score_type.feedback() != "full":
                 print_msg("Public Score: {}; expected: {}".
-                        format(public_score, expected_public))
+                          format(public_score, expected_public))
 
             print_msg("Total Score: {}; expected: {}".format(score,
-                                                            expected_private))
+                                                             expected_private))
             print()
 
         verd = details["verdict"]

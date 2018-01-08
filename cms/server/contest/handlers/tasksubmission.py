@@ -463,7 +463,7 @@ class SubmissionStatusHandler(ContestHandler):
             if score_type.max_public_score > 0:
                 data["max_public_score"] = \
                     round(score_type.max_public_score,
-                            task.score_precision)
+                          task.score_precision)
                 data["public_score"] = \
                     round(sr.public_score, task.score_precision)
                 data["public_score_message"] = score_type.format_score(

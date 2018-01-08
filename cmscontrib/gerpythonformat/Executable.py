@@ -184,7 +184,7 @@ def asy_keyword_list(kwords):
     def encode(key, val):
         return ("-" if val else "-no") + str(key)
 
-    return [encode(key, val) for key, val in kwords.items()]    
+    return [encode(key, val) for key, val in kwords.items()]
 
 
 class CPPProgram(Executable):

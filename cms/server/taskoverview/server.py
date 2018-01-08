@@ -26,7 +26,7 @@ import json
 
 from pkg_resources import resource_filename
 from tornado.ioloop import IOLoop
-from tornado.web import RequestHandler, Application, StaticFileHandler
+from tornado.web import RequestHandler, Application
 
 from cms import config
 from cms.io.TaskInfo import TaskInfo

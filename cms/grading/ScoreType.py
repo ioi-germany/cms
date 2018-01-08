@@ -104,7 +104,7 @@ class ScoreType(object):
 
     @staticmethod
     def format_score_unit_test(score, max_score, unused_score_details,
-                     score_precision, _=lambda s: s):
+                               score_precision, _=lambda s: s):
         """Same as format_score, but max_score is a string.
 
         """
