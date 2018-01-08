@@ -141,6 +141,7 @@ class SubtaskGroup(ScoreType):
     {% end %}
 {% end %}
 {% else %}{# Unit test #}
+{% if "public_score_okay" in details %}
 {% if details["public_score_okay"] == True %}
     <div class="subtask correct">
         <div class="subtask-head">
@@ -255,6 +256,7 @@ class SubtaskGroup(ScoreType):
     </div>
 {% end %}
 <br><br>
+{% end %}
 
 {% for st in details["subtasks"] %}
     {% if st["status"][0] == 1337%}

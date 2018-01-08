@@ -1608,7 +1608,8 @@ class TaskConfig(CommonConfig, Scope):
             compile_operation, sdb, ddb)
         compile_job = self._run_job(compile_job)
         compile_job.to_submission(submission_result)
-        if submission_result.compilation_outcome != "ok":
+        compile_ok = (submission_result.compilation_outcome == "ok")
+        if not compile_ok:
             print_msg("Compile error:")
             if submission_result.compilation_stdout is not None:
                 print_block(submission_result.compilation_stdout)
@@ -1704,20 +1705,22 @@ class TaskConfig(CommonConfig, Scope):
 
             print()
 
-        public_score = green("{}".format(public_score)) if \
-            details["public_score_okay"] else \
-            red("{}".format(public_score))
-        score = green("{}".format(score)) if \
-            details["private_score_okay"] else \
-            red("{}".format(score))
+        if compile_ok:
+            public_score = green("{}".format(public_score)) if \
+                details["public_score_okay"] else \
+                red("{}".format(public_score))
+            score = green("{}".format(score)) if \
+                details["private_score_okay"] else \
+                red("{}".format(score))
 
-        if score_type.feedback() != "full":
-            print_msg("Public Score: {}; expected: {}".
-                      format(public_score, expected_public))
+            if score_type.feedback() != "full":
+                print_msg("Public Score: {}; expected: {}".
+                        format(public_score, expected_public))
 
-        print_msg("Total Score: {}; expected: {}".format(score,
-                                                          expected_private))
-        print()
+            print_msg("Total Score: {}; expected: {}".format(score,
+                                                            expected_private))
+            print()
+
         verd = details["verdict"]
         box(" Overall verdict ", green(verd[1]) if verd[0] == 1
             else red(verd[1]))

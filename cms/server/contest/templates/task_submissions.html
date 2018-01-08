@@ -53,6 +53,12 @@ update_submission_row = function (submission_id, data) {
             row.children("td.total_score").removeClass("undefined");
             row.children("td.total_score").html(data["score_message"]);
         }
+        if (data["verdict"] != undefined) {
+            // unit test verdict
+            row.children("td.unit_test").addClass(get_score_class(data["verdict"][0], 1));
+            row.children("td.unit_test").removeClass("undefined");
+            row.children("td.unit_test").html(data["verdict"][1] + " (" + data["comment"] + ")");
+        }
     } else if (data["status"] != {{ SubmissionResult.COMPILATION_FAILED }}) {
         schedule_update_submission_row(submission_id);
     }

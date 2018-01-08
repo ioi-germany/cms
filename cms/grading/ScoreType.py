@@ -102,6 +102,15 @@ class ScoreType(object):
         return locale_format(_, "{0:g} / {1:g}",
             round(score, score_precision), round(max_score, score_precision))
 
+    @staticmethod
+    def format_score_unit_test(score, max_score, unused_score_details,
+                     score_precision, _=lambda s: s):
+        """Same as format_score, but max_score is a string.
+
+        """
+        return locale_format(_, "{0:g}; expected: {1:s}",
+            round(score, score_precision), max_score)
+
     def get_html_details(self, score_details, _=lambda s: s):
         """Return an HTML string representing the score details of a
         submission.
