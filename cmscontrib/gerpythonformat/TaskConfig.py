@@ -447,7 +447,7 @@ class MySubmission(object):
                 "Weird limits for unit test; strong limits should be > 1 "
                 "and weak limits should be < 1")
         self.expected = expected
-        
+
         keywords = {"arbitrary": ["arbitrary"],
                     "time":      ["time"],
                     "memory":    ["memory"],
@@ -483,7 +483,7 @@ class MySubmission(object):
 
         for c in self.task.cases:
             self.case_expectations[c.codename] = []
-            
+
         def encode(key):
             try:
                 return keywords[key]
@@ -531,15 +531,15 @@ class MySubmission(object):
         """
         if x == "arbitrary":
             return [float("-inf"), float("inf")]
-    
+
         try:
             float(x)
             return [float(x), float(x)]
         except TypeError:
             pass
-            
+
         return x
-    
+
     @staticmethod
     def score_human_readable(x):
         """

@@ -369,7 +369,7 @@ class SubtaskGroup(ScoreType):
 
         public = submission_info.get("expected_public_score_info", 0)
         private = submission_info.get("expected_score_info", 0)
-        
+
         if self.feedback() == "partial":
             public = submission_info.get("expected_partial_score_info", 0)
 
