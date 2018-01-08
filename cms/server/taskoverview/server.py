@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2016 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2016-2018 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -26,7 +26,7 @@ import json
 
 from pkg_resources import resource_filename
 from tornado.ioloop import IOLoop
-from tornado.web import RequestHandler, Application
+from tornado.web import RequestHandler, Application, StaticFileHandler
 
 from cms import config
 from cms.io.TaskInfo import TaskInfo
@@ -103,8 +103,8 @@ class TaskOverviewWebServer:
 
         params = {"template_path": resource_filename("cms.server",
                                                      "taskoverview/templates"),
-                  "static_path":   resource_filename("cms.server",
-                                                     "taskoverview/static")}
+                  "static_path": resource_filename("cms.server",
+                                                   "taskoverview/static")}
 
         repository = Repository(config.task_repository, config.auto_sync)
 

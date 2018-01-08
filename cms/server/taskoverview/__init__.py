@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2016 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2015 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,24 +21,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import logging
-import sys
+from .server import TaskOverviewWebServer
 
-from cms import ConfigError
-from cms.server.taskoverview import TaskOverviewWebServer
-
-
-logger = logging.getLogger(__name__)
-
-
-def main():
-    TaskOverviewWebServer().run()
-
-
-if __name__ == "__main__":
-    try:
-        main()
-        sys.exit(0)
-    except ConfigError as error:
-        logger.critical(error.message)
-        sys.exit(1)
+__all__ = [TaskOverviewWebServer]
