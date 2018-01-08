@@ -57,6 +57,11 @@ PACKAGE_DATA = {
         os.path.join("contest", "static", "js", "*.*"),
         os.path.join("contest", "templates", "*.*"),
         os.path.join("taskoverview", "templates", "*.*"),
+        os.path.join("taskoverview", "static", "*.*"),
+        os.path.join("taskoverview", "static", "css", "*.*"),
+        os.path.join("taskoverview", "static", "img", "*.*"),
+        os.path.join("taskoverview", "static", "jq", "*.*"),
+        os.path.join("taskoverview", "static", "js", "*.*"),
     ],
     "cms.service": [
         os.path.join("templates", "printing", "*.*"),
