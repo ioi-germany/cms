@@ -460,40 +460,27 @@ class SubmissionStatusHandler(ContestHandler):
                 self._("Evaluated"), self._("details"))
 
             score_type = get_score_type(dataset=task.active_dataset)
-            if submission.is_unit_test():
-                utd = json.loads(sr.unit_test_score_details)
-                data["expected_public"], data["expected_private"] = \
-                    score_type.unit_test_expected_scores_info(
-                        submission.additional_info)
-                data["verdict"] = utd["verdict"]
+            if score_type.max_public_score > 0:
+                data["max_public_score"] = \
+                    round(score_type.max_public_score,
+                          task.score_precision)
                 data["public_score"] = \
                     round(sr.public_score, task.score_precision)
                 data["public_score_message"] = score_type.format_score(
-                    sr.public_score, data["expected_public"],
+                    sr.public_score, score_type.max_public_score,
                     sr.public_score_details, task.score_precision, self._)
+            if submission.token is not None or submission.is_unit_test():
+                data["max_score"] = \
+                    round(score_type.max_score, task.score_precision)
                 data["score"] = \
                     round(sr.score, task.score_precision)
                 data["score_message"] = score_type.format_score(
-                    sr.public_score, data["expected_private"],
-                    sr.public_score_details, task.score_precision, self._)
-            else:
-                if score_type.max_public_score > 0:
-                    data["max_public_score"] = \
-                        round(score_type.max_public_score,
-                              task.score_precision)
-                    data["public_score"] = \
-                        round(sr.public_score, task.score_precision)
-                    data["public_score_message"] = score_type.format_score(
-                        sr.public_score, score_type.max_public_score,
-                        sr.public_score_details, task.score_precision, self._)
-                if submission.token is not None:
-                    data["max_score"] = \
-                        round(score_type.max_score, task.score_precision)
-                    data["score"] = \
-                        round(sr.score, task.score_precision)
-                    data["score_message"] = score_type.format_score(
-                        sr.score, score_type.max_score,
-                        sr.score_details, task.score_precision, self._)
+                    sr.score, score_type.max_score,
+                    sr.score_details, task.score_precision, self._)
+            if submission.is_unit_test():
+                utd = json.loads(sr.unit_test_score_details)
+                data["verdict"] = utd["verdict"]
+                data["comment"] = submission.comment
 
         self.write(data)
 

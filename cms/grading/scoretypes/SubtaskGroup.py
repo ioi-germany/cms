@@ -141,6 +141,7 @@ class SubtaskGroup(ScoreType):
     {% end %}
 {% end %}
 {% else %}{# Unit test #}
+{% if "public_score_okay" in details %}
 {% if details["public_score_okay"] == True %}
     <div class="subtask correct">
         <div class="subtask-head">
@@ -255,6 +256,7 @@ class SubtaskGroup(ScoreType):
     </div>
 {% end %}
 <br><br>
+{% end %}
 
 {% for st in details["subtasks"] %}
     {% if st["status"][0] == 1337%}
@@ -369,7 +371,7 @@ class SubtaskGroup(ScoreType):
 
         public = submission_info.get("expected_public_score_info", 0)
         private = submission_info.get("expected_score_info", 0)
-        
+
         if self.feedback() == "partial":
             public = submission_info.get("expected_partial_score_info", 0)
 
@@ -409,8 +411,7 @@ class SubtaskGroup(ScoreType):
                 return 0.0, json.dumps({"unit_test": False, "subtasks": []})
             else:
                 return 0.0, json.dumps({"unit_test": False, "subtasks": []}), \
-                    json.dumps(["%lg" % 0.0
-                                for _ in self.parameters["tcinfo"]])
+                    ["%lg" % 0.0 for _ in self.parameters["tcinfo"]]
 
         evaluations = dict((ev.codename, ev)
                            for ev in submission_result.evaluations)
@@ -471,8 +472,7 @@ class SubtaskGroup(ScoreType):
         if public:
             return score, json.dumps(details)
         else:
-            return score, json.dumps(details), \
-                json.dumps(ranking_details)
+            return score, json.dumps(details), ranking_details
 
     def compute_score(self, submission_result):
         """Compute the score of a normal submission.

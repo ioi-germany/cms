@@ -24,7 +24,7 @@ from __future__ import unicode_literals
 
 from .Messenger import print_msg, print_block, header
 from .Executable import CPPProgram, InternalPython, ExternalScript, \
-    ExternalPython, keyword_list, asy_keyword_list
+    ExternalPython, asy_keyword_list
 from cms.rules.Rule import LaTeXRule, CommandRule
 from .Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
 import inspect
@@ -323,7 +323,7 @@ class CommonConfig(object):
         return output
 
     @exported_function
-    def compileasy(self, basename, stdin=None, output=None, pdf=True, 
+    def compileasy(self, basename, stdin=None, output=None, pdf=True,
                    **kwargs):
         """
         Compile and run an asymptote file to generate a pdf file.

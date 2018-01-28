@@ -60,38 +60,38 @@ def main():
 
     success = init_db()
     if success is not True: return 1
-    
+
     first = True
-    
+
     while True:
         print(("Do you want to add {} admin account (alternatively you can use "
                "cmsAddAdmin)? [y/n] ").format("an" if first else "another"),
               end="")
-        
+
         ans = sys.stdin.readline().strip().lower()
-        
+
         if ans not in ["y", "yes"]:
             break
-        
+
         print("Enter user name: ", end="")
         username = sys.stdin.readline().strip()
-        
+
         print("Enter human readable name: ", end="")
         readable_name = sys.stdin.readline().strip()
 
-        password = getpass.getpass("Enter password: ")        
+        password = getpass.getpass("Enter password: ")
         repeated_password = getpass.getpass("Enter again: ")
         print("")
-        
+
         if password == repeated_password:
             if add_admin(username, password, readable_name):
-                first = False                  
-        
+                first = False
+
         else:
             logger.error("Passwords don't agree.")
 
         print("")
-    
+
     return 0 if success is True else 1
 
 

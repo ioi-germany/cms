@@ -64,6 +64,7 @@ def add_admin(username, password=None, real_name=None):
     logger.info("Admin '%s' with complete access added. ", username)
     return True
 
+
 def main():
     """Parse arguments and launch process.
 
@@ -81,4 +82,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-
