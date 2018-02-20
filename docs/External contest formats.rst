@@ -187,7 +187,7 @@ An example contest can be found here: `<https://github.com/ioi-germany/testconte
 
 You can test a contest locally using the :file:`cmsGerMake` command. It will create a :file:`build` directory inside the given contest directory, copy all files from the contest directory to the build directory and then build the contest (read the configuration files, generate test cases, ...).
 
-Similarly, use :file:`cmsImporter` or :file:`cmsReimporter` as usual. **Warning:** :file:`cmsReimporter` currently ignores test submissions.
+Use :file:`cmsGerImport` instead of the generic command :file:`cmsImportContest`, which doesn't support this import format. **Warning:** Don't try to use :file:`cmsImportContest` or one of the abolished commands :file:`cmsImporter` or :file:`cmsReimporter` as that doesn't work.
 
 Contests and tasks are specified using python scripts :file:`contest-config.py` and :file:`taskname/config.py`.
 
@@ -318,7 +318,7 @@ For test submission result specifications (see below), you need some way to refe
 Test submissions (a.k.a. unit tests)
 ------------------------------------
 
-Using :py:meth:`.test_submission`, you can add test submissions which are automatically evaluated by :file:`cmsGerMake` and submitted by :file:`cmsImporter` (**Warning:** :file:`cmsReimporter` currently ignores test submissions).
+Using :py:meth:`.test_submission`, you can add test submissions which are automatically evaluated by :file:`cmsGerMake` and submitted by :file:`cmsGerImport`.
 
 For each test submission, you have to specify the expected results, which :file:`cmsGerMake` automatically compares to the actual results.
 
