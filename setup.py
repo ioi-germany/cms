@@ -40,7 +40,6 @@ from future.builtins import *
 import io
 import re
 import os
-
 from setuptools import setup, find_packages
 from setuptools.command.build_py import build_py
 
@@ -145,7 +144,8 @@ setup(
              "scripts/cmsRankingWebServer",
              "scripts/cmsTaskOverviewWebServer",
              "scripts/cmsInitDB",
-             "scripts/cmsDropDB"],
+             "scripts/cmsDropDB",
+             "scripts/cmsTelegramBotService"],
     entry_points={
         "console_scripts": [
             "cmsRunTests=cmstestsuite.RunTests:main",
