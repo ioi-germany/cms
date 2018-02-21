@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2013-2017 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2013-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 Luca Versari <veluca93@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -27,8 +27,12 @@ exporting and importing again should be idempotent.
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import itervalues, iteritems
 
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
@@ -46,13 +50,12 @@ import tempfile
 
 from sqlalchemy.types import \
     Boolean, Integer, Float, String, Unicode, DateTime, Interval, Enum
-from sqlalchemy.dialects.postgresql import ARRAY, CIDR
+from sqlalchemy.dialects.postgresql import ARRAY, CIDR, JSONB
 
 from cms import utf8_decoder
 from cms.db import version as model_version
-from cms.db import SessionGen, Contest, User, Task, \
-    Submission, UserTest, SubmissionResult, UserTestResult, \
-    RepeatedUnicode
+from cms.db import SessionGen, Contest, User, Task, Submission, UserTest, \
+    SubmissionResult, UserTestResult
 from cms.db.filecacher import FileCacher
 from cms.io.GeventUtils import rmtree
 
@@ -65,7 +68,6 @@ logger = logging.getLogger(__name__)
 
 
 def get_archive_info(file_name):
-
     """Return information about the archive name.
 
     file_name (string): the file name of the archive to analyze.
@@ -120,8 +122,7 @@ def encode_value(type_, value):
     """
     if value is None:
         return None
-    elif isinstance(type_,
-                    (Boolean, Integer, Float, Unicode, Enum, RepeatedUnicode)):
+    elif isinstance(type_, (Boolean, Integer, Float, Unicode, Enum, JSONB)):
         return value
     elif isinstance(type_, String):
         return value.decode('latin1')
@@ -132,7 +133,7 @@ def encode_value(type_, value):
     elif isinstance(type_, ARRAY):
         return list(encode_value(type_.item_type, item) for item in value)
     elif isinstance(type_, CIDR):
-        return "%s" % value
+        return str(value)
     else:
         raise RuntimeError("Unknown SQLAlchemy column type: %s" % type_)
 
@@ -171,7 +172,7 @@ class DumpExporter(object):
         self.export_target = export_target
 
         # If target is not provided, we use the contest's name.
-        if export_target == "":
+        if len(export_target) == 0:
             self.export_target = "dump_%s.tar.gz" % date.today().isoformat()
             logger.warning("export_target not given, using \"%s\"",
                            self.export_target)
@@ -243,7 +244,7 @@ class DumpExporter(object):
                         self.get_id(obj)
 
                 # Specify the "root" of the data graph
-                data["_objects"] = self.ids.values()
+                data["_objects"] = list(itervalues(self.ids))
 
                 while len(self.queue) > 0:
                     obj = self.queue.pop(0)
@@ -254,8 +255,7 @@ class DumpExporter(object):
 
                 with io.open(os.path.join(export_dir,
                                           "contest.json"), "wb") as fout:
-                    json.dump(data, fout, encoding="utf-8",
-                              indent=4, sort_keys=True)
+                    json.dump(data, fout, indent=4, sort_keys=True)
 
         # If the admin requested export to file, we do that.
         if archive_info["write_mode"] != "":
@@ -310,7 +310,6 @@ class DumpExporter(object):
 
         for prp in cls._col_props:
             col, = prp.columns
-            col_type = type(col.type)
 
             val = getattr(obj, prp.key)
             data[prp.key] = encode_value(col.type, val)
@@ -340,7 +339,7 @@ class DumpExporter(object):
                 data[prp.key] = list(self.get_id(i) for i in val)
             elif isinstance(val, dict):
                 data[prp.key] = \
-                    dict((k, self.get_id(v)) for k, v in val.iteritems())
+                    dict((k, self.get_id(v)) for k, v in iteritems(val))
             else:
                 raise RuntimeError("Unknown SQLAlchemy relationship type: %s"
                                    % type(val))

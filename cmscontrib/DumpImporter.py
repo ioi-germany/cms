@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2015 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2013-2017 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2013-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 # Copyright © 2014 Luca Versari <veluca93@gmail.com>
 # Copyright © 2014 William Di Luigi <williamdiluigi@gmail.com>
@@ -30,8 +30,12 @@ again should be idempotent.
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iteritems
 
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
@@ -50,15 +54,14 @@ from datetime import timedelta
 
 from sqlalchemy.types import \
     Boolean, Integer, Float, String, Unicode, DateTime, Interval, Enum
-from sqlalchemy.dialects.postgresql import ARRAY, CIDR
+from sqlalchemy.dialects.postgresql import ARRAY, CIDR, JSONB
 
 import cms.db as class_hook
 
 from cms import utf8_decoder
 from cms.db import version as model_version
-from cms.db import Contest, RepeatedUnicode, SessionGen, \
-    Submission, SubmissionResult, UserTest, UserTestResult, \
-    init_db, drop_db
+from cms.db import SessionGen, Contest, Submission, SubmissionResult, \
+    UserTest, UserTestResult, init_db, drop_db
 from cms.db.filecacher import FileCacher
 
 from cmscontrib import sha1sum
@@ -70,7 +73,6 @@ logger = logging.getLogger(__name__)
 
 
 def find_root_of_archive(file_names):
-
     """Given a list of file names (the content of an archive) find the
     name of the root directory, i.e., the only file that would be
     created in a directory if we extract there the archive.
@@ -106,8 +108,7 @@ def decode_value(type_, value):
     """
     if value is None:
         return None
-    elif isinstance(type_,
-                    (Boolean, Integer, Float, Unicode, Enum,RepeatedUnicode)):
+    elif isinstance(type_, (Boolean, Integer, Float, Unicode, Enum, JSONB)):
         return value
     elif isinstance(type_, String):
         return value.encode('latin1')
@@ -189,7 +190,7 @@ class DumpImporter(object):
                     # input is correct without actually doing any
                     # validations.  Thus, for example, we're not
                     # checking that the decoded object is a dict...
-                    self.datas = json.load(fin, encoding="utf-8")
+                    self.datas = json.load(fin)
 
                 # If the dump has been exported using a data model
                 # different than the current one (that is, a previous
@@ -235,14 +236,14 @@ class DumpImporter(object):
                 assert self.datas["_version"] == model_version
 
                 self.objs = dict()
-                for id_, data in self.datas.iteritems():
+                for id_, data in iteritems(self.datas):
                     if not id_.startswith("_"):
                         self.objs[id_] = self.import_object(data)
-                for id_, data in self.datas.iteritems():
+                for id_, data in iteritems(self.datas):
                     if not id_.startswith("_"):
                         self.add_relationships(data, self.objs[id_])
 
-                for k, v in list(self.objs.iteritems()):
+                for k, v in list(iteritems(self.objs)):
 
                     # Skip submissions if requested
                     if self.skip_submissions and isinstance(v, Submission):
@@ -402,13 +403,13 @@ class DumpImporter(object):
             val = data[prp.key]
             if val is None:
                 setattr(obj, prp.key, None)
-            elif type(val) == unicode:
+            elif isinstance(val, str):
                 setattr(obj, prp.key, self.objs[val])
-            elif type(val) == list:
+            elif isinstance(val, list):
                 setattr(obj, prp.key, list(self.objs[i] for i in val))
-            elif type(val) == dict:
+            elif isinstance(val, dict):
                 setattr(obj, prp.key,
-                        dict((k, self.objs[v]) for k, v in val.iteritems()))
+                        dict((k, self.objs[v]) for k, v in iteritems(val)))
             else:
                 raise RuntimeError(
                     "Unknown RelationshipProperty value: %s" % type(val))

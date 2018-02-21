@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -20,8 +20,11 @@
 """Provide utilities to work with programming language classes."""
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 from cms import plugin_list
 
@@ -68,28 +71,24 @@ def filename_to_language(filename):
     if ext_index == -1:
         return None
     ext = filename[ext_index:]
-    names = sorted([language.name
-                    for language in LANGUAGES
-                    if ext in language.source_extensions])
+    names = sorted(language.name
+                   for language in LANGUAGES
+                   if ext in language.source_extensions)
     return None if len(names) == 0 else get_language(names[0])
 
 
 def _load_languages():
     """Load the available languages and fills all other data structures."""
-    global LANGUAGES, _BY_NAME, HEADER_EXTS, OBJECT_EXTS, SOURCE_EXTS
-    if LANGUAGES != []:
+    if len(LANGUAGES) > 0:
         return
 
-    LANGUAGES = [
-        language()
-        for language in plugin_list("cms.grading.languages", "languages")
-    ]
-    _BY_NAME = dict(
-        (language.name, language) for language in LANGUAGES)
+    LANGUAGES.extend(language() for language in plugin_list(
+        "cms.grading.languages", "languages"))
+    _BY_NAME.update((language.name, language) for language in LANGUAGES)
     for lang in LANGUAGES:
-        HEADER_EXTS |= set(lang.header_extensions)
-        OBJECT_EXTS |= set(lang.object_extensions)
-        SOURCE_EXTS |= set(lang.source_extensions)
+        HEADER_EXTS.update(lang.header_extensions)
+        OBJECT_EXTS.update(lang.object_extensions)
+        SOURCE_EXTS.update(lang.source_extensions)
 
 
 # Initialize!

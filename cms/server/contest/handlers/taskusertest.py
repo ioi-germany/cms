@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -30,8 +30,12 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iterkeys, itervalues, iteritems
 
 import io
 import logging
@@ -47,8 +51,7 @@ from cms import config
 from cms.db import Task, UserTest, UserTestFile, UserTestManager
 from cms.grading.languagemanager import get_language
 from cms.grading.tasktypes import get_task_type
-from cms.server import actual_phase_required, format_size, multi_contest
-from cms.locale import locale_format
+from cms.server import actual_phase_required, multi_contest
 from cmscommon.archive import Archive
 from cmscommon.crypto import encrypt_number
 from cmscommon.datetime import make_timestamp
@@ -129,7 +132,7 @@ class UserTestHandler(ContestHandler):
     def _send_error(self, subject, text):
         """Shorthand for sending a notification and redirecting."""
         logger.warning("Sent error: `%s' - `%s'", subject, text)
-        self.application.service.add_notification(
+        self.service.add_notification(
             self.current_user.user.username,
             self.timestamp,
             subject,
@@ -191,7 +194,7 @@ class UserTestHandler(ContestHandler):
                                "at most %d tests on this task.") %
                         task.max_user_test_number)
         except ValueError as error:
-            self._send_error(self._("Too many tests!"), error.message)
+            self._send_error(self._("Too many tests!"), str(error))
             return
 
         # Enforce minimum time between user_tests
@@ -229,7 +232,7 @@ class UserTestHandler(ContestHandler):
                                "after %d seconds from last test.") %
                         task.min_user_test_interval.total_seconds())
         except ValueError as error:
-            self._send_error(self._("Tests too frequent!"), error.message)
+            self._send_error(self._("Tests too frequent!"), str(error))
             return
 
         # Required files from the user.
@@ -239,7 +242,7 @@ class UserTestHandler(ContestHandler):
 
         # Ensure that the user did not submit multiple files with the
         # same name.
-        if any(len(filename) != 1 for filename in self.request.files.values()):
+        if any(len(filename) != 1 for filename in itervalues(self.request.files)):
             self._send_error(
                 self._("Invalid test format!"),
                 self._("Please select the correct files."))
@@ -250,7 +253,7 @@ class UserTestHandler(ContestHandler):
         # not for submissions requiring a programming language
         # identification).
         if len(self.request.files) == 1 and \
-                self.request.files.keys()[0] == "submission":
+                next(iterkeys(self.request.files)) == "submission":
             if any(filename.endswith(".%l") for filename in required):
                 self._send_error(
                     self._("Invalid test format!"),
@@ -284,7 +287,7 @@ class UserTestHandler(ContestHandler):
         # This ensure that the user sent one file for every name in
         # submission format and no more. Less is acceptable if task
         # type says so.
-        provided = set(self.request.files.keys())
+        provided = set(iterkeys(self.request.files))
         if not (required == provided or (task_type.ALLOW_PARTIAL_SUBMISSION
                                          and required.issuperset(provided))):
             self._send_error(
@@ -297,7 +300,7 @@ class UserTestHandler(ContestHandler):
         # "taskname.%l", and whose value is a couple
         # (user_assigned_filename, content).
         files = {}
-        for uploaded, data in self.request.files.iteritems():
+        for uploaded, data in iteritems(self.request.files):
             files[uploaded] = (data[0]["filename"], data[0]["body"])
 
         # Read the submission language provided in the request; we
@@ -337,7 +340,7 @@ class UserTestHandler(ContestHandler):
 
         # Check if submitted files are small enough.
         if any([len(f[1]) > config.max_submission_length
-                for n, f in files.items() if n != "input"]):
+                for n, f in iteritems(files) if n != "input"]):
             self._send_error(
                 self._("Test too big!"),
                 self._("Each source file must be at most %d bytes long.") %
@@ -378,7 +381,7 @@ class UserTestHandler(ContestHandler):
         # We now have to send all the files to the destination...
         try:
             for filename in files:
-                digest = self.application.service.file_cacher.put_file_content(
+                digest = self.service.file_cacher.put_file_content(
                     files[filename][1],
                     "Test file %s sent by %s at %d." % (
                         filename, participation.user.username,
@@ -416,9 +419,9 @@ class UserTestHandler(ContestHandler):
 
         self.sql_session.add(user_test)
         self.sql_session.commit()
-        self.application.service.evaluation_service.new_user_test(
+        self.service.evaluation_service.new_user_test(
             user_test_id=user_test.id)
-        self.application.service.add_notification(
+        self.service.add_notification(
             participation.user.username,
             self.timestamp,
             self._("Test received"),
@@ -480,12 +483,13 @@ class UserTestStatusHandler(ContestHandler):
             data["status_text"] = "%s <a class=\"details\">%s</a>" % (
                 self._("Executed"), self._("details"))
             if ur.execution_time is not None:
-                data["time"] = locale_format(self._,
-                    self._("{seconds:0.3f} s"), seconds=ur.execution_time)
+                data["time"] = \
+                    self.translation.format_duration(ur.execution_time)
             else:
                 data["time"] = None
             if ur.execution_memory is not None:
-                data["memory"] = format_size(ur.execution_memory, self._)
+                data["memory"] = \
+                    self.translation.format_size(ur.execution_memory)
             else:
                 data["memory"] = None
             data["output"] = ur.output is not None
@@ -522,7 +526,8 @@ class UserTestDetailsHandler(ContestHandler):
 
         tr = user_test.get_result(task.active_dataset)
 
-        self.render("user_test_details.html", task=task, tr=tr)
+        self.render("user_test_details.html", task=task, tr=tr,
+                    **self.r_params)
 
 
 class UserTestIOHandler(FileHandler):

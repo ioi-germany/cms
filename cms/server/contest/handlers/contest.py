@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -31,20 +31,20 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iterkeys, iteritems
 
 import ipaddress
 import logging
 import pickle
-
 from datetime import timedelta
 
 import tornado.web
-
 from sqlalchemy.orm import contains_eager
-from werkzeug.datastructures import LanguageAccept
-from werkzeug.http import parse_accept_header
 
 from cms import config
 from cms.db import Contest, Participation, User
@@ -52,8 +52,6 @@ from cms.server import compute_actual_phase, file_handler_gen, \
     create_url_builder
 from cms.locale import filter_language_codes
 from cmscommon.datetime import get_timezone, make_datetime, make_timestamp
-from cmscommon.isocodes import translate_language_code, \
-    translate_language_country_code
 
 from .base import BaseHandler
 
@@ -77,7 +75,7 @@ def check_ip(address, networks):
 
     """
     try:
-        address = ipaddress.ip_address(unicode(address))
+        address = ipaddress.ip_address(str(address))
     except ValueError:
         return False
 
@@ -95,11 +93,22 @@ class ContestHandler(BaseHandler):
     child of this class.
 
     """
+    def __init__(self, *args, **kwargs):
+        super(ContestHandler, self).__init__(*args, **kwargs)
+        self.contest_url = None
+
     def prepare(self):
-        super(ContestHandler, self).prepare()
         self.choose_contest()
 
-        self._ = self.locale.translate
+        if self.contest.allowed_localizations:
+            lang_codes = filter_language_codes(
+                list(iterkeys(self.available_translations)),
+                self.contest.allowed_localizations)
+            self.available_translations = dict(
+                (k, v) for k, v in iteritems(self.available_translations)
+                if k in lang_codes)
+
+        super(ContestHandler, self).prepare()
 
         if self.is_multi_contest():
             self.contest_url = \
@@ -124,17 +133,20 @@ class ContestHandler(BaseHandler):
             contest_name = self.path_args[0]
 
             # Select the correct contest or return an error
-            try:
-                self.contest = self.contest_list[contest_name]
-            except KeyError:
+            self.contest = self.sql_session.query(Contest)\
+                .filter(Contest.name == contest_name).first()
+            if self.contest is None:
                 self.contest = Contest(
                     name=contest_name, description=contest_name)
-                self.r_params = self.render_params()
+                # render_params in this class assumes the contest is loaded,
+                # so we cannot call it without a fully defined contest. Luckily
+                # the one from the base class is enough to display a 404 page.
+                self.r_params = super(ContestHandler, self).render_params()
                 raise tornado.web.HTTPError(404)
         else:
             # Select the contest specified on the command line
             self.contest = Contest.get_from_id(
-                self.application.service.contest_id, self.sql_session)
+                self.service.contest_id, self.sql_session)
 
     def get_current_user(self):
         """Return the currently logged in participation.
@@ -209,7 +221,7 @@ class ContestHandler(BaseHandler):
             # We encode it as a network (i.e., we assign it a /32 or
             # /128 mask) since we're comparing it for equality with
             # other networks.
-            remote_ip = ipaddress.ip_network(unicode(self.request.remote_ip))
+            remote_ip = ipaddress.ip_network(str(self.request.remote_ip))
         except ValueError:
             return None
         participations = self.sql_session.query(Participation)\
@@ -292,35 +304,6 @@ class ContestHandler(BaseHandler):
 
         return participation
 
-    def get_user_locale(self):
-        self.langs = self.application.service.langs
-        lang_codes = self.langs.keys()
-
-        if self.contest.allowed_localizations:
-            lang_codes = filter_language_codes(
-                lang_codes, self.contest.allowed_localizations)
-
-        # Select the one the user likes most.
-        basic_lang = 'en'
-
-        if self.contest.allowed_localizations:
-            basic_lang = lang_codes[0].replace("_", "-")
-
-        http_langs = [lang_code.replace("_", "-") for lang_code in lang_codes]
-        self.browser_lang = parse_accept_header(
-            self.request.headers.get("Accept-Language", ""),
-            LanguageAccept).best_match(http_langs, basic_lang)
-
-        self.cookie_lang = self.get_cookie("language", None)
-
-        if self.cookie_lang in http_langs:
-            lang_code = self.cookie_lang
-        else:
-            lang_code = self.browser_lang
-
-        self.set_header("Content-Language", lang_code)
-        return self.langs[lang_code.replace("-", "_")]
-
     @staticmethod
     def _get_token_status(obj):
         """Return the status of the tokens for the given object.
@@ -344,7 +327,7 @@ class ContestHandler(BaseHandler):
 
         ret["contest"] = self.contest
 
-        if hasattr(self, "contest_url"):
+        if self.contest_url is not None:
             ret["contest_url"] = self.contest_url
 
         if self.current_user is None:
@@ -389,31 +372,6 @@ class ContestHandler(BaseHandler):
             ret["tokens_tasks"] = 2  # all infinite
         else:
             ret["tokens_tasks"] = 1  # all finite or mixed
-
-        # TODO Now all language names are shown in the active language.
-        # It would be better to show them in the corresponding one.
-        ret["lang_names"] = {}
-
-        # Get language codes for allowed localizations
-        lang_codes = self.langs.keys()
-        if len(self.contest.allowed_localizations) > 0:
-            lang_codes = filter_language_codes(
-                lang_codes, self.contest.allowed_localizations)
-        for lang_code, trans in self.langs.iteritems():
-            language_name = None
-            # Filter lang_codes with allowed localizations
-            if lang_code not in lang_codes:
-                continue
-            try:
-                language_name = translate_language_country_code(
-                    lang_code, trans)
-            except ValueError:
-                language_name = translate_language_code(
-                    lang_code, trans)
-            ret["lang_names"][lang_code.replace("_", "-")] = language_name
-
-        ret["cookie_lang"] = self.cookie_lang
-        ret["browser_lang"] = self.browser_lang
 
         return ret
 

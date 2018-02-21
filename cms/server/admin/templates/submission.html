@@ -187,9 +187,9 @@
 
   <div class="score_details" id="evaluation_{{ s.id }}">
     {% if s.tokened() %}
-      {% raw st.get_html_details(sr.score_details, _) %}
+      {% raw st.get_html_details(sr.score_details) %}
     {% else %}
-      {% raw st.get_html_details(sr.public_score_details, _) %}
+      {% raw st.get_html_details(sr.public_score_details) %}
     {% end %}
   </div>
 </div>
@@ -216,7 +216,7 @@
     </thead>
     <tbody>
       {% if sr.evaluations %}
-        {% for idx, ev in enumerate(zip(*sorted((ev.codename, ev) for ev in sr.evaluations))[1], start=1) %}
+        {% for idx, ev in enumerate(sorted(sr.evaluations, key=lambda ev: ev.codename), start=1) %}
         <tr>
           <td>{{ idx }}</td>
           <td>{{ ev.codename }}</td>
@@ -255,7 +255,7 @@
 <div id="compilation">
 
   <h3>Outcome</h3>
-  <pre>{% if sr.compilation_text is not None %}{{ format_status_text(sr.compilation_text) }}{% end %}</pre>
+  <pre>{% if len(sr.compilation_text) > 0 %}{{ format_status_text(sr.compilation_text) }}{% end %}</pre>
 
   <h3>Standard output</h3>
   <pre>{% if sr.compilation_stdout is not None %}{{ sr.compilation_stdout }}{% end %}</pre>

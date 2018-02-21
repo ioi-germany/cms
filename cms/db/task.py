@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2014 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2012-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -26,8 +26,12 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import itervalues
 
 from datetime import timedelta
 
@@ -38,6 +42,7 @@ from sqlalchemy.types import Boolean, Integer, Float, String, Unicode, \
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.ext.orderinglist import ordering_list
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 from . import Base, Contest, CodenameConstraint, FilenameConstraint, \
     DigestConstraint
@@ -103,12 +108,12 @@ class Task(Base):
         Unicode,
         nullable=False)
 
-    # A JSON-encoded lists of strings: the language codes of the
-    # statements that will be highlighted to all users for this task.
+    # The language codes of the statements that will be highlighted to
+    # all users for this task.
     primary_statements = Column(
-        String,
+        ARRAY(String),
         nullable=False,
-        default="[]")
+        default=[])
 
     # The parameters that control task-tokens follow. Note that their
     # effect during the contest depends on the interaction with the
@@ -399,9 +404,9 @@ class Dataset(Base):
         String,
         nullable=False)
 
-    # Parameters for the task type class, JSON encoded.
+    # Parameters for the task type class.
     task_type_parameters = Column(
-        String,
+        JSONB,
         nullable=False)
 
     # Name of the ScoreType child class suited for the task.
@@ -409,9 +414,9 @@ class Dataset(Base):
         String,
         nullable=False)
 
-    # Parameters for the score type class, JSON encoded.
+    # Parameters for the score type class.
     score_type_parameters = Column(
-        String,
+        JSONB,
         nullable=False)
 
     # Follows the description of the fields automatically added by
@@ -442,13 +447,13 @@ class Dataset(Base):
         """
         new_testcases = dict()
         if clone_testcases or clone_results:
-            for old_t in old_dataset.testcases.itervalues():
+            for old_t in itervalues(old_dataset.testcases):
                 new_t = old_t.clone()
                 new_t.dataset = self
                 new_testcases[new_t.codename] = new_t
 
         if clone_managers or clone_results:
-            for old_m in old_dataset.managers.itervalues():
+            for old_m in itervalues(old_dataset.managers):
                 new_m = old_m.clone()
                 new_m.dataset = self
 
@@ -465,7 +470,7 @@ class Dataset(Base):
                 new_sr.dataset = self
 
                 # Create executables.
-                for old_e in old_sr.executables.itervalues():
+                for old_e in itervalues(old_sr.executables):
                     new_e = old_e.clone()
                     new_e.submission_result = new_sr
 

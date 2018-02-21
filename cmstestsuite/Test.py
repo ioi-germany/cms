@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -19,8 +19,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import json
 import os
@@ -28,9 +31,7 @@ import re
 
 from cms.grading.languagemanager import get_language
 
-from cmstestsuite import \
-    cws_submit, cws_submit_user_test, \
-    get_evaluation_result, get_user_test_result
+from cmstestsuite.functionaltestframework import FunctionalTestFramework
 
 
 class TestFailure(Exception):
@@ -142,6 +143,8 @@ class CheckNonzeroReturn(CheckAbstractEvaluationFailure):
 class Test(object):
     def __init__(self, name, task, filenames, languages, checks,
                  user_tests=False):
+        self.framework = FunctionalTestFramework()
+
         self.name = name
         self.task_module = task
         self.filenames = filenames
@@ -166,13 +169,13 @@ class Test(object):
 
         full_paths = [os.path.join(path, filename) for filename in filenames]
 
-        return filenames, full_paths
+        return full_paths
 
-    def submit(self, contest_id, task_id, user_id, language):
-        filenames, full_paths = self._sources_names(language)
-        self.submission_id[language] = cws_submit(
-            contest_id, task_id, user_id, self.submission_format,
-            full_paths, language)
+    def submit(self, task_id, user_id, language):
+        full_paths = self._sources_names(language)
+        self.submission_id[language] = self.framework.cws_submit(
+            task_id, user_id,
+            self.submission_format, full_paths, language)
 
     def wait(self, contest_id, language):
         # This means we were not able to submit, hence the error
@@ -181,7 +184,7 @@ class Test(object):
             return
 
         # Wait for evaluation to complete.
-        result_info = get_evaluation_result(
+        result_info = self.framework.get_evaluation_result(
             contest_id, self.submission_id[language])
 
         # Run checks.
@@ -192,11 +195,11 @@ class Test(object):
                 # Our caller can deal with these.
                 raise
 
-    def submit_user_test(self, contest_id, task_id, user_id, language):
-        filenames, full_paths = self._sources_names(language)
-        self.user_test_id[language] = cws_submit_user_test(
-            contest_id, task_id, user_id, self.submission_format,
-            full_paths, language)
+    def submit_user_test(self, task_id, user_id, language):
+        full_paths = self._sources_names(language)
+        self.user_test_id[language] = self.framework.cws_submit_user_test(
+            task_id, user_id,
+            self.submission_format, full_paths, language)
 
     def wait_user_test(self, contest_id, language):
         # This means we were not able to submit, hence the error
@@ -205,4 +208,5 @@ class Test(object):
             return
 
         # Wait for evaluation to complete. We do not do any other check.
-        get_user_test_result(contest_id, self.user_test_id[language])
+        self.framework.get_user_test_result(
+            contest_id, self.user_test_id[language])

@@ -62,7 +62,7 @@
               <td style="text-align: center">
                 <input type="checkbox" disabled{{ " checked" if s.token is not None or ev.testcase.public else "" }}>
               </td>
-              <td>{{ ev.text }}</td>
+              <td>{{ format_status_text(ev.text) }}</td>
             </tr>
             {% end %}
           </tbody>
@@ -78,7 +78,7 @@
       Scored ({{ sr.score }} / {{ max_score }})
       <div id="evaluation_{{ s.id }}" class="score_details" style="display: none;">
         {% try %}
-          {% raw score_type.get_html_details(sr.score_details, _) %}
+          {% raw score_type.get_html_details(sr.score_details) %}
         {% except %}
         [Cannot get score type - see logs]
         {% end %}
@@ -89,14 +89,14 @@
 
       {% end %}
         <h3>Compilation output</h3>{% comment TODO: trim long outputs and add facility to see raw %}
-        <pre>{% if sr.compilation_text is not None %}{{ format_status_text(sr.compilation_text) }}{% end %}</pre>
+        <pre>{% if len(sr.compilation_text) > 0 %}{{ format_status_text(sr.compilation_text) }}{% end %}</pre>
       </div>
     </div>
 
     {% end %}
   </td>
   <td>
-    {% for filename, sub_file in s.files.items() %}
+    {% for filename, sub_file in iteritems(s.files) %}
       {% set real_filename = filename if s.language is None else filename.replace(".%l", get_language(s.language).source_extension) %}
     <a href="javascript:void(0);" onclick="utils.show_file('{{ real_filename }}','{{ url("submission_file", sub_file.id) }}')">{{ real_filename }}</a><br/>
     {% end %}

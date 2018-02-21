@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -27,8 +27,12 @@ This adapts the dump to some changes in the model introduced in commit
 """
 
 from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iteritems
 
 
 class Updater(object):
@@ -39,7 +43,7 @@ class Updater(object):
         self.testcases = dict()
 
     def run(self):
-        for k, v in self.objs.iteritems():
+        for k, v in iteritems(self.objs):
             if k.startswith("_"):
                 continue
             if v["_class"] == "Testcase":
@@ -47,7 +51,7 @@ class Updater(object):
                 v["codename"] = "%03d" % v["num"]
                 del v["num"]
 
-        for k, v in self.objs.iteritems():
+        for k, v in iteritems(self.objs):
             if k.startswith("_"):
                 continue
             if v["_class"] == "Evaluation":

@@ -1,9 +1,8 @@
 {% extends contest.html %}
 {% block core %}
 
-{% from cms.server import format_token_rules, format_size %}
+{% from cms.server.contest.formatting import format_token_rules %}
 {% from cms.grading.tasktypes import get_task_type %}
-{% from cms.locale import locale_format %}
 
 {% if actual_phase == 0 or actual_phase == 3 or current_user.unrestricted %}
 
@@ -40,7 +39,7 @@
             {{ _("Some suggested translations follow.") }}
         </p>
     {% set task_primary = primary_statements %}
-    {% for statement in sorted(task.statements.itervalues(), key=lambda x: x.language_name) %}
+    {% for statement in sorted(itervalues(task.statements), key=lambda x: x.language_name) %}
         {% if statement.language in task_primary %}
         <a href="{{ contest_url("tasks", task.name, "statements", statement.language) }}" class="btn btn-large btn-success">
             {% if statement.language != statement.language_name %}
@@ -51,7 +50,7 @@
         </a>
         {% end %}
     {% end %}
-    {% for statement in sorted(task.statements.itervalues(), key=lambda x: x.language_name) %}
+    {% for statement in sorted(itervalues(task.statements), key=lambda x: x.language_name) %}
         {% if statement.language in user_primary and statement.language not in task_primary %}
         <a href="{{ contest_url("tasks", task.name, "statements", statement.language) }}" class="btn btn-large">
             {% if statement.language != statement.language_name %}
@@ -66,7 +65,7 @@
     <div class="all_statements well">
         <div>
             <ul>
-    {% for statement in sorted(task.statements.itervalues(), key=lambda x: x.language_name) %}
+    {% for statement in sorted(itervalues(task.statements), key=lambda x: x.language_name) %}
                 <li>
                     <a href="{{ contest_url("tasks", task.name, "statements", statement.language) }}">
         {% if statement.language != statement.language_name %}
@@ -100,19 +99,13 @@
 {% if task.active_dataset.time_limit is not None %}
         <tr>
             <th>{{ _("Time limit") }}</th>
-            <td colspan="2">
-    {% if task.active_dataset.time_limit == 1.0 %}
-        {{ locale_format(_, _("{seconds:g} second"), seconds=task.active_dataset.time_limit) }}
-    {% else %}
-        {{ locale_format(_, _("{seconds:g} seconds"), seconds=task.active_dataset.time_limit) }}
-    {% end %}
-            </td>
+            <td colspan="2">{{ translation.format_duration(task.active_dataset.time_limit, length="long") }}</td>
         </tr>
 {% end %}
 {% if task.active_dataset.memory_limit is not None %}
         <tr>
             <th>{{ _("Memory limit") }}</th>
-            <td colspan="2">{{ _("%(mb)d MiB") % {"mb": task.active_dataset.memory_limit} }}</td>
+            <td colspan="2">{{ translation.format_size(task.active_dataset.memory_limit * 1024 * 1024) }}</td>
         </tr>
 {% end %}
 {% set compilation_commands = task_type.get_compilation_commands([x.filename for x in task.submission_format]) %}
@@ -120,7 +113,7 @@
 {% set compilation_commands = {lang: compilation_commands[lang] for lang in contest.languages} %}
 <tr>
     <th rowspan="{{ len(compilation_commands) }}">{{ _("Compilation commands") }}</th>
-    {% for i, (l, c) in enumerate(sorted(compilation_commands.iteritems())) %}
+    {% for i, (l, c) in enumerate(sorted(iteritems(compilation_commands))) %}
         {% if i > 0 %}
 </tr>
 <tr>
@@ -145,8 +138,8 @@
         </p>
     {% elif tokens_contest == 2 %}
         <p>
-        {% set tokens = {k[6:]: v for k, v in task.__dict__.iteritems() if k.startswith("token_")} %}
-        {{ format_token_rules(tokens, locale=locale) }}
+        {% set tokens = {k[6:]: v for k, v in iteritems(task.__dict__) if k.startswith("token_")} %}
+        {{ format_token_rules(tokens, translation=translation) }}
         </p>
     {% elif tokens_tasks == 2 %}
         <p>
@@ -154,12 +147,12 @@
         </p>
     {% else %}
         <p>
-        {% set tokens = {k[6:]: v for k, v in task.__dict__.iteritems() if k.startswith("token_")} %}
-        {{ format_token_rules(tokens, t_type="task", locale=locale) }}
+        {% set tokens = {k[6:]: v for k, v in iteritems(task.__dict__) if k.startswith("token_")} %}
+        {{ format_token_rules(tokens, t_type="task", translation=translation) }}
         </p>
 
         <p>
-        {{ _("Remeber that to see the detailed result of a submission you need to use both a contest-token and a task-token.") }}
+        {{ _("Remember that to see the detailed result of a submission you need to use both a contest-token and a task-token.") }}
         {% raw _("You can find the rules for the %(type_pl)s on the <a href=\"%(contest_root)s\">contest overview page</a>.") % {"type_pl": _("contest-tokens"), "contest_root": contest_url()} %}
         </p>
     {% end %}
@@ -176,7 +169,7 @@
     <div id="attachments">
         <ul>
     {% from cmscommon import mimetypes %}
-    {% for filename, attachment in sorted(task.attachments.items()) %}
+    {% for filename, attachment in sorted(iteritems(task.attachments)) %}
         {% set mime_type = mimetypes.get_type_for_file_name(filename) %}
         {% if mime_type is not None %}
             {% set type_name = mimetypes.get_name_for_type(mime_type) %}
@@ -195,10 +188,10 @@
             {% end %}
                     <span class="first_line">
                         <span class="name">{{ filename }}</span>
-                        <span class="size">{{ format_size(file_size, _) }}</span>
+                        <span class="size">{{ translation.format_size(file_size) }}</span>
                     </span>
-            {% if type_icon is not None %}
-                    <span class="type">{{ _(type_name) }}</span>
+            {% if type_name is not None %}
+                    <span class="type">{{ translation.translate_mimetype(type_name) }}</span>
             {% end %}
                 </a>
             </li>

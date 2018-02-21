@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -25,8 +25,11 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import sys
 
@@ -119,9 +122,9 @@ def ask_for_contest(skip=None):
                 else:
                     print()
 
-        contest_number = raw_input("Insert the row number next to the contest "
-                                   "you want to load (not the id): ")
-        if contest_number == "":
+        contest_number = input("Insert the row number next to the contest "
+                               "you want to load (not the id): ")
+        if len(contest_number) == 0:
             contest_number = n_contests
         try:
             contest_id = matches[int(contest_number)]

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -6,7 +6,7 @@
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
-# Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2013-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,10 +22,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iteritems
 
-import json
 import logging
 
 from cms import plugin_lookup
@@ -51,7 +54,7 @@ def get_score_type(name=None, parameters=None, public_testcases=None,
     they are obtained from the dataset.
 
     name (unicode|None): the name of the ScoreType class.
-    parameters (unicode|None): the JSON-encoded parameters.
+    parameters (object|None): the parameters.
     public_testcases ({str: bool}|None): for each testcase (identified
         by its codename) a flag telling whether it's public or not.
     dataset (Dataset|None): the dataset whose ScoreType we want.
@@ -66,17 +69,11 @@ def get_score_type(name=None, parameters=None, public_testcases=None,
         name = dataset.score_type
         parameters = dataset.score_type_parameters
         public_testcases = dict((k, tc.public)
-                                for k, tc in dataset.testcases.iteritems())
+                                for k, tc in iteritems(dataset.testcases))
 
     elif any(x is None for x in (name, parameters, public_testcases)):
         raise ValueError("Need exactly one way to get the score type.")
 
     class_ = get_score_type_class(name)
-
-    try:
-        parameters = json.loads(parameters)
-    except ValueError as error:
-        logger.error("Cannot decode score type parameters.\n%r.", error)
-        raise
 
     return class_(parameters, public_testcases)

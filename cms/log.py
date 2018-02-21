@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -45,8 +45,11 @@
 # http://hg.python.org/cpython/file/69ee9b554eca/Lib/logging/handlers.py
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import logging
 import sys
@@ -252,11 +255,11 @@ class CustomFormatter(logging.Formatter):
             severity = add_color_to_string(severity, severity_col,
                                            bold=True, force=True)
             coordinates_col = get_color_hash(coordinates)
-            if coordinates != "":
+            if len(coordinates) > 0:
                 coordinates = add_color_to_string(coordinates, coordinates_col,
                                                   bold=True, force=True)
             operation_col = get_color_hash(operation)
-            if operation != "":
+            if len(operation) > 0:
                 operation = add_color_to_string(operation, operation_col,
                                                 bold=True, force=True)
 

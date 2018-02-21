@@ -1,36 +1,54 @@
 dist: trusty
 sudo: required
 
-# FIXME: The following travis setting would automatically use a virtualenv,
-#        and CMS would think it is not installed, see this github issue:
-#        https://github.com/cms-dev/cms/issues/559
-#        (while it stays commented out, travis will think we're using ruby)
-#        when the issue is fixed, we will be able to take advantage of
-#        multi-version testing (testing against many python versions)
-#language: python
-#python:
-#  - 2.7
+language: python
+python:
+  - 2.7
+  - 3.6
+
+# Use the PostgreSQL version that is provided in Ubuntu 16.04.
+# We need at least version 9.4 as that is the one that introduced the
+# JSONB type. By default Ubuntu 14.04 comes with version 9.3.
+addons:
+  postgresql: "9.5"
+
+  apt:
+    packages:
+      - build-essential
+      - php5-cli
+      - haskell-platform
+      - fp-compiler
+      - fp-units-base
+      - fp-units-fcl
+      - fp-units-misc
+      - fp-units-math
+      - fp-units-rtl
+      - postgresql-client
+      - python2.7
+      - stl-manual
+      - cgroup-lite
+      - libcap-dev
+      - python-dev
+      - libpq-dev
+      - libcups2-dev
+      - libyaml-dev
+      - wget
+      - mono-mcs
 
 install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -y build-essential php5-cli haskell-platform
-  - sudo apt-get install -y fp-compiler fp-units-base fp-units-fcl fp-units-misc fp-units-math fp-units-rtl
-  - sudo apt-get install -y postgresql-client gettext python2.7 iso-codes shared-mime-info stl-manual cgroup-lite libcap-dev
-  - sudo apt-get install -y python-dev libpq-dev libcups2-dev libyaml-dev wget
-
   - wget "https://static.rust-lang.org/dist/rust-1.15.1-x86_64-unknown-linux-gnu.tar.gz"
   - tar xf rust-1.15.1-x86_64-unknown-linux-gnu.tar.gz
   - pushd rust-1.15.1-x86_64-unknown-linux-gnu
   - sudo ./install.sh --prefix=/usr
   - popd
 
-  - cp ./config/cms.conf.sample ./config/cms.conf
-  - sudo ./prerequisites.py install -y
+  - pip install -r requirements.txt
+  - pip install -r dev-requirements.txt
 
-  - sudo pip install -r requirements.txt
-  - sudo pip install -r dev-requirements.txt
-  - sudo python setup.py install
+  - sudo python prerequisites.py -y --cmsuser=$USER install
+  - python setup.py install
 
+before_script:
   - psql --username=postgres --command="CREATE USER cmsuser WITH PASSWORD 'your_password_here';"
 
   - createdb --username=postgres --owner=cmsuser cmsdb
@@ -41,15 +59,13 @@ install:
   - psql --username=postgres --dbname=cmsdbfortesting --command='ALTER SCHEMA public OWNER TO cmsuser'
   - psql --username=postgres --dbname=cmsdbfortesting --command='GRANT SELECT ON pg_largeobject TO cmsuser'
 
-# Debugging info
-  - sudo chown root:$USER /usr/local/bin/isolate /usr/local/etc/cms.conf
-  - ls -al /usr/local/bin/isolate /usr/local/etc/cms.conf
-  - groups
+  - cp ./config/cms.conf.sample ./config/cms.conf
+  - 'sed -e "s/\"cmsuser\": \"cmsuser\"/\"cmsuser\": \"$USER\"/" -i ./config/cms.conf'
 
-  - sudo cmsInitDB
+  - cmsInitDB
 
 script:
-  - sudo cmsRunTests -v
+  - cmsRunTests -v
 
 notifications:
   email: no

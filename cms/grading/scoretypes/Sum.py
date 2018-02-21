@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -20,10 +20,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-
-import json
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iterkeys, itervalues
 
 from cms.grading.ScoreType import ScoreTypeAlone
 
@@ -46,8 +48,6 @@ class Sum(ScoreTypeAlone):
     N_("N/A")
     TEMPLATE = """\
 {% from cms.grading import format_status_text %}
-{% from cms.server import format_size %}
-{% from cms.locale import locale_format %}
 <table class="testcase-list">
     <thead>
         <tr>
@@ -70,24 +70,26 @@ class Sum(ScoreTypeAlone):
             {% end %}
             <td class="idx">{{ idx }}</td>
             <td class="outcome">{{ _(tc["outcome"]) }}</td>
-            <td class="details">{{ format_status_text(tc["text"], _) }}</td>
+            <td class="details">
+                {{ format_status_text(tc["text"], translation=translation) }}
+            </td>
             <td class="execution-time">
             {% if tc["time"] is not None %}
-                {{ locale_format(_, _("{seconds:0.3f} s"), seconds=tc["time"]) }}
+                {{ translation.format_duration(tc["time"]) }}
             {% else %}
                 {{ _("N/A") }}
             {% end %}
             </td>
             <td class="memory-used">
             {% if tc["memory"] is not None %}
-                {{ format_size(tc["memory"], _) }}
+                {{ translation.format_size(tc["memory"]) }}
             {% else %}
                 {{ _("N/A") }}
             {% end %}
             </td>
         {% else %}
         <tr class="undefined">
-            <td colspan="4">
+            <td colspan="5">
                 {{ _("N/A") }}
             </td>
         </tr>
@@ -100,7 +102,7 @@ class Sum(ScoreTypeAlone):
         """See ScoreType.max_score."""
         public_score = 0.0
         score = 0.0
-        for public in self.public_testcases.itervalues():
+        for public in itervalues(self.public_testcases):
             if public:
                 public_score += self.parameters
             score += self.parameters
@@ -110,10 +112,10 @@ class Sum(ScoreTypeAlone):
         """See ScoreType.compute_score."""
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated():
-            return 0.0, "[]", 0.0, "[]", []
+            return 0.0, [], 0.0, [], []
 
         # XXX Lexicographical order by codename
-        indices = sorted(self.public_testcases.keys())
+        indices = sorted(iterkeys(self.public_testcases))
         evaluations = dict((ev.codename, ev)
                            for ev in submission_result.evaluations)
         testcases = []
@@ -138,9 +140,7 @@ class Sum(ScoreTypeAlone):
             else:
                 public_testcases.append({"idx": idx})
 
-        return score, json.dumps(testcases), \
-            public_score, json.dumps(public_testcases), \
-            []
+        return score, testcases, public_score, public_testcases, []
 
     def get_public_outcome(self, outcome):
         """Return a public outcome from an outcome.

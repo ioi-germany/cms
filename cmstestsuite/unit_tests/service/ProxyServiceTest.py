@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -22,8 +22,11 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
@@ -49,6 +52,7 @@ class TestProxyService(unittest.TestCase):
         """Test that data is sent in the right order at startup."""
         put_mock = Mock()
         cms.service.ProxyService.requests.put = put_mock
+        put_mock.return_value.status_code = 200
 
         task = get_task()
         participation = get_participation()

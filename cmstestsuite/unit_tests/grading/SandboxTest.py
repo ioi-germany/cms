@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -21,8 +21,11 @@
 """Tests for general utility functions."""
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import unittest
 import io
@@ -43,7 +46,7 @@ class TestTruncator(unittest.TestCase):
         truncator = Truncator(back_file, trunc_len)
         buf = truncator.read(read_chunk_size)
         read_len = 0
-        while buf != '':
+        while len(buf) > 0:
             read_len += len(buf)
             buf = truncator.read(read_chunk_size)
         self.assertEqual(read_len, min(trunc_len, orig_len))

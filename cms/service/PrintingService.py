@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -23,8 +23,11 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import cups
 import json
@@ -40,9 +43,8 @@ from cms.db.filecacher import FileCacher
 from cms.io import Executor, QueueItem, TriggeredService, rpc_method
 from cms.io.GeventUtils import rmtree
 from cms.db import SessionGen, PrintJob
-from cms.server import format_datetime
 from cmscommon.commands import pretty_print_cmdline
-from cmscommon.datetime import get_timezone
+from cmscommon.datetime import get_timezone, utc
 
 
 logger = logging.getLogger(__name__)
@@ -94,7 +96,8 @@ class PrintingExecutor(Executor):
             user = printjob.participation.user
             contest = printjob.participation.contest
             timezone = get_timezone(user, contest)
-            timestr = format_datetime(printjob.timestamp, timezone)
+            timestr = str(printjob.timestamp.replace(tzinfo=utc)
+                          .astimezone(timezone).replace(tzinfo=None))
             filename = printjob.filename
 
             # Check if it's ready to be printed.

@@ -81,8 +81,8 @@ msgid "Your submission used too much total time. This might be triggered by unde
 msgstr "Tvoja oddaja je porabila preveč skupnega časa. To je lahko posledica nedefinirane kode ali preseženega medpomnilnika. V tem primeru je lahko procesorski čas, ki je viden pri podrobnostih o oddaji, precej manjši od dejanjske časovne omejitve."
 
 #, python-format
-msgid "Execution killed with signal %d (could be triggered by violating memory limits)"
-msgstr "Izvajanje je bilo prekinjeno s signalom %d (lahko je posledica prekoračitve omejitve spomina)"
+msgid "Execution killed with signal %s (could be triggered by violating memory limits)"
+msgstr "Izvajanje je bilo prekinjeno s signalom %s (lahko je posledica prekoračitve omejitve spomina)"
 
 msgid "Your submission was killed with the specified signal. Among other things, this might be caused by exceeding the memory limit. Note that if this is the reason, the memory usage visible in the submission details is the usage before the allocation that caused the signal."
 msgstr "Tvoja oddaja je bila prekinjena s specifičnim signalom. Med drugim je to lahko posledica prekoračitve spominske omejitve. V tem primeru je porabljen spomin, ki je viden pri podrobnostih o oddaji, tisti spomin, ki je bil uporabljen pred dodelitvijo, ki je sporžila signal."
@@ -146,57 +146,8 @@ msgstr "Prevajanje ni potrebno"
 msgid "File not submitted"
 msgstr "Datoteka ni bila oddana"
 
-msgid "%Y-%m-%d"
-msgstr "%d. %m. %Y"
-
-msgid "%H:%M:%S"
-msgstr "%H:%M:%S"
-
-msgid "%Y-%m-%d %H:%M:%S"
-msgstr "%d. %m. %Y %H:%M:%S"
-
 msgid "loading..."
 msgstr "nalagam..."
-
-#, python-format
-msgid "%d second"
-msgid_plural "%d seconds"
-msgstr[0] "%d sekunda"
-msgstr[1] "%d sekundi"
-msgstr[2] "%d sekunde"
-msgstr[3] "%d sekund"
-
-#, python-format
-msgid "%d minute"
-msgid_plural "%d minutes"
-msgstr[0] "%d minuta"
-msgstr[1] "%d minuti"
-msgstr[2] "%d minute"
-msgstr[3] "%d minut"
-
-#, python-format
-msgid "%d hour"
-msgid_plural "%d hours"
-msgstr[0] "%d ura"
-msgstr[1] "%d uri"
-msgstr[2] "%d ure"
-msgstr[3] "%d ur"
-
-#, python-format
-msgid "%d day"
-msgid_plural "%d days"
-msgstr[0] "%d dan"
-msgstr[1] "%d dneva"
-msgstr[2] "%d dnevi"
-msgstr[3] "%d dni"
-
-#, python-format
-msgid "%s and %s"
-msgstr "%s in %s"
-
-#, python-format
-msgid "more than %s"
-msgstr "več kot %s"
 
 msgid "contest-token"
 msgstr "tekmovalni-žeton"
@@ -498,10 +449,6 @@ msgid "Executed"
 msgstr "Izvedeno"
 
 #, python-format
-msgid "{seconds:0.3f} s"
-msgstr "{seconds:0.3f} s"
-
-#, python-format
 msgid "Automatic (%s)"
 msgstr "Avtomatsko (%s)"
 
@@ -757,18 +704,6 @@ msgstr "Datoteke"
 msgid "Tokens"
 msgstr "Žetoni"
 
-#, python-format
-msgid "{seconds:g} second"
-msgstr "{seconds:g} sekunda"
-
-#, python-format
-msgid "{seconds:g} seconds"
-msgstr "{seconds:g} sekund"
-
-#, python-format
-msgid "%(mb)d MiB"
-msgstr "%(mb)d MiB"
-
 msgid "Yes"
 msgstr "Da"
 
@@ -900,7 +835,7 @@ msgstr "Ukazi za prevajanje"
 msgid "You can find the rules for the %(type_pl)s on the <a href=\"%(contest_root)s/\">contest overview page</a>."
 msgstr "Pravila za %(type_pl)s so dostopna na <a href=\"%(contest_root)s/\">pregledni strani</a>."
 
-msgid "Remeber that to see the detailed result of a submission you need to use both a contest-token and a task-token."
+msgid "Remember that to see the detailed result of a submission you need to use both a contest-token and a task-token."
 msgstr "Če želiš videti podrobnejši izzid oddaje, moraš uporabiti oba žetona."
 
 msgid "Attachments"

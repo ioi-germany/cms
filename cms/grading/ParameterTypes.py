@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -29,13 +29,19 @@ represented by JSON objects.
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import with_metaclass
+
+from abc import ABCMeta, abstractmethod
 
 from tornado.template import Template
 
 
-class ParameterType(object):
+class ParameterType(with_metaclass(ABCMeta, object)):
     """Base class for parameter types.
 
     """
@@ -54,6 +60,7 @@ class ParameterType(object):
         self.short_name = short_name
         self.description = description
 
+    @abstractmethod
     def parse_string(self, value):
         """Parse the specified string and returns the parsed value.
 
@@ -62,7 +69,7 @@ class ParameterType(object):
         fails, this method must raise a ValueError exception with
         an appropriate message.
         """
-        raise NotImplementedError("Please subclass this class.")
+        pass
 
     def parse_handler(self, handler, prefix):
         """Parse relevant parameters in the handler.
@@ -76,8 +83,9 @@ class ParameterType(object):
         return self.parse_string(handler.get_argument(
             prefix + self.short_name))
 
+    @abstractmethod
     def render(self, prefix, previous_value=None):
-        raise NotImplementedError("Please subclass this class.")
+        pass
 
 
 class ParameterTypeString(ParameterType):
@@ -154,9 +162,10 @@ class ParameterTypeBoolean(ParameterType):
 class ParameterTypeChoice(ParameterType):
     """Parameter type representing a limited number of choices."""
 
-    TEMPLATE = "<select name=\"{{parameter_name}}\">" \
+    TEMPLATE = "{% from six import iteritems %}" \
+        "<select name=\"{{parameter_name}}\">" \
         "{% for choice_value, choice_description "\
-        " in choices.items() %}" \
+        " in iteritems(choices) %}" \
         "<option value=\"{{choice_value}}\" " \
         "{% if choice_value == parameter_value %}" \
         "selected" \

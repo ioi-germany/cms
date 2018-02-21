@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -22,8 +22,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iterkeys, iteritems
 
 import logging
 
@@ -129,7 +133,7 @@ class Batch(TaskType):
 
     def get_auto_managers(self):
         """See TaskType.get_auto_managers."""
-        return None
+        return []
 
     def _uses_grader(self):
         return self.parameters[0] == "grader"
@@ -152,7 +156,7 @@ class Batch(TaskType):
             job.text = [N_("Invalid files in submission")]
             logger.error("Submission contains %d files, expecting 1",
                          len(job.files), extra={"operation": job.info})
-            return True
+            return
 
         # Create the sandbox
         sandbox = create_sandbox(file_cacher, job.multithreaded_sandbox)
@@ -160,7 +164,7 @@ class Batch(TaskType):
 
         # Prepare the source files in the sandbox
         files_to_get = {}
-        format_filename = job.files.keys()[0]
+        format_filename = next(iterkeys(job.files))
         source_filenames = []
         source_filenames.append(format_filename.replace(".%l", source_ext))
         files_to_get[source_filenames[0]] = \
@@ -174,7 +178,7 @@ class Batch(TaskType):
                 job.managers["grader%s" % source_ext].digest
 
         # Also copy all managers that might be useful during compilation.
-        for filename in job.managers.iterkeys():
+        for filename in iterkeys(job.managers):
             if any(filename.endswith(header) for header in HEADER_EXTS):
                 files_to_get[filename] = \
                     job.managers[filename].digest
@@ -185,7 +189,7 @@ class Batch(TaskType):
                 files_to_get[filename] = \
                     job.managers[filename].digest
 
-        for filename, digest in files_to_get.iteritems():
+        for filename, digest in iteritems(files_to_get):
             sandbox.create_file_from_storage(filename, digest)
 
         # Prepare the compilation command
@@ -219,7 +223,8 @@ class Batch(TaskType):
         sandbox = create_sandbox(file_cacher, job.multithreaded_sandbox)
 
         # Prepare the execution
-        executable_filename = job.executables.keys()[0]
+        assert len(job.executables) == 1
+        executable_filename = next(iterkeys(job.executables))
         language = get_language(job.language)
         commands = language.get_evaluation_commands(
             executable_filename,
@@ -232,10 +237,10 @@ class Batch(TaskType):
         stdin_redirect = None
         stdout_redirect = None
         files_allowing_write = []
-        if input_filename == "":
+        if len(input_filename) == 0:
             input_filename = "input.txt"
             stdin_redirect = input_filename
-        if output_filename == "":
+        if len(output_filename) == 0:
             output_filename = "output.txt"
             stdout_redirect = output_filename
         else:
@@ -245,9 +250,9 @@ class Batch(TaskType):
             }
 
         # Put the required files into the sandbox
-        for filename, digest in executables_to_get.iteritems():
+        for filename, digest in iteritems(executables_to_get):
             sandbox.create_file_from_storage(filename, digest, executable=True)
-        for filename, digest in files_to_get.iteritems():
+        for filename, digest in iteritems(files_to_get):
             sandbox.create_file_from_storage(filename, digest)
 
         # Actually performs the execution
@@ -264,7 +269,7 @@ class Batch(TaskType):
         job.plus = plus
 
         outcome = None
-        text = None
+        text = []
 
         # Error in the sandbox: nothing to do!
         if not success:
@@ -364,7 +369,7 @@ class Batch(TaskType):
                             try:
                                 outcome, text = \
                                     extract_outcome_and_text(sandbox)
-                            except ValueError, e:
+                            except ValueError as e:
                                 logger.error("Invalid output from "
                                              "comparator: %s", e.message,
                                              extra={"operation": job.info})

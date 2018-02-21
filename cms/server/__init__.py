@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -18,25 +18,22 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 from .util import \
-    CommonRequestHandler, DIMS, UNITS, \
-    actual_phase_required, compute_actual_phase, \
-    encode_for_url, file_handler_gen, filter_ascii, \
-    format_amount_of_time, format_dataset_attrs, format_date, \
-    format_datetime, format_datetime_smart, format_size, format_time, \
-    format_token_rules, get_score_class, create_url_builder, multi_contest
+    CommonRequestHandler, actual_phase_required, compute_actual_phase, \
+    file_handler_gen, filter_ascii, \
+    create_url_builder, multi_contest
 
 
 __all__ = [
     # util
-    "CommonRequestHandler", "DIMS", "UNITS",
-    "actual_phase_required", "compute_actual_phase",
-    "encode_for_url", "file_handler_gen", "filter_ascii",
-    "format_amount_of_time", "format_dataset_attrs", "format_date",
-    "format_datetime", "format_datetime_smart", "format_size", "format_time",
-    "format_token_rules", "get_score_class", "create_url_builder",
+    "CommonRequestHandler", "actual_phase_required", "compute_actual_phase",
+    "file_handler_gen", "filter_ascii",
+    "create_url_builder",
     "multi_contest",
 ]

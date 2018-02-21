@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -26,8 +26,12 @@ using gevent and JSON encoding.
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import itervalues
 
 import errno
 import functools
@@ -36,7 +40,6 @@ import os
 import pwd
 import signal
 import socket
-import _socket
 import time
 
 import gevent
@@ -266,10 +269,11 @@ class Service(object):
         else:
             logger.warning("A backdoor socket has been found and deleted.")
         mkdir(os.path.dirname(backdoor_path))
-        backdoor_sock = _socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        backdoor_sock = gevent.socket.socket(socket.AF_UNIX,
+                                             socket.SOCK_STREAM)
         backdoor_sock.setblocking(0)
         backdoor_sock.bind(backdoor_path)
-        user = pwd.getpwnam("cmsuser")
+        user = pwd.getpwnam(config.cmsuser)
         # We would like to also set the user to "cmsuser" but only root
         # can do that. Therefore we limit ourselves to the group.
         os.chown(backdoor_path, os.getuid(), user.pw_gid)
@@ -343,7 +347,7 @@ class Service(object):
         """Disconnect all remote services.
 
         """
-        for service in self.remote_services.itervalues():
+        for service in itervalues(self.remote_services):
             if service.connected:
                 service.disconnect()
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -22,8 +22,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iteritems
 
 import logging
 import os
@@ -138,7 +142,7 @@ class TwoSteps(TaskType):
             job.text = [N_("Invalid files in submission")]
             logger.error("Submission contains %d files, expecting 2",
                          len(job.files), extra={"operation": job.info})
-            return True
+            return
 
         # First and only one compilation.
         sandbox = create_sandbox(file_cacher, job.multithreaded_sandbox)
@@ -160,7 +164,7 @@ class TwoSteps(TaskType):
                 job.managers[manager_filename].digest
 
         # User's submissions and headers.
-        for filename, file_ in job.files.iteritems():
+        for filename, file_ in iteritems(job.files):
             source_filename = filename.replace(".%l", source_ext)
             source_filenames.append(source_filename)
             files_to_get[source_filename] = file_.digest
@@ -171,7 +175,7 @@ class TwoSteps(TaskType):
                 files_to_get[header_filename] = \
                     job.managers[header_filename].digest
 
-        for filename, digest in files_to_get.iteritems():
+        for filename, digest in iteritems(files_to_get):
             sandbox.create_file_from_storage(filename, digest)
 
         # Get compilation command and compile.
@@ -221,11 +225,11 @@ class TwoSteps(TaskType):
         first_allow_path = [fifo_dir]
 
         # Put the required files into the sandbox
-        for filename, digest in first_executables_to_get.iteritems():
+        for filename, digest in iteritems(first_executables_to_get):
             first_sandbox.create_file_from_storage(filename,
                                                    digest,
                                                    executable=True)
-        for filename, digest in first_files_to_get.iteritems():
+        for filename, digest in iteritems(first_files_to_get):
             first_sandbox.create_file_from_storage(filename, digest)
 
         first = evaluation_step_before_run(
@@ -248,11 +252,11 @@ class TwoSteps(TaskType):
         second_allow_path = [fifo_dir]
 
         # Put the required files into the second sandbox
-        for filename, digest in second_executables_to_get.iteritems():
+        for filename, digest in iteritems(second_executables_to_get):
             second_sandbox.create_file_from_storage(filename,
                                                     digest,
                                                     executable=True)
-        for filename, digest in second_files_to_get.iteritems():
+        for filename, digest in iteritems(second_files_to_get):
             second_sandbox.create_file_from_storage(filename, digest)
 
         second = evaluation_step_before_run(
@@ -279,7 +283,7 @@ class TwoSteps(TaskType):
 
         success = True
         outcome = None
-        text = None
+        text = []
 
         # Error in the sandbox: report failure!
         if not success_first or not success_second:
@@ -354,7 +358,7 @@ class TwoSteps(TaskType):
                                 try:
                                     outcome, text = extract_outcome_and_text(
                                         second_sandbox)
-                                except ValueError, e:
+                                except ValueError as e:
                                     logger.error("Invalid output from "
                                                  "comparator: %s", e.message,
                                                  extra={"operation": job.info})

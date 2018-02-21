@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -34,16 +34,20 @@ task.
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iterkeys, with_metaclass
 
-import json
 import logging
 import re
+from abc import ABCMeta, abstractmethod
 
 from tornado.template import Template
 
-from cms.locale import locale_format
+from cms.locale import DEFAULT_TRANSLATION
 
 
 logger = logging.getLogger(__name__)
@@ -54,11 +58,12 @@ def N_(message):
     return message
 
 
-class ScoreType(object):
+class ScoreType(with_metaclass(ABCMeta, object)):
     """Base class for all score types, that must implement all methods
     defined here.
 
     """
+
     TEMPLATE = ""
 
     def __init__(self, parameters, public_testcases):
@@ -79,7 +84,7 @@ class ScoreType(object):
 
     @staticmethod
     def format_score(score, max_score, unused_score_details,
-                     score_precision, _=lambda s: s):
+                     score_precision, translation=DEFAULT_TRANSLATION):
         """Produce the string of the score that is shown in CWS.
 
         In the submission table in the task page of CWS the global
@@ -94,35 +99,37 @@ class ScoreType(object):
             the ScoreType produced for the submission when scoring it.
         score_precision (int): the maximum number of digits of the
             fractional digits to show.
-        _ (function): translation function.
+        translation (Translation): the translation to use.
 
         return (string): the message to show.
 
         """
-        return locale_format(_, "{0:g} / {1:g}",
-            round(score, score_precision), round(max_score, score_precision))
+        return "%s / %s" % (
+            translation.format_decimal(round(score, score_precision)),
+            translation.format_decimal(round(max_score, score_precision)))
 
-    def get_html_details(self, score_details, _=lambda s: s):
+    def get_html_details(self, score_details, translation=DEFAULT_TRANSLATION):
         """Return an HTML string representing the score details of a
         submission.
 
-        score_details (unicode): the data saved by the score type
+        score_details (object): the data saved by the score type
             itself in the database; can be public or private.
-        _ (function): translation function.
+        translation (Translation): the translation to use.
 
         return (string): an HTML string representing score_details.
 
         """
-        try:
-            score_details = json.loads(score_details)
-        except (TypeError, ValueError):
-            # TypeError raised if score_details is None
-            logger.error("Found a null or non-JSON score details string. "
+        _ = translation.gettext
+        if score_details is None:
+            logger.error("Found a null score details string. "
                          "Try invalidating scores.")
             return _("Score details temporarily unavailable.")
         else:
-            return Template(self.TEMPLATE).generate(details=score_details, _=_)
+            return Template(self.TEMPLATE).generate(details=score_details,
+                                                    translation=translation,
+                                                    _=_)
 
+    @abstractmethod
     def max_scores(self):
         """Returns the maximum score that one could aim to in this
         problem. Also return the maximum score from the point of view
@@ -134,25 +141,24 @@ class ScoreType(object):
             score with only public testcases; ranking headers.
 
         """
-        logger.error("Unimplemented method max_scores.")
-        raise NotImplementedError("Please subclass this class.")
+        pass
 
+    @abstractmethod
     def compute_score(self, unused_submission_result):
         """Computes a score of a single submission.
 
         unused_submission_result (SubmissionResult): the submission
             result of which we want the score
 
-        returns (float, str, float, str, [str]): respectively: the
-            score, the opaque data with additional information (e.g.
-            testcases' and subtasks' score) that will be converted to
-            HTML by get_html_details, and the same information from the
-            point of view of a user that did not play a token, the list
-            of strings to send to RWS.
+        return (float, object, float, object, [str]): respectively: the
+            score, an opaque JSON-like data structure with additional
+            information (e.g. testcases' and subtasks' score) that will
+            be converted to HTML by get_html_details, the score and a
+            similar data structure from the point of view of a user who
+            did not play a token, the list of strings to send to RWS.
 
         """
-        logger.error("Unimplemented method compute_score.")
-        raise NotImplementedError("Please subclass this class.")
+        pass
 
     def compute_unit_test_score(self, submission_result,
                                 submission_info):
@@ -203,8 +209,6 @@ class ScoreTypeGroup(ScoreTypeAlone):
     N_("N/A")
     TEMPLATE = """\
 {% from cms.grading import format_status_text %}
-{% from cms.server import format_size %}
-{% from cms.locale import locale_format %}
 {% set idx = 0 %}
 {% for st in details %}
     {% if "score" in st and "max_score" in st %}
@@ -224,7 +228,8 @@ class ScoreTypeGroup(ScoreTypeAlone):
         </span>
     {% if "score" in st and "max_score" in st %}
         <span class="score">
-            ({{ locale_format(_, "{0:g} / {1:g}", round(st["score"], 2), st["max_score"]) }})
+            ({{ translation.format_decimal(round(st["score"], 2)) }}
+             / {{ translation.format_decimal(st["max_score"]) }})
         </span>
     {% else %}
         <span class="score">
@@ -257,18 +262,18 @@ class ScoreTypeGroup(ScoreTypeAlone):
                     <td class="idx">{{ idx }}</td>
                     <td class="outcome">{{ _(tc["outcome"]) }}</td>
                     <td class="details">
-                      {{ format_status_text(tc["text"], _) }}
+                      {{ format_status_text(tc["text"], translation=translation) }}
                     </td>
                     <td class="execution-time">
             {% if "time" in tc and tc["time"] is not None %}
-                        {{ locale_format(_, _("{seconds:0.3f} s"), seconds=tc["time"]) }}
+                        {{ translation.format_duration(tc["time"]) }}
             {% else %}
                         {{ _("N/A") }}
             {% end %}
                     </td>
                     <td class="memory-used">
             {% if "memory" in tc and tc["memory"] is not None %}
-                        {{ format_size(tc["memory"], _) }}
+                        {{ translation.format_size(tc["memory"]) }}
             {% else %}
                         {{ _("N/A") }}
             {% end %}
@@ -305,7 +310,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
         if all(isinstance(t, int) for t in t_params):
 
             # XXX Lexicographical order by codename
-            indices = sorted(self.public_testcases.keys())
+            indices = sorted(iterkeys(self.public_testcases))
             current = 0
             targets = []
 
@@ -316,9 +321,9 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
             return targets
 
-        elif all(isinstance(t, unicode) for t in t_params):
+        elif all(isinstance(t, str) for t in t_params):
 
-            indices = sorted(self.public_testcases.keys())
+            indices = sorted(iterkeys(self.public_testcases))
             targets = []
 
             for t in t_params:
@@ -356,7 +361,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
         """See ScoreType.compute_score."""
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated():
-            return 0.0, "[]", 0.0, "[]", ["%lg" % 0.0 for _ in self.parameters]
+            return 0.0, [], 0.0, [], ["%lg" % 0.0 for _ in self.parameters]
 
         targets = self.retrieve_target_testcases()
         evaluations = dict((ev.codename, ev)
@@ -412,10 +417,9 @@ class ScoreTypeGroup(ScoreTypeAlone):
                            for st in public_subtasks
                            if "score" in st)
 
-        return score, json.dumps(subtasks), \
-            public_score, json.dumps(public_subtasks), \
-            ranking_details
+        return score, subtasks, public_score, public_subtasks, ranking_details
 
+    @abstractmethod
     def get_public_outcome(self, unused_outcome, unused_parameter):
         """Return a public outcome from an outcome.
 
@@ -431,9 +435,9 @@ class ScoreTypeGroup(ScoreTypeAlone):
         return (float): the public output.
 
         """
-        logger.error("Unimplemented method get_public_outcome.")
-        raise NotImplementedError("Please subclass this class.")
+        pass
 
+    @abstractmethod
     def reduce(self, unused_outcomes, unused_parameter):
         """Return the score of a subtask given the outcomes.
 
@@ -444,5 +448,4 @@ class ScoreTypeGroup(ScoreTypeAlone):
         return (float): the public output.
 
         """
-        logger.error("Unimplemented method reduce.")
-        raise NotImplementedError("Please subclass this class.")
+        pass

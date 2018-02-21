@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -40,10 +40,16 @@ together the three data point: item, priority, and timestamp.
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iteritems
 
 from gevent.event import Event
+
+from functools import total_ordering
 
 from cmscommon.datetime import make_datetime, make_timestamp
 
@@ -61,6 +67,7 @@ class QueueItem(object):
         return self.__dict__
 
 
+@total_ordering
 class QueueEntry(object):
 
     """Type of the actual objects in the queue.
@@ -83,14 +90,15 @@ class QueueEntry(object):
         self.timestamp = timestamp
         self.index = index
 
-    def __cmp__(self, other):
-        """Compare self's and other's priorities."""
-        if self.priority != other.priority:
-            return cmp(self.priority, other.priority)
-        elif self.timestamp != other.timestamp:
-            return cmp(self.timestamp, other.timestamp)
-        else:
-            return cmp(self.index, other.index)
+    def __eq__(self, other):
+        """Return whether self and other have the same priority."""
+        return (self.priority, self.timestamp, self.index) \
+               == (other.priority, other.timestamp, other.index)
+
+    def __lt__(self, other):
+        """Return whether self has higher priority than other."""
+        return (self.priority, self.timestamp, self.index) \
+               < (other.priority, other.timestamp, other.index)
 
 
 class PriorityQueue(object):
@@ -145,7 +153,7 @@ class PriorityQueue(object):
             return False
         if self._event.isSet() == self.empty():
             return False
-        for item, idx in self._reverse.iteritems():
+        for item, idx in iteritems(self._reverse):
             if self._queue[idx].item != item:
                 return False
         return True

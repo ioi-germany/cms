@@ -105,10 +105,10 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Execution killed with signal %d (could be triggered by violating memory "
+"Execution killed with signal %s (could be triggered by violating memory "
 "limits)"
 msgstr ""
-"Chương trình bị ngắt bởi tín hiệu %d (có thể do vượt quá giới hạn bộ nhớ)"
+"Chương trình bị ngắt bởi tín hiệu %s (có thể do vượt quá giới hạn bộ nhớ)"
 
 msgid ""
 "Your submission was killed with the specified signal. Among other things, "
@@ -184,52 +184,11 @@ msgstr "Không cần biên dịch"
 msgid "File not submitted"
 msgstr "File chưa được nộp"
 
-msgid "%Y-%m-%d"
-msgstr "%d-%m-%Y"
-
-msgid "%H:%M:%S"
-msgstr "%H:%M:%S"
-
-msgid "%Y-%m-%d %H:%M:%S"
-msgstr "%H:%M:%S %d-%m-%Y"
-
 msgid "loading..."
 msgstr "đang tải..."
 
 msgid "unknown"
 msgstr "không xác định"
-
-#, python-format
-msgid "%d second"
-msgid_plural "%d seconds"
-msgstr[0] "%d giây"
-msgstr[1] "%d giây"
-
-#, python-format
-msgid "%d minute"
-msgid_plural "%d minutes"
-msgstr[0] "%d phút"
-msgstr[1] "%d phút"
-
-#, python-format
-msgid "%d hour"
-msgid_plural "%d hours"
-msgstr[0] "%d giờ"
-msgstr[1] "%d giờ"
-
-#, python-format
-msgid "%d day"
-msgid_plural "%d days"
-msgstr[0] "%d ngày"
-msgstr[1] "%d ngày"
-
-#, python-format
-msgid "%s and %s"
-msgstr "%s và %s"
-
-#, python-format
-msgid "more than %s"
-msgstr "nhiều hơn %s"
 
 msgid "contest-token"
 msgstr "contest-token"
@@ -519,10 +478,6 @@ msgstr "Đang chạy..."
 
 msgid "Executed"
 msgstr "Đã chạy xong"
-
-#, python-format
-msgid "{seconds:0.3f} s"
-msgstr "{seconds:0.3f} giây"
 
 #, python-format
 msgid "Automatic (%s)"
@@ -837,18 +792,6 @@ msgstr "File"
 msgid "Tokens"
 msgstr "Token"
 
-#, python-format
-msgid "{seconds:g} second"
-msgstr "{seconds:g} giây"
-
-#, python-format
-msgid "{seconds:g} seconds"
-msgstr "{seconds:g} giây"
-
-#, python-format
-msgid "%(mb)d MiB"
-msgstr "%(mb)d MiB"
-
 msgid "Yes"
 msgstr "Có"
 
@@ -996,7 +939,7 @@ msgstr ""
 "tổng quan kì thi</a>."
 
 msgid ""
-"Remeber that to see the detailed result of a submission you need to use both "
+"Remember that to see the detailed result of a submission you need to use both "
 "a contest-token and a task-token."
 msgstr ""
 "Chú ý rằng để xem chi tiết chấm của một bài nộp bạn cần sử dụng một contest-"

@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2012-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
@@ -28,17 +28,22 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import itervalues
 
 from datetime import timedelta
 
 from sqlalchemy.schema import Column, ForeignKey, CheckConstraint
 from sqlalchemy.types import Integer, Unicode, DateTime, Interval, Enum, \
-    Boolean
+    Boolean, String
 from sqlalchemy.orm import relationship, backref
+from sqlalchemy.dialects.postgresql import ARRAY
 
-from . import Base, RepeatedUnicode, CodenameConstraint
+from . import Base, CodenameConstraint
 
 from cmscommon.datetime import make_datetime
 
@@ -72,13 +77,13 @@ class Contest(Base):
     # The list of language codes of the localizations that contestants
     # are allowed to use (empty means all).
     allowed_localizations = Column(
-        RepeatedUnicode(),
+        ARRAY(String),
         nullable=False,
         default=[])
 
     # The list of names of languages allowed in the contest.
     languages = Column(
-        RepeatedUnicode(),
+        ARRAY(String),
         nullable=False,
         default=["C11 / gcc", "C++11 / g++", "Pascal / fpc"])
 
@@ -309,21 +314,21 @@ class Contest(Base):
         for task in self.tasks:
 
             # Enumerate statements
-            for file_ in task.statements.itervalues():
+            for file_ in itervalues(task.statements):
                 files.add(file_.digest)
 
             # Enumerate attachments
-            for file_ in task.attachments.itervalues():
+            for file_ in itervalues(task.attachments):
                 files.add(file_.digest)
 
             # Enumerate managers
             for dataset in task.datasets:
-                for file_ in dataset.managers.itervalues():
+                for file_ in itervalues(dataset.managers):
                     files.add(file_.digest)
 
             # Enumerate testcases
             for dataset in task.datasets:
-                for testcase in dataset.testcases.itervalues():
+                for testcase in itervalues(dataset.testcases):
                     files.add(testcase.input)
                     files.add(testcase.output)
 
@@ -331,13 +336,13 @@ class Contest(Base):
             for submission in self.get_submissions():
 
                 # Enumerate files
-                for file_ in submission.files.itervalues():
+                for file_ in itervalues(submission.files):
                     files.add(file_.digest)
 
                 # Enumerate executables
                 if not skip_generated:
                     for sr in submission.results:
-                        for file_ in sr.executables.itervalues():
+                        for file_ in itervalues(sr.executables):
                             files.add(file_.digest)
 
         if not skip_user_tests:
@@ -351,17 +356,17 @@ class Contest(Base):
                             files.add(ur.output)
 
                 # Enumerate files
-                for file_ in user_test.files.itervalues():
+                for file_ in itervalues(user_test.files):
                     files.add(file_.digest)
 
                 # Enumerate managers
-                for file_ in user_test.managers.itervalues():
+                for file_ in itervalues(user_test.managers):
                     files.add(file_.digest)
 
                 # Enumerate executables
                 if not skip_generated:
                     for ur in user_test.results:
-                        for file_ in ur.executables.itervalues():
+                        for file_ in itervalues(ur.executables):
                             files.add(file_.digest)
 
         return files
@@ -429,11 +434,11 @@ class Contest(Base):
             """
             # How many generation times we passed from start to
             # the previous considered time?
-            before_prev = int((prev_time - start).total_seconds()
-                              / token_gen_interval.total_seconds())
+            before_prev = ((prev_time - start).total_seconds()
+                           // token_gen_interval.total_seconds())
             # And from start to the current considered time?
-            before_next = int((next_time - start).total_seconds()
-                              / token_gen_interval.total_seconds())
+            before_next = ((next_time - start).total_seconds()
+                           // token_gen_interval.total_seconds())
             # So...
             return token_gen_number * (before_next - before_prev)
 
@@ -534,11 +539,11 @@ class Contest(Base):
 
         # Take the list of the tokens already played (sorted by time).
         tokens = participation.get_tokens()
-        token_timestamps_contest = sorted([token.timestamp
-                                           for token in tokens])
-        token_timestamps_task = sorted([
+        token_timestamps_contest = sorted(token.timestamp
+                                          for token in tokens)
+        token_timestamps_task = sorted(
             token.timestamp for token in tokens
-            if token.submission.task.name == task.name])
+            if token.submission.task.name == task.name)
 
         # If the contest is USACO-style (i.e., the time for each user
         # start when they log in for the first time), then we start

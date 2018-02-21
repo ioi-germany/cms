@@ -107,10 +107,10 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Execution killed with signal %d (could be triggered by violating memory "
+"Execution killed with signal %s (could be triggered by violating memory "
 "limits)"
 msgstr ""
-"Exécution interrompue : signal %d (peut provenir d'un débordement de mémoire)"
+"Exécution interrompue : signal %s (peut provenir d'un débordement de mémoire)"
 
 msgid ""
 "Your submission was killed with the specified signal. Among other things, "
@@ -193,52 +193,11 @@ msgstr "Compilation non nécessaire"
 msgid "File not submitted"
 msgstr "Aucun fichier soumis"
 
-msgid "%Y-%m-%d"
-msgstr "%d/%m/%Y"
-
-msgid "%H:%M:%S"
-msgstr "%H:%M:%S"
-
-msgid "%Y-%m-%d %H:%M:%S"
-msgstr "%d/%m/%Y %H:%M:%S"
-
 msgid "loading..."
 msgstr "chargement ..."
 
 msgid "unknown"
 msgstr "inconnu"
-
-#, python-format
-msgid "%d second"
-msgid_plural "%d seconds"
-msgstr[0] "%d seconde"
-msgstr[1] "%d secondes"
-
-#, python-format
-msgid "%d minute"
-msgid_plural "%d minutes"
-msgstr[0] "%d minute"
-msgstr[1] "%d minutes"
-
-#, python-format
-msgid "%d hour"
-msgid_plural "%d hours"
-msgstr[0] "%d heure"
-msgstr[1] "%d heures"
-
-#, python-format
-msgid "%d day"
-msgid_plural "%d days"
-msgstr[0] "%d jour"
-msgstr[1] "%d jours"
-
-#, python-format
-msgid "%s and %s"
-msgstr "%s et %s"
-
-#, python-format
-msgid "more than %s"
-msgstr "plus de %s"
 
 msgid "contest-token"
 msgstr "jeton d'épreuve"
@@ -543,10 +502,6 @@ msgstr "En cours d'exécution..."
 
 msgid "Executed"
 msgstr "Exécuté"
-
-#, python-format
-msgid "{seconds:0.3f} s"
-msgstr "{seconds:0.3f} s"
 
 #, python-format
 msgid "Automatic (%s)"
@@ -872,18 +827,6 @@ msgstr "Fichiers"
 msgid "Tokens"
 msgstr "Jetons"
 
-#, python-format
-msgid "{seconds:g} second"
-msgstr "{seconds:g} seconde"
-
-#, python-format
-msgid "{seconds:g} seconds"
-msgstr "{seconds:g} secondes"
-
-#, python-format
-msgid "%(mb)d MiB"
-msgstr "%(mb)d Mio (MiB)"
-
 msgid "Yes"
 msgstr "Oui"
 
@@ -1035,7 +978,7 @@ msgstr ""
 "\">la page générale du concours</a>."
 
 msgid ""
-"Remeber that to see the detailed result of a submission you need to use both "
+"Remember that to see the detailed result of a submission you need to use both "
 "a contest-token and a task-token."
 msgstr ""
 "Rappelez-vous que pour voir les résultats détaillés d'une soumission, vous "

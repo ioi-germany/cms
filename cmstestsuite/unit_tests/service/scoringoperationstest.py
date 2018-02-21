@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -23,8 +23,12 @@ and the function to compute them).
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iterkeys, iteritems
 
 import unittest
 
@@ -43,13 +47,13 @@ class TestScoringOperations(TestCaseWithDatabase):
         self.contest = self.add_contest()
         self.participation = self.add_participation(contest=self.contest)
         self.tasks = [
-            self.add_task(self.contest),
-            self.add_task(self.contest)
+            self.add_task(contest=self.contest),
+            self.add_task(contest=self.contest)
         ]
         self.datasets = sum([[
-            self.add_dataset(task, autojudge=False),
-            self.add_dataset(task, autojudge=True),
-            self.add_dataset(task, autojudge=False),
+            self.add_dataset(task=task, autojudge=False),
+            self.add_dataset(task=task, autojudge=True),
+            self.add_dataset(task=task, autojudge=False),
         ] for task in self.tasks], [])
         # Similarly to esoperationstest, the active dataset is not
         # autojudged.
@@ -99,7 +103,8 @@ class TestScoringOperations(TestCaseWithDatabase):
             self.tasks[0], self.participation, True)
         evaluated_codenames = set()
         for result in results:
-            evaluated_codename = result.dataset.testcases.keys()[0]
+            # Pick one arbitrary testcase.
+            evaluated_codename = next(iterkeys(result.dataset.testcases))
             self.add_evaluation(
                 result, result.dataset.testcases[evaluated_codename])
             evaluated_codenames.add(evaluated_codename)
@@ -127,7 +132,7 @@ class TestScoringOperations(TestCaseWithDatabase):
         submission, results = self.add_submission_with_results(
             self.tasks[0], self.participation, True)
         for result in results:
-            for codename, testcase in result.dataset.testcases.items():
+            for codename, testcase in iteritems(result.dataset.testcases):
                 self.add_evaluation(result, testcase)
                 result.set_evaluation_outcome()
         self.session.flush()
@@ -147,8 +152,8 @@ class TestScoringOperations(TestCaseWithDatabase):
     @staticmethod
     def to_judge(dataset):
         return (
-            dataset.autojudge
-            or dataset.task.active_dataset_id == dataset.id)
+            dataset.autojudge or
+            dataset.task.active_dataset_id == dataset.id)
 
 
 if __name__ == "__main__":

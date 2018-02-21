@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -32,8 +32,12 @@ the current ranking.
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import itervalues, iteritems
 
 import logging
 
@@ -92,7 +96,7 @@ class EvaluationExecutor(Executor):
         # operation.
         self._drop_current = False
 
-        for i in xrange(get_service_shards("Worker")):
+        for i in range(get_service_shards("Worker")):
             worker = ServiceCoord("Worker", i)
             self.pool.add_worker(worker)
 
@@ -484,7 +488,7 @@ class EvaluationService(TriggeredService):
             subs = dict()
             srs = dict()
 
-            for key, operation_results in by_object_and_type.iteritems():
+            for key, operation_results in iteritems(by_object_and_type):
                 type_, object_id, dataset_id = key
 
                 # Get dataset.
@@ -606,7 +610,7 @@ class EvaluationService(TriggeredService):
                    result.job.plus.get("tombstone") is True:
                     executable_digests = [
                         e.digest for e in
-                        object_result.executables.itervalues()]
+                        itervalues(object_result.executables)]
                     if FileCacher.TOMBSTONE_DIGEST in executable_digests:
                         logger.info("Submission %d's compilation on dataset "
                                     "%d has been invalidated since the "
@@ -888,6 +892,10 @@ class EvaluationService(TriggeredService):
             contest_id = self.contest_id
 
         with SessionGen() as session:
+            # When invalidating a dataset we need to know the task_id, otherwise
+            # get_submissions will return all the submissions of the contest.
+            if dataset_id is not None and task_id is None:
+                task_id = Dataset.get_from_id(dataset_id, session).task_id
             # First we load all involved submissions.
             submissions = get_submissions(
                 # Give contest_id only if all others are None.
@@ -921,7 +929,11 @@ class EvaluationService(TriggeredService):
                     submission_id,
                     dataset_id} == {None}
                 else None,
-                participation_id, task_id, submission_id, dataset_id, session)
+                participation_id,
+                # Provide the task_id only if the entire task has to be
+                # reevaluated and not only a specific dataset.
+                task_id if dataset_id is None else None,
+                submission_id, dataset_id, session)
             logger.info("Submission results to invalidate %s for: %d.",
                         level, len(submission_results))
             for submission_result in submission_results:
@@ -1015,6 +1027,5 @@ class EvaluationService(TriggeredService):
                 entries_by_key[key] = entry
                 entries_by_key[key]["item"]["multiplicity"] = 1
         return sorted(
-            entries_by_key.values(),
-            lambda x, y: cmp((x["priority"], x["timestamp"]),
-                             (y["priority"], y["timestamp"])))
+            itervalues(entries_by_key),
+            key=lambda x: (x["priority"], x["timestamp"]))

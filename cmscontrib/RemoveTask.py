@@ -1,8 +1,8 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2013-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2013-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,8 +22,11 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import argparse
 import sys
@@ -33,10 +36,9 @@ from cms.db import SessionGen, Task
 
 
 def ask(task_name):
-    print("This will delete task `%s' and all related data, "
-          "including submissions. Are you sure? [y/N] "
-          % task_name, end='')
-    ans = sys.stdin.readline().strip().lower()
+    ans = input("This will delete task `%s' and all related data, including "
+                "submissions. Are you sure? [y/N] "
+                % task_name).strip().lower()
     return ans in ["y", "yes"]
 
 
@@ -53,7 +55,6 @@ def remove_task(task_name):
         num = task.num
         contest_id = task.contest_id
         session.delete(task)
-        session.commit()
         # Keeping the tasks' nums to the range 0... n - 1.
         if contest_id is not None:
             following_tasks = session.query(Task)\

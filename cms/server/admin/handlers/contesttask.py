@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -27,8 +27,11 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 from cms.db import Contest, Task
 from cmscommon.datetime import make_datetime
@@ -68,7 +71,7 @@ class ContestTasksHandler(BaseHandler):
                 self.MOVE_DOWN
             ), "Please select a valid operation"
         except Exception as error:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(fallback_page)
             return
@@ -112,7 +115,7 @@ class ContestTasksHandler(BaseHandler):
 
         if self.try_commit():
             # Create the user on RWS.
-            self.application.service.proxy_service.reinitialize()
+            self.service.proxy_service.reinitialize()
 
         # Maybe they'll want to do this again (for another task)
         self.redirect(fallback_page)
@@ -130,7 +133,7 @@ class AddContestTaskHandler(BaseHandler):
             # Check that the admin selected some task.
             assert task_id != "null", "Please select a valid task"
         except Exception as error:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(fallback_page)
             return
@@ -143,7 +146,7 @@ class AddContestTaskHandler(BaseHandler):
 
         if self.try_commit():
             # Create the user on RWS.
-            self.application.service.proxy_service.reinitialize()
+            self.service.proxy_service.reinitialize()
 
         # Maybe they'll want to do this again (for another task)
         self.redirect(fallback_page)

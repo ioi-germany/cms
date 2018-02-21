@@ -21,10 +21,6 @@ msgstr ""
 "X-Language: ru_RU\n"
 "X-Source-Language: C\n"
 
-#. translators: decimal mark in fractions (e.g., in "3.14")
-msgid "."
-msgstr ","
-
 msgid "Compilation succeeded"
 msgstr "Успешная компиляция"
 
@@ -103,10 +99,10 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Execution killed with signal %d (could be triggered by violating memory "
+"Execution killed with signal %s (could be triggered by violating memory "
 "limits)"
 msgstr ""
-"Выполнение завершилось с сигналом %d (это могло быть вызвано превышением "
+"Выполнение завершилось с сигналом %s (это могло быть вызвано превышением "
 "ограничения по памяти)"
 
 msgid ""
@@ -184,56 +180,11 @@ msgstr "Нет необходимости компилировать"
 msgid "File not submitted"
 msgstr "Файл не отправлен"
 
-msgid "%Y-%m-%d"
-msgstr "%Y-%m-%d"
-
-msgid "%H:%M:%S"
-msgstr "%H:%M:%S"
-
-msgid "%Y-%m-%d %H:%M:%S"
-msgstr "%Y-%m-%d %H:%M:%S"
-
 msgid "loading..."
 msgstr "загрузка..."
 
 msgid "unknown"
 msgstr ""
-
-#, python-format
-msgid "%d second"
-msgid_plural "%d seconds"
-msgstr[0] "%d секунда"
-msgstr[1] "%d секунды"
-msgstr[2] "%d секунд"
-
-#, python-format
-msgid "%d minute"
-msgid_plural "%d minutes"
-msgstr[0] "%d минута"
-msgstr[1] "%d минуты"
-msgstr[2] "%d минут"
-
-#, python-format
-msgid "%d hour"
-msgid_plural "%d hours"
-msgstr[0] "%d час"
-msgstr[1] "%d часа"
-msgstr[2] "%d часов"
-
-#, python-format
-msgid "%d day"
-msgid_plural "%d days"
-msgstr[0] "%d день"
-msgstr[1] "%d дня"
-msgstr[2] "%d дней"
-
-#, python-format
-msgid "%s and %s"
-msgstr "%s и %s"
-
-#, python-format
-msgid "more than %s"
-msgstr "больше чем %s"
 
 msgid "contest-token"
 msgstr "contest-token"
@@ -549,10 +500,6 @@ msgstr "Выполнение..."
 
 msgid "Executed"
 msgstr "Выполнено"
-
-#, python-brace-format
-msgid "{seconds:0.3f} s"
-msgstr "{seconds:0.3f} с"
 
 msgid "Communication"
 msgstr "Объявления и вопросы к жюри"
@@ -893,18 +840,6 @@ msgstr "Файлы"
 msgid "Tokens"
 msgstr "Токены"
 
-#, python-brace-format
-msgid "{seconds:g} second"
-msgstr "{seconds:g} секунда"
-
-#, python-brace-format
-msgid "{seconds:g} seconds"
-msgstr "{seconds:g} секунды"
-
-#, python-format
-msgid "%(mb)d MiB"
-msgstr "%(mb)d МБ"
-
 msgid "Yes"
 msgstr "Да"
 
@@ -1052,7 +987,7 @@ msgstr ""
 "\">странице информации о контесте</a>."
 
 msgid ""
-"Remeber that to see the detailed result of a submission you need to use both "
+"Remember that to see the detailed result of a submission you need to use both "
 "a contest-token and a task-token."
 msgstr ""
 "Помните, что для того, чтобы увидеть детальный результат отправки, вам "

@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2013-2016 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2013-2017 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 William Di Luigi <williamdiluigi@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -27,10 +27,14 @@ that saves the resources usage in that machine.
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iteritems
 
-import bisect
+from collections import defaultdict, deque
 import logging
 import os
 import re
@@ -38,7 +42,6 @@ import time
 
 import psutil
 
-from collections import defaultdict
 from gevent import subprocess
 try:
     from subprocess import DEVNULL  # py3k
@@ -52,22 +55,12 @@ from cms.io import Service, rpc_method
 logger = logging.getLogger(__name__)
 
 
-B_TO_MB = 1024.0 * 1024.0
-
-# As psutil-2.0 introduced many backward-incompatible changes to its
-# API we define this global flag to make it easier later on to decide
-# which methods, properties, etc. to use.
-PSUTIL2 = psutil.version_info >= (2, 0)
+B_TO_MB = 1024 * 1024
 
 MAX_RESOURCE_SECONDS = 11 * 60  # MAX time window for remote resource query
 
-if PSUTIL2:
-    PSUTIL_PROC_ATTRS = \
-        ["cmdline", "cpu_times", "create_time", "memory_info", "num_threads"]
-else:
-    PSUTIL_PROC_ATTRS = \
-        ["cmdline", "get_cpu_times", "create_time",
-         "get_memory_info", "get_num_threads"]
+PSUTIL_PROC_ATTRS = \
+    ["cmdline", "cpu_times", "create_time", "memory_info", "num_threads"]
 
 
 class ProcessMatcher(object):
@@ -90,7 +83,7 @@ class ProcessMatcher(object):
         if self._procs is None:
             self._procs = ProcessMatcher._get_interesting_running_processes()
         shards = self._procs.get(service.name, {})
-        for shard, proc in shards.iteritems():
+        for shard, proc in iteritems(shards):
             if get_safe_shard(service.name, shard) == service.shard:
                 logger.debug("Found %s", service)
                 if cpu_times is not None:
@@ -163,7 +156,7 @@ class ProcessMatcher(object):
         # We assume that apart from the shard, all other
         # options are in the form "-<something> <something>".
         shard = None
-        for i in xrange(start_index + 2, len(cmdline), 2):
+        for i in range(start_index + 2, len(cmdline), 2):
             if cmdline[i].isdigit():
                 shard = int(cmdline[i])
                 break
@@ -187,7 +180,7 @@ class ResourceService(Service):
         self.autorestart = autorestart or (contest_id is not None)
 
         # _local_store is a dictionary indexed by time in int(epoch)
-        self._local_store = []
+        self._local_store = deque()
         # Floating point epoch using for precise measurement of percents
         self._last_saved_time = time.time()
         # Starting point for cpu times
@@ -338,8 +331,7 @@ class ResourceService(Service):
         data["cpu"] = dict((x, percent_from_delta(cpu_times[x] -
                                                   self._prev_cpu_times[x]))
                            for x in cpu_times)
-        data["cpu"]["num_cpu"] = \
-            psutil.cpu_count() if PSUTIL2 else psutil.NUM_CPUS
+        data["cpu"]["num_cpu"] = psutil.cpu_count()
         self._prev_cpu_times = cpu_times
 
         # Memory. The following relations hold (I think... I only
@@ -407,9 +399,10 @@ class ResourceService(Service):
             data["services"]["%s" % (service,)] = dic
 
         if store:
-            if len(self._local_store) >= 5000:  # almost 7 hours
-                self._local_store = self._local_store[1:]
-            self._local_store.append((now, data))
+            while self._local_store \
+                    and self._local_store[-1][0] < now - MAX_RESOURCE_SECONDS:
+                self._local_store.pop()
+            self._local_store.appendleft((now, data))
 
         return True
 
@@ -425,8 +418,12 @@ class ResourceService(Service):
         logger.debug("ResourceService._get_resources")
 
         last_time = max(last_time, time.time() - MAX_RESOURCE_SECONDS)
-        index = bisect.bisect_right(self._local_store, (last_time, 0))
-        return self._local_store[index:]
+        result = list()
+        for sample_time, data in self._local_store:
+            if sample_time > last_time:
+                result.append((sample_time, data))
+        result.reverse()
+        return result
 
     @rpc_method
     def kill_service(self, service):

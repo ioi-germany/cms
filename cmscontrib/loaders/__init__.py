@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -17,8 +17,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import itervalues, iteritems
 
 from .italy_yaml import YamlLoader
 from .polygon import PolygonTaskLoader, PolygonUserLoader, PolygonContestLoader
@@ -57,7 +61,7 @@ def choose_loader(arg, path, error_callback):
             error_callback("Specified loader doesn't exist")
     else:
         res = None
-        for loader in LOADERS.itervalues():
+        for loader in itervalues(LOADERS):
             if loader.detect(path):
                 if res is None:
                     res = loader
@@ -80,6 +84,6 @@ def build_epilog():
 
     """
     epilog = "The following loaders are supported:\n"
-    for short_name, loader_class in sorted(LOADERS.items()):
+    for short_name, loader_class in sorted(iteritems(LOADERS)):
         epilog += " * %s (%s)\n" % (short_name, loader_class.description)
     return epilog

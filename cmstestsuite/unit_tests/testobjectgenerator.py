@@ -1,9 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2015 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
+# Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,6 +21,13 @@
 
 """Utilities to generate test objects."""
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+
 from mock import Mock
 
 import random
@@ -30,7 +38,7 @@ from cmscommon.datetime import make_datetime
 
 
 def get_string(length=16):
-    return "".join(random.choice(string.letters) for _ in xrange(length))
+    return "".join(random.choice(string.ascii_letters) for _ in range(length))
 
 
 def get_int(upper=2 ** 31, lower=1):
@@ -60,9 +68,9 @@ def get_dataset():
     dataset = Mock()
     dataset.id = get_int()
     dataset.testcases = dict(
-        (get_string(), get_testcase()) for _ in xrange(10))
+        (get_string(), get_testcase()) for _ in range(10))
     dataset.score_type = "Sum"
-    dataset.score_type_parameters = "100"
+    dataset.score_type_parameters = 100
     return dataset
 
 
@@ -111,7 +119,7 @@ def get_participation(hidden=False, user=None):
 def get_sr(scored=True):
     sr = Mock()
     sr.scored.return_value = scored
-    sr.ranking_score_details = "0"
+    sr.ranking_score_details = ["0"]
     sr.score = get_int(100) if scored else None
     sr.token = None
     return sr

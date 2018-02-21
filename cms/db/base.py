@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2013-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2013-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,9 +21,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iterkeys, iteritems
 
+import ipaddress
 from datetime import datetime, timedelta
 
 from sqlalchemy.ext.declarative import declarative_base
@@ -32,24 +37,35 @@ from sqlalchemy.orm.session import object_session
 from sqlalchemy.orm import \
     class_mapper, object_mapper, ColumnProperty, RelationshipProperty
 from sqlalchemy.types import \
-    Boolean, Integer, Float, String, Unicode, DateTime, Interval, Enum
+    Boolean, Integer, Float, String, Unicode, Enum, DateTime, Interval
+from sqlalchemy.dialects.postgresql import ARRAY, CIDR, JSONB
 
 import six
+# In both Python 2 and 3, everything is an object. But in py2 we alias
+# the object name with future.types.newobject.newobject, for which that
+# isn't the case. Here we recover access to the original object type.
+if six.PY3:
+    raw_object = object
+else:
+    import __builtin__
+    raw_object = __builtin__.object
 
-from . import CastingArray, RepeatedUnicode, engine
+from . import engine, CastingArray
 
 
 _TYPE_MAP = {
     Boolean: bool,
     Integer: six.integer_types,
     Float: float,
+    Enum: six.text_type,
+    Unicode: six.text_type,
     String: six.string_types,  # TODO Use six.binary_type.
-    Unicode: six.string_types,  # TODO Use six.text_type.
     DateTime: datetime,
     Interval: timedelta,
-    Enum: six.string_types,  # TODO Use six.text_type.
-    RepeatedUnicode: list,  # TODO Use a type that checks also the content.
-    CastingArray: list,  # TODO Use a type that checks also the content.
+    ARRAY: list,
+    CastingArray: list,
+    CIDR: (ipaddress.IPv4Network, ipaddress.IPv6Network),
+    JSONB: raw_object,
 }
 
 
@@ -96,17 +112,16 @@ class Base(object):
                         "Unexpected number of columns for ColumnProperty %s of"
                         " %s: %d" % (prp.key, cls.__name__, len(prp.columns)))
                 col = prp.columns[0]
-                col_type = type(col.type)
 
                 # Ignore IDs and foreign keys
                 if col.primary_key or col.foreign_keys:
                     continue
 
                 # Check that we understand the type
-                if col_type not in _TYPE_MAP:
+                if not isinstance(col.type, tuple(iterkeys(_TYPE_MAP))):
                     raise RuntimeError(
                         "Unknown SQLAlchemy column type for ColumnProperty "
-                        "%s of %s: %s" % (prp.key, cls.__name__, col_type))
+                        "%s of %s: %s" % (prp.key, cls.__name__, col.type))
 
                 cls._col_props.append(prp)
             elif isinstance(prp, RelationshipProperty):
@@ -158,7 +173,7 @@ class Base(object):
         """
         cls = type(self)
 
-        # Check the number of positional argument
+        # Check the number of positional arguments
         if len(args) > len(self._col_props):
             raise TypeError(
                 "%s.__init__() takes at most %d positional arguments (%d "
@@ -172,63 +187,13 @@ class Base(object):
                     "argument '%s'" % (cls.__name__, prp.key))
             kwargs[prp.key] = arg
 
-        for prp in self._col_props:
-            col = prp.columns[0]
-            col_type = type(col.type)
-
-            if prp.key not in kwargs:
-                # We're assuming the default value, if specified, has
-                # the correct type
-                if col.default is None and not col.nullable:
-                    raise TypeError(
-                        "%s.__init__() didn't get required keyword "
-                        "argument '%s'" % (cls.__name__, prp.key))
-                # We're setting the default ourselves, since we may
-                # want to use the object before storing it in the DB.
-                # FIXME This code doesn't work with callable defaults.
-                # We can use the is_callable and is_scalar properties
-                # (and maybe the is_sequence and is_clause_element ones
-                # too) to detect the type. Note that callables require a
-                # ExecutionContext argument (which we don't have).
-                if col.default is not None:
-                    setattr(self, prp.key, col.default.arg)
-            else:
-                val = kwargs.pop(prp.key)
-
-                if val is None:
-                    if not col.nullable:
-                        raise TypeError(
-                            "%s.__init__() got None for keyword argument '%s',"
-                            " which is not nullable" % (cls.__name__, prp.key))
-                    setattr(self, prp.key, val)
-                else:
-                    # TODO col_type.python_type contains the type that
-                    # SQLAlchemy thinks is more appropriate. We could
-                    # use that and drop _TYPE_MAP...
-                    if not isinstance(val, _TYPE_MAP[col_type]):
-                        raise TypeError(
-                            "%s.__init__() got a '%s' for keyword argument "
-                            "'%s', which requires a '%s'" %
-                            (cls.__name__, type(val), prp.key,
-                             _TYPE_MAP[col_type]))
-                    setattr(self, prp.key, val)
-
-        for prp in self._rel_props:
-            if prp.key not in kwargs:
-                # If the property isn't given we leave the default
-                # value instead of explictly setting it ourself.
-                pass
-            else:
-                val = kwargs.pop(prp.key)
-
-                # TODO Some type validation (take a look at prp.uselist)
-                setattr(self, prp.key, val)
-
-        # Check if there were unknown arguments
-        if kwargs:
-            raise TypeError(
-                "%s.__init__() got an unexpected keyword argument '%s'" %
-                (cls.__name__, kwargs.popitem()[0]))
+        try:
+            self.set_attrs(kwargs, fill_with_defaults=True)
+        except TypeError as err:
+            message, = err.args
+            err.args = (message.replace("set_attrs()",
+                                        "%s.__init__()" % cls.__name__),)
+            raise
 
     @classmethod
     def get_from_id(cls, id_, session):
@@ -285,13 +250,16 @@ class Base(object):
                 attrs[prp.key] = getattr(self, prp.key)
         return attrs
 
-    def set_attrs(self, attrs):
+    def set_attrs(self, attrs, fill_with_defaults=False):
         """Do self.__dict__.update(attrs) with validation.
 
         Limited to SQLAlchemy column and relationship properties.
 
         attrs ({string: object}): the new properties we want to set on
             this object.
+        fill_with_defaults (bool): whether to explicitly reset the
+            attributes that were not provided in attrs to their default
+            value.
 
         """
         # We want to pop items without altering the caller's object.
@@ -299,9 +267,24 @@ class Base(object):
 
         for prp in self._col_props:
             col = prp.columns[0]
-            col_type = type(col.type)
 
-            if prp.key in attrs:
+            if prp.key not in attrs and fill_with_defaults:
+                # We're assuming the default value, if specified, has
+                # the correct type
+                if col.default is None and not col.nullable:
+                    raise TypeError(
+                        "set_attrs() didn't get required keyword "
+                        "argument '%s'" % prp.key)
+                # We're setting the default ourselves, since we may
+                # want to use the object before storing it in the DB.
+                # FIXME This code doesn't work with callable defaults.
+                # We can use the is_callable and is_scalar properties
+                # (and maybe the is_sequence and is_clause_element ones
+                # too) to detect the type. Note that callables require
+                # an ExecutionContext argument (which we don't have).
+                if col.default is not None:
+                    setattr(self, prp.key, col.default.arg)
+            elif prp.key in attrs:
                 val = attrs.pop(prp.key)
 
                 if val is None:
@@ -311,14 +294,24 @@ class Base(object):
                             " which is not nullable" % prp.key)
                     setattr(self, prp.key, val)
                 else:
-                    # TODO col_type.python_type contains the type that
+                    # TODO col.type.python_type contains the type that
                     # SQLAlchemy thinks is more appropriate. We could
                     # use that and drop _TYPE_MAP...
-                    if not isinstance(val, _TYPE_MAP[col_type]):
+                    py_type = _TYPE_MAP[type(col.type)]
+                    if not isinstance(val, py_type):
                         raise TypeError(
                             "set_attrs() got a '%s' for keyword argument "
                             "'%s', which requires a '%s'" %
-                            (type(val), prp.key, _TYPE_MAP[col_type]))
+                            (type(val), prp.key, py_type))
+                    if isinstance(col.type, ARRAY):
+                        py_item_type = _TYPE_MAP[type(col.type.item_type)]
+                        for item in val:
+                            if not isinstance(item, py_item_type):
+                                raise TypeError(
+                                    "set_attrs() got a '%s' inside the list "
+                                    "for keyword argument '%s', which requires "
+                                    "a list of '%s'"
+                                    % (type(item), prp.key, py_item_type))
                     setattr(self, prp.key, val)
 
         for prp in self._rel_props:

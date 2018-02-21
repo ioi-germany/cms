@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -18,8 +18,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import itervalues, iteritems
 
 import heapq
 import logging
@@ -120,7 +124,7 @@ class Score(object):
         if self._score_mode == "max":
             score = max([0.0] +
                         [submission.score
-                         for submission in self._submissions.values()])
+                         for submission in itervalues(self._submissions)])
         else:
             score = max(self._released.query(),
                         self._last.score if self._last is not None else 0.0)
@@ -138,7 +142,7 @@ class Score(object):
         del self._history[:]
 
         # Reset the submissions at their default value.
-        for sub in self._submissions.itervalues():
+        for sub in itervalues(self._submissions):
             sub.score = 0.0
             sub.token = False
             sub.extra = list()
@@ -254,9 +258,9 @@ class ScoringStore(object):
         finishes loading the data from disk.
 
         """
-        for key, value in submission_store._store.iteritems():
+        for key, value in iteritems(submission_store._store):
             self.create_submission(key, value)
-        for key, value in sorted(subchange_store._store.iteritems()):
+        for key, value in sorted(iteritems(subchange_store._store)):
             self.create_subchange(key, value)
 
     def add_score_callback(self, callback):
@@ -381,8 +385,8 @@ class ScoringStore(object):
         # Use a priority queue, containing only one entry
         # per-user/per-task.
         queue = list()
-        for user, dic in self._scores.iteritems():
-            for task, scoring in dic.iteritems():
+        for user, dic in iteritems(self._scores):
+            for task, scoring in iteritems(dic):
                 if scoring._history:
                     heapq.heappush(queue, (scoring._history[0],
                                            user, task, scoring, 0))

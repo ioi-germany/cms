@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -21,8 +21,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iterkeys, itervalues
 
 import functools
 import json
@@ -262,8 +266,8 @@ class RemoteServiceBase(object):
                 self._writer.write(data + b'\r\n')
                 self._writer.flush()
         except socket.error as error:
-            logger.warning("Failed writing to socket: %s.", error)
             self.finalize("Write failed.")
+            logger.warning("Failed writing to socket: %s.", error)
             raise error
 
 
@@ -336,7 +340,7 @@ class RemoteServiceServer(RemoteServiceBase):
         """
         # Decode the incoming data.
         try:
-            message = json.loads(data, encoding='utf-8')
+            message = json.loads(data.decode('utf-8'))
         except ValueError:
             logger.warning("Cannot parse incoming message, discarding.")
             return
@@ -353,7 +357,7 @@ class RemoteServiceServer(RemoteServiceBase):
 
         """
         # Validate the request.
-        if not {"__id", "__method", "__data"}.issubset(request.iterkeys()):
+        if not {"__id", "__method", "__data"}.issubset(iterkeys(request)):
             logger.warning("Request is missing some fields, ingoring.")
             return
 
@@ -387,7 +391,7 @@ class RemoteServiceServer(RemoteServiceBase):
 
         # Encode it.
         try:
-            data = json.dumps(response, encoding='utf-8')
+            data = json.dumps(response).encode('utf-8')
         except (TypeError, ValueError):
             logger.warning("JSON encoding failed.", exc_info=True)
             return
@@ -448,7 +452,7 @@ class RemoteServiceClient(RemoteServiceBase):
         """See RemoteServiceBase.finalize."""
         super(RemoteServiceClient, self).finalize(reason)
 
-        for result in self.pending_outgoing_requests_results.itervalues():
+        for result in itervalues(self.pending_outgoing_requests_results):
             result.set_exception(RPCError(reason))
 
         self.pending_outgoing_requests.clear()
@@ -527,7 +531,7 @@ class RemoteServiceClient(RemoteServiceBase):
         """
         # Decode the incoming data.
         try:
-            message = json.loads(data, encoding='utf-8')
+            message = json.loads(data.decode('utf-8'))
         except ValueError:
             logger.warning("Cannot parse incoming message, discarding.")
             return
@@ -544,7 +548,7 @@ class RemoteServiceClient(RemoteServiceBase):
 
         """
         # Validate the response.
-        if not {"__id", "__data", "__error"}.issubset(response.iterkeys()):
+        if not {"__id", "__data", "__error"}.issubset(iterkeys(response)):
             logger.warning("Response is missing some fields, ingoring.")
             return
 
@@ -590,7 +594,7 @@ class RemoteServiceClient(RemoteServiceBase):
 
         # Encode it.
         try:
-            data = json.dumps(request, encoding='utf-8')
+            data = json.dumps(request).encode('utf-8')
         except (TypeError, ValueError):
             logger.error("JSON encoding failed.", exc_info=True)
             result.set_exception(RPCError("JSON encoding failed."))

@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2015 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2012-2015 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2012-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013-2014 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
@@ -30,15 +30,19 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 from sqlalchemy import Boolean
 from sqlalchemy.schema import Column, ForeignKey, ForeignKeyConstraint, \
     UniqueConstraint
-from sqlalchemy.types import Integer, Float, String, Unicode, DateTime
+from sqlalchemy.types import Integer, Float, String, Unicode, DateTime, Enum
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 from . import Base, Participation, Task, Dataset, Testcase, \
     FilenameConstraint, DigestConstraint
@@ -313,13 +317,16 @@ class SubmissionResult(Base):
     # compilation successful and we can evaluate, "fail" =
     # compilation unsuccessful, throw it away).
     compilation_outcome = Column(
-        String,
+        Enum("ok", "fail", name="compilation_outcome"),
         nullable=True)
 
-    # String containing output from the sandbox.
+    # The output from the sandbox (to allow localization the first item
+    # of the list is a format string, possibly containing some "%s",
+    # that will be filled in using the remaining items of the list).
     compilation_text = Column(
-        String,
-        nullable=True)
+        ARRAY(String),
+        nullable=False,
+        default=[])
 
     # Number of failures during compilation.
     compilation_tries = Column(
@@ -358,7 +365,7 @@ class SubmissionResult(Base):
     # evaluation successful). At any time, this should be equal to
     # evaluations != [].
     evaluation_outcome = Column(
-        String,
+        Enum("ok", name="evaluation_outcome"),
         nullable=True)
 
     # Number of failures during evaluation.
@@ -372,13 +379,13 @@ class SubmissionResult(Base):
         Float,
         nullable=True)
 
-    # Score details. It's a JSON-encoded string containing information
+    # Score details. It's a JSON-like structure containing information
     # that is given to ScoreType.get_html_details to generate an HTML
     # snippet that is shown on AWS and, if the user used a token, on
     # CWS to display the details of the submission.
     # For example, results for each testcases, subtask, etc.
     score_details = Column(
-        String,
+        JSONB,
         nullable=True)
 
     # The same as the last two fields, but only showing information
@@ -388,7 +395,7 @@ class SubmissionResult(Base):
         Float,
         nullable=True)
     public_score_details = Column(
-        String,
+        JSONB,
         nullable=True)
 
     unit_test_score_details = Column(
@@ -396,10 +403,9 @@ class SubmissionResult(Base):
         nullable=True)
 
     # Ranking score details. It is a list of strings that are going to
-    # be shown in a single row in the table of submission in RWS. JSON
-    # encoded.
+    # be shown in a single row in the table of submission in RWS.
     ranking_score_details = Column(
-        String,
+        ARRAY(String),
         nullable=True)
 
     # Follows the description of the fields automatically added by
@@ -456,8 +462,12 @@ class SubmissionResult(Base):
         t, m = None, None
         if self.evaluated() and self.evaluations:
             for ev in self.evaluations:
-                t = max(t, ev.execution_time)
-                m = max(m, ev.execution_memory)
+                if ev.execution_time is not None \
+                        and (t is None or t < ev.execution_time):
+                    t = ev.execution_time
+                if ev.execution_memory is not None \
+                        and (m is None or m < ev.execution_memory):
+                    m = ev.execution_memory
         return (t, m)
 
     def compiled(self):
@@ -563,7 +573,7 @@ class SubmissionResult(Base):
         """
         self.invalidate_evaluation()
         self.compilation_outcome = None
-        self.compilation_text = None
+        self.compilation_text = []
         self.compilation_tries = 0
         self.compilation_time = None
         self.compilation_wall_clock_time = None
@@ -733,11 +743,14 @@ class Evaluation(Base):
         Unicode,
         nullable=True)
 
-    # String containing output from the grader (usually "Correct",
-    # "Time limit", ...).
+    # The output from the grader, usually "Correct", "Time limit", ...
+    # (to allow localization the first item of the list is a format
+    # string, possibly containing some "%s", that will be filled in
+    # using the remaining items of the list).
     text = Column(
-        String,
-        nullable=True)
+        ARRAY(String),
+        nullable=False,
+        default=[])
 
     # Evaluation's time and wall-clock time, in seconds.
     execution_time = Column(

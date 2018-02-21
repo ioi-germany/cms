@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -20,8 +20,11 @@
 """Rust programming language definition."""
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 from cms.grading import CompiledLanguage
 
@@ -44,16 +47,6 @@ class Rust(CompiledLanguage):
     def source_extensions(self):
         """See Language.source_extensions."""
         return [".rs"]
-
-    @property
-    def header_extensions(self):
-        """See Language.header_extensions."""
-        return []
-
-    @property
-    def object_extensions(self):
-        """See Language.object_extensions."""
-        return []
 
     def get_compilation_commands(self,
                                  source_filenames, executable_filename,

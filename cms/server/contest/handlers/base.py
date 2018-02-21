@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -31,15 +31,23 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iterkeys
 
 import logging
 import os
 import traceback
+
 import tornado.web
+from werkzeug.datastructures import LanguageAccept
+from werkzeug.http import parse_accept_header
 
 from cms.db import Contest
+from cms.locale import DEFAULT_TRANSLATION, choose_language_code
 from cms.server import CommonRequestHandler
 
 
@@ -55,29 +63,63 @@ class BaseHandler(CommonRequestHandler):
 
     def __init__(self, *args, **kwargs):
         super(BaseHandler, self).__init__(*args, **kwargs)
-        self.cookie_lang = None
-        self.browser_lang = None
-        self.langs = None
-        self._ = None
+        # The list of interface translations the user can choose from.
+        self.available_translations = self.service.translations
+        # The translation that best matches the user's system settings
+        # (as reflected by the browser in the HTTP request's
+        # Accept-Language header).
+        self.automatic_translation = DEFAULT_TRANSLATION
+        # The translation that the user specifically manually picked.
+        self.cookie_translation = None
+        # The translation that we are going to use.
+        self.translation = DEFAULT_TRANSLATION
+        self._ = self.translation.gettext
+        self.n_ = self.translation.ngettext
 
     def get(self):
         self.r_params = self.render_params()
-
-        self.render("contest_list.html", **self.r_params)
+        # We need this to be computed for each request because we want to be
+        # able to import new contests without having to restart CWS.
+        contest_list = dict()
+        for contest in self.sql_session.query(Contest).all():
+            contest_list[contest.name] = contest
+        self.render("contest_list.html", contest_list=contest_list,
+                    **self.r_params)
 
     def prepare(self):
         """This method is executed at the beginning of each request.
 
         """
         super(BaseHandler, self).prepare()
+        self.setup_locale()
 
-        # We need this to be computed for each request because we want to be
-        # able to import new contests without having to restart CWS. But only
-        # in multi-contest mode.
-        self.contest_list = {}
-        if self.is_multi_contest():
-            for contest in self.sql_session.query(Contest).all():
-                self.contest_list[contest.name] = contest
+    def setup_locale(self):
+        lang_codes = list(iterkeys(self.available_translations))
+
+        browser_langs = parse_accept_header(
+            self.request.headers.get("Accept-Language", ""),
+            LanguageAccept).values()
+        automatic_lang = choose_language_code(browser_langs, lang_codes)
+        if automatic_lang is None:
+            automatic_lang = lang_codes[0]
+        self.automatic_translation = \
+            self.available_translations[automatic_lang]
+
+        cookie_lang = self.get_cookie("language", None)
+        if cookie_lang is not None:
+            chosen_lang = \
+                choose_language_code([cookie_lang, automatic_lang], lang_codes)
+            if chosen_lang == cookie_lang:
+                self.cookie_translation = \
+                    self.available_translations[cookie_lang]
+        else:
+            chosen_lang = automatic_lang
+        self.translation = self.available_translations[chosen_lang]
+
+        self._ = self.translation.gettext
+        self.n_ = self.translation.ngettext
+
+        self.set_header("Content-Language", chosen_lang)
 
     def render_params(self):
         """Return the default render params used by almost all handlers.
@@ -86,35 +128,18 @@ class BaseHandler(CommonRequestHandler):
 
         """
         ret = {}
-        ret["timestamp"] = self.timestamp
+        ret["now"] = self.timestamp
         ret["url"] = self.url
 
-        ret["contest_list"] = self.contest_list
+        ret["available_translations"] = self.available_translations
+
+        ret["cookie_translation"] = self.cookie_translation
+        ret["automatic_translation"] = self.automatic_translation
+
+        ret["translation"] = self.translation
+        ret["_"] = self._
 
         return ret
-
-    def finish(self, *args, **kwds):
-        """Finish this response, ending the HTTP request.
-
-        We override this method in order to properly close the database.
-
-        TODO - Now that we have greenlet support, this method could be
-        refactored in terms of context manager or something like
-        that. So far I'm leaving it to minimize changes.
-
-        """
-        if hasattr(self, "sql_session"):
-            try:
-                self.sql_session.close()
-            except Exception as error:
-                logger.warning("Couldn't close SQL connection: %r", error)
-        try:
-            tornado.web.RequestHandler.finish(self, *args, **kwds)
-        except IOError:
-            # When the client closes the connection before we reply,
-            # Tornado raises an IOError exception, that would pollute
-            # our log with unnecessarily critical messages
-            logger.debug("Connection closed before our reply.")
 
     def write_error(self, status_code, **kwargs):
         if "exc_info" in kwargs and \
@@ -128,7 +153,7 @@ class BaseHandler(CommonRequestHandler):
         # the data we need to display a basic template with the error
         # information. If r_params is not defined (i.e. something went
         # *really* bad) we simply return a basic textual error notice.
-        if getattr(self, 'r_params', None) is not None:
+        if self.r_params is not None:
             self.render("error.html", status_code=status_code, **self.r_params)
         else:
             self.write("A critical error has occurred :-(")
@@ -136,7 +161,7 @@ class BaseHandler(CommonRequestHandler):
 
     def is_multi_contest(self):
         """Return whether CWS serves all contests."""
-        return self.application.service.contest_id is None
+        return self.service.contest_id is None
 
 
 class StaticFileGzHandler(tornado.web.StaticFileHandler):

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -23,8 +23,12 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iterkeys
 
 import logging
 
@@ -83,7 +87,7 @@ class AddAdminHandler(SimpleHandler("add_admin.html", permission_all=True)):
             self.sql_session.add(admin)
 
         except Exception as error:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(fallback_page)
             return
@@ -136,7 +140,7 @@ class AdminHandler(BaseHandler):
             new_attrs = _admin_attrs(self)
 
         except Exception as error:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(self.url("admin", admin_id))
             return
@@ -146,7 +150,7 @@ class AdminHandler(BaseHandler):
         # allowed because they are editing their own details, they can
         # only change a subset of the fields.
         if not self.current_user.permission_all:
-            for key in new_attrs.keys():
+            for key in iterkeys(new_attrs):
                 if key not in AdminHandler.SELF_MODIFIABLE_FIELDS:
                     del new_attrs[key]
         admin.set_attrs(new_attrs)

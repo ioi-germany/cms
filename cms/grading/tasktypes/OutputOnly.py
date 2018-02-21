@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -25,8 +25,11 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import logging
 
@@ -104,7 +107,7 @@ class OutputOnly(TaskType):
         job.plus = {}
 
         outcome = None
-        text = None
+        text = []
 
         # Since we allow partial submission, if the file is not
         # present we report that the outcome is 0.
@@ -113,7 +116,7 @@ class OutputOnly(TaskType):
             job.success = True
             job.outcome = "0.0"
             job.text = [N_("File not submitted")]
-            return True
+            return
 
         # First and only one step: diffing (manual or with manager).
         output_digest = job.files["output_%s.txt" %

@@ -1,8 +1,8 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2013-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2013-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2016 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -19,8 +19,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import argparse
 import io
@@ -31,8 +34,7 @@ import subprocess
 import datetime
 
 from cms import utf8_decoder
-from cmstestsuite import CONFIG, FrameworkException, sh
-from cmstestsuite import combine_coverage
+from cmstestsuite import CONFIG, TestException, combine_coverage, sh
 
 
 logger = logging.getLogger(__name__)
@@ -55,14 +57,13 @@ def run_unittests(test_list):
 
     # For all tests...
     for i, (path, filename) in enumerate(test_list):
-        logger.info("Running test %d/%d: %s.%s" % (
-            i + 1, num_tests_to_execute,
-            path, filename))
+        logger.info("Running test %d/%d: %s.%s",
+                    i + 1, num_tests_to_execute, path, filename)
         try:
             sh([sys.executable, "-m", "coverage", "run", "-p", "--source=cms",
                 os.path.join(path, filename)])
-        except FrameworkException:
-            logger.info("  (FAILED: %s)" % filename)
+        except TestException:
+            logger.info("  (FAILED: %s)", filename)
 
             # Add this case to our list of failures, if we haven't already.
             failures.append((path, filename))
@@ -126,22 +127,14 @@ def load_failed_tests():
     return failed_tests
 
 
-def time_difference(start_time, end_time):
-    secs = int((end_time - start_time).total_seconds())
-    mins = secs / 60
-    secs = secs % 60
-    hrs = mins / 60
-    mins = mins % 60
-    return "Time elapsed: %02d:%02d:%02d" % (hrs, mins, secs)
-
-
 def main():
-    parser = argparse.ArgumentParser(description="Runs the CMS unittest suite.")
+    parser = argparse.ArgumentParser(
+        description="Runs the CMS unittest suite.")
     parser.add_argument(
         "-n", "--dry-run", action="store_true",
         help="show what tests would be run, but do not run them")
     parser.add_argument(
-        "-v", "--verbose", action="count",
+        "-v", "--verbose", action="count", default=0,
         help="print debug information (use multiple times for more)")
     parser.add_argument(
         "-r", "--retry-failed", action="store_true",
@@ -169,7 +162,7 @@ def main():
     try:
         git_root = subprocess.check_output(
             "git rev-parse --show-toplevel", shell=True,
-            stderr=io.open(os.devnull, "wb")).strip()
+            stderr=io.open(os.devnull, "wb")).decode('utf8').strip()
     except subprocess.CalledProcessError:
         print("Please run the unit tests from the git repository.")
         return 1
@@ -185,7 +178,7 @@ def main():
         return 0
 
     if args.retry_failed:
-        logger.info("Re-running %d failed tests from last run." %
+        logger.info("Re-running %d failed tests from last run.",
                     len(test_list))
 
     # Load config from cms.conf.
@@ -211,12 +204,13 @@ def main():
     print(test_results)
 
     end_time = datetime.datetime.now()
-    print(time_difference(start_time, end_time))
+    print("Time elapsed: %s" % (end_time - start_time))
 
     if passed:
         return 0
     else:
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

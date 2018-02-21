@@ -10,15 +10,13 @@ These are our requirements (in particular we highlight those that are not usuall
 
 * build environment for the programming languages allowed in the competition;
 
-* `PostgreSQL <http://www.postgresql.org/>`_ >= 9.0;
+* `PostgreSQL <http://www.postgresql.org/>`_ >= 9.4;
 
-  .. We need 9.0 because of pg_largeobject_metadata (in drop_db).
+  .. We need 9.4 because of the JSONB data type.
 
 * `GNU compiler collection <https://gcc.gnu.org/>`_ (in particular the C compiler ``gcc``);
 
-* `gettext <http://www.gnu.org/software/gettext/>`_ >= 0.18;
-
-* `Python <http://www.python.org/>`_ >= 2.7, < 3.0;
+* `Python <http://www.python.org/>`_ 2.7 or 3.6;
 
 * `libcg <http://libcg.sourceforge.net/>`_;
 
@@ -52,7 +50,9 @@ Then you require the compilation and execution environments for the languages yo
 
 * `Glasgow Haskell Compiler <https://www.haskell.org/ghc/>`_ (for Haskell, with executable ``ghc``);
 
-* `Rust <https://www.rust-lang.org/>`_ (for Rust, with executable ``rustc``).
+* `Rust <https://www.rust-lang.org/>`_ (for Rust, with executable ``rustc``);
+
+* `C# <http://www.mono-project.com/docs/about-mono/languages/csharp/>`_ (for C#, with executable ``mcs``).
 
 All dependencies can be installed automatically on most Linux distributions.
 
@@ -66,16 +66,15 @@ On Ubuntu 16.04, one will need to run the following script to satisfy all depend
     # Feel free to change OpenJDK packages with your preferred JDK.
     sudo apt-get install build-essential openjdk-8-jre openjdk-8-jdk \
         fp-compiler fp-units-base fp-units-fcl fp-units-misc fp-units-math fp-units-rtl \
-        postgresql postgresql-client gettext python2.7 \
-        iso-codes shared-mime-info stl-manual cgroup-lite libcap-dev
+        postgresql postgresql-client python3.6 stl-manual cgroup-lite libcap-dev
 
     # Only if you are going to use pip/virtualenv to install python dependencies
-    sudo apt-get install python-dev libpq-dev libcups2-dev libyaml-dev \
+    sudo apt-get install python3.6-dev libpq-dev libcups2-dev libyaml-dev \
          libffi-dev python-pip
 
     # Optional
-    sudo apt-get install nginx-full php7.0-cli php7.0-fpm phppgadmin \
-         texlive-latex-base a2ps gcj-jdk haskell-platform rustc
+    sudo apt-get install nginx-full python2.7 php7.0-cli php7.0-fpm phppgadmin \
+         texlive-latex-base a2ps gcj-jdk haskell-platform rustc mono-mcs
 
 Arch Linux
 ----------
@@ -85,19 +84,18 @@ On Arch Linux, unofficial AUR packages can be found: `cms <http://aur.archlinux.
 .. sourcecode:: bash
 
     sudo pacman -S base-devel jre8-openjdk jdk8-openjdk fpc \
-         postgresql postgresql-client python2 \
-         iso-codes shared-mime-info libcap
+         postgresql postgresql-client python libcap
 
     # Install the following from AUR.
     # https://aur.archlinux.org/packages/libcgroup/
     # https://aur.archlinux.org/packages/sgi-stl-doc/
 
     # Only if you are going to use pip/virtualenv to install python dependencies
-    sudo pacman -S --needed postgresql-libs libcups libyaml python2-pip
+    sudo pacman -S --needed postgresql-libs libcups libyaml python-pip
 
     # Optional
-    sudo pacman -S --needed nginx php php-fpm phppgadmin texlive-core a2ps \
-         ghc rust
+    sudo pacman -S --needed nginx python2 php php-fpm phppgadmin texlive-core \
+         a2ps ghc rust mono
 
 Preparation steps
 =================
@@ -116,7 +114,7 @@ In order to run CMS there are some preparation steps to run (like installing the
 
 .. sourcecode:: bash
 
-    sudo ./prerequisites.py install
+    sudo python3 prerequisites.py install
 
 .. FIXME -- The following part probably does not need to be mentioned. Moreover, it would be better if isolate was just a dependency (like postgresql) to be installed separately, with its own group (e.g. 'isolate' instead of 'cmsuser'). The 'cmsuser' group could just become deprected, at that point.
 
@@ -155,38 +153,28 @@ Assuming you have ``pip`` installed, you can do this:
 
 .. sourcecode:: bash
 
-    sudo pip2 install -r requirements.txt
-    sudo python2 setup.py install
+    sudo pip3 install -r requirements.txt
+    sudo python3 setup.py install
 
 This command installs python dependencies globally. Note that on some distros, like Arch Linux, this might interfere with the system package manager. If you want to perform the installation in your home folder instead, then you can do this instead:
 
 .. sourcecode:: bash
 
-    pip2 install --user -r requirements.txt
-    python2 setup.py install --user
+    pip3 install --user -r requirements.txt
+    python3 setup.py install --user
 
 Method 2: Virtual environment
 -----------------------------
 
 .. warning::
 
-An alternative method to perform the installation is with a `virtual environment <https://virtualenv.pypa.io/en/latest/>`_, which is an isolated Python environment that you can put wherever you like and that can be activated/deactivated at will. The tool you need in order to create a virtual environment is called ``virtualenv``, and can be installed by looking for ``virtualenv`` using your Linux distribution's package manager. For example:
+An alternative method to perform the installation is with a `virtual environment <https://virtualenv.pypa.io/en/latest/>`_, which is an isolated Python environment that you can put wherever you like and that can be activated/deactivated at will.
 
-* Ubuntu 14.x: `python-virtualenv <http://packages.ubuntu.com/trusty/python-virtualenv>`_.
-* Ubuntu 16.x: `virtualenv <http://packages.ubuntu.com/xenial/virtualenv>`_.
-* Arch Linux: `python-virtualenv <https://www.archlinux.org/packages/extra/any/python-virtualenv/>`_.
-
-.. FUTURE FIXME: virtualenv installation is necessary only on python2; when the
-   porting to python3 will be complete, the "new" way of creating a virtual
-   environment will be ``pyvenv`` or equivalently ``python -m venv`` (the venv
-   module and the pyvenv script come bundled with python3, so there is no need
-   to install virtualenv anymore).
-
-Once you installed ``virtualenv``, you will need to create a virtual environment somewhere in your filesystem. For example, let's assume that you decided to create it under your home directory (as ``~/cms_venv``):
+You will need to create a virtual environment somewhere in your filesystem. For example, let's assume that you decided to create it under your home directory (as ``~/cms_venv``):
 
 .. sourcecode:: bash
 
-    virtualenv -p python2 ~/cms_venv
+    python3 -m venv ~/cms_venv
 
 To activate it:
 
@@ -198,8 +186,8 @@ After the activation, the ``pip`` command will *always* be available (even if it
 
 .. sourcecode:: bash
 
-    pip install -r requirements.txt
-    python setup.py install
+    pip3 install -r requirements.txt
+    python3 setup.py install
 
 .. note::
 
@@ -220,17 +208,16 @@ To install CMS and its Python dependencies on Ubuntu, you can issue:
 
 .. sourcecode:: bash
 
-    sudo python setup.py install
+    sudo python3 setup.py install
 
-    sudo apt-get install python-setuptools python-tornado python-psycopg2 \
-         python-sqlalchemy python-psutil python-netifaces python-crypto \
-         python-tz python-six python-bs4 python-coverage python-mock \
-         python-requests python-werkzeug python-gevent python-bcrypt \
-         python-chardet patool python-ipaddress python-pathlib
+    sudo apt-get install python3-setuptools python3-tornado python3-psycopg2 \
+         python3-sqlalchemy python3-psutil python3-netifaces python3-crypto \
+         python3-six python3-bs4 python3-coverage python3-mock python3-requests \
+         python3-werkzeug python3-gevent python3-bcrypt python3-chardet patool \
+         python3-ipaddress python3-babel python3-xdg
 
     # Optional.
-    # sudo apt-get install python-yaml python-sphinx python-cups python-pypdf2 \
-    #      asymptote latexmk
+    # sudo apt-get install python3-yaml python3-sphinx python3-cups python3-pypdf2
 
 Method 4: Using ``pacman`` on Arch Linux
 ----------------------------------------
@@ -243,22 +230,22 @@ To install CMS python dependencies on Arch Linux (again: assuming you did not us
 
 .. sourcecode:: bash
 
-    sudo python2 setup.py install
+    sudo python3 setup.py install
 
-    sudo pacman -S --needed python2-setuptools python2-tornado python2-psycopg2 \
-         python2-sqlalchemy python2-psutil python2-netifaces python2-crypto \
-         python2-pytz python2-six python2-beautifulsoup4 python2-coverage \
-         python2-mock python2-requests python2-werkzeug python2-gevent \
-         python2-bcrypt python2-chardet python2-ipaddress python2-pathlib
+    sudo pacman -S --needed python-setuptools python-tornado python-psycopg2 \
+         python-sqlalchemy python-psutil python-netifaces python-crypto \
+         python-six python-beautifulsoup4 python-coverage python-mock \
+         python-requests python-werkzeug python-gevent python-bcrypt \
+         python-chardet python-ipaddress python-babel python-xdg
 
     # Install the following from AUR.
     # https://aur.archlinux.org/packages/patool/
 
     # Optional.
-    # sudo pacman -S --needed python2-yaml python-sphinx python2-pycups \
+    # sudo pacman -S --needed python-yaml python-sphinx python-pycups \
     #      asymptote texlive-core
     # Optionally install the following from AUR.
-    # https://aur.archlinux.org/packages/python2-pypdf2/
+    # https://aur.archlinux.org/packages/python-pypdf2/
 
 
 Configuring the worker machines
@@ -280,7 +267,7 @@ To run CMS without installing it in the system, you need first to build the prer
 
 .. sourcecode:: bash
 
-    ./prerequisites.py build
+    python3 prerequisites.py build
 
 There are still a few steps to complete manually in this case. First, add CMS and isolate to the path and create the configuration files:
 

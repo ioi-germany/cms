@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -26,14 +26,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import io
-import json
 import logging
 import os
-import six
 
 from collections import namedtuple
 
@@ -42,6 +43,7 @@ from sqlalchemy.orm import joinedload
 from cms import SCORE_MODE_MAX, config
 from cms.db import Submission
 from cms.grading.Sandbox import Sandbox
+from cms.locale import DEFAULT_TRANSLATION
 
 from .language import Language, CompiledLanguage
 
@@ -177,7 +179,7 @@ EVALUATION_MESSAGES = MessageCollection([
                     "visible in the submission details might be much smaller "
                     "than the time limit.")),
     HumanMessage("signal",
-                 N_("Execution killed with signal %d (could be triggered by "
+                 N_("Execution killed with signal %s (could be triggered by "
                     "violating memory limits)"),
                  N_("Your submission was killed with the specified signal. "
                     "Among other things, this might be caused by exceeding "
@@ -214,44 +216,35 @@ class JobException(Exception):
         return "JobException(\"%s\")" % (repr(self.msg))
 
 
-def format_status_text(status, translator=None):
+def format_status_text(status, translation=DEFAULT_TRANSLATION):
     """Format the given status text in the given locale.
 
     A status text is the content of SubmissionResult.compilation_text,
     Evaluation.text and UserTestResult.(compilation|evaluation)_text.
     It is a list whose first element is a string with printf-like
     placeholders and whose other elements are the data to use to fill
-    them. A JSON-encoded list is also accepted.
+    them.
     The first element will be translated using the given translator (or
     the identity function, if not given), completed with the data and
     returned.
 
-    status ([unicode]|unicode): a status, as described above.
-    translator (function|None): a function expecting a string and
-        returning that same string translated in some language, or
-        None to apply the identity.
+    status ([unicode]): a status, as described above.
+    translation (Translation): the translation to use.
 
     """
-    # Mark strings for localization.
-    N_("N/A")
-
-    if translator is None:
-        translator = lambda x: x
+    _ = translation.gettext
 
     try:
-        if isinstance(status, six.text_type):
-            status = json.loads(status)
-        elif not isinstance(status, list):
+        if not isinstance(status, list):
             raise TypeError("Invalid type: %r" % type(status))
 
-        # translator('') gives, for some reason, the first lines of
-        # the po file.
-        text = translator(status[0]) if status[0] != '' else ''
+        # The empty msgid corresponds to the headers of the pofile.
+        text = _(status[0]) if status[0] != '' else ''
         return text % tuple(status[1:])
     except:
         logger.error("Unexpected error when formatting status "
                      "text: %r", status, exc_info=True)
-        return translator("N/A")
+        return _("N/A")
 
 
 def compilation_step(sandbox, commands):
@@ -294,13 +287,13 @@ def compilation_step(sandbox, commands):
             logger.error("Compilation aborted because of "
                          "sandbox error in `%s'.", sandbox.path)
             return False, None, None, None
-        stdout = unicode(sandbox.get_file_to_string(sandbox.stdout_file),
-                         "utf-8", errors="replace").strip()
-        if stdout != "":
+        stdout = sandbox.get_file_to_string(sandbox.stdout_file)\
+            .decode("utf-8", errors="replace").strip()
+        if len(stdout) > 0:
             stdouts.append(stdout)
-        stderr = unicode(sandbox.get_file_to_string(sandbox.stderr_file),
-                         "utf-8", errors="replace").strip()
-        if stderr != "":
+        stderr = sandbox.get_file_to_string(sandbox.stderr_file)\
+            .decode("utf-8", errors="replace").strip()
+        if len(stderr) > 0:
             stderrs.append(stderr)
 
         # If some command in the sequence is failed,
@@ -333,7 +326,7 @@ def compilation_step(sandbox, commands):
     # correctly compiled.
     success = False
     compilation_success = None
-    text = None
+    text = []
 
     if exit_status == Sandbox.EXIT_OK and exit_code == 0:
         logger.debug("Compilation successfully finished.")
@@ -365,7 +358,7 @@ def compilation_step(sandbox, commands):
         success = True
         compilation_success = False
         plus["signal"] = signal
-        text = [COMPILATION_MESSAGES.get("signal").message, signal]
+        text = [COMPILATION_MESSAGES.get("signal").message, str(signal)]
 
     # Sandbox error: this isn't a user error, the administrator needs
     # to check the environment
@@ -561,6 +554,10 @@ def evaluation_step_after_run(sandbox):
 def merge_evaluation_results(plus0, plus1):
     """Merges two evaluation results provided by different sandboxes.
 
+    The logic is to sum execution time and memory, but take the maximum of the
+    wall clock time; for status, to take the first non-ok status, if it exists,
+    otherwise use ok.
+
     """
     plus = plus0.copy()
     plus["execution_time"] += plus1["execution_time"]
@@ -597,9 +594,9 @@ def human_evaluation_message(plus):
     elif exit_status == Sandbox.EXIT_TIMEOUT_WALL:
         return [EVALUATION_MESSAGES.get("walltimeout").message]
     elif exit_status == Sandbox.EXIT_SIGNAL:
-        return [EVALUATION_MESSAGES.get("signal").message, plus['signal']]
+        return [EVALUATION_MESSAGES.get("signal").message, str(plus['signal'])]
     elif exit_status == Sandbox.EXIT_SANDBOX_ERROR:
-        return None
+        return []
     elif exit_status == Sandbox.EXIT_SYSCALL:
         return [EVALUATION_MESSAGES.get("syscall").message, plus['syscall']]
     elif exit_status == Sandbox.EXIT_FILE_ACCESS:
@@ -609,9 +606,9 @@ def human_evaluation_message(plus):
         # Don't tell which code: would be too much information!
         return [EVALUATION_MESSAGES.get("returncode").message]
     elif exit_status == Sandbox.EXIT_OK:
-        return None
+        return []
     else:
-        return None
+        return []
 
 
 def is_evaluation_passed(plus):
@@ -692,7 +689,7 @@ def extract_outcome_and_text(sandbox):
 # We take as definition of whitespaces the intersection between ASCII
 # and Unicode White_Space characters (see
 # http://www.unicode.org/Public/6.3.0/ucd/PropList.txt)
-WHITES = b' \t\n\x0b\x0c\r'
+WHITES = [b' ', b'\t', b'\n', b'\x0b', b'\x0c', b'\r']
 
 
 def white_diff_canonicalize(string):
@@ -721,7 +718,7 @@ def white_diff_canonicalize(string):
     # whitespace; this way, runs of more than one whitespaces are
     # collapsed into just one copy.
     string = WHITES[0].join([x for x in string.split(WHITES[0])
-                             if x != ''])
+                             if len(x) > 0])
     return string
 
 
@@ -747,14 +744,14 @@ def white_diff(output, res):
         lres = res.readline()
 
         # Both files finished: comparison succeded
-        if lres == '' and lout == '':
+        if len(lres) == 0 and len(lout) == 0:
             return True
 
         # Only one file finished: ok if the other contains only blanks
-        elif lres == '' or lout == '':
-            lout = lout.strip(WHITES)
-            lres = lres.strip(WHITES)
-            if lout != '' or lres != '':
+        elif len(lres) == 0 or len(lout) == 0:
+            lout = lout.strip(b''.join(WHITES))
+            lres = lres.strip(b''.join(WHITES))
+            if len(lout) > 0 or len(lres) > 0:
                 return False
 
         # Both file still have lines to go: ok if they agree except

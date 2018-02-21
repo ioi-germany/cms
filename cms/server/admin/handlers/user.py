@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2015 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2012-2017 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2012-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
@@ -29,8 +29,11 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 from cms.db import Contest, Group, Participation, Submission, Team, User
 from cmscommon.datetime import make_datetime
@@ -75,7 +78,7 @@ class UserHandler(BaseHandler):
             self.get_password(attrs, user.password, False)
 
             self.get_string(attrs, "email", empty=None)
-            self.get_string(attrs, "preferred_languages")
+            self.get_string_list(attrs, "preferred_languages")
             self.get_string(attrs, "timezone", empty=None)
 
             assert attrs.get("username") is not None, \
@@ -85,14 +88,14 @@ class UserHandler(BaseHandler):
             user.set_attrs(attrs)
 
         except Exception as error:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(fallback_page)
             return
 
         if self.try_commit():
             # Update the user on RWS.
-            self.application.service.proxy_service.reinitialize()
+            self.service.proxy_service.reinitialize()
         self.redirect(fallback_page)
 
 
@@ -114,7 +117,7 @@ class UserListHandler(SimpleHandler("users.html")):
             # Open asking for remove page
             self.redirect(asking_page)
         else:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid operation %s" % operation, "")
             self.redirect(self.url("contests"))
 
@@ -145,7 +148,7 @@ class RemoveUserHandler(BaseHandler):
 
         self.sql_session.delete(user)
         if self.try_commit():
-            self.application.service.proxy_service.reinitialize()
+            self.service.proxy_service.reinitialize()
 
         # Maybe they'll want to do this again (for another user)
         self.write("../../users")
@@ -182,14 +185,14 @@ class TeamHandler(BaseHandler):
             team.set_attrs(attrs)
 
         except Exception as error:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(fallback_page)
             return
 
         if self.try_commit():
             # Update the team on RWS.
-            self.application.service.proxy_service.reinitialize()
+            self.service.proxy_service.reinitialize()
         self.redirect(fallback_page)
 
 
@@ -212,14 +215,14 @@ class AddTeamHandler(SimpleHandler("add_team.html", permission_all=True)):
             self.sql_session.add(team)
 
         except Exception as error:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(fallback_page)
             return
 
         if self.try_commit():
             # Create the team on RWS.
-            self.application.service.proxy_service.reinitialize()
+            self.service.proxy_service.reinitialize()
 
         # In case other teams need to be added.
         self.redirect(fallback_page)
@@ -246,21 +249,21 @@ class AddUserHandler(SimpleHandler("add_user.html", permission_all=True)):
 
             self.get_string(attrs, "timezone", empty=None)
 
-            self.get_string(attrs, "preferred_languages")
+            self.get_string_list(attrs, "preferred_languages")
 
             # Create the user.
             user = User(**attrs)
             self.sql_session.add(user)
 
         except Exception as error:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(fallback_page)
             return
 
         if self.try_commit():
             # Create the user on RWS.
-            self.application.service.proxy_service.reinitialize()
+            self.service.proxy_service.reinitialize()
             self.redirect(self.url("user", user.id))
         else:
             self.redirect(fallback_page)
@@ -277,7 +280,7 @@ class AddParticipationHandler(BaseHandler):
             group_id = self.get_argument("group_id")
             assert group_id != "null", "Please select a valid group"
         except Exception as error:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(fallback_page)
             return
@@ -299,7 +302,7 @@ class AddParticipationHandler(BaseHandler):
 
         if self.try_commit():
             # Create the user on RWS.
-            self.application.service.proxy_service.reinitialize()
+            self.service.proxy_service.reinitialize()
 
         # Maybe they'll want to do this again (for another contest).
         self.redirect(fallback_page)
@@ -320,7 +323,7 @@ class EditParticipationHandler(BaseHandler):
                 "Remove",
             ), "Please select a valid operation"
         except Exception as error:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(fallback_page)
             return
@@ -337,7 +340,7 @@ class EditParticipationHandler(BaseHandler):
 
         if self.try_commit():
             # Create the user on RWS.
-            self.application.service.proxy_service.reinitialize()
+            self.service.proxy_service.reinitialize()
 
         # Maybe they'll want to do this again (for another contest).
         self.redirect(fallback_page)

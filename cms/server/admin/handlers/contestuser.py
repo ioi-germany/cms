@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -31,8 +31,11 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import logging
 
@@ -77,7 +80,7 @@ class ContestUsersHandler(BaseHandler):
                 self.REMOVE_FROM_CONTEST,
             ), "Please select a valid operation"
         except Exception as error:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(fallback_page)
             return
@@ -133,7 +136,7 @@ class RemoveParticipationHandler(BaseHandler):
 
         if self.try_commit():
             # Remove the participation on RWS.
-            self.application.service.proxy_service.reinitialize()
+            self.service.proxy_service.reinitialize()
 
         # Maybe they'll want to do this again (for another participation)
         self.write("../../users")
@@ -152,7 +155,7 @@ class AddContestUserHandler(BaseHandler):
             group_id = self.get_argument("group_id")
             assert group_id != "null", "Please select a valid group"
         except Exception as error:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(fallback_page)
             return
@@ -167,7 +170,7 @@ class AddContestUserHandler(BaseHandler):
 
         if self.try_commit():
             # Create the user on RWS.
-            self.application.service.proxy_service.reinitialize()
+            self.service.proxy_service.reinitialize()
 
         # Maybe they'll want to do this again (for another user)
         self.redirect(fallback_page)
@@ -241,14 +244,14 @@ class ParticipationHandler(BaseHandler):
             participation.group = self.safe_get_item(Group, group_id)
 
         except Exception as error:
-            self.application.service.add_notification(
+            self.service.add_notification(
                 make_datetime(), "Invalid field(s)", repr(error))
             self.redirect(fallback_page)
             return
 
         if self.try_commit():
             # Update the user on RWS.
-            self.application.service.proxy_service.reinitialize()
+            self.service.proxy_service.reinitialize()
         self.redirect(fallback_page)
 
 

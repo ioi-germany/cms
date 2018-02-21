@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -30,15 +30,19 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 # setuptools doesn't seem to like this:
 # from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import io
 import re
 import os
 
 from setuptools import setup, find_packages
+from setuptools.command.build_py import build_py
 
 
 PACKAGE_DATA = {
@@ -106,6 +110,16 @@ def find_version():
     raise RuntimeError("Unable to find version string.")
 
 
+# We piggyback the translation catalogs compilation onto build_py since
+# the po and mofiles will be part of the package data for cms.locale,
+# which is collected at this stage.
+class build_py_and_l10n(build_py):
+    def run(self):
+        self.run_command("compile_catalog")
+        # Can't use super here as in Py2 it isn't a new-style class.
+        build_py.run(self)
+
+
 setup(
     name="cms",
     version=find_version(),
@@ -117,6 +131,7 @@ setup(
                 "for IOI-like programming competitions",
     packages=find_packages(),
     package_data=PACKAGE_DATA,
+    cmdclass = {"build_py": build_py_and_l10n},
     scripts=["scripts/cmsLogService",
              "scripts/cmsScoringService",
              "scripts/cmsEvaluationService",
@@ -173,7 +188,8 @@ setup(
         "Development Status :: 5 - Production/Stable",
         "Natural Language :: English",
         "Operating System :: POSIX :: Linux",
-        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.6",
         "License :: OSI Approved :: "
         "GNU Affero General Public License v3",
     ]

@@ -1,8 +1,8 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2015-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2015-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,22 +22,35 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iteritems
 
 import argparse
 import logging
 import sys
 
-from cms import utf8_decoder
+from cms import utf8_decoder, ServiceCoord
 from cms.db import File, Participation, SessionGen, Submission, Task, User, \
     ask_for_contest
 from cms.db.filecacher import FileCacher
 from cms.grading.languagemanager import filename_to_language
+from cms.io import RemoteServiceClient
 from cmscommon.datetime import make_datetime
 
 
 logger = logging.getLogger(__name__)
+
+
+def maybe_send_notification(submission_id):
+    """Non-blocking attempt to notify a running ES of the submission"""
+    rs = RemoteServiceClient(ServiceCoord("EvaluationService", 0))
+    rs.connect()
+    rs.new_submission(submission_id=submission_id)
+    rs.disconnect()
 
 
 def add_submission(contest_id, username, task_name, timestamp, files):
@@ -106,10 +119,11 @@ def add_submission(contest_id, username, task_name, timestamp, files):
         # Create objects in the DB.
         submission = Submission(make_datetime(timestamp), language.name,
                                 participation=participation, task=task)
-        for filename, digest in file_digests.items():
+        for filename, digest in iteritems(file_digests):
             session.add(File(filename, digest, submission=submission))
         session.add(submission)
         session.commit()
+        maybe_send_notification(submission.id)
 
     return True
 

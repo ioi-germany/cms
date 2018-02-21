@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -24,14 +24,18 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iteritems
 
 import argparse
+import io
 import logging
 import os
 import sys
-import codecs
 
 from cms import utf8_decoder
 from cms.db import Dataset, File, FSObject, Participation, SessionGen, \
@@ -89,7 +93,7 @@ def filter_top_scoring(results, unique):
                 usertask[key].append(value)
 
     results = []
-    for key, values in usertask.iteritems():
+    for key, values in iteritems(usertask):
         for value in values:
             results.append(value[2])  # the "old" row
 
@@ -184,7 +188,7 @@ def main():
             results = filter_top_scoring(results, args.unique)
 
         print("%s file(s) will be created." % len(results))
-        if raw_input("Continue? [Y/n] ").lower() not in ["y", ""]:
+        if input("Continue? [Y/n] ").strip().lower() not in ["y", ""]:
             return 0
 
         done = 0
@@ -238,7 +242,7 @@ def main():
                         ) + data
 
                     # Print utf8-encoded, possibly altered data
-                    with codecs.open(filename, "w", encoding="utf-8") as f_out:
+                    with io.open(filename, "wt", encoding="utf-8") as f_out:
                         f_out.write(data)
                 else:
                     # Print raw, untouched binary data

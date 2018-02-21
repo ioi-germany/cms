@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -19,8 +19,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iteritems
 
 import gevent
 import logging
@@ -83,7 +87,7 @@ class FlushingDict(object):
         with self.d_lock:
             self.fd = self.d
             self.d = dict()
-        self.callback(self.fd.items())
+        self.callback(list(iteritems(self.fd)))
         self.fd = dict()
 
     def __contains__(self, key):

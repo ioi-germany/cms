@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -25,17 +25,21 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
+import hashlib
 import io
 import os
 import random
-from StringIO import StringIO
-import hashlib
 import shutil
 import unittest
+from io import BytesIO
 
+from cmscommon.binary import bin_to_hex
 from cms.db.filecacher import FileCacher
 
 
@@ -62,7 +66,7 @@ class RandomFile(object):
         if byte_num > self.dim:
             byte_num = self.dim
         if byte_num == 0:
-            return ''
+            return b''
         buf = self.source.read(byte_num)
         self.dim -= len(buf)
         self.hasher.update(buf)
@@ -81,7 +85,7 @@ class RandomFile(object):
         return (string): digest.
 
         """
-        return self.hasher.hexdigest()
+        return bin_to_hex(self.hasher.digest())
 
 
 class HashingFile(object):
@@ -109,7 +113,7 @@ class HashingFile(object):
         return (string): digest.
 
         """
-        return self.hasher.hexdigest()
+        return bin_to_hex(self.hasher.digest())
 
     def close(self):
         """Do nothing, because there is no hidden file we are writing
@@ -153,46 +157,43 @@ class TestFileCacher(unittest.TestCase):
 
         """
         self.size = 100
-        self.content = b"".join(chr(random.randint(0, 255))
-                                for unused_i in xrange(self.size))
+        # We need to wrap the generator in a list because of a
+        # shortcoming of future's bytes implementation.
+        self.content = bytes([random.getrandbits(8) for _ in range(self.size)])
 
-        data = self.file_cacher.put_file_from_fobj(StringIO(self.content),
-                                                   u"Test #000")
+        data = self.file_cacher.put_file_from_fobj(BytesIO(self.content),
+                                                   "Test #000")
 
         if not os.path.exists(os.path.join(self.cache_base_path, data)):
             self.fail("File not stored in local cache.")
-        elif io.open(os.path.join(self.cache_base_path, data),
-                     "rb").read() != self.content:
-            self.fail("Local cache's content differ "
-                      "from original file.")
-        else:
-            self.cache_path = os.path.join(self.cache_base_path, data)
-            self.digest = data
+        with io.open(os.path.join(self.cache_base_path, data), "rb") as f:
+            if f.read() != self.content:
+                self.fail("Local cache's content differ "
+                          "from original file.")
+        self.cache_path = os.path.join(self.cache_base_path, data)
+        self.digest = data
 
         # Retrieve the file.
-        self.fake_content = "Fake content.\n"
+        self.fake_content = b"Fake content.\n"
         with io.open(self.cache_path, "wb") as cached_file:
             cached_file.write(self.fake_content)
         try:
             data = self.file_cacher.get_file(self.digest)
         except Exception as error:
             self.fail("Error received: %r." % error)
-            return
 
         received = data.read()
         data.close()
         if received != self.fake_content:
             if received == self.content:
                 self.fail("Did not use the cache even if it could.")
-            else:
-                self.fail("Content differ.")
+            self.fail("Content differ.")
 
         # Check the size of the file.
         try:
             size = self.file_cacher.get_size(self.digest)
         except Exception as error:
             self.fail("Error received: %r." % error)
-            return
 
         if size != self.size:
             self.fail("The size is wrong: %d instead of %d" %
@@ -204,17 +205,17 @@ class TestFileCacher(unittest.TestCase):
             data = self.file_cacher.get_file(self.digest)
         except Exception as error:
             self.fail("Error received: %r." % error)
-            return
 
         received = data.read()
         data.close()
         if received != self.content:
             self.fail("Content differ.")
-        elif not os.path.exists(self.cache_path):
+        if not os.path.exists(self.cache_path):
             self.fail("File not stored in local cache.")
-        elif io.open(self.cache_path, "rb").read() != self.content:
-            self.fail("Local cache's content differ " +
-                      "from original file.")
+        with io.open(self.cache_path, "rb") as f:
+            if f.read() != self.content:
+                self.fail("Local cache's content differ " +
+                          "from original file.")
 
         # Delete the file through FS and tries to get it again through
         # FC.
@@ -222,7 +223,6 @@ class TestFileCacher(unittest.TestCase):
             self.file_cacher.delete(digest=self.digest)
         except Exception as error:
             self.fail("Error received: %s." % error)
-            return
 
         else:
             with self.assertRaises(Exception):
@@ -242,28 +242,28 @@ class TestFileCacher(unittest.TestCase):
         Then retrieve it as a string.
 
         """
-        self.content = b"".join(chr(random.randint(0, 255))
-                                for unused_i in xrange(100))
+        # We need to wrap the generator in a list because of a
+        # shortcoming of future's bytes implementation.
+        self.content = bytes([random.getrandbits(8) for _ in range(100)])
 
         try:
             data = self.file_cacher.put_file_content(self.content,
-                                                     u"Test #005")
+                                                     "Test #005")
         except Exception as error:
             self.fail("Error received: %r." % error)
             return
 
         if not os.path.exists(os.path.join(self.cache_base_path, data)):
             self.fail("File not stored in local cache.")
-        elif io.open(os.path.join(self.cache_base_path, data),
-                     "rb").read() != self.content:
-            self.fail("Local cache's content differ "
-                      "from original file.")
-        else:
-            self.cache_path = os.path.join(self.cache_base_path, data)
-            self.digest = data
+        with io.open(os.path.join(self.cache_base_path, data), "rb") as f:
+            if f.read() != self.content:
+                self.fail("Local cache's content differ "
+                          "from original file.")
+        self.cache_path = os.path.join(self.cache_base_path, data)
+        self.digest = data
 
         # Retrieve the file as a string.
-        self.fake_content = "Fake content.\n"
+        self.fake_content = b"Fake content.\n"
         with io.open(self.cache_path, "wb") as cached_file:
             cached_file.write(self.fake_content)
         try:
@@ -287,10 +287,9 @@ class TestFileCacher(unittest.TestCase):
         """
         rand_file = RandomFile(10000000)
         try:
-            data = self.file_cacher.put_file_from_fobj(rand_file, u"Test #007")
+            data = self.file_cacher.put_file_from_fobj(rand_file, "Test #007")
         except Exception as error:
             self.fail("Error received: %r." % error)
-            return
         if rand_file.dim != 0:
             self.fail("The input file wasn't read completely.")
         my_digest = rand_file.digest
@@ -298,11 +297,10 @@ class TestFileCacher(unittest.TestCase):
 
         if not os.path.exists(os.path.join(self.cache_base_path, data)):
             self.fail("File not stored in local cache.")
-        elif my_digest != data:
+        if my_digest != data:
             self.fail("File received with wrong hash.")
-        else:
-            self.cache_path = os.path.join(self.cache_base_path, data)
-            self.digest = data
+        self.cache_path = os.path.join(self.cache_base_path, data)
+        self.digest = data
 
         # Get the ~100MB file from FileCacher.
         os.unlink(self.cache_path)
@@ -311,14 +309,13 @@ class TestFileCacher(unittest.TestCase):
             self.file_cacher.get_file_to_fobj(self.digest, hash_file)
         except Exception as error:
             self.fail("Error received: %r." % error)
-            return
         my_digest = hash_file.digest
         hash_file.close()
 
         try:
             if self.digest != my_digest:
                 self.fail("Content differs.")
-            elif not os.path.exists(self.cache_path):
+            if not os.path.exists(self.cache_path):
                 self.fail("File not stored in local cache.")
         finally:
             self.file_cacher.delete(self.digest)

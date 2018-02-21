@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -6,7 +6,7 @@
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
-# Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2013-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,10 +22,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
-import json
 import logging
 
 from cms import plugin_lookup
@@ -50,7 +52,7 @@ def get_task_type(name=None, parameters=None,
     they are obtained from the dataset.
 
     name (unicode|None): the name of the TaskType class.
-    parameters (unicode|None): the JSON-encoded parameters.
+    parameters (object|None): the parameters.
     dataset (Dataset|None): the dataset whose TaskType we want (if
         None, use the other parameters to find the task type).
 
@@ -71,11 +73,5 @@ def get_task_type(name=None, parameters=None,
         raise ValueError("Need exactly one way to get the task type.")
 
     class_ = get_task_type_class(name)
-
-    try:
-        parameters = json.loads(parameters)
-    except ValueError as error:
-        logger.error("Cannot decode task type parameters.\n%r.", error)
-        raise
 
     return class_(parameters)

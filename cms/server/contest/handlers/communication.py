@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -29,8 +29,11 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import logging
 
@@ -53,7 +56,6 @@ class CommunicationHandler(ContestHandler):
     @tornado.web.authenticated
     @multi_contest
     def get(self):
-        self.set_secure_cookie(self.contest.name + "_unread_count", "0")
         self.render("communication.html", **self.r_params)
 
 
@@ -78,7 +80,7 @@ class QuestionHandler(ContestHandler):
             logger.warning("Long question (%d, %d) dropped for user %s.",
                            subject_length, text_length,
                            self.current_user.user.username)
-            self.application.service.add_notification(
+            self.service.add_notification(
                 self.current_user.user.username,
                 self.timestamp,
                 self._("Question too big!"),
@@ -98,7 +100,7 @@ class QuestionHandler(ContestHandler):
             "Question submitted by user %s.", participation.user.username)
 
         # Add "All ok" notification.
-        self.application.service.add_notification(
+        self.service.add_notification(
             participation.user.username,
             self.timestamp,
             self._("Question received"),

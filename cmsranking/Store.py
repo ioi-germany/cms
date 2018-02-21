@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -18,8 +18,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iterkeys, iteritems
 
 import io
 import json
@@ -88,7 +92,7 @@ class Store(object):
                 if name[-5:] == '.json' and name[:-5] != '':
                     with io.open(os.path.join(self._path, name), 'rb') as rec:
                         item = self._entity()
-                        item.set(json.load(rec, encoding='utf-8'))
+                        item.set(json.load(rec))
                         item.key = name[:-5]
                         self._store[name[:-5]] = item
         except OSError:
@@ -146,7 +150,7 @@ class Store(object):
             some properties or if properties are of the wrong type.
 
         """
-        if not isinstance(key, unicode) or key in self._store:
+        if not isinstance(key, str) or key in self._store:
             raise InvalidKey("Key already in store.")
 
         # create entity
@@ -164,7 +168,7 @@ class Store(object):
             try:
                 path = os.path.join(self._path, key + '.json')
                 with io.open(path, 'wb') as rec:
-                    json.dump(self._store[key].get(), rec, encoding='utf-8')
+                    json.dump(self._store[key].get(), rec)
             except IOError:
                 logger.error("I/O error occured while creating entity",
                              exc_info=True)
@@ -184,7 +188,7 @@ class Store(object):
             some properties or if properties are of the wrong type.
 
         """
-        if not isinstance(key, unicode) or key not in self._store:
+        if not isinstance(key, str) or key not in self._store:
             raise InvalidKey("Key not in store.")
 
         # update entity
@@ -203,7 +207,7 @@ class Store(object):
             try:
                 path = os.path.join(self._path, key + '.json')
                 with io.open(path, 'wb') as rec:
-                    json.dump(self._store[key].get(), rec, encoding='utf-8')
+                    json.dump(self._store[key].get(), rec)
             except IOError:
                 logger.error("I/O error occured while updating entity",
                              exc_info=True)
@@ -226,7 +230,7 @@ class Store(object):
             if not isinstance(data_dict, dict):
                 raise InvalidData("Not a dictionary")
             item_dict = dict()
-            for key, value in data_dict.iteritems():
+            for key, value in iteritems(data_dict):
                 try:
                     # FIXME We should allow keys to be arbitrary unicode
                     # strings, so this just needs to be a non-empty check.
@@ -243,7 +247,7 @@ class Store(object):
                     exc.args = exc.message,
                     raise exc
 
-            for key, value in item_dict.iteritems():
+            for key, value in iteritems(item_dict):
                 is_new = key not in self._store
                 old_value = self._store.get(key)
                 # insert entity
@@ -259,7 +263,7 @@ class Store(object):
                 try:
                     path = os.path.join(self._path, key + '.json')
                     with io.open(path, 'wb') as rec:
-                        json.dump(value.get(), rec, encoding='utf-8')
+                        json.dump(value.get(), rec)
                 except IOError:
                     logger.error(
                         "I/O error occured while merging entity lists",
@@ -276,7 +280,7 @@ class Store(object):
             with that key is present in the store.
 
         """
-        if not isinstance(key, unicode) or key not in self._store:
+        if not isinstance(key, str) or key not in self._store:
             raise InvalidKey("Key not in store.")
 
         with LOCK:
@@ -285,7 +289,7 @@ class Store(object):
             del self._store[key]
             # enforce consistency
             for depend in self._depends:
-                for o_key, o_value in list(depend._store.iteritems()):
+                for o_key, o_value in list(iteritems(depend._store)):
                     if not o_value.consistent():
                         depend.delete(o_key)
             # notify callbacks
@@ -305,7 +309,7 @@ class Store(object):
         """
         with LOCK:
             # delete all entities
-            for key in list(self._store.iterkeys()):
+            for key in list(iterkeys(self._store)):
                 self.delete(key)
 
     def retrieve(self, key):
@@ -319,7 +323,7 @@ class Store(object):
             with that key is present in the store.
 
         """
-        if not isinstance(key, unicode) or key not in self._store:
+        if not isinstance(key, str) or key not in self._store:
             raise InvalidKey("Key not in store.")
 
         # retrieve entity
@@ -328,7 +332,7 @@ class Store(object):
     def retrieve_list(self):
         """Retrieve a list of all entities."""
         result = dict()
-        for key, value in self._store.iteritems():
+        for key, value in iteritems(self._store):
             result[key] = value.get()
         return result
 

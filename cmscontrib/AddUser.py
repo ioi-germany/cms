@@ -1,9 +1,9 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2016 Stefano Maggiolo <s.maggiolo@gmail.com>
-# Copyright © 2017 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2017-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,12 +23,17 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
 import gevent.monkey
+
+
 gevent.monkey.patch_all()
 
 import argparse
@@ -41,6 +46,7 @@ from cmscommon.crypto import generate_random_password, build_password, \
     hash_password
 
 from sqlalchemy.exc import IntegrityError
+
 
 logger = logging.getLogger(__name__)
 
@@ -58,12 +64,12 @@ def add_user(first_name, last_name, username, password, method, is_hashed,
     else:
         stored_password = hash_password(password, method)
 
-    if preferred_languages is None or preferred_languages == "":
-        preferred_languages = "[]"
+    if preferred_languages is None:
+        preferred_languages = []
     else:
-        preferred_languages = \
-            "[" + ",".join("\"" + lang + "\""
-                           for lang in preferred_languages.split(",")) + "]"
+        preferred_languages = list(
+            lang.strip() for lang in preferred_languages.split(",") if
+            lang.strip())
     user = User(first_name=first_name,
                 last_name=last_name,
                 username=username,

@@ -1,6 +1,6 @@
+{% from six import iterkeys, itervalues, iteritems %}
+
 {% from cms.grading import format_status_text %}
-{% from cms.server import format_size %}
-{% from cms.locale import locale_format %}
 
 {% if details is not None %}
 <div class="score_details">
@@ -14,7 +14,7 @@
     <tbody>
         <tr>
             <th>{{ _("Compilation outcome:") }}</th>
-            <td>{{ format_status_text(sr.compilation_text, _) }}</td>
+            <td>{{ format_status_text(sr.compilation_text, translation=translation) }}</td>
         </tr>
         <tr>
             <th>{{ _("Compilation time:") }}</th>
@@ -22,7 +22,7 @@
 {% if sr.compilation_time is None %}
     {{ _("N/A") }}
 {% else %}
-    {{ locale_format(_, _("{seconds:0.3f} s"), seconds=sr.compilation_time) }}
+    {{ translation.format_duration(sr.compilation_time) }}
 {% end %}
             </td>
         </tr>
@@ -31,7 +31,7 @@
 {% if sr.compilation_memory is None %}
     {{ _("N/A") }}
 {% else %}
-    {{ format_size(sr.compilation_memory, _) }}
+    {{ translation.format_size(sr.compilation_memory) }}
 {% end %}
             </td>
         </tr>

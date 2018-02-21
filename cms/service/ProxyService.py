@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2015 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2013-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2015 Luca Versari <veluca93@gmail.com>
 # Copyright © 2015 William Di Luigi <williamdiluigi@gmail.com>
@@ -29,8 +29,11 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import json
 import logging
@@ -41,7 +44,7 @@ import gevent.queue
 
 import requests
 import requests.exceptions
-from urlparse import urljoin, urlsplit
+from future.moves.urllib.parse import urljoin, urlsplit
 
 from cms import config
 from cms.io import Executor, QueueItem, TriggeredService, rpc_method
@@ -65,11 +68,11 @@ def encode_id(entity_id):
 
     """
     encoded_id = ""
-    for char in entity_id.encode('utf-8'):
+    for char in entity_id:
         if char not in string.ascii_letters + string.digits:
             encoded_id += "_%x" % ord(char)
         else:
-            encoded_id += unicode(char)
+            encoded_id += char
     return encoded_id
 
 
@@ -90,7 +93,7 @@ def safe_put_data(ranking, resource, data, operation):
         # XXX With requests-1.2 auth is automatically extracted from
         # the URL: there is no need for this.
         auth = urlsplit(url)
-        res = requests.put(url, json.dumps(data, encoding="utf-8"),
+        res = requests.put(url, json.dumps(data),
                            auth=(auth.username, auth.password),
                            headers={'content-type': 'application/json'},
                            verify=config.https_certfile)
@@ -145,12 +148,12 @@ class ProxyExecutor(Executor):
     # The resource paths for the different entity types, relative to
     # the self.ranking URL.
     RESOURCE_PATHS = [
-        b"contests",
-        b"tasks",
-        b"teams",
-        b"users",
-        b"submissions",
-        b"subchanges"]
+        "contests",
+        "tasks",
+        "teams",
+        "users",
+        "submissions",
+        "subchanges"]
 
     # How many different entity types we know about.
     TYPE_COUNT = len(RESOURCE_PATHS)
@@ -191,13 +194,13 @@ class ProxyExecutor(Executor):
         """
         # The cumulative data that we will try to send to the ranking,
         # built by combining items in the queue.
-        data = list(dict() for i in xrange(self.TYPE_COUNT))
+        data = list(dict() for i in range(self.TYPE_COUNT))
 
         for entry in entries:
             data[entry.item.type_].update(entry.item.data)
 
         try:
-            for i in xrange(self.TYPE_COUNT):
+            for i in range(self.TYPE_COUNT):
                 # Send entities of type i.
                 if len(data[i]) > 0:
                     # We abuse the resource path as the English
@@ -208,7 +211,7 @@ class ProxyExecutor(Executor):
 
                     logger.debug(operation.capitalize())
                     safe_put_data(
-                        self._ranking, b"%s/" % name, data[i], operation)
+                        self._ranking, "%s/" % name, data[i], operation)
                     data[i].clear()
 
         except CannotSendError:
@@ -263,7 +266,7 @@ class ProxyService(TriggeredService):
         # Create one executor for each ranking.
         self.rankings = list()
         for ranking in config.rankings:
-            self.add_executor(ProxyExecutor(ranking.encode('utf-8')))
+            self.add_executor(ProxyExecutor(ranking))
 
         # Enqueue the dispatch of some initial data to rankings. Needs
         # to be done before the sweeper is started, as otherwise RWS
@@ -399,8 +402,7 @@ class ProxyService(TriggeredService):
         if submission_result is not None and submission_result.scored():
             # We're sending the unrounded score to RWS
             subchange_data["score"] = submission_result.score
-            subchange_data["extra"] = \
-                json.loads(submission_result.ranking_score_details)
+            subchange_data["extra"] = submission_result.ranking_score_details
 
         self.scores_sent_to_rankings.add(submission.id)
 

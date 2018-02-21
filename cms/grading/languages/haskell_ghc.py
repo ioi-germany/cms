@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -20,8 +20,11 @@
 """Haskell programming language definition."""
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import os
 
@@ -46,11 +49,6 @@ class HaskellGhc(CompiledLanguage):
     def source_extensions(self):
         """See Language.source_extensions."""
         return [".hs"]
-
-    @property
-    def header_extensions(self):
-        """See Language.source_extensions."""
-        return []
 
     @property
     def object_extensions(self):

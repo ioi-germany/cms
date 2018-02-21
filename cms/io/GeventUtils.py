@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -41,8 +41,11 @@ blocking way.
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import io
 import os
@@ -52,7 +55,7 @@ import sys
 # There are some calls that we take from shutil, since they're
 # hopefully not taking too long and can avoid yielding
 from shutil import copymode, copystat, _samefile, Error, \
-    SpecialFileError, _basename, WindowsError, _destinsrc
+    SpecialFileError, _basename, _destinsrc
 
 import gevent
 
@@ -172,18 +175,14 @@ def copytree(src, dst, symlinks=False, ignore=None):
                 copy2(srcname, dstname)
         # catch the Error from the recursive copytree so that we can
         # continue with other files
-        except Error, err:
+        except Error as err:
             errors.extend(err.args[0])
-        except EnvironmentError, why:
+        except EnvironmentError as why:
             errors.append((srcname, dstname, "%s" % why))
     try:
         copystat(src, dst)
-    except OSError, why:
-        if WindowsError is not None and isinstance(why, WindowsError):
-            # Copying file access times may fail on Windows
-            pass
-        else:
-            errors.append((src, dst, "%s" % why))
+    except OSError as why:
+        errors.append((src, dst, "%s" % why))
     if errors:
         raise Error(errors)
 

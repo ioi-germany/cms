@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2012-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
@@ -30,18 +30,18 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import itervalues
 
-import json
 import logging
 
 import tornado.web
 
 from cms.server import actual_phase_required, multi_contest
-from cmscommon.isocodes import is_language_code, translate_language_code, \
-    is_country_code, translate_country_code, \
-    is_language_country_code, translate_language_country_code
 from cmscommon.mimetypes import get_type_for_file_name
 
 from .contest import ContestHandler, FileHandler
@@ -63,31 +63,15 @@ class TaskDescriptionHandler(ContestHandler):
         except KeyError:
             raise tornado.web.HTTPError(404)
 
-        for statement in task.statements.itervalues():
-            lang_code = statement.language
-            if is_language_country_code(lang_code):
-                statement.language_name = \
-                    translate_language_country_code(lang_code, self.locale)
-            elif is_language_code(lang_code):
-                statement.language_name = \
-                    translate_language_code(lang_code, self.locale)
-            elif is_country_code(lang_code):
-                statement.language_name = \
-                    translate_country_code(lang_code, self.locale)
-            else:
-                statement.language_name = lang_code
+        for statement in itervalues(task.statements):
+            statement.language_name = \
+                self.translation.format_locale(statement.language)
 
-        try:
-            self.r_params["primary_statements"] = \
-                json.loads(task.primary_statements)
-        except ValueError as e:
-            self.r_params["primary_statements"] = []
-            logger.error("Primary statements for task %s is invalid [%r].",
-                         task_name, e)
+        self.r_params["primary_statements"] = task.primary_statements
 
         try:
             self.r_params["user_primary"] = \
-                json.loads(self.current_user.user.preferred_languages)
+                self.current_user.user.preferred_languages
         except ValueError as e:
             self.r_params["user_primary"] = []
             logger.error("Preferred languages for user %s is invalid [%r].",
@@ -115,7 +99,7 @@ class TaskStatementViewHandler(FileHandler):
         statement = task.statements[lang_code].digest
         self.sql_session.close()
 
-        if lang_code != '':
+        if len(lang_code) > 0:
             filename = "%s (%s).pdf" % (task.name, lang_code)
         else:
             filename = "%s.pdf" % task.name

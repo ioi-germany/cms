@@ -1,14 +1,15 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2013-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2013-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014-2016 William Di Luigi <williamdiluigi@gmail.com>
 # Copyright © 2015 Luca Chiodini <luca@chiodini.org>
 # Copyright © 2016 Andrea Cracco <guilucand@gmail.com>
+# Copyright © 2018 Edoardo Morassutto <edoardo.morassutto@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,8 +25,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import io
 import logging
@@ -39,6 +43,7 @@ from cms import SCORE_MODE_MAX, SCORE_MODE_MAX_TOKENED_LAST
 from cms.db import Contest, User, Task, Statement, Attachment, \
     Team, SubmissionFormatElement, Dataset, Manager, Testcase
 from cms.grading.languagemanager import LANGUAGES, HEADER_EXTS
+from cmscommon.crypto import build_password
 from cmscommon.datetime import make_datetime
 from cmscontrib import touch
 
@@ -209,6 +214,8 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
 
         tasks = load(conf, None, ["tasks", "problemi"])
         participations = load(conf, None, ["users", "utenti"])
+        for p in participations:
+            p["password"] = build_password(p["password"])
 
         # Import was successful
         os.remove(os.path.join(self.path, ".import_error_contest"))
@@ -245,7 +252,7 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
             return None
 
         load(conf, args, "username")
-        load(conf, args, "password")
+        load(conf, args, "password", conv=build_password)
 
         load(conf, args, ["first_name", "nome"])
         load(conf, args, ["last_name", "cognome"])
@@ -367,7 +374,7 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                 primary_language: Statement(primary_language, digest)
             }
 
-            args["primary_statements"] = '["%s"]' % (primary_language)
+            args["primary_statements"] = [primary_language]
 
         args["submission_format"] = [
             SubmissionFormatElement("%s.%%l" % name)]
@@ -521,7 +528,7 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                         testcase, comment = splitted
                         testcase = testcase.strip()
                         comment = comment.strip()
-                        testcase_detected = testcase != ''
+                        testcase_detected = len(testcase) > 0
                         copy_testcase_detected = comment.startswith("COPY:")
                         subtask_detected = comment.startswith('ST:')
 
@@ -558,13 +565,13 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                     n_input = testcases
                     if n_input != 0:
                         input_value = total_value / n_input
-                    args["score_type_parameters"] = "%s" % input_value
+                    args["score_type_parameters"] = input_value
                 else:
                     subtasks.append([points, testcases])
                     assert(100 == sum([int(st[0]) for st in subtasks]))
                     n_input = sum([int(st[1]) for st in subtasks])
                     args["score_type"] = "GroupMin"
-                    args["score_type_parameters"] = "%s" % subtasks
+                    args["score_type_parameters"] = subtasks
 
                 if "n_input" in conf:
                     assert int(conf['n_input']) == n_input
@@ -577,17 +584,17 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
             n_input = int(conf['n_input'])
             if n_input != 0:
                 input_value = total_value / n_input
-            args["score_type_parameters"] = "%s" % input_value
+            args["score_type_parameters"] = input_value
 
         # If output_only is set, then the task type is OutputOnly
         if conf.get('output_only', False):
             args["task_type"] = "OutputOnly"
             args["time_limit"] = None
             args["memory_limit"] = None
-            args["task_type_parameters"] = '["%s"]' % evaluation_param
+            args["task_type_parameters"] = [evaluation_param]
             task.submission_format = [
                 SubmissionFormatElement("output_%03d.txt" % i)
-                for i in xrange(n_input)]
+                for i in range(n_input)]
 
         # If there is check/manager (or equivalent), then the task
         # type is Communication
@@ -601,7 +608,7 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                         num_processes = 1
                     logger.info("Task type Communication")
                     args["task_type"] = "Communication"
-                    args["task_type_parameters"] = '[%d]' % num_processes
+                    args["task_type_parameters"] = [num_processes]
                     digest = self.file_cacher.put_file_from_path(
                         path,
                         "Manager for task %s" % task.name)
@@ -637,12 +644,11 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
             else:
                 args["task_type"] = "Batch"
                 args["task_type_parameters"] = \
-                    '["%s", ["%s", "%s"], "%s"]' % \
-                    (compilation_param, infile_param, outfile_param,
-                     evaluation_param)
+                    [compilation_param, [infile_param, outfile_param],
+                     evaluation_param]
 
         args["testcases"] = []
-        for i in xrange(n_input):
+        for i in range(n_input):
             input_digest = self.file_cacher.put_file_from_path(
                 os.path.join(self.path, "input", "input%d.txt" % i),
                 "Input %d for task %s" % (i, task.name))
@@ -659,7 +665,7 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         if public_testcases == "all":
             for t in args["testcases"]:
                 t.public = True
-        elif public_testcases != "":
+        elif len(public_testcases) > 0:
             for x in public_testcases.split(","):
                 args["testcases"][int(x.strip())].public = True
         args["testcases"] = dict((tc.codename, tc) for tc in args["testcases"])

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -21,8 +21,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
+from six import iteritems, with_metaclass
 
 import io
 import logging
@@ -32,6 +36,7 @@ import resource
 import select
 import stat
 import tempfile
+from abc import ABCMeta, abstractmethod
 from functools import wraps, partial
 
 import gevent
@@ -180,7 +185,7 @@ class Truncator(io.RawIOBase):
         raise io.UnsupportedOperation('write')
 
 
-class SandboxBase(object):
+class SandboxBase(with_metaclass(ABCMeta, object)):
     """A base class for all sandboxes, meant to contain common
     resources.
 
@@ -252,39 +257,70 @@ class SandboxBase(object):
             mem_str = "(memory usage unknown)"
         return "[%s - %s]" % (time_str, mem_str)
 
+    @abstractmethod
     def get_root_path(self):
         """Return the toplevel path of the sandbox.
 
         return (string): the root path.
 
-        raise (NotImplementedError): if the subclass does not
-            implement this method.
-
         """
-        raise NotImplementedError("Subclasses must implement get_root_path.")
+        pass
 
+    @abstractmethod
     def get_execution_time(self):
         """Return the time spent in the sandbox.
 
         return (float): time spent in the sandbox.
 
-        raise (NotImplementedError): if the subclass does not
-            implement this method.
-
         """
-        raise NotImplementedError(
-            "Subclasses must implement get_execution_time.")
+        pass
 
+    @abstractmethod
     def get_memory_used(self):
         """Return the memory used by the sandbox.
 
         return (int): memory used by the sandbox (in bytes).
 
-        raise (NotImplementedError): if the subclass does not
-            implement this method.
+        """
+        pass
+
+    @abstractmethod
+    def get_killing_signal(self):
+        """Return the signal that killed the sandboxed process.
+
+        return (int): offending signal, or 0.
 
         """
-        raise NotImplementedError("Subclasses must implement get_memory_used.")
+        pass
+
+    @abstractmethod
+    def get_exit_status(self):
+        """Get information about how the sandbox terminated.
+
+        return (string): the main reason why the sandbox terminated.
+
+        """
+        pass
+
+    @abstractmethod
+    def get_exit_code(self):
+        """Return the exit code of the sandboxed process.
+
+        return (float): exitcode, or 0.
+
+        """
+        pass
+
+    @abstractmethod
+    def get_human_exit_description(self):
+        """Get the status of the sandbox and return a human-readable
+        string describing it.
+
+        return (string): human-readable explaination of why the
+                         sandbox terminated.
+
+        """
+        pass
 
     def relative_path(self, path):
         """Translate from a relative path inside the sandbox to a
@@ -314,7 +350,7 @@ class SandboxBase(object):
         real_path = self.relative_path(path)
         try:
             file_fd = os.open(real_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            file_ = os.fdopen(file_fd, "wb")
+            file_ = io.open(file_fd, "wb")
         except OSError as e:
             logger.error("Failed create file %s in sandbox. Unable to "
                          "evalulate this submission. This may be due to "
@@ -392,15 +428,10 @@ class SandboxBase(object):
 
         """
         file_ = self.get_file(path)
-        try:
-            if maxlen is None:
-                content = file_.read()
-            else:
-                content = file_.read(maxlen)
-        except UnicodeDecodeError:
-            logger.error("Unable to interpret file as UTF-8.",
-                         exc_info=True)
-            return None
+        if maxlen is None:
+            content = file_.read()
+        else:
+            content = file_.read(maxlen)
         file_.close()
         return content
 
@@ -448,6 +479,59 @@ class SandboxBase(object):
         """
         os.remove(self.relative_path(path))
 
+    @abstractmethod
+    def execute_without_std(self, command, wait=False):
+        """Execute the given command in the sandbox using
+        subprocess.Popen and discarding standard input, output and
+        error. More specifically, the standard input gets closed just
+        after the execution has started; standard output and error are
+        read until the end, in a way that prevents the execution from
+        being blocked because of insufficient buffering.
+
+        command ([string]): executable filename and arguments of the
+            command.
+        wait (bool): True if this call is blocking, False otherwise
+
+        return (bool|Popen): if the call is blocking, then return True
+            if the sandbox didn't report errors (caused by the sandbox
+            itself), False otherwise; if the call is not blocking,
+            return the Popen object from subprocess.
+
+        """
+        pass
+
+    @abstractmethod
+    def translate_box_exitcode(self, _):
+        """Translate the sandbox exit code according to the
+        following table:
+         * 0 -> everything ok -> returns True
+         * 1 -> error in the program inside the sandbox ->
+                returns True
+         * 2 -> error in the sandbox itself -> returns False
+
+        Basically, it recognizes whether the sandbox executed
+        correctly or not.
+
+        """
+        pass
+
+    @abstractmethod
+    def cleanup(self):
+        """Cleanup the sandbox.
+
+        To be called at the end of the execution, regardless of
+        whether the sandbox should be deleted or not.
+
+        """
+        pass
+
+    @abstractmethod
+    def delete(self):
+        """Delete the directory where the sandbox operated.
+
+        """
+        pass
+
 
 class StupidSandbox(SandboxBase):
     """A stupid sandbox implementation. It has very few features and
@@ -486,6 +570,14 @@ class StupidSandbox(SandboxBase):
         self.timeout = None
         self.wallclock_timeout = None
         self.extra_timeout = None
+
+    def get_root_path(self):
+        """Return the toplevel path of the sandbox.
+
+        return (string): the root path.
+
+        """
+        return self.path
 
     # TODO - It returns wall clock time, because I have no way to
     # check CPU time (libev doesn't have wait4() support)
@@ -972,7 +1064,7 @@ class IsolateSandbox(SandboxBase):
             res += ["--full-env"]
         for var in self.inherit_env:
             res += ["--env=%s" % var]
-        for var, value in self.set_env.items():
+        for var, value in iteritems(self.set_env):
             res += ["--env=%s=%s" % (var, value)]
         if self.fsize is not None:
             res += ["--fsize=%d" % self.fsize]
@@ -1016,7 +1108,7 @@ class IsolateSandbox(SandboxBase):
         try:
             with self.get_file(info_file) as log_file:
                 for line in log_file:
-                    key, value = line.strip().split(":", 1)
+                    key, value = line.decode('utf-8').strip().split(":", 1)
                     if key in self.log:
                         self.log[key].append(value)
                     else:

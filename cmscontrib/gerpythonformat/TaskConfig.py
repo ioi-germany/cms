@@ -1645,7 +1645,8 @@ class TaskConfig(CommonConfig, Scope):
         expected_public, expected_private = \
             score_type.unit_test_expected_scores_info(sdb.additional_info)
 
-        def v((accepted, desc), z=False):
+        def v(acc_des, z=False):
+            (accepted, desc) = acc_des
             d = desc  # .replace("<br>", "\n")
 
             if accepted == 1337:
@@ -1659,7 +1660,8 @@ class TaskConfig(CommonConfig, Scope):
             else:
                 return green(d)
 
-        def w(details, (accepted, desc), length, z=False):
+        def w(details, acc_des, length, z=False):
+            (accepted, desc) = acc_des
             return v((accepted,
                       pad_left(details.strip() + " " + desc, length)), z=z)
 

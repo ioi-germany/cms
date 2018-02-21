@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -29,8 +29,11 @@ of the old supported versions to the current one.
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
@@ -98,7 +101,7 @@ def main():
         return 1
 
     with io.open(path, 'rb') as fin:
-        data = json.load(fin, encoding="utf-8")
+        data = json.load(fin)
 
     # If no "_version" field is found we assume it's a v1.0
     # export (before the new dump format was introduced).
@@ -143,7 +146,7 @@ def main():
     assert data["_version"] == to_version
 
     with io.open(path, 'wb') as fout:
-        json.dump(data, fout, encoding="utf-8", indent=4, sort_keys=True)
+        json.dump(data, fout, indent=4, sort_keys=True)
 
     if archive is not None:
         # Keep the old archive, just rename it

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -22,8 +22,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import argparse
 import chardet
@@ -33,19 +36,13 @@ import netifaces
 import os
 import sys
 import grp
-from collections import namedtuple
-
-import six
 
 import gevent.socket
 
+from cms import ServiceCoord, ConfigError, async_config, config
+
 
 logger = logging.getLogger(__name__)
-
-
-class ConfigError(Exception):
-    """Exception for critical configuration errors."""
-    pass
 
 
 def mkdir(path):
@@ -59,7 +56,7 @@ def mkdir(path):
         os.mkdir(path)
         try:
             os.chmod(path, 0o770)
-            cmsuser_gid = grp.getgrnam('cmsuser').gr_gid
+            cmsuser_gid = grp.getgrnam(config.cmsuser).gr_gid
             os.chown(path, -1, cmsuser_gid)
         except OSError as error:
             os.rmdir(path)
@@ -81,9 +78,9 @@ def utf8_decoder(value):
     raise (TypeError): if value isn't a string.
 
     """
-    if isinstance(value, six.text_type):
+    if isinstance(value, str):
         return value
-    elif isinstance(value, six.binary_type):
+    elif isinstance(value, bytes):
         try:
             return value.decode("utf-8")
         except UnicodeDecodeError:
@@ -93,41 +90,6 @@ def utf8_decoder(value):
                 pass
 
     raise TypeError("Not a string.")
-
-
-class Address(namedtuple("Address", "ip port")):
-    def __repr__(self):
-        return "%s:%d" % (self.ip, self.port)
-
-
-class ServiceCoord(namedtuple("ServiceCoord", "name shard")):
-    """A compact representation for the name and the shard number of a
-    service (thus identifying it).
-
-    """
-    def __repr__(self):
-        return "%s,%d" % (self.name, self.shard)
-
-
-class Config(object):
-    """This class will contain the configuration for the
-    services. This needs to be populated at the initilization stage.
-
-    The *_services variables are dictionaries indexed by ServiceCoord
-    with values of type Address.
-
-    Core services are the ones that are supposed to run whenever the
-    system is up.
-
-    Other services are not supposed to run when the system is up, or
-    anyway not constantly.
-
-    """
-    core_services = {}
-    other_services = {}
-
-
-async_config = Config()
 
 
 def get_safe_shard(service, provided_shard):
@@ -326,8 +288,8 @@ def _get_shard_from_addresses(service, addrs):
                 res_ipv4_addrs = set([x[4][0] for x in
                                       gevent.socket.getaddrinfo(
                                           host, port,
-                                          family=gevent.socket.AF_INET,
-                                          socktype=gevent.socket.SOCK_STREAM)])
+                                          gevent.socket.AF_INET,
+                                          gevent.socket.SOCK_STREAM)])
             except (gevent.socket.gaierror, gevent.socket.error):
                 res_ipv4_addrs = set()
 
@@ -335,8 +297,8 @@ def _get_shard_from_addresses(service, addrs):
                 res_ipv6_addrs = set([x[4][0] for x in
                                       gevent.socket.getaddrinfo(
                                           host, port,
-                                          family=gevent.socket.AF_INET6,
-                                          socktype=gevent.socket.SOCK_STREAM)])
+                                          gevent.socket.AF_INET6,
+                                          gevent.socket.SOCK_STREAM)])
             except (gevent.socket.gaierror, gevent.socket.error):
                 res_ipv6_addrs = set()
 

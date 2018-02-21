@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -23,8 +23,11 @@
 """
 
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import unittest
 
@@ -143,13 +146,15 @@ class TestRPC(unittest.TestCase):
 
     def disconnect_servers(self):
         """Disconnect all registered servers from their clients."""
-        for server in self.servers:
+        servers = self.servers.copy()
+        for server in servers:
             if server.connected:
                 server.disconnect()
 
     def disconnect_clients(self):
         """Disconnect all registered clients from their servers."""
-        for client in self.clients:
+        clients = self.clients.copy()
+        for client in clients:
             if client.connected:
                 client.disconnect()
 
@@ -234,7 +239,7 @@ class TestRPC(unittest.TestCase):
         self.sleep()
         self.assertTrue(client.connected)
         self.disconnect_servers()
-        self.sleep()
+        gevent.sleep(0.01)
         self.assertTrue(client.connected, "Autoreconnect didn't kick in "
                                           "after server disconnected")
 
@@ -247,7 +252,7 @@ class TestRPC(unittest.TestCase):
         self.sleep()
         self.assertFalse(client.connected)
         self.spawn_listener(port=self.port)
-        gevent.sleep(0.005)
+        self.sleep()
         self.assertTrue(client.connected, "Autoreconnect didn't kick in "
                                           "after server came back online")
 
@@ -374,7 +379,7 @@ class TestRPC(unittest.TestCase):
 
     def test_send_invalid_json(self):
         sock = gevent.socket.create_connection((self.host, self.port))
-        sock.sendall("foo\r\n")
+        sock.sendall(b"foo\r\n")
         self.sleep()
         self.assertTrue(self.servers[0].connected)
         # Verify the server resumes normal operation.
@@ -382,7 +387,7 @@ class TestRPC(unittest.TestCase):
 
     def test_send_incomplete_json(self):
         sock = gevent.socket.create_connection((self.host, self.port))
-        sock.sendall('{"__id": "foo"}\r\n')
+        sock.sendall(b'{"__id": "foo"}\r\n')
         self.sleep()
         self.assertTrue(self.servers[0].connected)
         # Verify the server resumes normal operation.
