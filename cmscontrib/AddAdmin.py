@@ -53,7 +53,7 @@ def add_admin(username, password=None, real_name=None):
     if password is None:
         password = generate_random_password()
     admin = Admin(username=username,
-                  authentication=hash_password(password.encode("utf-8")),
+                  authentication=hash_password(password),
                   name=real_name or username,
                   permission_all=True)
     try:

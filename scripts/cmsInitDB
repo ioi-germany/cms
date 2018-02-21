@@ -70,6 +70,7 @@ def main():
         print(("Do you want to add {} admin account (alternatively you can use "
                "cmsAddAdmin)? [y/n] ").format("an" if first else "another"),
               end="")
+        sys.stdout.flush()
 
         ans = sys.stdin.readline().strip().lower()
 
@@ -77,9 +78,11 @@ def main():
             break
 
         print("Enter user name: ", end="")
+        sys.stdout.flush()
         username = sys.stdin.readline().strip()
 
         print("Enter human readable name: ", end="")
+        sys.stdout.flush()
         readable_name = sys.stdin.readline().strip()
 
         password = getpass.getpass("Enter password: ")
@@ -92,6 +95,7 @@ def main():
 
         else:
             logger.error("Passwords don't agree.")
+            sys.stdout.flush()
 
         print("")
 
