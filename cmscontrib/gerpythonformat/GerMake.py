@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
@@ -22,8 +22,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from .ContestConfig import ContestConfig
-from .LocationStack import chdir
+from cmscontrib.gerpythonformat.ContestConfig import ContestConfig
+from cmscontrib.gerpythonformat.LocationStack import chdir
 from cms import utf8_decoder
 from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary

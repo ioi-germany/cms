@@ -45,6 +45,7 @@ from future.builtins import *
 from six import itervalues, iteritems
 
 import logging
+import json
 
 from cms.db import File, Manager, Executable, UserTestExecutable, Evaluation
 from cms.grading.languagemanager import get_language

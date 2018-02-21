@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
@@ -23,9 +23,9 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import os.path
-from .Messenger import print_block, header
+from cmscontrib.gerpythonformat.Messenger import print_block, header
 from cms.rules.Rule import CommandRule, GCCRule, PythonFunctionRule
-
+from six import iteritems
 
 class Executable(object):
     """Abstract base class for executables suitable for e.g. solutions and
@@ -158,9 +158,9 @@ class ParamsExecutable(Executable):
     def __str__(self):
         return "{} with additional arguments {}" \
             .format(self.parent.__str__(),
-                    ", ".join(map(str, self.args) +
+                    ", ".join([x for x in map(str, self.args)] +
                               [str(a) + "=" + str(b)
-                               for a, b in self.kwargs.iteritems()]))
+                               for a, b in iteritems(self.kwargs)]))
 
 
 class ExitCodeException(Exception):

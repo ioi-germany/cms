@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
@@ -22,11 +22,11 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from .Messenger import print_msg, print_block, header
-from .Executable import CPPProgram, InternalPython, ExternalScript, \
+from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header
+from cmscontrib.gerpythonformat.Executable import CPPProgram, InternalPython, ExternalScript, \
     ExternalPython, asy_keyword_list
 from cms.rules.Rule import LaTeXRule, CommandRule
-from .Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
+from cmscontrib.gerpythonformat.Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
 import inspect
 import io
 import os
@@ -114,7 +114,9 @@ class CommonConfig(object):
         filename (string): file name of the configuration script
 
         """
-        execfile(os.path.abspath(filename), self.exported)
+        with open(os.path.abspath(filename), "rb") as f:
+            code = compile(f.read(), os.path.abspath(filename), 'exec')
+            exec(code, self.exported)
 
     # Supplements
 

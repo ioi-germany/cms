@@ -34,6 +34,7 @@ from time import sleep, time
 from copy import deepcopy
 from math import sqrt
 
+from six import iteritems
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +114,7 @@ class SingleTaskInfo:
                 info["error"] = "I couldn't parse the dates for " \
                                 "\"(previous) uses\"."
 
-        for key, value in info.iteritems():
+        for key, value in iteritems(info):
             setattr(self, key, value)
 
     def to_dict(self):

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
@@ -29,8 +29,8 @@ import resource
 import shutil
 import sys
 
-from .ContestConfig import ContestConfig
-from .LocationStack import chdir
+from cmscontrib.gerpythonformat.ContestConfig import ContestConfig
+from cmscontrib.gerpythonformat.LocationStack import chdir
 from cms import utf8_decoder, ServiceCoord
 from cms.db import Attachment, Contest, Dataset, Group, Manager, \
     Participation, SessionGen, Statement, Submission, \
@@ -39,6 +39,8 @@ from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 from cmscontrib import BaseImporter, _is_rel
 from cms.io import Service
+
+from six import iteritems
 
 logger = logging.getLogger(__name__)
 
@@ -384,7 +386,7 @@ class GerImport(BaseImporter, Service):
                 pdb1s = self._update_dict(pdb1s, pdbs, delete=True,
                                           creator_function=lambda _, v:
                                               cdb1.participations.append(v))
-                for username, u in pdb1s.iteritems():
+                for username, u in iteritems(pdb1s):
                     u.user = udb1s[username]
                     u.group = cdb1.get_group(
                         contestconfig.users[username].group.name)
@@ -403,7 +405,7 @@ class GerImport(BaseImporter, Service):
                     t.num += len(contestconfig.tasks) + len(cdb1.tasks)
 
                 tdbs = {n: t._makedbobject(cdb, self.file_cacher)
-                        for n, t in contestconfig.tasks.iteritems()}
+                        for n, t in iteritems(contestconfig.tasks)}
                 tdb1s = {t.name: t for t in cdb1.tasks}
                 # We only set the active dataset when importing a new task.
                 # Afterwards, the active dataset has to be set using the web

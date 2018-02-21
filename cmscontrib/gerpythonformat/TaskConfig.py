@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
@@ -22,12 +22,12 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from .Messenger import print_msg, print_block, header, red, green, gray, blue, \
+from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header, red, green, gray, blue, \
     yellow, box, side_by_side, pad_left, add_line_breaks, \
     remaining_line_length, indent
-from .CommonConfig import exported_function, CommonConfig
-from .Executable import ExitCodeException
-from .ConstraintParser import ConstraintList, merge_constraints
+from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
+from cmscontrib.gerpythonformat.Executable import ExitCodeException
+from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, merge_constraints
 from cms import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX
 from cms.db import Task, Statement, Testcase, Dataset, \
@@ -44,6 +44,7 @@ import json
 import os
 import shutil
 
+from six import iteritems, iterkeys
 
 class Scope(object):
     """
@@ -492,7 +493,7 @@ class MySubmission(object):
 
         # Convert the given lists of expected events to something more
         # readable for ScoreTypes
-        for key, items in self.expected.iteritems():
+        for key, items in iteritems(self.expected):
             for item in items:
                 if isinstance(item, MyCase):
                     self.case_expectations[item.codename] += encode(key)
@@ -501,7 +502,7 @@ class MySubmission(object):
 
         # JSON doesn't allow lists nor tuples as keys so we dump them, too
         self.expectations = {json.dumps(key): val for key, val
-                             in self.expectations.iteritems()}
+                             in iteritems(self.expectations)}
 
     def _should_test(self, local_test):
         """
@@ -658,7 +659,7 @@ class TaskConfig(CommonConfig, Scope):
         s = "#define __constraints\n"
         s += '#include <checkutil.h>\n'
         s += "void load_constraints() {\n"
-        for var, ran in constraints.iteritems():
+        for var, ran in iteritems(constraints):
             s += '\tput_constraint("{}", {}, {});\n'.format(var,
                                                             ran[0], ran[1])
         s += "}\n"
@@ -795,9 +796,7 @@ class TaskConfig(CommonConfig, Scope):
         if comparator is not None:
             evaluation_param = "comparator"
             self.managers["checker"] = comparator.get_path()
-        self.tasktypeparameters = json.dumps([grader_param,
-                                              [input, output],
-                                              evaluation_param])
+        self.tasktypeparameters = ([grader_param, [input, output], evaluation_param])
 
     @exported_function
     def outputonly(self, comparator=None):
@@ -814,7 +813,7 @@ class TaskConfig(CommonConfig, Scope):
         if comparator is not None:
             evaluation_param = "comparator"
             self.managers["checker"] = comparator.get_path()
-        self.tasktypeparameters = json.dumps([evaluation_param])
+        self.tasktypeparameters = ([evaluation_param])
 
     @exported_function
     def communication(self, manager, stub=True):
@@ -838,7 +837,7 @@ class TaskConfig(CommonConfig, Scope):
         compilation_param = "alone"
         if stub:
             compilation_param = "stub"
-        self.tasktypeparameters = json.dumps([compilation_param, 1])
+        self.tasktypeparameters = ([compilation_param, 1])
 
     @exported_function
     def output_generator(self, s):
@@ -1250,7 +1249,7 @@ class TaskConfig(CommonConfig, Scope):
             print_msg("Taskname: {}".format(self.name))
             sts = ["{} {}{}".format(l, self.short_path(s.file_),
                                     " (primary)" if s.primary else "")
-                   for l, s in self._statements.iteritems()]
+                   for l, s in iteritems(self._statements)]
             print_msg("Task statements: {}".format(", ".join(sts)))
             print_msg("Number of subtasks: {}".format(len(self.subtasks)))
             print_msg("Number of test cases: {}".format(len(self.cases)))
@@ -1361,7 +1360,7 @@ class TaskConfig(CommonConfig, Scope):
         primary_statements = []
 
         # Add statements
-        for language, statement in self._statements.iteritems():
+        for language, statement in iteritems(self._statements):
             digest = file_cacher.put_file_from_path(
                 statement.file_,
                 "Statement task %s in language %s" % (self.name, language))
@@ -1373,7 +1372,7 @@ class TaskConfig(CommonConfig, Scope):
         tdb.primary_statements = json.dumps(primary_statements)
 
         # Add attachments
-        for name, file in self.attachments.iteritems():
+        for name, file in iteritems(self.attachments):
             digest = file_cacher.put_file_from_path(
                 file,
                 "Attachment %s to task %s" % (name, self.name))
@@ -1384,7 +1383,7 @@ class TaskConfig(CommonConfig, Scope):
         return tdb
 
     def _makedataset(self, file_cacher, tdb):
-        score_type_parameters = json.dumps(
+        score_type_parameters = (
             {'feedback': self.feedback,
              'tcinfo':
              [{'name': s.description,
@@ -1423,7 +1422,7 @@ class TaskConfig(CommonConfig, Scope):
             ddb.testcases[c.codename] = tcdb
 
         # Add managers
-        for name, file in self.managers.iteritems():
+        for name, file in iteritems(self.managers):
             digest = file_cacher.put_file_from_path(
                 file,
                 "Manager %s for task %s" % (name, self.name))
@@ -1621,7 +1620,7 @@ class TaskConfig(CommonConfig, Scope):
             if submission_result.compilation_stderr is not None:
                 print_block(submission_result.compilation_stderr)
             # Evaluate
-            for testcase_codename in sorted(ddb.testcases.iterkeys()):
+            for testcase_codename in sorted(iterkeys(ddb.testcases)):
                 evaluation_operation = ESOperation(ESOperation.EVALUATION,
                                                    -1, -1,
                                                    testcase_codename)
@@ -1687,7 +1686,7 @@ class TaskConfig(CommonConfig, Scope):
                                                   [2, 14, 27, 37])))
 
                         for c in g["cases"]:
-                            l = [(b, unicode(a)) for a, b in c["line"]]
+                            l = [(b, (a)) for a, b in c["line"]]
                             ftime = "%.3fs" % c["time"]
                             if c["memory"] is None:
                                 fmem = "??? MB"

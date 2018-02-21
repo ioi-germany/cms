@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
@@ -35,6 +35,7 @@ import functools
 import os
 import shutil
 
+from six import iteritems
 
 class PlainTemplate(Template):
     def __init__(self, contest):
@@ -156,7 +157,7 @@ class PlainTemplate(Template):
                     d[v] = c
 
         res = ""
-        for v, c in d.iteritems():
+        for v, c in iteritems(d):
             res += r"\makescopedconstraint{" + "{}".format(i) + "}{" + v + \
                    "}{" + c.latex() + "}\n"
 

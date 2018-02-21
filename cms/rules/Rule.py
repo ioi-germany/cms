@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
@@ -28,6 +28,7 @@ import json
 import os
 import subprocess
 
+from six import iteritems
 
 def compute_file_hash(filename):
     """Return the sha256 sum of the given file.
@@ -80,7 +81,7 @@ class Rule(object):
         """Return the name of the file to which the results are saved.
         """
         hasher = hashlib.sha256()
-        hasher.update(json.dumps(self.mission()))
+        hasher.update(json.dumps(self.mission()).encode('utf-8'))
         return os.path.join(self.rulesdir, hasher.hexdigest())
 
     def run(self):
@@ -115,7 +116,7 @@ class Rule(object):
         mhf = self.missionhashfile()
         if not os.path.exists(mhf):
             return False
-        with io.open(mhf, 'rb') as f:
+        with io.open(mhf, 'r') as f:
             r = RuleResult.import_from_dict(self.rulesdir,
                                             json.load(f)['result'])
             return r.uptodate()
@@ -146,7 +147,7 @@ class Rule(object):
             # Don't save the result if something really bad happened (e.g. the
             # dependencies could not be determined)
             if not self.result.badfail:
-                with io.open(mhf, 'wb') as f:
+                with io.open(mhf, 'w') as f:
                     # Save the result.
                     # The mission is saved for debugging purposes.
                     json.dump({'mission': self.mission(),
@@ -228,14 +229,14 @@ class RuleResult(object):
     def uptodate(self):
         """Whether the saved hash values all agree with the current files.
         """
-        for fn, h in self.dependencies.iteritems():
+        for fn, h in iteritems(self.dependencies):
             if h is None:
                 if os.path.isfile(fn):
                     return False
             else:
                 if not os.path.isfile(fn) or h != self.hash_of_file(fn):
                     return False
-        for fn, h in self.outputs.iteritems():
+        for fn, h in iteritems(self.outputs):
             if h is None:
                 if os.path.isfile(fn):
                     return False
@@ -293,7 +294,7 @@ class CommandRule(Rule):
 
         """
         super(CommandRule, self).__init__(rulesdir)
-        self.command = map(str, command)
+        self.command = [x for x in map(str, command)]
         self.dependencies = dependencies
         self.outputs = outputs
         self.stdin = stdin
@@ -591,7 +592,7 @@ class ZipRule(Rule):
     def run(self):
         import zipfile
         with zipfile.ZipFile(self.zipname, 'w', zipfile.ZIP_DEFLATED) as zf:
-            for an, fn in self.contents.iteritems():
+            for an, fn in iteritems(self.contents):
                 zf.write(fn, arcname=an)
                 self.result.add_dependency(fn)
         self.result.add_output(self.zipname)

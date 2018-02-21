@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
@@ -22,6 +22,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from six import iteritems
 
 class Constraint(object):
     def __init__(self, variables, min, max):
@@ -108,7 +109,7 @@ class Constraint(object):
                   "{": "(",
                   "}": ")"}
 
-        for old, new in coding.iteritems():
+        for old, new in iteritems(coding):
             s = s.replace(old, new)
 
         return eval(s)
@@ -194,7 +195,7 @@ class ConstraintList(object):
 
 def merge_constraints(cl1, cl2):
     res = dict(cl1)
-    for var, ran in cl2.iteritems():
+    for var, ran in iteritems(cl2):
         if var in res:
             a, b = res[var]
         if ran[0] is not None:

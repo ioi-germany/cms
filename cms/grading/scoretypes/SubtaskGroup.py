@@ -31,6 +31,7 @@ from cms.grading import UnitTest, format_status_text
 import json
 import logging
 
+from six import iteritems
 
 logger = logging.getLogger(__name__)
 
@@ -530,7 +531,7 @@ class SubtaskGroup(ScoreType):
         private_score = 0
 
         expectations = {tuple(json.loads(key)): val for key, val
-                        in submission_info["expected"].iteritems()}
+                        in iteritems(submission_info["expected"])}
         case_expectations = submission_info["expected_case"]
         possible_task = expectations[()]
         subtasks_failed = False
@@ -593,8 +594,7 @@ class SubtaskGroup(ScoreType):
 
                     v = (v[0],
                          v[1] + "\nGrader output: " +
-                         format_status_text(
-                             unicode(evaluations[idx].text)).strip())
+                         format_status_text((evaluations[idx].text)).strip())
 
                     subtasks[-1]["groups"][-1]["cases"].\
                         append({"line": l, "verdict": v,

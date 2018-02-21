@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
@@ -22,8 +22,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from .ContestConfig import ContestConfig
-from .LocationStack import chdir
+from cmscontrib.gerpythonformat.ContestConfig import ContestConfig
+from cmscontrib.gerpythonformat.LocationStack import chdir
 from cms import utf8_decoder
 from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary, \
@@ -99,8 +99,8 @@ class GerMakeTask:
         finally:
             file_cacher.destroy_cache()
 
-        primary_statements = [s for s in contestconfig.tasks.values()[
-            0]._statements.values() if s.primary]
+        primary_statements = [s for s in list(list(contestconfig.tasks.values())[
+            0]._statements.values()) if s.primary]
         if len(primary_statements) == 0:
             return None
         elif len(primary_statements) == 1:

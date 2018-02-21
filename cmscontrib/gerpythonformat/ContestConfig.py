@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
@@ -22,10 +22,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from .Messenger import print_msg
-from .CommonConfig import exported_function, CommonConfig
-from .TaskConfig import TaskConfig
-from .LocationStack import chdir
+from cmscontrib.gerpythonformat.Messenger import print_msg
+from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
+from cmscontrib.gerpythonformat.TaskConfig import TaskConfig
+from cmscontrib.gerpythonformat.LocationStack import chdir
 from cms.db import Contest, User, Group, Participation, Team
 from cmscommon.crypto import build_password
 import os

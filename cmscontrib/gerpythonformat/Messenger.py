@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
@@ -21,6 +21,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
+from __future__ import division
 
 import codecs
 from functools import wraps
@@ -28,8 +29,8 @@ import os
 import sys
 
 
-sys.stdout = codecs.getwriter("utf8")(sys.stdout)
-sys.stderr = codecs.getwriter("utf8")(sys.stderr)
+# sys.stdout = codecs.getwriter("utf8")(sys.stdout)
+# sys.stderr = codecs.getwriter("utf8")(sys.stderr)
 
 
 def get_terminal_line_length():
@@ -73,7 +74,7 @@ def color_function(start):
         r = ""
         # Split the string to make nested formatting commands behave as
         # expected.
-        for t in string.split(end_code):
+        for t in (str(string)).split(end_code):
             r += start + t + end_code
         return r
     return f
@@ -165,7 +166,7 @@ def pad_center(string, length, filler=' '):
     r = length - estimate_len(string)
     if r < 0:
         return string
-    return filler * (r / 2) + string + filler * ((r + 1) / 2)
+    return filler * (r // 2) + string + filler * ((r + 1) // 2)
 
 
 @apply_to_lines
@@ -305,11 +306,11 @@ def side_by_side(strings, offsets):
 
     """
     lines = [s.split("\n") for s in strings]
-    num_lines = max(map(len, lines))
+    num_lines = max([x for x in map(len, lines)])
     res = []
-    for iline in xrange(num_lines):
+    for iline in range(num_lines):
         line = ""
-        for istring, o in zip(xrange(len(strings)), offsets):
+        for istring, o in zip(range(len(strings)), offsets):
             if len(line) > 0:
                 line += " "
             line += " " * max(o - estimate_len(line), 0)

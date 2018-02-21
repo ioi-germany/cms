@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
@@ -28,8 +28,8 @@ import resource
 
 from cmscontrib.BaseLoader import Loader
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
-from .LocationStack import chdir
-from .ContestConfig import ContestConfig
+from cmscontrib.gerpythonformat.LocationStack import chdir
+from cmscontrib.gerpythonformat.ContestConfig import ContestConfig
 
 
 class GerLoader(Loader):
@@ -66,7 +66,7 @@ class GerLoader(Loader):
                                                    resource.RLIM_INFINITY))
 
         self.buildpath = os.path.join(self.path, "build")
-        copyrecursivelyifnecessary(unicode(self.path), self.buildpath,
+        copyrecursivelyifnecessary((self.path), self.buildpath,
                                    set([self.buildpath]))
         with chdir(self.buildpath):
             rules = ".rules"

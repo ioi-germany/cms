@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
@@ -55,7 +55,7 @@ class LgTemplate(PlainTemplate):
         task.supply_asy("taskname", task.simple_query("name"))
         task.supplement_file("asy", "info.asy")
         task.compile("bar.asy")
-        
+
         # Tell Latex where bar.pdf can be found
         task.supply("latex", def_latex("barpdf", "bar.pdf"))
         task.supply("latex", def_latex("feedback", task.feedback))

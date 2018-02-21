@@ -966,7 +966,7 @@ class UnitTest:
                                 float(limits["weak_time_limit"]),
                                 float(limits["strong_time_limit"]))
 
-            if "wall clock limit exceeded" in json.loads(evaluation.text)[0]:
+            if "wall clock limit exceeded" in (evaluation.text)[0]:
                 timeverdict = -1
 
             if timeverdict == -1:
@@ -980,7 +980,7 @@ class UnitTest:
             memverdict = check(float(evaluation.execution_memory) / 2**20,
                                float(limits["weak_mem_limit"]),
                                float(limits["strong_mem_limit"]))
-            if "violating memory limits" in json.loads(evaluation.text)[0]:
+            if "violating memory limits" in (evaluation.text)[0]:
                 memverdict = -1
             if memverdict == -1:
                 result.append("memory")
