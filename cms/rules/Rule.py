@@ -80,7 +80,7 @@ class Rule(object):
         """Return the name of the file to which the results are saved.
         """
         hasher = hashlib.sha256()
-        hasher.update(json.dumps(self.mission()))
+        hasher.update(json.dumps(self.mission(), sort_keys=True))
         return os.path.join(self.rulesdir, hasher.hexdigest())
 
     def run(self):
@@ -199,7 +199,8 @@ class RuleResult(object):
         # hasher = hashlib.sha256()
         # hasher.update(json.dumps({'type': 'filehash',
         #                           'file': filename,
-        #                           'ctime': os.path.getctime(filename)}))
+        #                           'ctime': os.path.getctime(filename)},
+        #                          sort_keys=True))
         # hashfile = os.path.join(self.rulesdir, hasher.hexdigest())
         # if os.path.exists(hashfile):
         #     return readfile(hashfile)
