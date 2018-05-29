@@ -32,8 +32,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
 import logging
 
@@ -57,7 +57,7 @@ __all__ = [
     # base
     "metadata", "Base",
     # fsobject
-    "FSObject",
+    "FSObject", "LargeObject",
     # validation
     "CodenameConstraint", "FilenameConstraint", "DigestConstraint",
     # contest
@@ -89,7 +89,7 @@ __all__ = [
 
 # Instantiate or import these objects.
 
-version = 29
+version = 30
 
 engine = create_engine(config.database, echo=config.database_debug,
                        pool_timeout=60, pool_recycle=120)
@@ -100,7 +100,7 @@ from .session import Session, ScopedSession, SessionGen, \
 
 from .types import CastingArray
 from .base import metadata, Base
-from .fsobject import FSObject
+from .fsobject import FSObject, LargeObject
 from .validation import CodenameConstraint, FilenameConstraint, \
     DigestConstraint
 from .contest import Contest, Announcement

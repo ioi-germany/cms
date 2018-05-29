@@ -32,8 +32,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
 import ipaddress
 import json
@@ -309,9 +309,9 @@ class BaseHandler(CommonRequestHandler):
             params["unanswered"] = self.sql_session.query(Question)\
                 .join(Participation)\
                 .filter(Participation.contest_id == self.contest.id)\
-                .filter(Question.reply_timestamp == None)\
-                .filter(Question.ignored == False)\
-                .count()  # noqa
+                .filter(Question.reply_timestamp.is_(None))\
+                .filter(Question.ignored.is_(False))\
+                .count()
         # TODO: not all pages require all these data.
         params["contest_list"] = self.sql_session.query(Contest).all()
         params["task_list"] = self.sql_session.query(Task).all()

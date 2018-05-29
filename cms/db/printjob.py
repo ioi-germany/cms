@@ -25,12 +25,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String, Unicode, DateTime, Boolean
 from sqlalchemy.orm import relationship, backref
+from sqlalchemy.dialects.postgresql import ARRAY
 
 from . import Base, Participation, FilenameConstraint, DigestConstraint
 
@@ -80,5 +81,6 @@ class PrintJob(Base):
         default=False)
 
     status = Column(
-        Unicode,
-        nullable=True)
+        ARRAY(String),
+        nullable=False,
+        default=[])

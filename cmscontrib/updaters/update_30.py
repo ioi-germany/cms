@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
+# Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,19 +17,44 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""A class to update a dump created by CMS.
+
+Used by ContestImporter and DumpUpdater.
+
+This updater changes the in-database column type for some columns.
+
+"""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
+from six import iteritems
+
+import json
+import logging
 
 
-def main():
-    print("YamlImporter has been removed from CMS starting from version 1.1.")
-    print("Please, use program Importer.")
-    print("Check CMS documentation for instructions.")
+logger = logging.getLogger(__name__)
 
 
-if __name__ == '__main__':
-    main()
+class Updater(object):
+
+    def __init__(self, data):
+        assert data["_version"] == 29
+        self.objs = data
+
+    def run(self):
+        for k, v in iteritems(self.objs):
+            if k.startswith("_"):
+                continue
+
+            if v["_class"] == "PrintJob":
+                if v.get("status") is None:
+                    v["status"] = []
+                else:
+                    v["status"] = json.loads(v["status"])
+
+        return self.objs

@@ -25,7 +25,7 @@ addons:
       - fp-units-rtl
       - postgresql-client
       - python2.7
-      - stl-manual
+      - cppreference-doc-en-html
       - cgroup-lite
       - libcap-dev
       - python-dev
@@ -65,7 +65,7 @@ before_script:
   - cmsInitDB
 
 script:
-  - cmsRunTests -v
+  - cmsRunTests -v --codecov
 
 notifications:
   email: no

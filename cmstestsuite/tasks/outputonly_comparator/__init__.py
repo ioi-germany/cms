@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
+# Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,16 +21,28 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
+task_info = {
+    "name": "outputonly_comparator",
+    "title": "Test OutputOnly Task with comparator",
+    "official_language": "",
+    "submission_format_choice": "other",
+    "submission_format": "[\"output_000.txt\", \"output_001.txt\"]",
+    "time_limit_{{dataset_id}}": "0.5",
+    "memory_limit_{{dataset_id}}": "128",
+    "task_type_{{dataset_id}}": "OutputOnly",
+    "TaskTypeOptions_{{dataset_id}}_OutputOnly_output_eval": "comparator",
+    "score_type_{{dataset_id}}": "Sum",
+    "score_type_parameters_{{dataset_id}}": "50",
+}
 
-def main():
-    print("YamlReimporter has been removed from CMS starting from version "
-          "1.1.")
-    print("Please, use program Reimporter.")
-    print("Check CMS documentation for instructions.")
+managers = [
+    "checker",
+]
 
-
-if __name__ == '__main__':
-    main()
+test_cases = [
+    ("input_000.txt", "output_000.txt", True),
+    ("input_001.txt", "output_001.txt", False),
+]

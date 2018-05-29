@@ -1,171 +1,184 @@
-{% extends contest.html %}
+{% extends "contest.html" %}
+
+{% set page = "overview" %}
+
 {% block core %}
 
-{% from cms.server.contest.formatting import format_token_rules %}
-{% from cms.grading.tasktypes import get_task_type %}
 
 <div class="span9">
 
 <div class="page-header">
-    <h1>{{ _("Overview") }}</h1>
+    <h1>{% trans %}Overview{% endtrans %}</h1>
 </div>
 
-<h2>{{ _("General information") }}</h2>
+<h2>{% trans %}General information{% endtrans %}</h2>
 <div class="row">
-{% if current_user.group.per_user_time is not None %}
-    <div class="span5">
-{% else %}
-    <div class="span9">
-{% end %}
+    <div class="{% if contest.per_user_time is not none %}span5{% else %}span9{% endif %}">
         <p>
 {% if phase == -1 %}
-        {{ _("The contest hasn't started yet.") }}
+        {% trans %}The contest hasn't started yet.{% endtrans %}
         </p>
         <p>
-        {{ _("The contest will start at %(start_time)s and will end at %(stop_time)s.") % {"start_time": translation.format_datetime_smart(contest.start + current_user.delay_time, now, timezone), "stop_time": translation.format_datetime_smart(contest.stop + current_user.delay_time + current_user.extra_time, now, timezone)} }}
+        {% trans start_time=(contest.start + participation.delay_time)|format_datetime_smart,
+                 stop_time=(contest.stop + participation.delay_time + participation.extra_time)|format_datetime_smart %}
+          The contest will start at {{ start_time }} and will end at {{ stop_time }}.
+        {% endtrans %}
 {% elif phase == 0 %}
-        {{ _("The contest is currently running.") }}
+        {% trans %}The contest is currently running.{% endtrans %}
         </p>
         <p>
-        {{ _("The contest started at %(start_time)s and will end at %(stop_time)s.") % {"start_time": translation.format_datetime_smart(contest.start + current_user.delay_time, now, timezone), "stop_time": translation.format_datetime_smart(contest.stop + current_user.delay_time + current_user.extra_time, now, timezone)} }}
+        {% trans start_time=(contest.start + participation.delay_time)|format_datetime_smart,
+                 stop_time=(contest.stop + participation.delay_time + participation.extra_time)|format_datetime_smart %}
+          The contest started at {{ start_time }} and will end at {{ stop_time }}.
+        {% endtrans %}
 {% elif phase >= +1 %}
-        {{ _("The contest has already ended.") }}
+        {% trans %}The contest has already ended.{% endtrans %}
         </p>
         <p>
-        {{ _("The contest started at %(start_time)s and ended at %(stop_time)s.") % {"start_time": translation.format_datetime_smart(contest.start + current_user.delay_time, now, timezone), "stop_time": translation.format_datetime_smart(contest.stop + current_user.delay_time + current_user.extra_time, now, timezone)} }}
-{% end %}
+        {% trans start_time=(contest.start + participation.delay_time)|format_datetime_smart,
+                 stop_time=(contest.stop + participation.delay_time + participation.extra_time)|format_datetime_smart %}
+          The contest started at {{ start_time }} and ended at {{ stop_time }}.
+        {% endtrans %}
+{% endif %}
         </p>
 {% if current_user.group.analysis_enabled %}
         <p>
   {% if phase == +1 %}
-        {{ _("The analysis mode hasn't started yet.") }}
+        {% trans %}The analysis mode hasn't started yet.{% endtrans %}
         </p>
         <p>
-        {{ _("The analysis mode will start at %(start_time)s and will end at %(stop_time)s.") % {"start_time": translation.format_datetime_smart(contest.analysis_start, now, timezone), "stop_time": translation.format_datetime_smart(contest.analysis_stop, now, timezone)} }}
+        {% trans start_time=contest.analysis_start|format_datetime_smart,
+                 stop_time=contest.analysis_stop|format_datetime_smart %}
+          The analysis mode will start at {{ start_time }} and will end at {{ stop_time }}.
+        {% endtrans %}
   {% elif phase == +2 %}
-        {{ _("The analysis mode is currently running.") }}
+        {% trans %}The analysis mode is currently running.{% endtrans %}
         </p>
         <p>
-        {{ _("The analysis mode started at %(start_time)s and will end at %(stop_time)s.") % {"start_time": translation.format_datetime_smart(contest.analysis_start, now, timezone), "stop_time": translation.format_datetime_smart(contest.analysis_stop, now, timezone)} }}
+        {% trans start_time=contest.analysis_start|format_datetime_smart,
+                 stop_time=contest.analysis_stop|format_datetime_smart %}
+          The analysis mode started at {{ start_time }} and will end at {{ stop_time }}.
+        {% endtrans %}
   {% elif phase == +3 %}
-        {{ _("The analysis mode has already ended.") }}
+        {% trans %}The analysis mode has already ended.{% endtrans %}
         </p>
         <p>
-        {{ _("The analysis mode started at %(start_time)s and ended at %(stop_time)s.") % {"start_time": translation.format_datetime_smart(contest.analysis_start, now, timezone), "stop_time": translation.format_datetime_smart(contest.analysis_stop, now, timezone)} }}
-  {% end %}
+        {% trans start_time=contest.analysis_start|format_datetime_smart,
+                 stop_time=contest.analysis_stop|format_datetime_smart %}
+          The analysis mode started at {{ start_time }} and ended at {{ stop_time }}.
+        {% endtrans %}
+  {% endif %}
         </p>
 
-{% end %}
+{% endif %}
 
 
 
-{% if tokens_contest != 0 and tokens_tasks != 0 %}
-    {% if tokens_contest == 2 and tokens_tasks == 2 %}
+{% if tokens_contest != TOKEN_MODE_DISABLED and tokens_tasks != TOKEN_MODE_DISABLED %}
+    {% if tokens_contest == TOKEN_MODE_INFINITE and tokens_tasks == TOKEN_MODE_INFINITE %}
         <p>
-        {{ _("You have an infinite number of tokens.") }}
-        </p>
-
-        <p>
-        {{ _("You can see the detailed result of a submission by using a token on it.") }}
-        {{ _("Your score for each task will be the maximum among the tokened submissions and the last one.") }}
-        </p>
-    {% elif tokens_contest == 2 %}
-        <p>
-        {{ _("You have a distinct set of tokens for each task.") }}
-        {{ _("You can find the rules for the %(type_pl)s on each task's description page.") % {"type_pl": _("tokens")} }}
+        {% trans %}You have an infinite number of tokens.{% endtrans %}
         </p>
 
         <p>
-        {{ _("You can see the detailed result of a submission by using a token on it.") }}
-        {{ _("Your score for each task will be the maximum among the tokened submissions and the last one.") }}
+        {% trans %}You can see the detailed result of a submission by using a token on it.{% endtrans %}
+        {% trans %}Your score for each task will be the maximum among the tokened submissions and the last one.{% endtrans %}
         </p>
-    {% elif tokens_tasks == 2 %}
+    {% elif tokens_contest == TOKEN_MODE_INFINITE %}
         <p>
-        {{ _("You have a set of tokens shared among all tasks.") }}
-        {% set tokens = {k[6:]: v for k, v in iteritems(contest.__dict__) if k.startswith("token_")} %}
-        {{ format_token_rules(tokens, translation=translation) }}
+        {% trans %}You have a distinct set of tokens for each task.{% endtrans %}
+        {% trans type_pl=_("tokens") %}You can find the rules for the {{ type_pl }} on each task's description page.{% endtrans %}
         </p>
 
         <p>
-        {{ _("You can see the detailed result of a submission by using a token on it.") }}
-        {{ _("Your score for each task will be the maximum among the tokened submissions and the last one.") }}
+        {% trans %}You can see the detailed result of a submission by using a token on it.{% endtrans %}
+        {% trans %}Your score for each task will be the maximum among the tokened submissions and the last one.{% endtrans %}
+        </p>
+    {% elif tokens_tasks == TOKEN_MODE_INFINITE %}
+        <p>
+        {% trans %}You have a set of tokens shared among all tasks.{% endtrans %}
+        {{ contest|extract_token_params|format_token_rules }}
+        </p>
+
+        <p>
+        {% trans %}You can see the detailed result of a submission by using a token on it.{% endtrans %}
+        {% trans %}Your score for each task will be the maximum among the tokened submissions and the last one.{% endtrans %}
         </p>
     {% else %}
         <p>
-        {% raw _("You have two types of tokens: a set of <em>contest-tokens</em> shared among all tasks and a distinct set of <em>task-tokens</em> for each task.") %}
-        {% set tokens = {k[6:]: v for k, v in iteritems(contest.__dict__) if k.startswith("token_")} %}
-        {{ format_token_rules(tokens, t_type="contest", translation=translation) }}
-        {{ _("You can find the rules for the %(type_pl)s on each task's description page.") % {"type_pl": _("task-tokens")} }}
+        {% trans %}You have two types of tokens: a set of <em>contest-tokens</em> shared among all tasks and a distinct set of <em>task-tokens</em> for each task.{% endtrans %}
+        {{ contest|extract_token_params|format_token_rules(t_type="contest") }}
+        {% trans type_pl=_("task-tokens") %}You can find the rules for the {{ type_pl }} on each task's description page.{% endtrans %}
         </p>
 
         <p>
-        {{ _("You can see the detailed result of a submission by using two tokens on it, one of each type.") }}
-        {{ _("Your score for each task will be the maximum among the tokened submissions and the last one.") }}
+        {% trans %}You can see the detailed result of a submission by using two tokens on it, one of each type.{% endtrans %}
+        {% trans %}Your score for each task will be the maximum among the tokened submissions and the last one.{% endtrans %}
         </p>
-    {% end %}
-{% end %}
+    {% endif %}
+{% endif %}
 
-{% if contest.max_submission_number is not None %}
+{% if contest.max_submission_number is not none %}
     <p>
-    {{ _("You can submit at most %(submissions)s solutions during this contest.") % {"submissions": contest.max_submission_number} }}
+    {% trans submissions=contest.max_submission_number %}You can submit at most {{ submissions }} solutions during this contest.{% endtrans %}
     </p>
-{% end %}
+{% endif %}
 
-{% if contest.max_user_test_number is not None %}
+{% if contest.max_user_test_number is not none %}
     <p>
-    {{ _("You can submit at most %(user_tests)s user tests during this contest.") % {"user_tests": contest.max_user_test_number} }}
+    {% trans user_tests=contest.max_user_test_number %}You can submit at most {{ user_tests }} user tests during this contest.{% endtrans %}
     </p>
-{% end %}
+{% endif %}
 
     </div>
-{% if current_user.group.per_user_time is not None %}
+{% if current_user.group.per_user_time is not none %}
     <div class="span4">
         <div class="well per_user_time">
             <p>
-        {% comment TODO would be very nice to write something like "just for 3 consecutive hours"... %}
-        {{ _("Every user is allowed to compete (i.e. submit solutions) for a uninterrupted time frame of %(per_user_time)s.") % {"per_user_time": translation.format_timedelta(contest.per_user_time)} }}
+        {# TODO would be very nice to write something like "just for 3 consecutive hours"... #}
+        {% trans per_user_time=contest.per_user_time|format_timedelta %}Every user is allowed to compete (i.e. submit solutions) for a uninterrupted time frame of {{ per_user_time }}.{% endtrans %}
             </p>
 
             <p>
     {% if actual_phase == -2 %}
-        {{ _("As soon as the contest starts you can choose to start your time frame.") }}
-        {{ _("Once you start, you can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.") }}
+        {% trans %}As soon as the contest starts you can choose to start your time frame.{% endtrans %}
+        {% trans %}Once you start, you can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.{% endtrans %}
     {% elif actual_phase == -1 %}
-        {{ _("By clicking on the button below you can start your time frame.") }}
-        {{ _("Once you start, you can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.") }}
+        {% trans %}By clicking on the button below you can start your time frame.{% endtrans %}
+        {% trans %}Once you start, you can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.{% endtrans %}
     {% elif actual_phase == 0 %}
-        {{ _("You started your time frame at %(start_time)s.") % {"start_time": translation.format_datetime_smart(current_user.starting_time, now, timezone)} }}
-        {{ _("You can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.") }}
+        {% trans start_time=participation.starting_time|format_datetime_smart %}You started your time frame at {{ start_time }}.{% endtrans %}
+        {% trans %}You can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.{% endtrans %}
     {% elif actual_phase == +1 %}
-        {{ _("You started your time frame at %(start_time)s and you already finished it.") % {"start_time": translation.format_datetime_smart(current_user.starting_time, now, timezone)} }}
-        {{ _("There's nothing you can do now.") }}
+        {% trans start_time=participation.starting_time|format_datetime_smart %}You started your time frame at {{ start_time }} and you already finished it.{% endtrans %}
+        {% trans %}There's nothing you can do now.{% endtrans %}
     {% elif actual_phase == +2 %}
-        {% if current_user.starting_time is None %}
-            {{ _("You never started your time frame. Now it's too late.") }}
+        {% if participation.starting_time is none %}
+            {% trans %}You never started your time frame. Now it's too late.{% endtrans %}
         {% else %}
-            {{ _("You started your time frame at %(start_time)s and you already finished it.") % {"start_time": translation.format_datetime_smart(current_user.starting_time, now, timezone)} }}
-        {% end %}
-        {{ _("There's nothing you can do now.") }}
-    {% end %}
+            {% trans start_time=participation.starting_time|format_datetime_smart %}You started your time frame at {{ start_time }} and you already finished it.{% endtrans %}
+        {% endif %}
+        {% trans %}There's nothing you can do now.{% endtrans %}
+    {% endif %}
             </p>
 
     {% if actual_phase == -1 %}
         <form action="{{ contest_url("start") }}" method="POST" style="margin: 0">
-            {% module xsrf_form_html() %}
+            {{ xsrf_form_html|safe }}
             <input type="hidden" name="next" value="{{ contest_url() }}">
-            <button type="submit" class="btn btn-danger btn-large" style="width:100%;-moz-box-sizing:border-box;box-sizing:border-box;" type="submit">{{ _("Start!") }}</button>
+            <button type="submit" class="btn btn-danger btn-large" style="width:100%;-moz-box-sizing:border-box;box-sizing:border-box;" type="submit">{% trans %}Start!{% endtrans %}</button>
         </form>
-    {% end %}
+    {% endif %}
 
         </div>
     </div>
-{% end %}
+{% endif %}
 </div>
 
 
 
 {% if actual_phase == 0 or actual_phase == 3%}
-<h2>{{ _("Task overview") }}</h2>
+<h2>{% trans %}Task overview{% endtrans %}</h2>
 
 <table class="table table-bordered table-striped">
     <!-- <colgroup>
@@ -178,54 +191,53 @@
     </colgroup> -->
     <thead>
         <tr>
-            <th>{{ _("Task") }}</th>
-            <th>{{ _("Name") }}</th>
-            <th>{{ _("Time limit") }}</th>
-            <th>{{ _("Memory limit") }}</th>
-            <th>{{ _("Type") }}</th>
-            <th>{{ _("Files") }}</th>
-{% if tokens_contest != 0 and tokens_tasks != 0 %}
-            <th>{{ _("Tokens") }}</th>
-{% end %}
+            <th>{% trans %}Task{% endtrans %}</th>
+            <th>{% trans %}Name{% endtrans %}</th>
+            <th>{% trans %}Time limit{% endtrans %}</th>
+            <th>{% trans %}Memory limit{% endtrans %}</th>
+            <th>{% trans %}Type{% endtrans %}</th>
+            <th>{% trans %}Files{% endtrans %}</th>
+{% if tokens_contest != TOKEN_MODE_DISABLED and tokens_tasks != TOKEN_MODE_DISABLED %}
+            <th>{% trans %}Tokens{% endtrans %}</th>
+{% endif %}
         </tr>
     </thead>
     <tbody>
-{% set extensions = "[%s]" %  ("|".join(set(get_language(lang).source_extension for lang in contest.languages))) %}
+{% set extensions = "[%s]"|format(contest.languages|map("to_language")|map(attribute="source_extension")|unique|join("|")) %}
 {% for t_iter in contest.tasks %}
         <tr>
             <th>{{ t_iter.name }}</th>
             <td>{{ t_iter.title }}</td>
             <td>
-    {% if t_iter.active_dataset.time_limit is not None %}
-        {{ translation.format_duration(t_iter.active_dataset.time_limit, length="long") }}
+    {% if t_iter.active_dataset.time_limit is not none %}
+        {{ t_iter.active_dataset.time_limit|format_duration(length="long") }}
     {% else %}
-        {{ _("N/A") }}
-    {% end %}
+        {% trans %}N/A{% endtrans %}
+    {% endif %}
             </td>
             <td>
-    {% if t_iter.active_dataset.memory_limit is not None %}
-        {{ translation.format_size(t_iter.active_dataset.memory_limit * 1024 * 1024) }}
+    {% if t_iter.active_dataset.memory_limit is not none %}
+        {{ (t_iter.active_dataset.memory_limit * 1024 * 1024)|format_size }}
     {% else %}
-        {{ _("N/A") }}
-    {% end %}
+        {% trans %}N/A{% endtrans %}
+    {% endif %}
             </td>
             <td>{{ get_task_type(dataset=t_iter.active_dataset).name }}</td>
-            <td>{{ " ".join(a.filename.replace(".%l", extensions) for a in t_iter.submission_format) }}</td>
-    {% if tokens_contest != 0 and tokens_tasks != 0 %}
+            <td>{{ t_iter.submission_format|map(attribute="filename")|map("replace", ".%l", extensions)|join(" ") }}</td>
+    {% if tokens_contest != TOKEN_MODE_DISABLED and tokens_tasks != TOKEN_MODE_DISABLED %}
             <td>
-        {% if t_iter.token_mode in ("finite", "infinite") %}
-            {{ _("Yes") }}
+        {% if t_iter.token_mode == "finite" or t_iter.token_mode == "infinite" %}
+            {% trans %}Yes{% endtrans %}
         {% else %}
-            {{ _("No") }}
-        {% end %}
+            {% trans %}No{% endtrans %}
+        {% endif %}
             </td>
-    {% end %}
+    {% endif %}
         </tr>
-{% end %}
+{% endfor %}
     </tbody>
 </table>
-
-{% end %}
+{% endif %}
 
 </div>
-{% end %}
+{% endblock core %}

@@ -27,8 +27,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
 import io
 import logging
@@ -74,6 +74,44 @@ def sh(cmdline, ignore_failure=False):
             (ret & 0xff, ret >> 8, ' '.join(cmdline)))
 
 
+_COVERAGE_DIRECTORIES = [
+    "cms",
+    "cmscommon",
+    "cmscontrib",
+    "cmsranking",
+    "cmstaskenv",
+]
+_COVERAGE_CMDLINE = [
+    sys.executable, "-m", "coverage", "run", "-p",
+    "--source=%s" % ",".join(_COVERAGE_DIRECTORIES)]
+
+
+def coverage_cmdline(cmdline):
+    """Return a cmdline possibly decorated to record coverage."""
+    if CONFIG.get('COVERAGE', False):
+        return _COVERAGE_CMDLINE + cmdline
+    else:
+        return cmdline
+
+
+def clear_coverage():
+    """Clear existing coverage reports."""
+    if CONFIG.get('COVERAGE', False):
+        logging.info("Clearing old coverage data.")
+        sh([sys.executable, "-m", "coverage", "erase"])
+
+
 def combine_coverage():
-    logger.info("Combining coverage results.")
-    sh([sys.executable, "-m", "coverage", "combine"])
+    """Combine coverage reports from different programs."""
+    if CONFIG.get('COVERAGE', False):
+        logger.info("Combining coverage results.")
+        sh([sys.executable, "-m", "coverage", "combine"])
+
+
+def send_coverage_to_codecov(flag):
+    """Send the coverage report to Codecov with the given flag."""
+    if CONFIG.get('COVERAGE', False):
+        logger.info("Sending coverage results to codecov for flag %s." % flag)
+        subprocess.call(
+            "bash -c 'bash <(curl -s https://codecov.io/bash) -c -F %s'" %
+            flag, shell=True)

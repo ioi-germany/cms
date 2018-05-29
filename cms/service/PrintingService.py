@@ -26,11 +26,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
 import cups
-import json
+import io
 import logging
 import os
 import subprocess
@@ -38,10 +38,9 @@ import tempfile
 from tornado import template
 from PyPDF2 import PdfFileReader, PdfFileMerger
 
-from cms import config
+from cms import config, rmtree
 from cms.db.filecacher import FileCacher
 from cms.io import Executor, QueueItem, TriggeredService, rpc_method
-from cms.io.GeventUtils import rmtree
 from cms.db import SessionGen, PrintJob
 from cmscommon.commands import pretty_print_cmdline
 from cmscommon.datetime import get_timezone, utc
@@ -111,7 +110,7 @@ class PrintingExecutor(Executor):
             # Take the base name just to be sure.
             relname = "source_" + os.path.basename(filename)
             source = os.path.join(directory, relname)
-            with open(source, "wb") as file_:
+            with io.open(source, "wb") as file_:
                 self.file_cacher.get_file_to_fobj(printjob.digest, file_)
 
             if filename.endswith(".pdf") and config.pdf_printing_allowed:
@@ -143,8 +142,7 @@ class PrintingExecutor(Executor):
                 if not os.path.exists(source_ps):
                     logger.warning("Unable to convert from text to ps.")
                     printjob.done = True
-                    printjob.status = json.dumps([
-                        N_("Invalid file")])
+                    printjob.status = [N_("Invalid file")]
                     session.commit()
                     rmtree(directory)
                     return
@@ -161,7 +159,7 @@ class PrintingExecutor(Executor):
                         "(error %d)" % (pretty_print_cmdline(cmd), ret))
 
             # Find out number of pages
-            with open(source_pdf, "rb") as file_:
+            with io.open(source_pdf, "rb") as file_:
                 pdfreader = PdfFileReader(file_)
                 page_count = pdfreader.getNumPages()
 
@@ -171,8 +169,7 @@ class PrintingExecutor(Executor):
             if page_count > config.max_pages_per_job:
                 logger.info("Too many pages.")
                 printjob.done = True
-                printjob.status = json.dumps([
-                    N_("Print job has too many pages")])
+                printjob.status = [N_("Print job has too many pages")]
                 session.commit()
                 rmtree(directory)
                 return
@@ -180,7 +177,7 @@ class PrintingExecutor(Executor):
             # Add the title page
             title_tex = os.path.join(directory, "title_page.tex")
             title_pdf = os.path.join(directory, "title_page.pdf")
-            with open(title_tex, "w") as f:
+            with io.open(title_tex, "wb") as f:
                 f.write(self.template_loader.load("title_page.tex")
                         .generate(user=user, filename=filename,
                                   timestr=timestr,
@@ -197,12 +194,12 @@ class PrintingExecutor(Executor):
                     "(error %d)" % (pretty_print_cmdline(cmd), ret))
 
             pdfmerger = PdfFileMerger()
-            with open(title_pdf, "rb") as file_:
+            with io.open(title_pdf, "rb") as file_:
                 pdfmerger.append(file_)
-            with open(source_pdf, "rb") as file_:
+            with io.open(source_pdf, "rb") as file_:
                 pdfmerger.append(file_)
             result = os.path.join(directory, "document.pdf")
-            with open(result, "wb") as file_:
+            with io.open(result, "wb") as file_:
                 pdfmerger.write(file_)
 
             try:
@@ -214,7 +211,7 @@ class PrintingExecutor(Executor):
                 logger.error("Unable to print: `%s'.", error)
             else:
                 printjob.done = True
-                printjob.status = json.dumps([N_("Sent to printer")])
+                printjob.status = [N_("Sent to printer")]
                 session.commit()
             finally:
                 rmtree(directory)
@@ -252,7 +249,7 @@ class PrintingService(TriggeredService):
         counter = 0
         with SessionGen() as session:
             for printjob in session.query(PrintJob) \
-                    .filter(PrintJob.done == False).all():  # noqa
+                    .filter(PrintJob.done.is_(False)).all():
                 self.enqueue(PrintingOperation(printjob.id),
                              timestamp=printjob.timestamp)
                 counter += 1

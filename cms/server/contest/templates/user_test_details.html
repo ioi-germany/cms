@@ -1,47 +1,45 @@
-{% from six import iterkeys, itervalues, iteritems %}
 
-{% from cms.grading import format_status_text %}
 
-{% if tr is not None and tr.evaluated() %}
-<h3>{{ _("Evaluation outcome") }}</h3>{% comment TODO: trim long outputs and add facility to see raw %}
-<pre>{{ format_status_text(tr.evaluation_text, translation=translation) }}</pre>
-{% end %}
+{% if tr is not none and tr.evaluated() %}
+<h3>{% trans %}Evaluation outcome{% endtrans %}</h3>{# TODO: trim long outputs and add facility to see raw #}
+<pre>{{ tr.evaluation_text|format_status_text }}</pre>
+{% endif %}
 
-{% if tr is not None and tr.compiled() %}
-<h3>{{ _("Compilation output") }}</h3>{% comment TODO: trim long outputs and add facility to see raw %}
+{% if tr is not none and tr.compiled() %}
+<h3>{% trans %}Compilation output{% endtrans %}</h3>{# TODO: trim long outputs and add facility to see raw #}
 <table class="table table-bordered" style="table-layout: fixed;">
     <tbody>
         <tr>
-            <th>{{ _("Compilation outcome:") }}</th>
-            <td>{{ format_status_text(tr.compilation_text, translation=translation) }}</td>
+            <th>{% trans %}Compilation outcome:{% endtrans %}</th>
+            <td>{{ tr.compilation_text|format_status_text }}</td>
         </tr>
         <tr>
-            <th>{{ _("Compilation time:") }}</th>
+            <th>{% trans %}Compilation time:{% endtrans %}</th>
             <td>
-{% if tr.compilation_time is None %}
-    {{ _("N/A") }}
+{% if tr.compilation_time is none %}
+    {% trans %}N/A{% endtrans %}
 {% else %}
-    {{ translation.format_duration(tr.compilation_time) }}
-{% end %}
+    {{ tr.compilation_time|format_duration }}
+{% endif %}
             </td>
         </tr>
-            <th>{{ _("Memory used:") }}</th>
+            <th>{% trans %}Memory used:{% endtrans %}</th>
             <td>
-{% if tr.compilation_memory is None %}
-    {{ _("N/A") }}
+{% if tr.compilation_memory is none %}
+    {% trans %}N/A{% endtrans %}
 {% else %}
-    {{ translation.format_size(tr.compilation_memory) }}
-{% end %}
+    {{ tr.compilation_memory|format_size }}
+{% endif %}
             </td>
         </tr>
     </tbody>
 </table>
-{% if tr.compilation_stdout is not None %}
-<h4>{{ _("Standard output") }}</h4>
+{% if tr.compilation_stdout is not none %}
+<h4>{% trans %}Standard output{% endtrans %}</h4>
 <pre>{{ tr.compilation_stdout }}</pre>
-{% end %}
-{% if tr.compilation_stderr is not None %}
-<h4>{{ _("Standard error") }}</h4>
+{% endif %}
+{% if tr.compilation_stderr is not none %}
+<h4>{% trans %}Standard error{% endtrans %}</h4>
 <pre>{{ tr.compilation_stderr }}</pre>
-{% end %}
-{% end %}
+{% endif %}
+{% endif %}

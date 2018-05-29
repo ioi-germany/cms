@@ -34,8 +34,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 from six import iterkeys
 
 import logging
@@ -49,6 +49,7 @@ from werkzeug.http import parse_accept_header
 from cms.db import Contest
 from cms.locale import DEFAULT_TRANSLATION, choose_language_code
 from cms.server import CommonRequestHandler
+from cmscommon.datetime import utc as utc_tzinfo
 
 
 logger = logging.getLogger(__name__)
@@ -76,15 +77,10 @@ class BaseHandler(CommonRequestHandler):
         self._ = self.translation.gettext
         self.n_ = self.translation.ngettext
 
-    def get(self):
-        self.r_params = self.render_params()
-        # We need this to be computed for each request because we want to be
-        # able to import new contests without having to restart CWS.
-        contest_list = dict()
-        for contest in self.sql_session.query(Contest).all():
-            contest_list[contest.name] = contest
-        self.render("contest_list.html", contest_list=contest_list,
-                    **self.r_params)
+    def render(self, template_name, **params):
+        t = self.service.jinja2_environment.get_template(template_name)
+        for chunk in t.generate(**params):
+            self.write(chunk)
 
     def prepare(self):
         """This method is executed at the beginning of each request.
@@ -129,6 +125,7 @@ class BaseHandler(CommonRequestHandler):
         """
         ret = {}
         ret["now"] = self.timestamp
+        ret["utc"] = utc_tzinfo
         ret["url"] = self.url
 
         ret["available_translations"] = self.available_translations
@@ -137,7 +134,13 @@ class BaseHandler(CommonRequestHandler):
         ret["automatic_translation"] = self.automatic_translation
 
         ret["translation"] = self.translation
-        ret["_"] = self._
+        ret["gettext"] = self._
+        ret["ngettext"] = self.n_
+
+        # FIXME this is cheating
+        ret["handler"] = self
+
+        ret["xsrf_form_html"] = self.xsrf_form_html()
 
         return ret
 
@@ -164,40 +167,13 @@ class BaseHandler(CommonRequestHandler):
         return self.service.contest_id is None
 
 
-class StaticFileGzHandler(tornado.web.StaticFileHandler):
-    """Handle files which may be gzip-compressed on the filesystem.
-
-    """
-    def is_multi_contest(self):
-        """Return whether CWS serves all contests."""
-        return self.application.service.contest_id is None
-
-    def get_absolute_path(self, root, path_or_contest_name):
-        if self.is_multi_contest():
-            # In multi contest mode, the second argument is the contest name,
-            # and we retrieve the file path from path_args.
-            return os.path.abspath(os.path.join(root, self.path_args[1]))
-        else:
-            # Otherwise, we can just use the second argument.
-            return os.path.abspath(os.path.join(root, path_or_contest_name))
-
-    def validate_absolute_path(self, root, absolute_path):
-        self.is_gzipped = False
-        try:
-            return tornado.web.StaticFileHandler.validate_absolute_path(
-                self, root, absolute_path)
-        except tornado.web.HTTPError as e:
-            if e.status_code != 404:
-                raise
-            self.is_gzipped = True
-            self.absolute_path = \
-                tornado.web.StaticFileHandler.validate_absolute_path(
-                    self, root, absolute_path + ".gz")
-            self.set_header("Content-encoding", "gzip")
-            return self.absolute_path
-
-    def get_content_type(self):
-        if self.is_gzipped:
-            return "text/plain"
-        else:
-            return tornado.web.StaticFileHandler.get_content_type(self)
+class ContestListHandler(BaseHandler):
+    def get(self):
+        self.r_params = self.render_params()
+        # We need this to be computed for each request because we want to be
+        # able to import new contests without having to restart CWS.
+        contest_list = dict()
+        for contest in self.sql_session.query(Contest).all():
+            contest_list[contest.name] = contest
+        self.render("contest_list.html", contest_list=contest_list,
+                    **self.r_params)

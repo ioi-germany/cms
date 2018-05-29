@@ -1,4 +1,6 @@
-{% extends contest.html %}
+{% extends "contest.html" %}
+
+{% set page = "test_interface" %}
 
 {% block additional_js %}
 $(document).on("click", ".user_test_list tbody tr td.status .details", function (event) {
@@ -7,7 +9,7 @@ $(document).on("click", ".user_test_list tbody tr td.status .details", function 
     var user_test_id = $this.parent().parent().attr("data-user-test");
     var modal = $("#user_test_detail");
     var modal_body = modal.children(".modal-body");
-    modal_body.html('<div class="loading"><img src="{{ url("static", "loading.gif") }}"/>{{ _("loading...") }}</div>');
+    modal_body.html('<div class="loading"><img src="{{ url("static", "loading.gif") }}"/>{% trans %}loading...{% endtrans %}</div>');
     modal_body.load(utils.contest_url("tasks", task_id, "tests", user_test_id, "details"));
     modal.modal("show");
 });
@@ -16,14 +18,14 @@ update_user_test_row = function (task_id, user_test_id, data) {
     var row = $(".user_test_list[data-task=\"" + task_id + "\"] tbody tr[data-user-test=\"" + user_test_id + "\"]");
     row.attr("data-status", data["status"]);
     row.children("td.status").html(data["status_text"]);
-    if (data["status"] == 4) {
+    if (data["status"] == {{ UserTestResult.EVALUATED }}) {
         if (data["output"]) {
             var btn = row.children("td.output").children("a.btn");
-            btn.text('{{ _("Download") }}');
+            btn.text('{% trans %}Download{% endtrans %}');
             btn.removeClass("disabled");
             btn.attr("href", utils.contest_url("tasks", task_id, "tests", user_test_id, "output"));
         } else {
-            row.children("td.output").children("a.btn").text("{{ _("N/A") }}");
+            row.children("td.output").children("a.btn").text("{% trans %}N/A{% endtrans %}");
         }
         if (data["time"] != null) {
             row.children("td.time").removeClass("undefined");
@@ -33,8 +35,8 @@ update_user_test_row = function (task_id, user_test_id, data) {
             row.children("td.memory").removeClass("undefined");
             row.children("td.memory").text(data["memory"]);
         }
-    } else if (data["status"] == 2) {
-        row.children("td.output").children("a.btn").text("{{ _("N/A") }}");
+    } else if (data["status"] == {{ UserTestResult.COMPILATION_FAILED }}) {
+        row.children("td.output").children("a.btn").text("{% trans %}N/A{% endtrans %}");
     } else {
         schedule_update_user_test_row(task_id, user_test_id);
     }
@@ -49,68 +51,65 @@ schedule_update_user_test_row = function (task_id, user_test_id) {
 }
 
 $(document).ready(function () {
-    $('.user_test_list tbody tr[data-status][data-status!="2"][data-status!="4"]').each(function (idx, elem) {
+    $('.user_test_list tbody tr[data-status][data-status!="{{ UserTestResult.COMPILATION_FAILED }}"][data-status!="{{ UserTestResult.EVALUATED }}"]').each(function (idx, elem) {
         var $this = $(this);
         schedule_update_user_test_row($this.parent().parent().attr("data-task"), $this.attr("data-user-test"));
     });
 });
-{% end %}
+{% endblock additional_js %}
 
 {% block core %}
 
-{% from cms.grading.tasktypes import get_task_type %}
-
-{% if actual_phase == 0 or current_user.unrestricted %}
 
 <div class="span9 test_interface">
 
 <div class="page-header">
-    <h1>{{ _("Testing") }}</h1>
+    <h1>{% trans %}Testing{% endtrans %}</h1>
 </div>
 
 
 <ul class="nav nav-tabs">
-{% for i, task in enumerate(contest.tasks) %}
+{% for task in contest.tasks %}
     {% set task_type = get_task_type(dataset=task.active_dataset) %}
     {% if task_type.testable %}
-    <li{% if task == default_task %} class="active"{% end %}><a href="#test_{{ task.name }}" data-toggle="tab">{{ task.name }}</a></li>
-    {% end %}
-{% end %}
+    <li{% if task == default_task %} class="active"{% endif %}><a href="#test_{{ task.name }}" data-toggle="tab">{{ task.name }}</a></li>
+    {% endif %}
+{% endfor %}
 </ul>
 
 <div class="tab-content">
-{% for i, task in enumerate(contest.tasks) %}
+{% for task in contest.tasks %}
     {% set task_type = get_task_type(dataset=task.active_dataset) %}
     {% if task_type.testable %}
-<div class="tab-pane{% if task == default_task %} active{% end %}" id="test_{{ task.name }}">
+<div class="tab-pane{% if task == default_task %} active{% endif %}" id="test_{{ task.name }}">
 
-<h2 style="margin-bottom: 10px">{{ _("Submit a test") }}</h2>
+<h2 style="margin-bottom: 10px">{% trans %}Submit a test{% endtrans %}</h2>
 
-{% if user_tests_left[task.id] is not None %}
+{% if user_tests_left[task.id] is not none %}
     <div class="span5">
         <p>
-        {{ _("You can submit %(user_tests_left)s more test(s).") % {"user_tests_left": user_tests_left[task.id]} }}
+        {% trans user_tests_left=user_tests_left[task.id] %}You can submit {{ user_tests_left }} more test(s).{% endtrans %}
         </p>
     </div>
-{% end %}
+{% endif %}
 
 <div class="submit_test row">
     <div class="span5">
         <form class="form-horizontal" enctype="multipart/form-data" action="{{ contest_url("tasks", task.name, "test") }}" method="POST">
-            {% module xsrf_form_html() %}
+            {{ xsrf_form_html|safe }}
             <fieldset>
-{% for idx, filename in enumerate([x.filename for x in task.submission_format] + task_type.get_user_managers(task.submission_format)) %}
+{% for filename in task.submission_format|map(attribute="filename")|list + task_type.get_user_managers(task.submission_format) %}
                 <div class="control-group">
-                    <label class="control-label" for="input{{ idx }}">{{ filename.replace(".%l", "") }}</label>
+                    <label class="control-label" for="input{{ loop.index0 }}">{{ filename|replace(".%l", "") }}</label>
                     <div class="controls">
                         <input type="file" class="input-xlarge"
-                               id="input{{ idx }}" name="{{ filename }}"
+                               id="input{{ loop.index0 }}" name="{{ filename }}"
                                onchange="CMS.CWSUtils.filter_languages($('#language option'), $(this).parents('fieldset').find('input[type=file]').not('#input_file'))"/>
                     </div>
                 </div>
-{% end %}
+{% endfor %}
                 <div class="control-group">
-                    <label class="control-label" for="input_file">{{ _("input") }}</label>
+                    <label class="control-label" for="input_file">{% trans %}input{% endtrans %}</label>
                     <div class="controls">
                         <input type="file" class="input-xlarge" id="input_file" name="input"/>
                     </div>
@@ -120,26 +119,26 @@ $(document).ready(function () {
                         <select id="language" name="language">
 {% for lang in contest.languages %}
                             <option value="{{ lang }}">{{ lang }}</option>
-{% end %}
+{% endfor %}
                         </select>
                     </div>
                 </div>
                 <div class="control-group">
                     <div class="controls">
-                        <button type="submit" class="btn btn-success">{{ _("Submit") }}</button>
-                        <button type="reset" class="btn">{{ _("Reset") }}</button>
+                        <button type="submit" class="btn btn-success">{% trans %}Submit{% endtrans %}</button>
+                        <button type="reset" class="btn">{% trans %}Reset{% endtrans %}</button>
                     </div>
                 </div>
             </fieldset>
         </form>
     </div>
-{% if not any(x.filename.endswith(".%l") for x in task.submission_format) %}
+{% if not task.submission_format|map(attribute="filename")|any("endswith", ".%l") %}
     <div class="span4">
         <form class="form-horizontal" enctype="multipart/form-data" action="{{ contest_url("tasks", task.name, "test") }}" method="POST">
-            {% module xsrf_form_html() %}
+            {{ xsrf_form_html|safe }}
             <fieldset>
                 <div class="control-group">
-                    <label class="control-label" for="input_zip">{{ _("submission.zip") }}</label>
+                    <label class="control-label" for="input_zip">{% trans %}submission.zip{% endtrans %}</label>
                     <div class="controls">
                         <input type="file" class="input-xlarge" id="input_zip" name="submission"/>
                     </div>
@@ -149,27 +148,26 @@ $(document).ready(function () {
                         <select id="zip_language" name="language">
 {% for lang in contest.languages %}
                             <option value="{{ lang }}">{{ lang }}</option>
-{% end %}
+{% endfor %}
                         </select>
                     </div>
                 </div>
                 <div class="control-group">
                     <div class="controls">
-                        <button type="submit" class="btn btn-success">{{ _("Submit") }}</button>
-                        <button type="reset" class="btn">{{ _("Reset") }}</button>
+                        <button type="submit" class="btn btn-success">{% trans %}Submit{% endtrans %}</button>
+                        <button type="reset" class="btn">{% trans %}Reset{% endtrans %}</button>
                     </div>
                 </div>
             </fieldset>
         </form>
     </div>
-{% end %}
+{% endif %}
 </div>
 
 
-<h2 style="margin: 40px 0 10px">{{ _("Previous tests") }}</h2>
+<h2 style="margin: 40px 0 10px">{% trans %}Previous tests{% endtrans %}</h2>
 
-{% from cmscommon.datetime import utc %}
-{% set show_date = any(t.timestamp.replace(tzinfo=utc).astimezone(timezone).date() != now.replace(tzinfo=utc).astimezone(timezone).date() for t in user_tests[task.id]) %}
+{% set show_date = not user_tests[task.id]|map(attribute="timestamp")|all("today") %}
 
 
 <table class="user_test_list table table-bordered table-striped" data-task="{{ task.name }}">
@@ -178,7 +176,7 @@ $(document).ready(function () {
         <col class="datetime"/>
 {% else %}
         <col class="time"/>
-{% end %}
+{% endif %}
         <col class="status"/>
         <col class="time"/>
         <col class="memory"/>
@@ -189,30 +187,29 @@ $(document).ready(function () {
     <thead>
         <tr>
 {% if show_date %}
-            <th class="datetime">{{ _("Date and time") }}</th>
+            <th class="datetime">{% trans %}Date and time{% endtrans %}</th>
 {% else %}
-            <th class="time">{{ _("Time") }}</th>
-{% end %}
-            <th class="status">{{ _("Status") }}</th>
-            <th class="time">{{ _("Execution time") }}</th>
-            <th class="memory">{{ _("Memory used") }}</th>
-            <th class="input">{{ _("Input") }}</th>
-            <th class="output">{{ _("Output") }}</th>
-            <th class="files">{{ _("Files") }}</th>
+            <th class="time">{% trans %}Time{% endtrans %}</th>
+{% endif %}
+            <th class="status">{% trans %}Status{% endtrans %}</th>
+            <th class="time">{% trans %}Execution time{% endtrans %}</th>
+            <th class="memory">{% trans %}Memory used{% endtrans %}</th>
+            <th class="input">{% trans %}Input{% endtrans %}</th>
+            <th class="output">{% trans %}Output{% endtrans %}</th>
+            <th class="files">{% trans %}Files{% endtrans %}</th>
         </tr>
     </thead>
     <tbody>
-    {% if len(user_tests[task.id]) == 0 %}
-        <tr>
-            <td colspan="7" class="no_user_tests">{{ _("no tests yet") }}</td>
-        </tr>
+    {% for t in user_tests[task.id]|sort(attribute="timestamp")|reverse %}
+        {# loop.revindex is broken: https://github.com/pallets/jinja/issues/794 #}
+        {% set t_idx = user_tests[task.id]|length - loop.index0 %}
+        {% set tr = t.get_result(t.task.active_dataset) or undefined %}
+        {% include "user_test_row.html" %}
     {% else %}
-        {% for t_idx, t in enumerate(sorted(user_tests[task.id], key=lambda t: t.timestamp, reverse=True)) %}
-            {% set t_idx = len(user_tests[task.id]) - t_idx %}
-            {% set tr = t.get_result(t.task.active_dataset) %}
-            {% include user_test_row.html %}
-        {% end %}
-    {% end %}
+        <tr>
+            <td colspan="7" class="no_user_tests">{% trans %}no tests yet{% endtrans %}</td>
+        </tr>
+    {% endfor %}
     </tbody>
 </table>
 
@@ -220,23 +217,22 @@ $(document).ready(function () {
 
 
 </div>
-    {% end %}
-{% end %}
+    {% endif %}
+{% endfor %}
 </div>
 
 <div class="modal fade hide" id="user_test_detail">
     <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal">&#xD7;</button>
-        <h3>{{ _("Test details") }}</h3>
+        <h3>{% trans %}Test details{% endtrans %}</h3>
     </div>
     <div class="modal-body">
     </div>
     <div class="modal-footer">
-        <a href="#" class="btn" data-dismiss="modal">{{ _("Close") }}</a>
+        <a href="#" class="btn" data-dismiss="modal">{% trans %}Close{% endtrans %}</a>
     </div>
 </div>
 
 </div>
-{% end %}
 
-{% end %}
+{% endblock core %}

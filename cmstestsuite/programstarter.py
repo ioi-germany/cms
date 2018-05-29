@@ -25,8 +25,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 from six import itervalues
 
 import atexit
@@ -38,12 +38,12 @@ import os
 import signal
 import socket
 import subprocess
-import sys
 import threading
 import time
 from future.moves.urllib.parse import urlsplit
 
-from cmstestsuite import CONFIG, TestException
+from cmscommon.datetime import monotonic_time
+from cmstestsuite import CONFIG, TestException, coverage_cmdline
 from cmstestsuite.functionaltestframework import FunctionalTestFramework
 
 
@@ -99,9 +99,6 @@ class RemoteService(object):
 class Program(object):
     """An instance of a program, which might be running or not."""
 
-    _COVERAGE_CMDLINE = \
-        [sys.executable, "-m", "coverage", "run", "-p", "--source=cms"]
-
     def __init__(self, cms_config, service_name, shard=0, contest=None):
         self.cms_config = cms_config
         self.service_name = service_name
@@ -147,9 +144,17 @@ class Program(object):
         # If it didn't understand, use bad manners.
         self._check()
         if self.healthy:
-            logger.info("Killing %s/%s.", self.service_name, self.shard)
-            os.kill(self.instance.pid, signal.SIGINT)
-            self.instance.wait()
+            logger.info("Interrupting %s/%s.", self.service_name, self.shard)
+            self.instance.send_signal(signal.SIGINT)
+            # FIXME on py3 this becomes self.instance.wait(timeout=5)
+            t = monotonic_time()
+            while monotonic_time() - t < 5:
+                if self.instance.poll() is not None:
+                    break
+                time.sleep(0.1)
+            else:
+                logger.info("Killing %s/%s.", self.service_name, self.shard)
+                self.instance.kill()
 
     def _check_with_backoff(self):
         """Check and wait that the service is healthy."""
@@ -224,8 +229,8 @@ class Program(object):
         if CONFIG["VERBOSITY"] >= 1:
             logger.info("$ %s", " ".join(cmdline))
 
-        if CONFIG["TEST_DIR"] is not None and CONFIG.get("COVERAGE"):
-            cmdline = Program._COVERAGE_CMDLINE + cmdline
+        if CONFIG["TEST_DIR"] is not None:
+            cmdline = coverage_cmdline(cmdline)
 
         if CONFIG["VERBOSITY"] >= 3:
             stdout = None

@@ -33,14 +33,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 from six import iteritems
 
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
 import gevent.monkey
-gevent.monkey.patch_all()
+gevent.monkey.patch_all()  # noqa
 
 import argparse
 import io
@@ -50,7 +50,7 @@ import logging
 import os
 import sys
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy.types import \
     Boolean, Integer, Float, String, Unicode, DateTime, Interval, Enum
@@ -108,12 +108,16 @@ def decode_value(type_, value):
     """
     if value is None:
         return None
-    elif isinstance(type_, (Boolean, Integer, Float, Unicode, Enum, JSONB)):
+    elif isinstance(type_, (
+            Boolean, Integer, Float, String, Unicode, Enum, JSONB)):
         return value
-    elif isinstance(type_, String):
-        return value.encode('latin1')
     elif isinstance(type_, DateTime):
-        return make_datetime(value)
+        try:
+            return make_datetime(value)
+        except OverflowError:
+            logger.warning("The dump has a date too far in the future for "
+                           "your system. Changing to 2030-01-01.")
+            return datetime(2030, 1, 1)
     elif isinstance(type_, Interval):
         return timedelta(seconds=value)
     elif isinstance(type_, ARRAY):

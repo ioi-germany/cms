@@ -26,8 +26,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 from six import iterkeys, iteritems
 
 import logging
@@ -36,7 +36,7 @@ import signal
 import tempfile
 from functools import reduce
 
-from cms import config
+from cms import config, rmtree
 from cms.grading.Sandbox import wait_without_std, Sandbox
 from cms.grading import compilation_step, \
     human_evaluation_message, is_evaluation_passed, extract_outcome_and_text, \
@@ -48,7 +48,6 @@ from cms.grading.ParameterTypes import ParameterTypeChoice, ParameterTypeInt
 from cms.grading.TaskType import TaskType, \
     create_sandbox, delete_sandbox
 from cms.db import Executable
-from cms.io.GeventUtils import rmtree
 
 
 logger = logging.getLogger(__name__)
@@ -129,7 +128,10 @@ class Communication(TaskType):
         source_ext = language.source_extension
 
         # Create the sandbox
-        sandbox = create_sandbox(file_cacher, job.multithreaded_sandbox)
+        sandbox = create_sandbox(
+            file_cacher,
+            multithreaded=job.multithreaded_sandbox,
+            name="compile")
         job.sandboxes.append(sandbox.path)
 
         # Prepare the source files in the sandbox
@@ -196,9 +198,16 @@ class Communication(TaskType):
             num_processes = self.parameters[1]
         indices = range(num_processes)
         # Create sandboxes and FIFOs
-        sandbox_mgr = create_sandbox(file_cacher, job.multithreaded_sandbox)
-        sandbox_user = [create_sandbox(file_cacher, job.multithreaded_sandbox)
-                        for i in indices]
+        sandbox_mgr = create_sandbox(
+            file_cacher,
+            multithreaded=job.multithreaded_sandbox,
+            name="manager_evaluate")
+        sandbox_user = [
+            create_sandbox(
+                file_cacher,
+                multithreaded=job.multithreaded_sandbox,
+                name="user_evaluate")
+            for i in indices]
         fifo_dir = [tempfile.mkdtemp(dir=config.temp_dir) for i in indices]
         abortion_control_fifo_dir = tempfile.mkdtemp(dir=config.temp_dir)
         fifo_in = [os.path.join(fifo_dir[i], "in%d" % i) for i in indices]

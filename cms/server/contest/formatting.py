@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
@@ -27,23 +27,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
-
-from future.moves.urllib.parse import quote
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
 from cms.locale import DEFAULT_TRANSLATION
-
-
-# Dummy functions to mark strings for translation: N_ is a dummy for
-# gettext/_ and Nn_ is a dummy for ngettext/n_ (for plural forms).
-def N_(msgid):
-    pass
-
-
-# Some strings in templates that for some reason don't get included in cms.pot.
-N_("loading...")
-N_("unknown")
 
 
 def format_token_rules(tokens, t_type=None, translation=DEFAULT_TRANSLATION):
@@ -159,17 +146,3 @@ def get_score_class(score, max_score):
         return "score_100"
     else:
         return "score_0_100"
-
-
-def encode_for_url(url_fragment):
-    """Return the string encoded safely for becoming a url fragment.
-
-    In particular, this means encoding it to UTF-8 and then
-    percent-encoding it.
-
-    url_fragment(unicode): the string to be encoded.
-
-    return (str): the encoded string.
-
-    """
-    return quote(url_fragment.encode('utf-8'), safe='')

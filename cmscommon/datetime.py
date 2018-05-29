@@ -22,8 +22,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
 import os
 import time
@@ -37,7 +37,7 @@ __all__ = [
     "make_datetime", "make_timestamp",
     "get_timezone", "get_system_timezone",
 
-    "utc", "local",
+    "utc", "local_tz",
 
     "monotonic_time",
     ]
@@ -77,7 +77,7 @@ def make_timestamp(_datetime=None):
 
 
 utc = babel.dates.UTC
-local = babel.dates.LOCALTZ
+local_tz = babel.dates.LOCALTZ
 
 
 def get_timezone(user, contest):
@@ -99,7 +99,7 @@ def get_timezone(user, contest):
             return babel.dates.get_timezone(contest.timezone)
         except LookupError:
             pass
-    return local
+    return local_tz
 
 
 def get_system_timezone():
@@ -110,9 +110,9 @@ def get_system_timezone():
         "Europe/Rome", "CET", etc.
 
     """
-    if hasattr(local, 'zone'):
-        return local.zone
-    return local.tzname(make_datetime())
+    if hasattr(local_tz, 'zone'):
+        return local_tz.zone
+    return local_tz.tzname(make_datetime())
 
 
 if sys.version_info >= (3, 3):

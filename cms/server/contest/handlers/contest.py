@@ -34,8 +34,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 from six import iterkeys, iteritems
 
 import ipaddress
@@ -46,7 +46,7 @@ from datetime import timedelta
 import tornado.web
 from sqlalchemy.orm import contains_eager
 
-from cms import config
+from cms import config, TOKEN_MODE_MIXED
 from cms.db import Contest, Participation, User
 from cms.server import compute_actual_phase, file_handler_gen, \
     create_url_builder
@@ -304,24 +304,6 @@ class ContestHandler(BaseHandler):
 
         return participation
 
-    @staticmethod
-    def _get_token_status(obj):
-        """Return the status of the tokens for the given object.
-
-        obj (Contest or Task): an object that has the token_* attributes.
-        return (int): one of 0 (disabled), 1 (enabled/finite) and 2
-                      (enabled/infinite).
-
-        """
-        if obj.token_mode == "disabled":
-            return 0
-        elif obj.token_mode == "finite":
-            return 1
-        elif obj.token_mode == "infinite":
-            return 2
-        else:
-            raise RuntimeError("Unknown token_mode value.")
-
     def render_params(self):
         ret = super(ContestHandler, self).render_params()
 
@@ -342,6 +324,9 @@ class ContestHandler(BaseHandler):
         if self.current_user is not None:
             participation = self.current_user
             group = participation.group
+            ret["group"] = group
+            ret["participation"] = participation
+            ret["user"] = participation.user
 
             res = compute_actual_phase(
                 self.timestamp, group.start, group.stop,
@@ -363,15 +348,13 @@ class ContestHandler(BaseHandler):
             ret["timezone"] = get_timezone(participation.user, self.contest)
 
         # some information about token configuration
-        ret["tokens_contest"] = self._get_token_status(self.contest)
+        ret["tokens_contest"] = self.contest.token_mode
 
-        t_tokens = sum(self._get_token_status(t) for t in self.contest.tasks)
-        if t_tokens == 0:
-            ret["tokens_tasks"] = 0  # all disabled
-        elif t_tokens == 2 * len(self.contest.tasks):
-            ret["tokens_tasks"] = 2  # all infinite
+        t_tokens = set(t.token_mode for t in self.contest.tasks)
+        if len(t_tokens) == 1:
+            ret["tokens_tasks"] = next(iter(t_tokens))
         else:
-            ret["tokens_tasks"] = 1  # all finite or mixed
+            ret["tokens_tasks"] = TOKEN_MODE_MIXED
 
         return ret
 

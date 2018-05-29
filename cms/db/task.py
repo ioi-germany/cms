@@ -29,8 +29,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 from six import itervalues
 
 from datetime import timedelta
@@ -44,9 +44,11 @@ from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
+from cms import SCORE_MODE_MAX, SCORE_MODE_MAX_TOKENED_LAST, \
+    TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE
+
 from . import Base, Contest, CodenameConstraint, FilenameConstraint, \
     DigestConstraint
-from cms import SCORE_MODE_MAX, SCORE_MODE_MAX_TOKENED_LAST
 
 
 class Task(Base):
@@ -127,7 +129,8 @@ class Task(Base):
     #   contest instead.
     # - infinite: The user will always be able to use a token.
     token_mode = Column(
-        Enum("disabled", "finite", "infinite", name="token_mode"),
+        Enum(TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE,
+             name="token_mode"),
         nullable=False,
         default="disabled")
 

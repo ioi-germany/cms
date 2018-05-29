@@ -25,9 +25,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
+import os.path
 import unittest
 from datetime import datetime, timedelta
 
@@ -547,6 +548,9 @@ class TestFormatDecimal(unittest.TestCase):
 
 class TestTranslateMimetype(unittest.TestCase):
 
+    @unittest.skipIf(not os.path.isfile(
+        "/usr/share/locale/it/LC_MESSAGES/shared-mime-info.mo"),
+                     reason="need Italian shared-mime-info translation")
     def test_translate_mimetype(self):
         self.assertEqual(ENGLISH.translate_mimetype("PDF document"),
                          "PDF document")

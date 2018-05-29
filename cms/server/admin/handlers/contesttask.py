@@ -30,8 +30,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
 from cms.db import Contest, Task
 from cmscommon.datetime import make_datetime
@@ -52,8 +52,8 @@ class ContestTasksHandler(BaseHandler):
         self.r_params["contest"] = self.contest
         self.r_params["unassigned_tasks"] = \
             self.sql_session.query(Task)\
-                .filter(Task.contest == None)\
-                .all()  # noqa
+                .filter(Task.contest_id.is_(None))\
+                .all()
         self.render("contest_tasks.html", **self.r_params)
 
     @require_permission(BaseHandler.PERMISSION_ALL)

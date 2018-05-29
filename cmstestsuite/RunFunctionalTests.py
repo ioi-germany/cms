@@ -24,8 +24,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
 import argparse
 import io
@@ -35,7 +35,8 @@ import re
 import sys
 
 from cms import utf8_decoder
-from cmstestsuite import CONFIG, combine_coverage, sh
+from cmstestsuite import CONFIG,\
+    clear_coverage, combine_coverage, send_coverage_to_codecov
 from cmstestsuite.Tests import ALL_TESTS
 from testrunner import TestRunner
 
@@ -80,6 +81,8 @@ def load_test_list_from_file(filename):
             continue
 
         name, lang = bits
+        if lang == "None":
+            lang = None
 
         if name not in name_to_test_map:
             print("ERROR: %s:%d invalid test case: %s" %
@@ -171,6 +174,9 @@ def main():
     parser.add_argument(
         "-v", "--verbose", action="count", default=0,
         help="print debug information (use multiple times for more)")
+    parser.add_argument(
+        "--codecov", action="store_true",
+        help="send coverage results to Codecov")
     args = parser.parse_args()
 
     CONFIG["VERBOSITY"] = args.verbose
@@ -212,9 +218,7 @@ def main():
         logger.info(
             "Re-running %s failed tests from last run.", len(test_list))
 
-    # Clear out any old coverage data.
-    logging.info("Clearing old coverage data.")
-    sh([sys.executable, "-m", "coverage", "erase"])
+    clear_coverage()
 
     # Startup the test runner.
     runner = TestRunner(test_list, contest_id=args.contest, workers=4)
@@ -230,6 +234,9 @@ def main():
     runner.shutdown()
     runner.log_elapsed_time()
     combine_coverage()
+
+    if args.codecov:
+        send_coverage_to_codecov("functionaltests")
 
     logger.info("Executed: %s", tests)
     logger.info("Failed: %s", len(failures))

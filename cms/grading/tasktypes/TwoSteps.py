@@ -25,8 +25,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 from six import iteritems
 
 import logging
@@ -145,7 +145,10 @@ class TwoSteps(TaskType):
             return
 
         # First and only one compilation.
-        sandbox = create_sandbox(file_cacher, job.multithreaded_sandbox)
+        sandbox = create_sandbox(
+            file_cacher,
+            multithreaded=job.multithreaded_sandbox,
+            name="compile")
         job.sandboxes.append(sandbox.path)
         files_to_get = {}
 
@@ -204,8 +207,14 @@ class TwoSteps(TaskType):
     def evaluate(self, job, file_cacher):
         """See TaskType.evaluate."""
         # f stand for first, s for second.
-        first_sandbox = create_sandbox(file_cacher, job.multithreaded_sandbox)
-        second_sandbox = create_sandbox(file_cacher, job.multithreaded_sandbox)
+        first_sandbox = create_sandbox(
+            file_cacher,
+            multithreaded=job.multithreaded_sandbox,
+            name="first_evaluate")
+        second_sandbox = create_sandbox(
+            file_cacher,
+            multithreaded=job.multithreaded_sandbox,
+            name="second_evaluate")
         fifo_dir = tempfile.mkdtemp(dir=config.temp_dir)
         fifo = os.path.join(fifo_dir, "fifo")
         os.mkfifo(fifo)
@@ -360,7 +369,7 @@ class TwoSteps(TaskType):
                                         second_sandbox)
                                 except ValueError as e:
                                     logger.error("Invalid output from "
-                                                 "comparator: %s", e.message,
+                                                 "comparator: %s", e,
                                                  extra={"operation": job.info})
                                     success = False
                     else:

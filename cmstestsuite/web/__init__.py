@@ -26,17 +26,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 from six import itervalues, iteritems
 
 import datetime
 import io
-import os
 import sys
 import time
 import traceback
-import urllib
 
 import requests
 
@@ -79,6 +77,7 @@ class Browser(object):
                 data['_xsrf'] = self.xsrf_token
                 response = self.session.post(url, data)
         else:
+            file_objs = {}
             try:
                 data = data.copy()
                 data['_xsrf'] = self.xsrf_token

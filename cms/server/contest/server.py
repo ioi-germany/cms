@@ -42,12 +42,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
 import logging
-import pkg_resources
 
+from werkzeug.wsgi import SharedDataMiddleware
+
+from cms.server.contest.jinja2_toolbox import CWS_ENVIRONMENT
 from cmscommon.binary import hex_to_bin, bin_to_b64
 from cms import ConfigError, ServiceCoord, config
 from cms.io import WebService
@@ -55,11 +57,14 @@ from cms.db.filecacher import FileCacher
 from cms.locale import get_translations
 
 from .handlers import HANDLERS
-from .handlers.base import BaseHandler
+from .handlers.base import ContestListHandler
 from .handlers.main import MainHandler
 
 
 logger = logging.getLogger(__name__)
+
+
+SECONDS_IN_A_YEAR = 365 * 24 * 60 * 60
 
 
 class ContestWebServer(WebService):
@@ -68,8 +73,6 @@ class ContestWebServer(WebService):
     """
     def __init__(self, shard, contest_id=None):
         parameters = {
-            "template_path": pkg_resources.resource_filename(
-                "cms.server.contest", "templates"),
             "static_files": [("cms.server", "static"),
                              ("cms.server.contest", "static")],
             "cookie_secret": hex_to_bin(config.secret_key),
@@ -92,7 +95,7 @@ class ContestWebServer(WebService):
 
         if self.contest_id is None:
             HANDLERS.append((r"", MainHandler))
-            handlers = [(r'/', BaseHandler)]
+            handlers = [(r'/', ContestListHandler)]
             for h in HANDLERS:
                 handlers.append((r'/([^/]+)' + h[0],) + h[1:])
         else:
@@ -105,6 +108,13 @@ class ContestWebServer(WebService):
             parameters,
             shard=shard,
             listen_address=listen_address)
+
+        self.wsgi_app = SharedDataMiddleware(
+            self.wsgi_app, {"/stl": config.stl_path},
+            cache=True, cache_timeout=SECONDS_IN_A_YEAR,
+            fallback_mimetype="application/octet-stream")
+
+        self.jinja2_environment = CWS_ENVIRONMENT
 
         # This is a dictionary (indexed by username) of pending
         # notification. Things like "Yay, your submission went

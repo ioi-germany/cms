@@ -24,8 +24,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 from six import iteritems, with_metaclass
 
 import io
@@ -41,10 +41,8 @@ from functools import wraps, partial
 
 import gevent
 from gevent import subprocess
-#import gevent_subprocess as subprocess
 
-from cms import config
-from cms.io.GeventUtils import copyfileobj, rmtree
+from cms import config, rmtree
 from cmscommon.commands import pretty_print_cmdline
 from cmscommon.datetime import monotonic_time
 
@@ -200,19 +198,22 @@ class SandboxBase(with_metaclass(ABCMeta, object)):
     EXIT_SYSCALL = 'syscall'
     EXIT_NONZERO_RETURN = 'nonzero return'
 
-    def __init__(self, multithreaded, file_cacher, temp_dir=None):
+    def __init__(self, multithreaded, file_cacher, name=None, temp_dir=None):
         """Initialization.
 
         multithreaded (boolean): whether the sandbox should allow
             multithreading.
         file_cacher (FileCacher): an instance of the FileCacher class
             (to interact with FS), if the sandbox needs it.
+        name (string|None): name of the sandbox, which might appear in the
+            path and in system logs.
         temp_dir (unicode|None): temporary directory to use; if None, use the
             default temporary directory specified in the configuration.
 
         """
         self.multithreaded = multithreaded
         self.file_cacher = file_cacher
+        self.name = name if name is not None else "unnamed"
         self.temp_dir = temp_dir if temp_dir is not None else config.temp_dir
 
         self.cmd_file = "commands.log"
@@ -386,19 +387,6 @@ class SandboxBase(with_metaclass(ABCMeta, object)):
         file_.write(content)
         file_.close()
 
-    def create_file_from_fileobj(self, path, file_obj, executable=False):
-        """Write a file in the sandbox copying the content of an open
-        file-like object.
-
-        path (string): relative path of the file inside the sandbox.
-        file_obj (file): where from read the file content.
-        executable (bool): to set permissions.
-
-        """
-        dest = self.create_file(path, executable)
-        copyfileobj(file_obj, dest)
-        dest.close()
-
     def get_file(self, path, trunc_len=None):
         """Open a file in the sandbox given its relative path.
 
@@ -542,16 +530,18 @@ class StupidSandbox(SandboxBase):
 
     """
 
-    def __init__(self, multithreaded, file_cacher, temp_dir=None):
+    def __init__(self, multithreaded, file_cacher, name=None, temp_dir=None):
         """Initialization.
 
         For arguments documentation, see SandboxBase.__init__.
 
         """
-        SandboxBase.__init__(self, multithreaded, file_cacher, temp_dir)
+        SandboxBase.__init__(self, multithreaded, file_cacher, name, temp_dir)
 
         # Make box directory
-        self.path = tempfile.mkdtemp(dir=self.temp_dir)
+        self.path = tempfile.mkdtemp(
+            dir=self.temp_dir,
+            prefix="cms-%s-" % (self.name))
 
         self.exec_num = -1
         self.popen = None
@@ -868,13 +858,13 @@ class IsolateSandbox(SandboxBase):
     # on the current directory.
     SECURE_COMMANDS = ["/bin/cp", "/bin/mv", "/usr/bin/zip", "/usr/bin/unzip"]
 
-    def __init__(self, multithreaded, file_cacher, temp_dir=None):
+    def __init__(self, multithreaded, file_cacher, name=None, temp_dir=None):
         """Initialization.
 
         For arguments documentation, see SandboxBase.__init__.
 
         """
-        SandboxBase.__init__(self, multithreaded, file_cacher, temp_dir)
+        SandboxBase.__init__(self, multithreaded, file_cacher, name, temp_dir)
 
         # Isolate only accepts ids between 0 and 99. We assign the
         # range [(shard+1)*10, (shard+2)*10) to each Worker and keep
@@ -897,7 +887,9 @@ class IsolateSandbox(SandboxBase):
         # system to, which is why the outer directory exists with no read
         # permissions.
         self.inner_temp_dir = "/tmp"
-        self.outer_temp_dir = tempfile.mkdtemp(dir=self.temp_dir)
+        self.outer_temp_dir = tempfile.mkdtemp(
+            dir=self.temp_dir,
+            prefix="cms-%s-" % (self.name))
         # Don't use os.path.join here, because the absoluteness of /tmp will
         # bite you.
         self.path = self.outer_temp_dir + self.inner_temp_dir

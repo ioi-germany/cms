@@ -22,8 +22,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 
 import json
 import os
@@ -163,9 +163,12 @@ class Test(object):
         path = os.path.join(os.path.dirname(__file__), 'code')
 
         # Choose the correct file to submit.
-        filenames = [
-            filename.replace(".%l", get_language(language).source_extension)
-            for filename in self.filenames]
+        if language is not None:
+            ext = get_language(language).source_extension
+            filenames = [filename.replace(".%l", ext)
+                         for filename in self.filenames]
+        else:
+            filenames = self.filenames
 
         full_paths = [os.path.join(path, filename) for filename in filenames]
 

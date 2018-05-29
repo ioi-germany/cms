@@ -33,8 +33,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
+from future.builtins.disabled import *  # noqa
+from future.builtins import *  # noqa
 from six import itervalues
 
 from datetime import timedelta
@@ -45,9 +45,10 @@ from sqlalchemy.types import Integer, Unicode, DateTime, Interval, Enum, \
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.dialects.postgresql import ARRAY
 
-from . import Base, CodenameConstraint
-
 from cmscommon.datetime import make_datetime
+from cms import TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE
+
+from . import Base, CodenameConstraint
 
 
 class Contest(Base):
@@ -147,7 +148,8 @@ class Contest(Base):
     #   contest instead.
     # - infinite: The user will always be able to use a token.
     token_mode = Column(
-        Enum("disabled", "finite", "infinite", name="token_mode"),
+        Enum(TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE,
+             name="token_mode"),
         nullable=False,
         default="infinite")
 
