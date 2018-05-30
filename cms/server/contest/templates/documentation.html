@@ -36,7 +36,7 @@
     {% for message in COMPILATION_MESSAGES.all() %}
     <tr>
       <td><em>{{ _(message.message) }}</em></td>
-      <td>{{ _(message.help) }}</td>
+      <td>{{ _(message.help_text) }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -55,7 +55,7 @@
     {% for message in EVALUATION_MESSAGES.all() %}
     <tr>
       <td><em>{{ _(message.message) }}</em></td>
-      <td>{{ _(message.help) }}</td>
+      <td>{{ _(message.help_text) }}</td>
     </tr>
     {% endfor %}
   </tbody>

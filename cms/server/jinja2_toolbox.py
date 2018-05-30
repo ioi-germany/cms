@@ -35,15 +35,14 @@ from six import iterkeys, itervalues, iteritems
 from jinja2 import Environment, StrictUndefined, contextfilter, \
     contextfunction, environmentfunction
 
+from cms.db import SubmissionResult, UserTestResult
 from cmscommon.datetime import make_datetime, make_timestamp, utc, local_tz
 from cmscommon.mimetypes import get_type_for_file_name, get_name_for_type, \
     get_icon_for_type
 from cms import TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE, \
-    TOKEN_MODE_MIXED
+    TOKEN_MODE_MIXED, SCORE_MODE_MAX_TOKENED_LAST, SCORE_MODE_MAX
 from cms.grading import format_status_text
 from cms.grading.languagemanager import get_language
-from cms.grading.scoretypes import get_score_type
-from cms.grading.tasktypes import get_task_type
 from cms.locale import DEFAULT_TRANSLATION
 
 
@@ -150,6 +149,13 @@ def instrument_generic_toolbox(env):
     env.globals["iteritems"] = iteritems
     env.globals["next"] = next
 
+    # Needed for some constants.
+    env.globals["SubmissionResult"] = SubmissionResult
+    env.globals["UserTestResult"] = UserTestResult
+
+    env.globals["SCORE_MODE_MAX"] = SCORE_MODE_MAX
+    env.globals["SCORE_MODE_MAX_TOKENED_LAST"] = SCORE_MODE_MAX_TOKENED_LAST
+
     env.globals["TOKEN_MODE_DISABLED"] = TOKEN_MODE_DISABLED
     env.globals["TOKEN_MODE_FINITE"] = TOKEN_MODE_FINITE
     env.globals["TOKEN_MODE_INFINITE"] = TOKEN_MODE_INFINITE
@@ -166,22 +172,26 @@ def instrument_generic_toolbox(env):
     env.tests["today"] = today
 
 
+# TODO When dropping py2, let the arguments be `env, *, dataset` in
+# order to force the users to pass the dataset as a keyword argument.
 @environmentfunction
-def safe_get_task_type(env, *args, **kwargs):
+def safe_get_task_type(env, dataset):
     try:
-        return get_task_type(*args, **kwargs)
+        return dataset.task_type_object
     # The task type's constructor is called, which may raise any
-    # arbitrary exception, hence we stay as general al possible.
+    # arbitrary exception, hence we stay as general as possible.
     except Exception as err:
         return env.undefined("TaskType not found: %s" % err)
 
 
+# TODO When dropping py2, let the arguments be `env, *, dataset` in
+# order to force the users to pass the dataset as a keyword argument.
 @environmentfunction
-def safe_get_score_type(env, *args, **kwargs):
+def safe_get_score_type(env, dataset):
     try:
-        return get_score_type(*args, **kwargs)
+        return dataset.score_type_object
     # The score type's constructor is called, which may raise any
-    # arbitrary exception, hence we stay as general al possible.
+    # arbitrary exception, hence we stay as general as possible.
     except Exception as err:
         return env.undefined("ScoreType not found: %s" % err)
 
@@ -244,6 +254,12 @@ def format_decimal(ctx, n):
 
 
 @contextfilter
+def format_locale(ctx, n):
+    translation = ctx.get("translation", DEFAULT_TRANSLATION)
+    return translation.format_locale(n)
+
+
+@contextfilter
 def wrapped_format_status_text(ctx, status_text):
     translation = ctx.get("translation", DEFAULT_TRANSLATION)
     return format_status_text(status_text, translation=translation)
@@ -257,6 +273,7 @@ def instrument_formatting_toolbox(env):
     env.filters["format_duration"] = format_duration
     env.filters["format_size"] = format_size
     env.filters["format_decimal"] = format_decimal
+    env.filters["format_locale"] = format_locale
 
     env.filters["format_status_text"] = wrapped_format_status_text
 

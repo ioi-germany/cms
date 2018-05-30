@@ -98,13 +98,14 @@ $(document).ready(function () {
         <form class="form-horizontal" enctype="multipart/form-data" action="{{ contest_url("tasks", task.name, "test") }}" method="POST">
             {{ xsrf_form_html|safe }}
             <fieldset>
-{% for filename in task.submission_format|map(attribute="filename")|list + task_type.get_user_managers(task.submission_format) %}
+{% for filename in task.submission_format + task_type.get_user_managers() %}
                 <div class="control-group">
                     <label class="control-label" for="input{{ loop.index0 }}">{{ filename|replace(".%l", "") }}</label>
                     <div class="controls">
                         <input type="file" class="input-xlarge"
                                id="input{{ loop.index0 }}" name="{{ filename }}"
-                               onchange="CMS.CWSUtils.filter_languages($('#language option'), $(this).parents('fieldset').find('input[type=file]').not('#input_file'))"/>
+                               onchange="CMS.CWSUtils.filter_languages($(this).parents('form').find('select[name=language] option'),
+                                                                       $(this).parents('form').find('input[type=file]').not('#input_file'))"/>
                     </div>
                 </div>
 {% endfor %}
@@ -116,7 +117,7 @@ $(document).ready(function () {
                 </div>
                 <div class="control-group">
                     <div class="controls">
-                        <select id="language" name="language">
+                        <select name="language">
 {% for lang in contest.languages %}
                             <option value="{{ lang }}">{{ lang }}</option>
 {% endfor %}
@@ -132,7 +133,7 @@ $(document).ready(function () {
             </fieldset>
         </form>
     </div>
-{% if not task.submission_format|map(attribute="filename")|any("endswith", ".%l") %}
+{% if not (task.submission_format + task_type.get_user_managers())|any("endswith", ".%l") %}
     <div class="span4">
         <form class="form-horizontal" enctype="multipart/form-data" action="{{ contest_url("tasks", task.name, "test") }}" method="POST">
             {{ xsrf_form_html|safe }}
@@ -141,15 +142,6 @@ $(document).ready(function () {
                     <label class="control-label" for="input_zip">{% trans %}submission.zip{% endtrans %}</label>
                     <div class="controls">
                         <input type="file" class="input-xlarge" id="input_zip" name="submission"/>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <div class="controls">
-                        <select id="zip_language" name="language">
-{% for lang in contest.languages %}
-                            <option value="{{ lang }}">{{ lang }}</option>
-{% endfor %}
-                        </select>
                     </div>
                 </div>
                 <div class="control-group">

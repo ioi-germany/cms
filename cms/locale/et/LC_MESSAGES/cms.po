@@ -21,7 +21,7 @@ msgstr ""
 msgid "Compilation succeeded"
 msgstr "Kompileerimine õnnestus"
 
-msgid "Your submission successfully compiled to an excutable."
+msgid "Your submission successfully compiled to an executable."
 msgstr ""
 
 msgid "Compilation failed"
@@ -43,7 +43,7 @@ msgid ""
 "Compilation killed with signal %s (could be triggered by violating memory "
 "limits)"
 msgstr ""
-"Kompileerimine katkes signaali %d tagajärjel (võib olla tingitud "
+"Kompileerimine katkes signaali %s tagajärjel (võib olla tingitud "
 "mälupiirangute ületamisest) "
 
 msgid ""
@@ -109,24 +109,6 @@ msgid ""
 "before the allocation that caused the signal."
 msgstr ""
 
-#, python-format
-msgid "Execution killed because of forbidden syscall %s"
-msgstr ""
-"Programmi täitmine peatatud keelatud süsteemifunktsiooni %s kasutamise tõttu"
-
-msgid ""
-"Your submission was killed because it tried to use the forbidden syscall "
-"specified in the message."
-msgstr ""
-
-msgid "Execution killed because of forbidden file access"
-msgstr "Programmi täitmine peatatud lubamatu failipöörduse tõttu"
-
-msgid ""
-"Your submission was killed because it tried to read or write a forbidden "
-"file."
-msgstr ""
-
 msgid "Execution failed because the return code was nonzero"
 msgstr "Programmi täitmine ebaõnnestus, nullist erinev veakood"
 
@@ -141,8 +123,8 @@ msgid "Score details temporarily unavailable."
 msgstr ""
 
 #, python-format
-msgid "Subtask %d"
-msgstr "Alamülesanne %d"
+msgid "Subtask %(index)s"
+msgstr "Alamülesanne %(index)s"
 
 msgid "Outcome"
 msgstr "Tulemus"

@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2015 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
@@ -64,6 +64,7 @@ class DatasetSubmissionsHandler(BaseHandler):
     def get(self, dataset_id):
         dataset = self.safe_get_item(Dataset, dataset_id)
         task = dataset.task
+        self.contest = task.contest
 
         submission_query = self.sql_session.query(Submission)\
             .filter(Submission.task == task)
@@ -94,6 +95,7 @@ class CloneDatasetHandler(BaseHandler):
     def get(self, dataset_id_to_copy):
         dataset = self.safe_get_item(Dataset, dataset_id_to_copy)
         task = self.safe_get_item(Task, dataset.task_id)
+        self.contest = task.contest
 
         try:
             original_dataset = \
@@ -184,6 +186,7 @@ class RenameDatasetHandler(BaseHandler):
     def get(self, dataset_id):
         dataset = self.safe_get_item(Dataset, dataset_id)
         task = dataset.task
+        self.contest = task.contest
 
         self.r_params = self.render_params()
         self.r_params["task"] = task
@@ -225,6 +228,7 @@ class DeleteDatasetHandler(BaseHandler):
     def get(self, dataset_id):
         dataset = self.safe_get_item(Dataset, dataset_id)
         task = dataset.task
+        self.contest = task.contest
 
         self.r_params = self.render_params()
         self.r_params["task"] = task
@@ -252,6 +256,7 @@ class ActivateDatasetHandler(BaseHandler):
     def get(self, dataset_id):
         dataset = self.safe_get_item(Dataset, dataset_id)
         task = dataset.task
+        self.contest = task.contest
 
         changes = compute_changes_for_dataset(task.active_dataset, dataset)
         notify_participations = set()
@@ -347,6 +352,7 @@ class AddManagerHandler(BaseHandler):
     def get(self, dataset_id):
         dataset = self.safe_get_item(Dataset, dataset_id)
         task = dataset.task
+        self.contest = task.contest
 
         self.r_params = self.render_params()
         self.r_params["task"] = task
@@ -418,6 +424,7 @@ class AddTestcaseHandler(BaseHandler):
     def get(self, dataset_id):
         dataset = self.safe_get_item(Dataset, dataset_id)
         task = dataset.task
+        self.contest = task.contest
 
         self.r_params = self.render_params()
         self.r_params["task"] = task
@@ -489,6 +496,7 @@ class AddTestcasesHandler(BaseHandler):
     def get(self, dataset_id):
         dataset = self.safe_get_item(Dataset, dataset_id)
         task = dataset.task
+        self.contest = task.contest
 
         self.r_params = self.render_params()
         self.r_params["task"] = task
@@ -575,6 +583,7 @@ class DownloadTestcasesHandler(BaseHandler):
     def get(self, dataset_id):
         dataset = self.safe_get_item(Dataset, dataset_id)
         task = dataset.task
+        self.contest = task.contest
 
         self.r_params = self.render_params()
         self.r_params["task"] = task
@@ -614,10 +623,10 @@ class DownloadTestcasesHandler(BaseHandler):
         with zipfile.ZipFile(temp_file, "w") as zip_file:
             for testcase in itervalues(dataset.testcases):
                 # Get input, output file path
-                input_path = self.service.file_cacher.\
-                    get_file(testcase.input).name
-                output_path = self.service.file_cacher.\
-                    get_file(testcase.output).name
+                with self.service.file_cacher.get_file(testcase.input) as f:
+                    input_path = f.name
+                with self.service.file_cacher.get_file(testcase.output) as f:
+                    output_path = f.name
                 zip_file.write(
                     input_path, input_template % testcase.codename)
                 zip_file.write(

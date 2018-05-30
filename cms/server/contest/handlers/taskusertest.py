@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
@@ -35,34 +35,32 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
-from six import iterkeys, itervalues, iteritems
 
-import io
 import logging
-import os
-import pickle
 import re
 
 import tornado.web
 
-from sqlalchemy import func
-
 from cms import config
-from cms.db import Task, UserTest, UserTestFile, UserTestManager, \
-    UserTestResult
+from cms.db import UserTest, UserTestResult
 from cms.grading.languagemanager import get_language
-from cms.grading.tasktypes import get_task_type
-from cms.server import actual_phase_required, multi_contest
-from cmscommon.archive import Archive
+from cms.server import multi_contest
+from cms.server.contest.submission import get_submission_count, \
+    TestingNotAllowed, UnacceptableUserTest, accept_user_test
 from cmscommon.crypto import encrypt_number
-from cmscommon.datetime import make_timestamp
 from cmscommon.mimetypes import get_type_for_file_name
 
-from .contest import ContestHandler, FileHandler, NOTIFICATION_ERROR, \
-    NOTIFICATION_SUCCESS
+from ..phase_management import actual_phase_required
+
+from .contest import ContestHandler, FileHandler
 
 
 logger = logging.getLogger(__name__)
+
+
+# Dummy function to mark translatable strings.
+def N_(msgid):
+    return msgid
 
 
 class UserTestInterfaceHandler(ContestHandler):
@@ -84,11 +82,9 @@ class UserTestInterfaceHandler(ContestHandler):
 
         user_tests_left_contest = None
         if self.contest.max_user_test_number is not None:
-            user_test_c = self.sql_session.query(func.count(UserTest.id))\
-                .join(UserTest.task)\
-                .filter(Task.contest == self.contest)\
-                .filter(UserTest.participation == participation)\
-                .scalar()
+            user_test_c = \
+                get_submission_count(self.sql_session, participation,
+                                     contest=self.contest, cls=UserTest)
             user_tests_left_contest = \
                 self.contest.max_user_test_number - user_test_c
 
@@ -120,7 +116,6 @@ class UserTestInterfaceHandler(ContestHandler):
 
         self.render("test_interface.html", default_task=default_task,
                     user_tests=user_tests, user_tests_left=user_tests_left,
-                    UserTestResult=UserTestResult,
                     **self.r_params)
 
 
@@ -128,315 +123,46 @@ class UserTestHandler(ContestHandler):
 
     refresh_cookie = False
 
-    # The following code has been taken from SubmitHandler and adapted
-    # for UserTests.
-
-    def _send_error(self, subject, text):
-        """Shorthand for sending a notification and redirecting."""
-        logger.warning("Sent error: `%s' - `%s'", subject, text)
-        self.service.add_notification(
-            self.current_user.user.username,
-            self.timestamp,
-            subject,
-            text,
-            NOTIFICATION_ERROR)
-        self.redirect(self.contest_url(*self.fallback_page,
-                                       **self.fallback_args))
-
     @tornado.web.authenticated
     @actual_phase_required(0)
     @multi_contest
     def post(self, task_name):
-        participation = self.current_user
-
         if not self.r_params["testing_enabled"]:
             raise tornado.web.HTTPError(404)
 
-        try:
-            task = self.contest.get_task(task_name)
-        except KeyError:
+        task = self.get_task(task_name)
+        if task is None:
             raise tornado.web.HTTPError(404)
 
-        self.fallback_page = ["testing"]
-        self.fallback_args = {"task_name": task.name}
+        query_args = dict()
 
-        # Check that the task is testable
-        task_type = get_task_type(dataset=task.active_dataset)
-        if not task_type.testable:
+        try:
+            user_test = accept_user_test(
+                self.sql_session, self.service.file_cacher, self.current_user,
+                task, self.timestamp, self.request.files,
+                self.get_argument("language", None))
+            self.sql_session.commit()
+        except TestingNotAllowed:
             logger.warning("User %s tried to make test on task %s.",
-                           participation.user.username, task_name)
+                           self.current_user.user.username, task_name)
             raise tornado.web.HTTPError(404)
+        except UnacceptableUserTest as e:
+            logger.info("Sent error: `%s' - `%s'", e.subject, e.text)
+            self.notify_error(e.subject, e.text)
+        else:
+            self.service.evaluation_service.new_user_test(
+                user_test_id=user_test.id)
+            self.notify_success(N_("Test received"),
+                                N_("Your test has been received "
+                                   "and is currently being executed."))
+            # The argument (encrypted user test id) is not used by CWS
+            # (nor it discloses information to the user), but it is
+            # useful for automatic testing to obtain the user test id).
+            query_args["user_test_id"] = \
+                encrypt_number(user_test.id, config.secret_key)
 
-        # Alias for easy access
-        contest = self.contest
-
-        # Enforce maximum number of user_tests
-        try:
-            if contest.max_user_test_number is not None:
-                user_test_c = self.sql_session.query(func.count(UserTest.id))\
-                    .join(UserTest.task)\
-                    .filter(Task.contest == contest)\
-                    .filter(UserTest.participation == participation)\
-                    .scalar()
-                if user_test_c >= contest.max_user_test_number and \
-                        not self.current_user.unrestricted:
-                    raise ValueError(
-                        self._("You have reached the maximum limit of "
-                               "at most %d tests among all tasks.") %
-                        contest.max_user_test_number)
-            if task.max_user_test_number is not None:
-                user_test_t = self.sql_session.query(func.count(UserTest.id))\
-                    .filter(UserTest.task == task)\
-                    .filter(UserTest.participation == participation)\
-                    .scalar()
-                if user_test_t >= task.max_user_test_number and \
-                        not self.current_user.unrestricted:
-                    raise ValueError(
-                        self._("You have reached the maximum limit of "
-                               "at most %d tests on this task.") %
-                        task.max_user_test_number)
-        except ValueError as error:
-            self._send_error(self._("Too many tests!"), str(error))
-            return
-
-        # Enforce minimum time between user_tests
-        try:
-            if contest.min_user_test_interval is not None:
-                last_user_test_c = self.sql_session.query(UserTest)\
-                    .join(UserTest.task)\
-                    .filter(Task.contest == contest)\
-                    .filter(UserTest.participation == participation)\
-                    .order_by(UserTest.timestamp.desc())\
-                    .first()
-                if last_user_test_c is not None and \
-                        self.timestamp - last_user_test_c.timestamp < \
-                        contest.min_user_test_interval and \
-                        not self.current_user.unrestricted:
-                    raise ValueError(
-                        self._("Among all tasks, you can test again "
-                               "after %d seconds from last test.") %
-                        contest.min_user_test_interval.total_seconds())
-            # We get the last user_test even if we may not need it
-            # for min_user_test_interval because we may need it later,
-            # in case this is a ALLOW_PARTIAL_SUBMISSION task.
-            last_user_test_t = self.sql_session.query(UserTest)\
-                .filter(UserTest.participation == participation)\
-                .filter(UserTest.task == task)\
-                .order_by(UserTest.timestamp.desc())\
-                .first()
-            if task.min_user_test_interval is not None:
-                if last_user_test_t is not None and \
-                        self.timestamp - last_user_test_t.timestamp < \
-                        task.min_user_test_interval and \
-                        not self.current_user.unrestricted:
-                    raise ValueError(
-                        self._("For this task, you can test again "
-                               "after %d seconds from last test.") %
-                        task.min_user_test_interval.total_seconds())
-        except ValueError as error:
-            self._send_error(self._("Tests too frequent!"), str(error))
-            return
-
-        # Required files from the user.
-        required = set([sfe.filename for sfe in task.submission_format] +
-                       task_type.get_user_managers(task.submission_format) +
-                       ["input"])
-
-        # Ensure that the user did not submit multiple files with the
-        # same name.
-        if any(len(filename) != 1 for filename in itervalues(self.request.files)):
-            self._send_error(
-                self._("Invalid test format!"),
-                self._("Please select the correct files."))
-            return
-
-        # If the user submitted an archive, extract it and use content
-        # as request.files. But only valid for "output only" (i.e.,
-        # not for submissions requiring a programming language
-        # identification).
-        if len(self.request.files) == 1 and \
-                next(iterkeys(self.request.files)) == "submission":
-            if any(filename.endswith(".%l") for filename in required):
-                self._send_error(
-                    self._("Invalid test format!"),
-                    self._("Please select the correct files."),
-                    task)
-                return
-            archive_data = self.request.files["submission"][0]
-            del self.request.files["submission"]
-
-            # Create the archive.
-            archive = Archive.from_raw_data(archive_data["body"])
-
-            if archive is None:
-                self._send_error(
-                    self._("Invalid archive format!"),
-                    self._("The submitted archive could not be opened."))
-                return
-
-            # Extract the archive.
-            unpacked_dir = archive.unpack()
-            for name in archive.namelist():
-                filename = os.path.basename(name)
-                body = open(os.path.join(unpacked_dir, filename), "r").read()
-                self.request.files[filename] = [{
-                    'filename': filename,
-                    'body': body
-                }]
-
-            archive.cleanup()
-
-        # This ensure that the user sent one file for every name in
-        # submission format and no more. Less is acceptable if task
-        # type says so.
-        provided = set(iterkeys(self.request.files))
-        if not (required == provided or (task_type.ALLOW_PARTIAL_SUBMISSION
-                                         and required.issuperset(provided))):
-            self._send_error(
-                self._("Invalid test format!"),
-                self._("Please select the correct files."))
-            return
-
-        # Add submitted files. After this, files is a dictionary indexed
-        # by *our* filenames (something like "output01.txt" or
-        # "taskname.%l", and whose value is a couple
-        # (user_assigned_filename, content).
-        files = {}
-        for uploaded, data in iteritems(self.request.files):
-            files[uploaded] = (data[0]["filename"], data[0]["body"])
-
-        # Read the submission language provided in the request; we
-        # integrate it with the language fetched from the previous
-        # submission (if we use it) and later make sure it is
-        # recognized and allowed.
-        submission_lang = self.get_argument("language", None)
-        need_lang = any(our_filename.find(".%l") != -1
-                        for our_filename in files)
-
-        # If we allow partial submissions, implicitly we recover the
-        # non-submitted files from the previous user test. And put them
-        # in file_digests (i.e. like they have already been sent to FS).
-        file_digests = {}
-        if task_type.ALLOW_PARTIAL_SUBMISSION and \
-                last_user_test_t is not None and \
-                (submission_lang is None or
-                 submission_lang == last_user_test_t.language):
-            submission_lang = last_user_test_t.language
-            for filename in required.difference(provided):
-                if filename in last_user_test_t.files:
-                    file_digests[filename] = \
-                        last_user_test_t.files[filename].digest
-
-        # Throw an error if task needs a language, but we don't have
-        # it or it is not allowed / recognized.
-        if need_lang:
-            error = None
-            if submission_lang is None:
-                error = self._("Cannot recognize the user test language.")
-            elif submission_lang not in contest.languages:
-                error = self._("Language %s not allowed in this contest.") \
-                    % submission_lang
-        if error is not None:
-            self._send_error(self._("Invalid test!"), error)
-            return
-
-        # Check if submitted files are small enough.
-        if any([len(f[1]) > config.max_submission_length
-                for n, f in iteritems(files) if n != "input"]):
-            self._send_error(
-                self._("Test too big!"),
-                self._("Each source file must be at most %d bytes long.") %
-                config.max_submission_length)
-            return
-        if len(files["input"][1]) > config.max_input_length:
-            self._send_error(
-                self._("Input too big!"),
-                self._("The input file must be at most %d bytes long.") %
-                config.max_input_length)
-            return
-
-        # All checks done, submission accepted.
-
-        # Attempt to store the submission locally to be able to
-        # recover a failure.
-        if config.tests_local_copy:
-            try:
-                path = os.path.join(
-                    config.tests_local_copy_path.replace("%s",
-                                                         config.data_dir),
-                    participation.user.username)
-                if not os.path.exists(path):
-                    os.makedirs(path)
-                # Pickle in ASCII format produces str, not unicode,
-                # therefore we open the file in binary mode.
-                with io.open(
-                        os.path.join(path,
-                                     "%d" % make_timestamp(self.timestamp)),
-                        "wb") as file_:
-                    pickle.dump((self.contest.id,
-                                 participation.user.id,
-                                 task.id,
-                                 files), file_)
-            except Exception as error:
-                logger.error("Test local copy failed.", exc_info=True)
-
-        # We now have to send all the files to the destination...
-        try:
-            for filename in files:
-                digest = self.service.file_cacher.put_file_content(
-                    files[filename][1],
-                    "Test file %s sent by %s at %d." % (
-                        filename, participation.user.username,
-                        make_timestamp(self.timestamp)))
-                file_digests[filename] = digest
-
-        # In case of error, the server aborts the submission
-        except Exception as error:
-            logger.error("Storage failed! %s", error)
-            self._send_error(
-                self._("Test storage failed!"),
-                self._("Please try again."))
-            return
-
-        # All the files are stored, ready to submit!
-        logger.info("All files stored for test sent by %s",
-                    participation.user.username)
-        user_test = UserTest(self.timestamp,
-                             submission_lang,
-                             file_digests["input"],
-                             participation=participation,
-                             task=task)
-
-        for filename in [sfe.filename for sfe in task.submission_format]:
-            digest = file_digests[filename]
-            self.sql_session.add(
-                UserTestFile(filename, digest, user_test=user_test))
-        for filename in task_type.get_user_managers(task.submission_format):
-            digest = file_digests[filename]
-            if submission_lang is not None:
-                extension = get_language(submission_lang).source_extension
-                filename = filename.replace(".%l", extension)
-            self.sql_session.add(
-                UserTestManager(filename, digest, user_test=user_test))
-
-        self.sql_session.add(user_test)
-        self.sql_session.commit()
-        self.service.evaluation_service.new_user_test(
-            user_test_id=user_test.id)
-        self.service.add_notification(
-            participation.user.username,
-            self.timestamp,
-            self._("Test received"),
-            self._("Your test has been received "
-                   "and is currently being executed."),
-            NOTIFICATION_SUCCESS)
-
-        # The argument (encripted user test id) is not used by CWS
-        # (nor it discloses information to the user), but it is useful
-        # for automatic testing to obtain the user test id).
-        self.redirect(self.contest_url(
-            *self.fallback_page, user_test_id=encrypt_number(user_test.id),
-            **self.fallback_args))
+        self.redirect(self.contest_url("testing", task_name=task.name,
+                                       **query_args))
 
 
 class UserTestStatusHandler(ContestHandler):
@@ -447,53 +173,48 @@ class UserTestStatusHandler(ContestHandler):
     @actual_phase_required(0)
     @multi_contest
     def get(self, task_name, user_test_num):
-        participation = self.current_user
-
         if not self.r_params["testing_enabled"]:
             raise tornado.web.HTTPError(404)
 
-        try:
-            task = self.contest.get_task(task_name)
-        except KeyError:
+        task = self.get_task(task_name)
+        if task is None:
             raise tornado.web.HTTPError(404)
 
-        user_test = self.sql_session.query(UserTest)\
-            .filter(UserTest.participation == participation)\
-            .filter(UserTest.task == task)\
-            .order_by(UserTest.timestamp)\
-            .offset(int(user_test_num) - 1)\
-            .first()
+        user_test = self.get_user_test(task, user_test_num)
         if user_test is None:
             raise tornado.web.HTTPError(404)
 
         ur = user_test.get_result(task.active_dataset)
-
-        # TODO: use some kind of constants to refer to the status.
         data = dict()
-        if ur is None or not ur.compiled():
-            data["status"] = 1
+
+        if ur is None:
+            data["status"] = UserTestResult.COMPILING
+        else:
+            data["status"] = ur.get_status()
+
+        if data["status"] == UserTestResult.COMPILING:
             data["status_text"] = self._("Compiling...")
-        elif ur.compilation_failed():
-            data["status"] = 2
+        elif data["status"] == UserTestResult.COMPILATION_FAILED:
             data["status_text"] = "%s <a class=\"details\">%s</a>" % (
                 self._("Compilation failed"), self._("details"))
-        elif not ur.evaluated():
-            data["status"] = 3
+        elif data["status"] == UserTestResult.EVALUATING:
             data["status_text"] = self._("Executing...")
-        else:
-            data["status"] = 4
+        elif data["status"] == UserTestResult.EVALUATED:
             data["status_text"] = "%s <a class=\"details\">%s</a>" % (
                 self._("Executed"), self._("details"))
+
             if ur.execution_time is not None:
                 data["time"] = \
                     self.translation.format_duration(ur.execution_time)
             else:
                 data["time"] = None
+
             if ur.execution_memory is not None:
                 data["memory"] = \
                     self.translation.format_size(ur.execution_memory)
             else:
                 data["memory"] = None
+
             data["output"] = ur.output is not None
 
         self.write(data)
@@ -507,22 +228,14 @@ class UserTestDetailsHandler(ContestHandler):
     @actual_phase_required(0)
     @multi_contest
     def get(self, task_name, user_test_num):
-        participation = self.current_user
-
         if not self.r_params["testing_enabled"]:
             raise tornado.web.HTTPError(404)
 
-        try:
-            task = self.contest.get_task(task_name)
-        except KeyError:
+        task = self.get_task(task_name)
+        if task is None:
             raise tornado.web.HTTPError(404)
 
-        user_test = self.sql_session.query(UserTest)\
-            .filter(UserTest.participation == participation)\
-            .filter(UserTest.task == task)\
-            .order_by(UserTest.timestamp)\
-            .offset(int(user_test_num) - 1)\
-            .first()
+        user_test = self.get_user_test(task, user_test_num)
         if user_test is None:
             raise tornado.web.HTTPError(404)
 
@@ -540,22 +253,14 @@ class UserTestIOHandler(FileHandler):
     @actual_phase_required(0)
     @multi_contest
     def get(self, task_name, user_test_num, io):
-        participation = self.current_user
-
         if not self.r_params["testing_enabled"]:
             raise tornado.web.HTTPError(404)
 
-        try:
-            task = self.contest.get_task(task_name)
-        except KeyError:
+        task = self.get_task(task_name)
+        if task is None:
             raise tornado.web.HTTPError(404)
 
-        user_test = self.sql_session.query(UserTest)\
-            .filter(UserTest.participation == participation)\
-            .filter(UserTest.task == task)\
-            .order_by(UserTest.timestamp)\
-            .offset(int(user_test_num) - 1)\
-            .first()
+        user_test = self.get_user_test(task, user_test_num)
         if user_test is None:
             raise tornado.web.HTTPError(404)
 
@@ -582,22 +287,14 @@ class UserTestFileHandler(FileHandler):
     @actual_phase_required(0)
     @multi_contest
     def get(self, task_name, user_test_num, filename):
-        participation = self.current_user
-
         if not self.r_params["testing_enabled"]:
             raise tornado.web.HTTPError(404)
 
-        try:
-            task = self.contest.get_task(task_name)
-        except KeyError:
+        task = self.get_task(task_name)
+        if task is None:
             raise tornado.web.HTTPError(404)
 
-        user_test = self.sql_session.query(UserTest)\
-            .filter(UserTest.participation == participation)\
-            .filter(UserTest.task == task)\
-            .order_by(UserTest.timestamp)\
-            .offset(int(user_test_num) - 1)\
-            .first()
+        user_test = self.get_user_test(task, user_test_num)
         if user_test is None:
             raise tornado.web.HTTPError(404)
 

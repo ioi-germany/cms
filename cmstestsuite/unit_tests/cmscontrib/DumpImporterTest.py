@@ -30,28 +30,32 @@ from six import PY3, assertCountEqual, iteritems
 import json
 import io
 import os
-import shutil
-import tempfile
 import unittest
 
 # Needs to be first to allow for monkey patching the DB connection string.
-from cmstestsuite.unit_tests.testdbgenerator import TestCaseWithDatabase
+from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
+from cmstestsuite.unit_tests.filesystemmixin import FileSystemMixin
 
-from cms import config
 from cms.db import Contest, FSObject, Session, version
+
+from cmscommon.digest import bytes_digest
 
 from cmscontrib.DumpImporter import DumpImporter
 
 
-class TestDumpImporter(TestCaseWithDatabase):
+class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
 
-    GENERATED_FILE_DIGEST = "040f06fd774092478d450774f5ba30c5da78acc8"
-    NOT_GENERATED_FILE_DIGEST = "828d338a9b04221c9cbe286f50cd389f68de4ecf"
+    GENERATED_FILE_CONTENT = b"content"
+    NON_GENERATED_FILE_CONTENT = b"source"
+
+    GENERATED_FILE_DIGEST = bytes_digest(GENERATED_FILE_CONTENT)
+    NON_GENERATED_FILE_DIGEST = bytes_digest(NON_GENERATED_FILE_CONTENT)
 
     FILES = {
-        GENERATED_FILE_DIGEST: ("desc", b"content"),
-        NOT_GENERATED_FILE_DIGEST: ("subsource", b"source"),
+        GENERATED_FILE_DIGEST: ("desc", GENERATED_FILE_CONTENT),
+        NON_GENERATED_FILE_DIGEST: ("subsource", NON_GENERATED_FILE_CONTENT),
     }
+
     DUMP = {
         "contest_key": {
             "_class": "Contest",
@@ -75,6 +79,8 @@ class TestDumpImporter(TestCaseWithDatabase):
             "task_type_parameters": "[]",
             "score_type": "Sum",
             "score_type_parameters": "[]",
+            "time_limit": 1.0,
+            "memory_limit": 512,
             "description": "dataset description",
             "task": "task_key",
         },
@@ -101,7 +107,7 @@ class TestDumpImporter(TestCaseWithDatabase):
             "_class": "File",
             "submission": "sub_key",
             "filename": "source",
-            "digest": NOT_GENERATED_FILE_DIGEST,
+            "digest": NON_GENERATED_FILE_DIGEST,
         },
         "sr_key": {
             "_class": "SubmissionResult",
@@ -122,10 +128,6 @@ class TestDumpImporter(TestCaseWithDatabase):
 
     def setUp(self):
         super(TestDumpImporter, self).setUp()
-        if not os.path.exists(config.temp_dir):
-            os.makedirs(config.temp_dir)
-
-        self.base = tempfile.mkdtemp()
 
         # Another contest, to make sure it's not wiped on import.
         self.other_contest = self.add_contest()
@@ -136,7 +138,6 @@ class TestDumpImporter(TestCaseWithDatabase):
 
     def tearDown(self):
         self.delete_data()
-        shutil.rmtree(self.base)
         super(TestDumpImporter, self).tearDown()
 
     def do_import(self, drop=False, load_files=True,
@@ -144,7 +145,7 @@ class TestDumpImporter(TestCaseWithDatabase):
         """Create an importer and call do_import in a convenient way"""
         return DumpImporter(
             drop,
-            self.base,
+            self.base_dir,
             load_files=load_files,
             load_model=True,
             skip_generated=skip_generated,
@@ -152,10 +153,7 @@ class TestDumpImporter(TestCaseWithDatabase):
             skip_user_tests=False).do_import()
 
     def write_dump(self, dump):
-        if not os.path.exists(self.base):
-            os.makedirs(self.base)
-
-        destination = os.path.join(self.base, "contest.json")
+        destination = self.get_path("contest.json")
         if PY3:
             with io.open(destination, "wt", encoding="utf-8") as f:
                 json.dump(dump, f, indent=4, sort_keys=True)
@@ -170,10 +168,8 @@ class TestDumpImporter(TestCaseWithDatabase):
             and content.
 
         """
-        f_path = os.path.join(self.base, "files")
-        os.makedirs(f_path)
-        d_path = os.path.join(self.base, "descriptions")
-        os.makedirs(d_path)
+        f_path = self.makedirs("files")
+        d_path = self.makedirs("descriptions")
         for digest, (desc, content) in iteritems(data):
             with io.open(
                     os.path.join(d_path, digest), "wt", encoding="utf-8") as f:
@@ -238,7 +234,7 @@ class TestDumpImporter(TestCaseWithDatabase):
         self.assertFileInDb(
             TestDumpImporter.GENERATED_FILE_DIGEST, "desc", b"content")
         self.assertFileInDb(
-            TestDumpImporter.NOT_GENERATED_FILE_DIGEST, "subsource", b"source")
+            TestDumpImporter.NON_GENERATED_FILE_DIGEST, "subsource", b"source")
 
     def test_import_with_drop(self):
         """Test importing everything, but dropping existing data."""
@@ -258,7 +254,7 @@ class TestDumpImporter(TestCaseWithDatabase):
         self.assertFileInDb(
             TestDumpImporter.GENERATED_FILE_DIGEST, "desc", b"content")
         self.assertFileInDb(
-            TestDumpImporter.NOT_GENERATED_FILE_DIGEST, "subsource", b"source")
+            TestDumpImporter.NON_GENERATED_FILE_DIGEST, "subsource", b"source")
 
     def test_import_skip_generated(self):
         """Test importing everything but the generated data."""
@@ -274,7 +270,7 @@ class TestDumpImporter(TestCaseWithDatabase):
 
         self.assertFileNotInDb(TestDumpImporter.GENERATED_FILE_DIGEST)
         self.assertFileInDb(
-            TestDumpImporter.NOT_GENERATED_FILE_DIGEST, "subsource", b"source")
+            TestDumpImporter.NON_GENERATED_FILE_DIGEST, "subsource", b"source")
 
     def test_import_skip_files(self):
         """Test importing the json but not the files."""
@@ -289,7 +285,7 @@ class TestDumpImporter(TestCaseWithDatabase):
             self.other_contest_name, self.other_contest_description, [], [])
 
         self.assertFileNotInDb(TestDumpImporter.GENERATED_FILE_DIGEST)
-        self.assertFileNotInDb(TestDumpImporter.NOT_GENERATED_FILE_DIGEST)
+        self.assertFileNotInDb(TestDumpImporter.NON_GENERATED_FILE_DIGEST)
 
     def test_import_old(self):
         """Test importing an old dump.
@@ -327,6 +323,8 @@ class TestDumpImporter(TestCaseWithDatabase):
                 "task_type_parameters": "[]",
                 "score_type": "Sum",
                 "score_type_parameters": "[]",
+                "time_limit": 0.0,
+                "memory_limit": None,
                 "contest": "contest_key",
                 "managers": {},
                 "testcases": {},
@@ -359,7 +357,7 @@ class TestDumpImporter(TestCaseWithDatabase):
                 "_class": "Executable",
                 "submission": "sub_key",
                 "filename": "exe",
-                "digest": "040f06fd774092478d450774f5ba30c5da78acc8",
+                "digest": TestDumpImporter.GENERATED_FILE_DIGEST,
             },
             "_version": 1,
             "_objects": ["contest_key", "user_key"],

@@ -4,6 +4,7 @@
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,6 +26,17 @@ from __future__ import unicode_literals
 from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
 
+try:
+    from shlex import quote
+except ImportError:
+    # Python 2
+    from pipes import quote
+
+
+__all__ = [
+    "pretty_print_cmdline",
+]
+
 
 def pretty_print_cmdline(cmdline):
     """Pretty print a command line.
@@ -38,4 +50,4 @@ def pretty_print_cmdline(cmdline):
     spaces.
 
     """
-    return " ".join(["'%s'" % (x.replace("'", "'\"'\"'")) for x in cmdline])
+    return " ".join(quote(x) for x in cmdline)

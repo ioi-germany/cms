@@ -48,10 +48,9 @@ import tornado.web
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import subqueryload
 
-from cms import __version__
-from cms.db import Admin, Contest, Participation, Question, \
-    Submission, SubmissionFormatElement, SubmissionResult, Task, Team, User, \
-    UserTest
+from cms import __version__, config
+from cms.db import Admin, Contest, Participation, Question, Submission, \
+    SubmissionResult, Task, Team, User, UserTest
 from cms.grading.scoretypes import get_score_type_class
 from cms.grading.tasktypes import get_task_type_class
 from cms.server import CommonRequestHandler, file_handler_gen
@@ -287,6 +286,11 @@ class BaseHandler(CommonRequestHandler):
         super(BaseHandler, self).prepare()
         self.contest = None
 
+    def render(self, template_name, **params):
+        t = self.service.jinja2_environment.get_template(template_name)
+        for chunk in t.generate(**params):
+            self.write(chunk)
+
     def render_params(self):
         """Return the default render params used by almost all handlers.
 
@@ -299,8 +303,13 @@ class BaseHandler(CommonRequestHandler):
         params["timestamp"] = make_datetime()
         params["contest"] = self.contest
         params["url"] = self.url
+        params["xsrf_form_html"] = self.xsrf_form_html()
+        # FIXME These objects provide too broad an access: their usage
+        # should be extracted into with narrower-scoped parameters.
+        params["config"] = config
+        params["handler"] = self
         if self.current_user is not None:
-            params["current_user"] = self.current_user
+            params["admin"] = self.current_user
         if self.contest is not None:
             params["phase"] = \
                 self.contest.main_group.phase(params["timestamp"])
@@ -380,18 +389,13 @@ class BaseHandler(CommonRequestHandler):
         """
         choice = self.get_argument("submission_format_choice", "other")
         if choice == "simple":
-            filename = "%s.%%l" % dest["name"]
-            format_ = [SubmissionFormatElement(filename)]
+            format_ = ["%s.%%l" % dest["name"]]
         elif choice == "other":
-            value = self.get_argument("submission_format", "[]")
-            if len(value) == 0:
-                value = "[]"
-            format_ = []
-            try:
-                for filename in json.loads(value):
-                    format_ += [SubmissionFormatElement(filename)]
-            except ValueError:
-                raise ValueError("Submission format not recognized.")
+            value = self.get_argument("submission_format", None)
+            if value is None:
+                format_ = list()
+            else:
+                format_ = list(e.strip() for e in value.split(","))
         else:
             raise ValueError("Submission format not recognized.")
         dest["submission_format"] = format_

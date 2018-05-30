@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
@@ -97,6 +97,10 @@ PACKAGE_DATA = {
         os.path.join("tasks", "outputonly", "data", "*.*"),
         os.path.join("tasks", "outputonly_comparator", "code", "*"),
         os.path.join("tasks", "outputonly_comparator", "data", "*.*"),
+        os.path.join("tasks", "twosteps", "code", "*.*"),
+        os.path.join("tasks", "twosteps", "data", "*.*"),
+        os.path.join("tasks", "twosteps_comparator", "code", "*"),
+        os.path.join("tasks", "twosteps_comparator", "data", "*.*"),
     ],
 }
 
@@ -126,7 +130,7 @@ setup(
     name="cms",
     version=find_version(),
     author="The CMS development team",
-    author_email="contestms@freelists.org",
+    author_email="contestms@googlegroups.com",
     url="https://github.com/cms-dev/cms",
     download_url="https://github.com/cms-dev/cms/archive/master.tar.gz",
     description="A contest management system and grader "

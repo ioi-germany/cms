@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
@@ -40,8 +40,7 @@ import traceback
 
 import tornado.web
 
-from cms.db import Attachment, Dataset, Session, Statement, Submission, \
-    SubmissionFormatElement, Task
+from cms.db import Attachment, Dataset, Session, Statement, Submission, Task
 from cmscommon.datetime import make_datetime
 
 from .base import BaseHandler, SimpleHandler, require_permission
@@ -63,8 +62,7 @@ class AddTaskHandler(SimpleHandler("add_task.html", permission_all=True)):
             attrs["title"] = attrs["name"]
 
             # Set default submission format as ["taskname.%l"]
-            attrs["submission_format"] = \
-                [SubmissionFormatElement("%s.%%l" % attrs["name"])]
+            attrs["submission_format"] = ["%s.%%l" % attrs["name"]]
 
             # Create the task.
             task = Task(**attrs)
@@ -201,6 +199,16 @@ class TaskHandler(BaseHandler):
                 testcase.public = bool(self.get_argument(
                     "testcase_%s_public" % testcase.id, False))
 
+            # Test that the score type parameters are valid.
+            try:
+                dataset.score_type_object
+            except (AssertionError, ValueError) as error:
+                self.application.service.add_notification(
+                    make_datetime(), "Invalid score type parameters",
+                    str(error))
+                self.redirect(self.url("task", task_id))
+                return
+
         if self.try_commit():
             # Update the task and score on RWS.
             self.service.proxy_service.dataset_updated(
@@ -215,6 +223,7 @@ class AddStatementHandler(BaseHandler):
     @require_permission(BaseHandler.PERMISSION_ALL)
     def get(self, task_id):
         task = self.safe_get_item(Task, task_id)
+        self.contest = task.contest
 
         self.r_params = self.render_params()
         self.r_params["task"] = task
@@ -302,6 +311,7 @@ class AddAttachmentHandler(BaseHandler):
     @require_permission(BaseHandler.PERMISSION_ALL)
     def get(self, task_id):
         task = self.safe_get_item(Task, task_id)
+        self.contest = task.contest
 
         self.r_params = self.render_params()
         self.r_params["task"] = task
@@ -379,6 +389,7 @@ class AddDatasetHandler(BaseHandler):
     @require_permission(BaseHandler.PERMISSION_ALL)
     def get(self, task_id):
         task = self.safe_get_item(Task, task_id)
+        self.contest = task.contest
 
         original_dataset = None
         description = "Default"

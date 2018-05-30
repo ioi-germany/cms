@@ -5,7 +5,7 @@
 # Copyright © 2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2013-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
-# Copyright © 2013-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2013-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
@@ -365,18 +365,22 @@ class CompilationJob(Job):
 
         multithreaded = _is_contest_multithreaded(user_test.task.contest)
 
-        # Add the managers to be got from the Task; get_task_type must
-        # be imported here to avoid circular dependencies
-        from cms.grading.tasktypes import get_task_type
+        # Add the managers to be got from the Task.
         # dict() is required to detach the dictionary that gets added
         # to the Job from the control of SQLAlchemy
+        try:
+            language = get_language(user_test.language)
+        except KeyError:
+            language = None
         managers = dict(user_test.managers)
-        task_type = get_task_type(dataset=dataset)
+        task_type = dataset.task_type_object
         auto_managers = task_type.get_auto_managers()
         if auto_managers is not None:
             for manager_filename in auto_managers:
-                managers[manager_filename] = \
-                    dataset.managers[manager_filename]
+                if manager_filename.endswith(".%l") and language is not None:
+                    manager_filename = manager_filename.replace(
+                        ".%l", language.source_extension)
+                managers[manager_filename] = dataset.managers[manager_filename]
         else:
             for manager_filename in dataset.managers:
                 if manager_filename not in managers:
@@ -613,18 +617,19 @@ class EvaluationJob(Job):
         # This should have been created by now.
         assert user_test_result is not None
 
-        # Add the managers to be got from the Task; get_task_type must
-        # be imported here to avoid circular dependencies
-        from cms.grading.tasktypes import get_task_type
+        # Add the managers to be got from the Task.
         # dict() is required to detach the dictionary that gets added
         # to the Job from the control of SQLAlchemy
+        language = get_language(user_test.language)
         managers = dict(user_test.managers)
-        task_type = get_task_type(dataset=dataset)
+        task_type = dataset.task_type_object
         auto_managers = task_type.get_auto_managers()
         if auto_managers is not None:
             for manager_filename in auto_managers:
-                managers[manager_filename] = \
-                    dataset.managers[manager_filename]
+                if manager_filename.endswith(".%l") and language is not None:
+                    manager_filename = manager_filename.replace(
+                        ".%l", language.source_extension)
+                managers[manager_filename] = dataset.managers[manager_filename]
         else:
             for manager_filename in dataset.managers:
                 if manager_filename not in managers:

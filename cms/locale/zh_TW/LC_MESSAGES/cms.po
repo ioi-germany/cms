@@ -30,9 +30,9 @@ msgstr "編譯逾時"
 
 #, python-format
 msgid ""
-"Compilation killed with signal %d (could be triggered by violating memory "
+"Compilation killed with signal %s (could be triggered by violating memory "
 "limits)"
-msgstr "編譯程式因記憶體違規存取而強制終止 (信號 %d)"
+msgstr "編譯程式因記憶體違規存取而強制終止 (信號 %s)"
 
 msgid "Execution timed out"
 msgstr "超過時間限制"
@@ -42,13 +42,6 @@ msgid ""
 "Execution killed with signal %s (could be triggered by violating memory "
 "limits)"
 msgstr "測試程式因記憶體違規存取而強制終止 (信號 %s)"
-
-#, python-format
-msgid "Execution killed because of forbidden syscall %s"
-msgstr "測試程式因違規存取系統函數 %s 而強制終止"
-
-msgid "Execution killed because of forbidden file access"
-msgstr "測試程式因違規存取檔案系統而強制終止"
 
 msgid "Execution failed because the return code was nonzero"
 msgstr "執行失敗: 程式回傳值非零"
@@ -64,8 +57,8 @@ msgid "Evaluation didn't produce file %s"
 msgstr "執行後並未產生檔案 %s"
 
 #, python-format
-msgid "Subtask %d"
-msgstr "子問題 %d"
+msgid "Subtask %(index)s"
+msgstr "子問題 %(index)s"
 
 msgid "Outcome"
 msgstr "評測結果"

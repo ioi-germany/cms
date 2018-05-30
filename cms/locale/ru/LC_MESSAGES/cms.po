@@ -24,7 +24,7 @@ msgstr ""
 msgid "Compilation succeeded"
 msgstr "Успешная компиляция"
 
-msgid "Your submission successfully compiled to an excutable."
+msgid "Your submission successfully compiled to an executable."
 msgstr ""
 
 msgid "Compilation failed"
@@ -46,7 +46,7 @@ msgid ""
 "Compilation killed with signal %s (could be triggered by violating memory "
 "limits)"
 msgstr ""
-"Компиляция завершилась с сигналом %d (это могло быть вызвано превышением "
+"Компиляция завершилась с сигналом %s (это могло быть вызвано превышением "
 "ограничения по памяти)"
 
 msgid ""
@@ -112,24 +112,6 @@ msgid ""
 "before the allocation that caused the signal."
 msgstr ""
 
-#, python-format
-msgid "Execution killed because of forbidden syscall %s"
-msgstr ""
-"Выполнение прервано в связи использованием запрещенного системного вызова %s"
-
-msgid ""
-"Your submission was killed because it tried to use the forbidden syscall "
-"specified in the message."
-msgstr ""
-
-msgid "Execution killed because of forbidden file access"
-msgstr "Выполнение прервано в связи с попыткой доступа к запрещенному файлу"
-
-msgid ""
-"Your submission was killed because it tried to read or write a forbidden "
-"file."
-msgstr ""
-
 msgid "Execution failed because the return code was nonzero"
 msgstr "Выполнение завершилось неудачно"
 
@@ -144,8 +126,8 @@ msgid "Score details temporarily unavailable."
 msgstr ""
 
 #, python-format
-msgid "Subtask %d"
-msgstr "Подзадача %d"
+msgid "Subtask %(index)s"
+msgstr "Подзадача %(index)s"
 
 msgid "Outcome"
 msgstr "Результат"

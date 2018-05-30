@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2015 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2017 Myungwoo Chun <mc.tamaki@gmail.com>
@@ -30,18 +30,15 @@ from future.builtins import *  # noqa
 from six import iterkeys, iteritems
 
 import logging
-import os
-import shutil
 
-from cms.grading import compilation_step, evaluation_step, \
-    human_evaluation_message, is_evaluation_passed, extract_outcome_and_text, \
-    white_diff_step
-from cms.grading.languagemanager import \
-    LANGUAGES, HEADER_EXTS, SOURCE_EXTS, OBJECT_EXTS, get_language
+from cms.grading.steps import compilation_step, evaluation_step,\
+    human_evaluation_message
+from cms.grading.languagemanager import LANGUAGES, get_language
 from cms.grading.ParameterTypes import ParameterTypeCollection, \
     ParameterTypeChoice, ParameterTypeString
-from cms.grading.TaskType import TaskType, \
-    create_sandbox, delete_sandbox
+from cms.grading.TaskType import TaskType, check_executables_number, \
+    check_files_number, check_manager_present, create_sandbox, \
+    delete_sandbox, eval_output, is_manager_for_compilation
 from cms.db import Executable
 
 
@@ -79,10 +76,8 @@ class Batch(TaskType):
     outcome to stdout and the text to stderr.
 
     """
-    # Filename of the reference solution in the sandbox evaluating the output.
-    CORRECT_OUTPUT_FILENAME = "res.txt"
-    # Filename of the admin-provided comparator.
-    CHECKER_FILENAME = "checker"
+    # Codename of the checker, if it is used.
+    CHECKER_CODENAME = "checker"
     # Basename of the grader, used in the manager filename and as the main
     # class in languages that require us to specify it.
     GRADER_BASENAME = "grader"
@@ -132,9 +127,20 @@ class Batch(TaskType):
 
     def __init__(self, parameters):
         super(Batch, self).__init__(parameters)
+
+        # Data in the parameters.
         self.compilation = self.parameters[0]
         self.input_filename, self.output_filename = self.parameters[1]
         self.output_eval = self.parameters[2]
+
+        # Actual input and output are the files used to store input and
+        # where the output is checked, regardless of using redirects or not.
+        self._actual_input = self.input_filename
+        self._actual_output = self.output_filename
+        if len(self.input_filename) == 0:
+            self._actual_input = Batch.DEFAULT_INPUT_FILENAME
+        if len(self.output_filename) == 0:
+            self._actual_output = Batch.DEFAULT_OUTPUT_FILENAME
 
     def get_compilation_commands(self, submission_format):
         """See TaskType.get_compilation_commands."""
@@ -153,9 +159,14 @@ class Batch(TaskType):
                 executable_filename)
         return res
 
-    def get_user_managers(self, unused_submission_format):
+    def get_user_managers(self):
         """See TaskType.get_user_managers."""
-        return []
+        # In case the task uses a grader, we let the user provide their own
+        # grader (which is usually a simplified grader provided by the admins).
+        if self._uses_grader():
+            return ["grader.%l"]
+        else:
+            return []
 
     def get_auto_managers(self):
         """See TaskType.get_auto_managers."""
@@ -167,94 +178,66 @@ class Batch(TaskType):
     def _uses_checker(self):
         return self.output_eval == Batch.OUTPUT_EVAL_CHECKER
 
-    @staticmethod
-    def _is_manager_for_compilation(filename):
-        """Return if a manager should be copied in the compilation sandbox"""
-        return any(filename.endswith(header) for header in HEADER_EXTS) or \
-            any(filename.endswith(source) for source in SOURCE_EXTS) or \
-            any(filename.endswith(obj) for obj in OBJECT_EXTS)
-
     def compile(self, job, file_cacher):
         """See TaskType.compile."""
-        # Detect the submission's language. The checks about the
-        # formal correctedness of the submission are done in CWS,
-        # before accepting it.
         language = get_language(job.language)
         source_ext = language.source_extension
 
-        # TODO: here we are sure that submission.files are the same as
-        # task.submission_format. The following check shouldn't be
-        # here, but in the definition of the task, since this actually
-        # checks that task's task type and submission format agree.
-        if len(job.files) != 1:
-            job.success = True
-            job.compilation_success = False
-            job.text = [N_("Invalid files in submission")]
-            logger.error("Submission contains %d files, expecting 1",
-                         len(job.files), extra={"operation": job.info})
+        if not check_files_number(job, 1):
             return
-
-        # Create the sandbox.
-        sandbox = create_sandbox(
-            file_cacher,
-            multithreaded=job.multithreaded_sandbox,
-            name="compile")
-        job.sandboxes.append(sandbox.path)
 
         user_file_format = next(iterkeys(job.files))
         user_source_filename = user_file_format.replace(".%l", source_ext)
         executable_filename = user_file_format.replace(".%l", "")
 
-        # Copy required files in the sandbox (includes the grader if present).
-        sandbox.create_file_from_storage(
-            user_source_filename, job.files[user_file_format].digest)
-        for filename in iterkeys(job.managers):
-            if Batch._is_manager_for_compilation(filename):
-                sandbox.create_file_from_storage(
-                    filename, job.managers[filename].digest)
-
         # Create the list of filenames to be passed to the compiler. If we use
-        # a grader, it needs to be in first position in the command line.
+        # a grader, it needs to be in first position in the command line, and
+        # we check that it exists.
         source_filenames = [user_source_filename]
         if self._uses_grader():
             grader_source_filename = Batch.GRADER_BASENAME + source_ext
+            if not check_manager_present(job, grader_source_filename):
+                return
             source_filenames.insert(0, grader_source_filename)
 
         # Prepare the compilation command.
         commands = language.get_compilation_commands(
             source_filenames, executable_filename)
 
-        # Run the compilation
-        operation_success, compilation_success, text, plus = \
+        # Create the sandbox.
+        sandbox = create_sandbox(file_cacher, name="compile")
+        job.sandboxes.append(sandbox.path)
+
+        # Copy required files in the sandbox (includes the grader if present).
+        sandbox.create_file_from_storage(
+            user_source_filename, job.files[user_file_format].digest)
+        for filename, manager in iteritems(job.managers):
+            if is_manager_for_compilation(filename, language):
+                sandbox.create_file_from_storage(filename, manager.digest)
+
+        # Run the compilation.
+        box_success, compilation_success, text, stats = \
             compilation_step(sandbox, commands)
 
-        # Retrieve the compiled executables
-        job.success = operation_success
+        # Retrieve the compiled executables.
+        job.success = box_success
         job.compilation_success = compilation_success
-        job.plus = plus
         job.text = text
-        if operation_success and compilation_success:
+        job.plus = stats
+        if box_success and compilation_success:
             digest = sandbox.get_file_to_storage(
                 executable_filename,
-                "Executable %s for %s" %
-                (executable_filename, job.info))
+                "Executable %s for %s" % (executable_filename, job.info))
             job.executables[executable_filename] = \
                 Executable(executable_filename, digest)
 
-        # Cleanup
+        # Cleanup.
         delete_sandbox(sandbox, job.success)
 
     def evaluate(self, job, file_cacher):
         """See TaskType.evaluate."""
-        if len(job.executables) != 1:
-            raise ValueError("Unexpected number of executables (%s)" %
-                             len(job.executables))
-
-        # Create the sandbox
-        sandbox = create_sandbox(
-            file_cacher,
-            multithreaded=job.multithreaded_sandbox,
-            name="evaluate")
+        if not check_executables_number(job, 1):
+            return
 
         # Prepare the execution
         executable_filename = next(iterkeys(job.executables))
@@ -264,23 +247,28 @@ class Batch(TaskType):
         commands = language.get_evaluation_commands(
             executable_filename, main=main)
         executables_to_get = {
-            executable_filename:
-            job.executables[executable_filename].digest
+            executable_filename: job.executables[executable_filename].digest
         }
+        files_to_get = {
+            self._actual_input: job.input
+        }
+
+        # Check which redirect we need to perform, and in case we don't
+        # manage the output via redirect, the submission needs to be able
+        # to write on it.
+        files_allowing_write = []
         stdin_redirect = None
         stdout_redirect = None
-        files_allowing_write = []
         if len(self.input_filename) == 0:
-            self.input_filename = Batch.DEFAULT_INPUT_FILENAME
-            stdin_redirect = self.input_filename
+            stdin_redirect = self._actual_input
         if len(self.output_filename) == 0:
-            self.output_filename = Batch.DEFAULT_OUTPUT_FILENAME
-            stdout_redirect = self.output_filename
+            stdout_redirect = self._actual_output
         else:
-            files_allowing_write.append(self.output_filename)
-        files_to_get = {
-            self.input_filename: job.input
-        }
+            files_allowing_write.append(self._actual_output)
+
+        # Create the sandbox
+        sandbox = create_sandbox(file_cacher, name="evaluate")
+        job.sandboxes.append(sandbox.path)
 
         # Put the required files into the sandbox
         for filename, digest in iteritems(executables_to_get):
@@ -289,29 +277,27 @@ class Batch(TaskType):
             sandbox.create_file_from_storage(filename, digest)
 
         # Actually performs the execution
-        success, plus = evaluation_step(
+        box_success, evaluation_success, stats = evaluation_step(
             sandbox,
             commands,
             job.time_limit,
             job.memory_limit,
             writable_files=files_allowing_write,
             stdin_redirect=stdin_redirect,
-            stdout_redirect=stdout_redirect)
-
-        job.sandboxes = [sandbox.path]
-        job.plus = plus
+            stdout_redirect=stdout_redirect,
+            multiprocess=job.multithreaded_sandbox)
 
         outcome = None
-        text = []
+        text = None
 
         # Error in the sandbox: nothing to do!
-        if not success:
+        if not box_success:
             pass
 
         # Contestant's error: the marks won't be good
-        elif not is_evaluation_passed(plus):
+        elif not evaluation_success:
             outcome = 0.0
-            text = human_evaluation_message(plus)
+            text = human_evaluation_message(stats)
             if job.get_output:
                 job.user_output = None
 
@@ -319,10 +305,10 @@ class Batch(TaskType):
         else:
 
             # Check that the output file was created
-            if not sandbox.file_exists(self.output_filename):
+            if not sandbox.file_exists(self._actual_output):
                 outcome = 0.0
                 text = [N_("Evaluation didn't produce file %s"),
-                        self.output_filename]
+                        self._actual_output]
                 if job.get_output:
                     job.user_output = None
 
@@ -330,7 +316,7 @@ class Batch(TaskType):
                 # If asked so, put the output file into the storage.
                 if job.get_output:
                     job.user_output = sandbox.get_file_to_storage(
-                        self.output_filename,
+                        self._actual_output,
                         "Output file in job %s" % job.info,
                         trunc_len=100 * 1024)
 
@@ -341,99 +327,18 @@ class Batch(TaskType):
 
                 # Otherwise evaluate the output file.
                 else:
+                    box_success, outcome, text = eval_output(
+                        file_cacher, job,
+                        Batch.CHECKER_CODENAME
+                        if self._uses_checker() else None,
+                        user_output_path=sandbox.relative_path(
+                            self._actual_output),
+                        user_output_filename=self.output_filename)
 
-                    # Create a brand-new sandbox just for checking. Only admin
-                    # code runs in it, so we allow multithreading and many
-                    # processes (still with a limit to avoid fork-bombs).
-                    checkbox = create_sandbox(
-                        file_cacher,
-                        multithreaded=True,
-                        name="check")
-                    checkbox.max_processes = 1000
-
-                    checker_success, outcome, text = self._eval_output(
-                        checkbox, job, sandbox.get_root_path())
-                    success = success and checker_success
-
-        # Whatever happened, we conclude.
-        job.success = success
-        job.outcome = "%s" % outcome if outcome is not None else None
+        # Fill in the job with the results.
+        job.success = box_success
+        job.outcome = str(outcome) if outcome is not None else None
         job.text = text
+        job.plus = stats
 
         delete_sandbox(sandbox, job.success)
-
-    def _eval_output(self, sandbox, job, eval_sandbox_path):
-        """Evaluate ("check") the output using a white diff or a checker.
-
-        sandbox (Sandbox): the sandbox to use to eval the output.
-        job (Job): the job triggering this checker run.
-
-        return (bool, float|None, [str]): success (true if the checker was able
-            to check the solution successfully), outcome and text.
-
-        """
-        # Put the reference solution and input into the checkbox.
-        sandbox.create_file_from_storage(
-            Batch.CORRECT_OUTPUT_FILENAME, job.output)
-        sandbox.create_file_from_storage(self.input_filename, job.input)
-
-        # Put the user-produced output file into the checkbox
-        output_src = os.path.join(eval_sandbox_path, self.output_filename)
-        output_dst = os.path.join(
-            sandbox.get_root_path(), self.output_filename)
-        try:
-            if os.path.islink(output_src):
-                raise FileNotFoundError
-            shutil.copyfile(output_src, output_dst)
-        except FileNotFoundError:
-            pass
-
-        if self._uses_checker():
-            success, outcome, text = self._run_checker(sandbox, job)
-        else:
-            success = True
-            outcome, text = white_diff_step(
-                sandbox, self.output_filename, Batch.CORRECT_OUTPUT_FILENAME)
-
-        delete_sandbox(sandbox, success)
-        return success, outcome, text
-
-    def _run_checker(self, sandbox, job):
-        """Run the explicit checker given by the admins
-
-        sandbox (Sandbox): the sandbox to run the checker in; should already
-            contain input, correct output, and user output.
-        job (Job): the job triggering this checker run.
-
-        return (bool, float|None, [str]): success (true if the checker was able
-            to check the solution successfully), outcome and text.
-
-        """
-        # Copy the checker in the sandbox, after making sure it was provided.
-        if Batch.CHECKER_FILENAME not in job.managers:
-            logger.error("Configuration error: missing or invalid comparator "
-                         "(it must be named '%s')", Batch.CHECKER_FILENAME,
-                         extra={"operation": job.info})
-            return False, None, []
-        sandbox.create_file_from_storage(
-            Batch.CHECKER_FILENAME,
-            job.managers[Batch.CHECKER_FILENAME].digest,
-            executable=True)
-
-        command = [
-            "./%s" % Batch.CHECKER_FILENAME,
-            self.input_filename,
-            Batch.CORRECT_OUTPUT_FILENAME,
-            self.output_filename]
-        success, _ = evaluation_step(sandbox, [command])
-        if not success:
-            return False, None, []
-
-        try:
-            outcome, text = extract_outcome_and_text(sandbox)
-        except ValueError as e:
-            logger.error("Invalid output from comparator: %s", e,
-                         extra={"operation": job.info})
-            return False, None, []
-
-        return True, outcome, text

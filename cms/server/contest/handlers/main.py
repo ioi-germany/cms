@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2015 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
@@ -34,27 +34,34 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
-from six import iterkeys, itervalues
 
-import datetime
+import ipaddress
 import json
 import logging
-import pickle
 
 import tornado.web
 
 from cms import config
-from cms.db import Participation, PrintJob, User
-from cms.grading import COMPILATION_MESSAGES, EVALUATION_MESSAGES
-from cms.server import actual_phase_required, filter_ascii, multi_contest
+from cms.db import PrintJob
+from cms.grading.steps import COMPILATION_MESSAGES, EVALUATION_MESSAGES
+from cms.server import multi_contest
+from cms.server.contest.authentication import validate_login
+from cms.server.contest.communication import get_communications
+from cms.server.contest.printing import accept_print_job, PrintingDisabled, \
+    UnacceptablePrintJob
 from cmscommon.datetime import make_datetime, make_timestamp
-from cmscommon.crypto import validate_password
 
-from .contest import ContestHandler, check_ip, \
-    NOTIFICATION_ERROR, NOTIFICATION_SUCCESS
+from ..phase_management import actual_phase_required
+
+from .contest import ContestHandler
 
 
 logger = logging.getLogger(__name__)
+
+
+# Dummy function to mark translatable strings.
+def N_(msgid):
+    return msgid
 
 
 class MainHandler(ContestHandler):
@@ -86,62 +93,30 @@ class LoginHandler(ContestHandler):
 
         username = self.get_argument("username", "")
         password = self.get_argument("password", "")
-        user = self.sql_session.query(User)\
-            .filter(User.username == username)\
-            .first()
-        participation = self.sql_session.query(Participation)\
-            .filter(Participation.contest == self.contest)\
-            .filter(Participation.user == user)\
-            .first()
 
-        if user is None:
-            # TODO: notify the user that they don't exist
-            self.redirect(error_page)
-            return
+        try:
+            # In py2 Tornado gives us the IP address as a native binary
+            # string, whereas ipaddress wants text (unicode) strings.
+            ip_address = ipaddress.ip_address(str(self.request.remote_ip))
+        except ValueError:
+            logger.warning("Invalid IP address provided by Tornado: %s",
+                           self.request.remote_ip)
+            return None
+
+        participation, cookie = validate_login(
+            self.sql_session, self.contest, self.timestamp, username, password,
+            ip_address)
+
+        cookie_name = self.contest.name + "_login"
+        if cookie is None:
+            self.clear_cookie(cookie_name)
+        else:
+            self.set_secure_cookie(cookie_name, cookie, expires_days=None)
 
         if participation is None:
-            # TODO: notify the user that they're uninvited
             self.redirect(error_page)
-            return
-
-        # If a contest-specific password is defined, use that. If it's
-        # not, use the user's main password.
-        if participation.password is None:
-            correct_password = user.password
         else:
-            correct_password = participation.password
-
-        filtered_user = filter_ascii(username)
-        filtered_pass = filter_ascii(password)
-
-        if not validate_password(correct_password, password):
-            logger.info("Login error: user=%s pass=%s remote_ip=%s." %
-                        (filtered_user, filtered_pass, self.request.remote_ip))
-            self.redirect(error_page)
-            return
-
-        if self.contest.ip_restriction and participation.ip is not None \
-                and not check_ip(self.request.remote_ip, participation.ip):
-            logger.info("Unexpected IP: user=%s pass=%s remote_ip=%s.",
-                        filtered_user, filtered_pass, self.request.remote_ip)
-            self.redirect(error_page)
-            return
-
-        if participation.hidden and self.contest.block_hidden_participations:
-            logger.info("Hidden user login attempt: "
-                        "user=%s pass=%s remote_ip=%s.",
-                        filtered_user, filtered_pass, self.request.remote_ip)
-            self.redirect(error_page)
-            return
-
-        logger.info("User logged in: user=%s remote_ip=%s.",
-                    filtered_user, self.request.remote_ip)
-        self.set_secure_cookie(self.contest.name + "_login",
-                               pickle.dumps((user.username,
-                                             correct_password,
-                                             make_timestamp())),
-                               expires_days=None)
-        self.redirect(next_page)
+            self.redirect(next_page)
 
 
 class StartHandler(ContestHandler):
@@ -183,52 +158,14 @@ class NotificationsHandler(ContestHandler):
     @tornado.web.authenticated
     @multi_contest
     def get(self):
-        if not self.current_user:
-            raise tornado.web.HTTPError(403)
-
         participation = self.current_user
 
-        res = []
         last_notification = self.get_argument("last_notification", None)
-        last_notification = make_datetime(float(last_notification)) \
-            if last_notification is not None else datetime.datetime.min
+        if last_notification is not None:
+            last_notification = make_datetime(float(last_notification))
 
-        # Announcements
-        for announcement in self.contest.announcements:
-            if announcement.timestamp > last_notification \
-                    and announcement.timestamp < self.timestamp:
-                res.append({"type": "announcement",
-                            "timestamp":
-                            make_timestamp(announcement.timestamp),
-                            "subject": announcement.subject,
-                            "text": announcement.text})
-
-        # Private messages
-        for message in participation.messages:
-            if message.timestamp > last_notification \
-                    and message.timestamp < self.timestamp:
-                res.append({"type": "message",
-                            "timestamp": make_timestamp(message.timestamp),
-                            "subject": message.subject,
-                            "text": message.text})
-
-        # Answers to questions
-        for question in participation.questions:
-            if question.reply_timestamp is not None \
-                    and question.reply_timestamp > last_notification \
-                    and question.reply_timestamp < self.timestamp:
-                subject = question.reply_subject
-                text = question.reply_text
-                if question.reply_subject is None:
-                    subject = question.reply_text
-                    text = ""
-                elif question.reply_text is None:
-                    text = ""
-                res.append({"type": "question",
-                            "timestamp":
-                            make_timestamp(question.reply_timestamp),
-                            "subject": subject,
-                            "text": text})
+        res = get_communications(self.sql_session, participation,
+                                 self.timestamp, after=last_notification)
 
         # Simple notifications
         notifications = self.service.notifications
@@ -275,97 +212,21 @@ class PrintingHandler(ContestHandler):
     @actual_phase_required(0)
     @multi_contest
     def post(self):
-        participation = self.current_user
-
-        if not self.r_params["printing_enabled"]:
-            raise tornado.web.HTTPError(404)
-
-        fallback_page = self.contest_url("printing")
-
-        printjobs = self.sql_session.query(PrintJob)\
-            .filter(PrintJob.participation == participation)\
-            .all()
-        old_count = len(printjobs)
-        if config.max_jobs_per_user <= old_count:
-            self.service.add_notification(
-                participation.user.username,
-                self.timestamp,
-                self._("Too many print jobs!"),
-                self._("You have reached the maximum limit of "
-                       "at most %d print jobs.") % config.max_jobs_per_user,
-                NOTIFICATION_ERROR)
-            self.redirect(fallback_page)
-            return
-
-        # Ensure that the user did not submit multiple files with the
-        # same name and that the user sent exactly one file.
-        if any(len(filename) != 1
-               for filename in itervalues(self.request.files)) \
-                or set(iterkeys(self.request.files)) != set(["file"]):
-            self.service.add_notification(
-                participation.user.username,
-                self.timestamp,
-                self._("Invalid format!"),
-                self._("Please select the correct files."),
-                NOTIFICATION_ERROR)
-            self.redirect(fallback_page)
-            return
-
-        filename = self.request.files["file"][0]["filename"]
-        data = self.request.files["file"][0]["body"]
-
-        # Check if submitted file is small enough.
-        if len(data) > config.max_print_length:
-            self.service.add_notification(
-                participation.user.username,
-                self.timestamp,
-                self._("File too big!"),
-                self._("Each file must be at most %d bytes long.") %
-                config.max_print_length,
-                NOTIFICATION_ERROR)
-            self.redirect(fallback_page)
-            return
-
-        # We now have to send the file to the destination...
         try:
-            digest = self.service.file_cacher.put_file_content(
-                data,
-                "Print job sent by %s at %d." % (
-                    participation.user.username,
-                    make_timestamp(self.timestamp)))
+            printjob = accept_print_job(
+                self.sql_session, self.service.file_cacher, self.current_user,
+                self.timestamp, self.request.files)
+            self.sql_session.commit()
+        except PrintingDisabled:
+            raise tornado.web.HTTPError(404)
+        except UnacceptablePrintJob as e:
+            self.notify_error(e.subject, e.text)
+        else:
+            self.service.printing_service.new_printjob(printjob_id=printjob.id)
+            self.notify_success(N_("Print job received"),
+                                N_("Your print job has been received."))
 
-        # In case of error, the server aborts
-        except Exception as error:
-            logger.error("Storage failed! %s", error)
-            self.service.add_notification(
-                participation.user.username,
-                self.timestamp,
-                self._("Print job storage failed!"),
-                self._("Please try again."),
-                NOTIFICATION_ERROR)
-            self.redirect(fallback_page)
-            return
-
-        # The file is stored, ready to submit!
-        logger.info("File stored for print job sent by %s",
-                    participation.user.username)
-
-        printjob = PrintJob(timestamp=self.timestamp,
-                            participation=participation,
-                            filename=filename,
-                            digest=digest)
-
-        self.sql_session.add(printjob)
-        self.sql_session.commit()
-        self.service.printing_service.new_printjob(
-            printjob_id=printjob.id)
-        self.service.add_notification(
-            participation.user.username,
-            self.timestamp,
-            self._("Print job received"),
-            self._("Your print job has been received."),
-            NOTIFICATION_SUCCESS)
-        self.redirect(fallback_page)
+        self.redirect(self.contest_url("printing"))
 
 
 class DocumentationHandler(ContestHandler):

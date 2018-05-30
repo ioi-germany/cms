@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2015 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
@@ -31,7 +31,6 @@ from six import iteritems, with_metaclass
 import io
 import logging
 import os
-import re
 import resource
 import select
 import stat
@@ -194,15 +193,11 @@ class SandboxBase(with_metaclass(ABCMeta, object)):
     EXIT_SIGNAL = 'signal'
     EXIT_TIMEOUT = 'timeout'
     EXIT_TIMEOUT_WALL = 'wall timeout'
-    EXIT_FILE_ACCESS = 'file access'
-    EXIT_SYSCALL = 'syscall'
     EXIT_NONZERO_RETURN = 'nonzero return'
 
-    def __init__(self, multithreaded, file_cacher, name=None, temp_dir=None):
+    def __init__(self, file_cacher, name=None, temp_dir=None):
         """Initialization.
 
-        multithreaded (boolean): whether the sandbox should allow
-            multithreading.
         file_cacher (FileCacher): an instance of the FileCacher class
             (to interact with FS), if the sandbox needs it.
         name (string|None): name of the sandbox, which might appear in the
@@ -211,7 +206,6 @@ class SandboxBase(with_metaclass(ABCMeta, object)):
             default temporary directory specified in the configuration.
 
         """
-        self.multithreaded = multithreaded
         self.file_cacher = file_cacher
         self.name = name if name is not None else "unnamed"
         self.temp_dir = temp_dir if temp_dir is not None else config.temp_dir
@@ -230,14 +224,23 @@ class SandboxBase(with_metaclass(ABCMeta, object)):
         self.verbosity = 0
 
         self.max_processes = 1
-        if multithreaded:
-            # Max processes is set to 1000 to limit the effect of fork bombs.
-            self.max_processes = 1000
 
         # Set common environment variables.
         # Specifically needed by Python, that searches the home for
         # packages.
         self.set_env["HOME"] = "./"
+
+    def set_multiprocess(self, multiprocess):
+        """Set the sandbox to (dis-)allow multiple threads and processes.
+
+        multiprocess (bool): whether to allow multiple thread/processes or not.
+
+        """
+        if multiprocess:
+            # Max processes is set to 1000 to limit the effect of fork bombs.
+            self.max_processes = 1000
+        else:
+            self.max_processes = 1
 
     def get_stats(self):
         """Return a human-readable string representing execution time
@@ -371,9 +374,8 @@ class SandboxBase(with_metaclass(ABCMeta, object)):
         executable (bool): to set permissions.
 
         """
-        file_ = self.create_file(path, executable)
-        self.file_cacher.get_file_to_fobj(digest, file_)
-        file_.close()
+        with self.create_file(path, executable) as dest_fobj:
+            self.file_cacher.get_file_to_fobj(digest, dest_fobj)
 
     def create_file_from_string(self, path, content, executable=False):
         """Write some data to a file in the sandbox.
@@ -383,14 +385,13 @@ class SandboxBase(with_metaclass(ABCMeta, object)):
         executable (bool): to set permissions.
 
         """
-        file_ = self.create_file(path, executable)
-        file_.write(content)
-        file_.close()
+        with self.create_file(path, executable) as dest_fobj:
+            dest_fobj.write(content)
 
     def get_file(self, path, trunc_len=None):
         """Open a file in the sandbox given its relative path.
 
-        path (string): relative path of the file inside the sandbox.
+        path (str): relative path of the file inside the sandbox.
         trunc_len (int|None): if None, does nothing; otherwise, before
             returning truncate it at the specified length.
 
@@ -404,40 +405,55 @@ class SandboxBase(with_metaclass(ABCMeta, object)):
             file_ = Truncator(file_, trunc_len)
         return file_
 
+    def get_file_text(self, path, trunc_len=None):
+        """Open a file in the sandbox given its relative path, in text mode.
+
+        Assumes encoding is UTF-8. The caller must handle decoding errors.
+
+        path (str): relative path of the file inside the sandbox.
+        trunc_len (int|None): if None, does nothing; otherwise, before
+            returning truncate it at the specified length.
+
+        return (file): the file opened in read binary mode.
+
+        """
+        logger.debug("Retrieving text file %s from sandbox.", path)
+        real_path = self.relative_path(path)
+        file_ = io.open(real_path, "rt", encoding="utf-8")
+        if trunc_len is not None:
+            file_ = Truncator(file_, trunc_len)
+        return file_
+
     def get_file_to_string(self, path, maxlen=1024):
         """Return the content of a file in the sandbox given its
         relative path.
 
-        path (string): relative path of the file inside the sandbox.
+        path (str): relative path of the file inside the sandbox.
         maxlen (int): maximum number of bytes to read, or None if no
             limit.
 
         return (string): the content of the file up to maxlen bytes.
 
         """
-        file_ = self.get_file(path)
-        if maxlen is None:
-            content = file_.read()
-        else:
-            content = file_.read(maxlen)
-        file_.close()
-        return content
+        with self.get_file(path) as file_:
+            if maxlen is None:
+                return file_.read()
+            else:
+                return file_.read(maxlen)
 
     def get_file_to_storage(self, path, description="", trunc_len=None):
         """Put a sandbox file in FS and return its digest.
 
-        path (string): relative path of the file inside the sandbox.
-        description (string): the description for FS.
+        path (str): relative path of the file inside the sandbox.
+        description (str): the description for FS.
         trunc_len (int|None): if None, does nothing; otherwise, before
             returning truncate it at the specified length.
 
-        return (string): the digest of the file.
+        return (str): the digest of the file.
 
         """
-        file_ = self.get_file(path, trunc_len=trunc_len)
-        digest = self.file_cacher.put_file_from_fobj(file_, description)
-        file_.close()
-        return digest
+        with self.get_file(path, trunc_len=trunc_len) as file_:
+            return self.file_cacher.put_file_from_fobj(file_, description)
 
     def stat_file(self, path):
         """Return the stats of a file in the sandbox.
@@ -490,15 +506,13 @@ class SandboxBase(with_metaclass(ABCMeta, object)):
 
     @abstractmethod
     def translate_box_exitcode(self, _):
-        """Translate the sandbox exit code according to the
-        following table:
-         * 0 -> everything ok -> returns True
-         * 1 -> error in the program inside the sandbox ->
-                returns True
-         * 2 -> error in the sandbox itself -> returns False
+        """Translate the sandbox exit code to a boolean sandbox success.
 
-        Basically, it recognizes whether the sandbox executed
-        correctly or not.
+        _ (int): the exit code of the sandbox.
+
+        return (bool): False if the sandbox had an error, True if it
+            terminated correctly (regardless of what the internal process
+            did).
 
         """
         pass
@@ -530,13 +544,13 @@ class StupidSandbox(SandboxBase):
 
     """
 
-    def __init__(self, multithreaded, file_cacher, name=None, temp_dir=None):
+    def __init__(self, file_cacher, name=None, temp_dir=None):
         """Initialization.
 
         For arguments documentation, see SandboxBase.__init__.
 
         """
-        SandboxBase.__init__(self, multithreaded, file_cacher, name, temp_dir)
+        SandboxBase.__init__(self, file_cacher, name, temp_dir)
 
         # Make box directory
         self.path = tempfile.mkdtemp(
@@ -653,7 +667,7 @@ class StupidSandbox(SandboxBase):
             return "Execution successfully finished (with exit code %d)" % \
                 self.get_exit_code()
         elif status == self.EXIT_SIGNAL:
-            return "Execution killed with signal %d" % \
+            return "Execution killed with signal %s" % \
                 self.get_killing_signal()
 
     def _popen(self, command,
@@ -739,7 +753,7 @@ class StupidSandbox(SandboxBase):
                                    (rlimit_stack, rlimit_stack))
 
             # TODO - Doesn't work as expected
-            #resource.setrlimit(resource.RLIMIT_NPROC, (1, 1))
+            # resource.setrlimit(resource.RLIMIT_NPROC, (1, 1))
 
         # Setup std*** redirection
         if self.stdin_file:
@@ -810,8 +824,9 @@ class StupidSandbox(SandboxBase):
             return self.popen
 
     def translate_box_exitcode(self, _):
-        """The stupid box always terminates successfully (or it raises
-        an exception).
+        """Translate the sandbox exit code to a boolean sandbox success.
+
+        This sandbox never fails.
 
         """
         return True
@@ -819,8 +834,7 @@ class StupidSandbox(SandboxBase):
     def cleanup(self):
         """Cleanup the sandbox.
 
-        To be called at the end of the execution, regardless of
-        whether the sandbox should be deleted or not.
+        This sandbox needs no cleanup.
 
         """
         pass
@@ -858,24 +872,24 @@ class IsolateSandbox(SandboxBase):
     # on the current directory.
     SECURE_COMMANDS = ["/bin/cp", "/bin/mv", "/usr/bin/zip", "/usr/bin/unzip"]
 
-    def __init__(self, multithreaded, file_cacher, name=None, temp_dir=None):
+    def __init__(self, file_cacher, name=None, temp_dir=None):
         """Initialization.
 
         For arguments documentation, see SandboxBase.__init__.
 
         """
-        SandboxBase.__init__(self, multithreaded, file_cacher, name, temp_dir)
+        SandboxBase.__init__(self, file_cacher, name, temp_dir)
 
-        # Isolate only accepts ids between 0 and 99. We assign the
-        # range [(shard+1)*10, (shard+2)*10) to each Worker and keep
-        # the range [0, 10) for other uses (command-line scripts like
-        # cmsMake or direct console users of isolate). Inside each
-        # range ids are assigned sequentially, with a wrap-around.
+        # Isolate only accepts ids between 0 and 999 (by default). We assign
+        # the range [(shard+1)*10, (shard+2)*10) to each Worker and keep the
+        # range [0, 10) for other uses (command-line scripts like cmsMake or
+        # direct console users of isolate). Inside each range ids are assigned
+        # sequentially, with a wrap-around.
         # FIXME This is the only use of FileCacher.service, and it's an
         # improper use! Avoid it!
         if file_cacher is not None and file_cacher.service is not None:
             box_id = ((file_cacher.service.shard + 1) * 10
-                      + (IsolateSandbox.next_id % 10)) % 100
+                      + (IsolateSandbox.next_id % 10)) % 1000
         else:
             box_id = IsolateSandbox.next_id % 10
         IsolateSandbox.next_id += 1
@@ -943,13 +957,7 @@ class IsolateSandbox(SandboxBase):
         # cleanup after ourselves, but we might have missed something
         # if the worker was interrupted in the middle of an execution.
         self.cleanup()
-        init_cmd = [self.box_exec] + (["--cg"] if self.cgroup else []) \
-            + ["--box-id=%d" % self.box_id] + ["--init"]
-        ret = subprocess.call(init_cmd)
-        if ret != 0:
-            raise SandboxInterfaceException(
-                "Failed to initialize sandbox with command: %s "
-                "(error %d)" % (pretty_print_cmdline(init_cmd), ret))
+        self.initialize_isolate()
 
     def add_mapped_directories(self, dirs):
         """Add dirs to the external dirs visible to the sandboxed command.
@@ -987,7 +995,7 @@ class IsolateSandbox(SandboxBase):
         # assign the correct permissions.
         for path in (os.path.join(self.path, path) for path in paths):
             if not os.path.exists(path):
-                open(path, "w").close()
+                io.open(path, "wb").close()
 
         # Close everything, then open only the specified.
         self.allow_writing_none()
@@ -1042,7 +1050,7 @@ class IsolateSandbox(SandboxBase):
         if self.box_id is not None:
             res += ["--box-id=%d" % self.box_id]
         if self.cgroup:
-            res += ["--cg"]
+            res += ["--cg", "--cg-timing"]
         if self.chdir is not None:
             res += ["--chdir=%s" % self.chdir]
         for in_name, out_name, options in self.dirs:
@@ -1065,7 +1073,10 @@ class IsolateSandbox(SandboxBase):
         if self.stack_space is not None:
             res += ["--stack=%d" % self.stack_space]
         if self.address_space is not None:
-            res += ["--cg-mem=%d" % self.address_space]
+            if self.cgroup:
+                res += ["--cg-mem=%d" % self.address_space]
+            else:
+                res += ["--mem=%d" % self.address_space]
         if self.stdout_file is not None:
             res += ["--stdout=%s" % self.inner_absolute_path(self.stdout_file)]
         if self.max_processes is not None:
@@ -1169,42 +1180,6 @@ class IsolateSandbox(SandboxBase):
             return int(self.log['exitcode'][0])
         return 0
 
-    # TODO - Rather fragile interface...
-    KILLING_SYSCALL_RE = re.compile("^Forbidden syscall (.*)$")
-
-    @with_log
-    def get_killing_syscall(self):
-        """Return the syscall that triggered the killing of the
-        sandboxed process, reading the log if necessary.
-
-        return (string): offending syscall, or None.
-
-        """
-        if 'message' in self.log:
-            match = self.KILLING_SYSCALL_RE.match(
-                self.log['message'][0])
-            if match is not None:
-                return match.group(1)
-        return None
-
-    # TODO - Rather fragile interface...
-    KILLING_FILE_ACCESS_RE = re.compile("^Forbidden access to file (.*)$")
-
-    @with_log
-    def get_forbidden_file_error(self):
-        """Return the error that got us killed for forbidden file
-        access.
-
-        return (string): offending error, or None.
-
-        """
-        if 'message' in self.log:
-            match = self.KILLING_FILE_ACCESS_RE.match(
-                self.log['message'][0])
-            if match is not None:
-                return match.group(1)
-        return None
-
     @with_log
     def get_status_list(self):
         """Reads the sandbox log file, and set and return the status
@@ -1227,13 +1202,6 @@ class IsolateSandbox(SandboxBase):
         status_list = self.get_status_list()
         if 'XX' in status_list:
             return self.EXIT_SANDBOX_ERROR
-        # New version seems not to report OK
-        #elif 'OK' in status_list:
-        #    return self.EXIT_OK
-        elif 'FO' in status_list:
-            return self.EXIT_SYSCALL
-        elif 'FA' in status_list:
-            return self.EXIT_FILE_ACCESS
         elif 'TO' in status_list:
             if 'message' in self.log and 'wall' in self.log['message'][0]:
                 return self.EXIT_TIMEOUT_WALL
@@ -1243,6 +1211,7 @@ class IsolateSandbox(SandboxBase):
             return self.EXIT_SIGNAL
         elif 'RE' in status_list:
             return self.EXIT_NONZERO_RETURN
+        # OK status is not reported in the log file, it's implicit.
         return self.EXIT_OK
 
     def get_human_exit_description(self):
@@ -1259,18 +1228,12 @@ class IsolateSandbox(SandboxBase):
                 self.get_exit_code()
         elif status == self.EXIT_SANDBOX_ERROR:
             return "Execution failed because of sandbox error"
-        elif status == self.EXIT_SYSCALL:
-            return "Execution killed because of forbidden syscall %s" % \
-                self.get_killing_syscall()
-        elif status == self.EXIT_FILE_ACCESS:
-            return "Execution killed because of forbidden file access: %s" \
-                % self.get_forbidden_file_error()
         elif status == self.EXIT_TIMEOUT:
             return "Execution timed out"
         elif status == self.EXIT_TIMEOUT_WALL:
             return "Execution timed out (wall clock limit exceeded)"
         elif status == self.EXIT_SIGNAL:
-            return "Execution killed with signal %d" % \
+            return "Execution killed with signal %s" % \
                 self.get_killing_signal()
         elif status == self.EXIT_NONZERO_RETURN:
             return "Execution failed because the return code was nonzero"
@@ -1325,8 +1288,10 @@ class IsolateSandbox(SandboxBase):
                 # is not forwarded to the contestants. Secure commands
                 # are "setup" commands, which should not fail or
                 # provide information for the contestants.
-                open(os.path.join(self.path, self.stdout_file), "w").close()
-                open(os.path.join(self.path, self.stderr_file), "w").close()
+                io.open(
+                    os.path.join(self.path, self.stdout_file), "wb").close()
+                io.open(
+                    os.path.join(self.path, self.stderr_file), "wb").close()
                 self._write_empty_run_log(self.exec_num)
             except OSError:
                 logger.critical(
@@ -1358,7 +1323,8 @@ class IsolateSandbox(SandboxBase):
 
     def _write_empty_run_log(self, index):
         """Write a fake run.log file with no information."""
-        with open(os.path.join(self.path, "run.log.%s" % index), "w") as f:
+        with io.open(os.path.join(self.path, "run.log.%s" % index),
+                     "wt", encoding="utf-8") as f:
             f.write("time:0.000\n")
             f.write("time-wall:0.000\n")
             f.write("max-rss:0\n")
@@ -1395,15 +1361,16 @@ class IsolateSandbox(SandboxBase):
             return popen
 
     def translate_box_exitcode(self, exitcode):
-        """Translate the sandbox exit code according to the
-        following table:
-         * 0 -> everything ok -> returns True
-         * 1 -> error in the program inside the sandbox ->
-                returns True
-         * 2 -> error in the sandbox itself -> returns False
+        """Translate the sandbox exit code to a boolean sandbox success.
 
-        Basically, it recognizes whether the sandbox executed
-        correctly or not.
+        Isolate emits the following exit codes:
+        * 0 -> both sandbox and internal process finished successfully (meta
+            file will contain "status:OK" -> return True;
+        * 1 -> sandbox finished successfully, but internal process was
+            terminated, e.g., due to timeout (meta file will contain
+            status:x" with x in (TO, SG, RE)) -> return True;
+        * 2 -> sandbox terminated with an error (meta file will contain
+            "status:XX") -> return False.
 
         """
         if exitcode == 0 or exitcode == 1:
@@ -1413,6 +1380,18 @@ class IsolateSandbox(SandboxBase):
         else:
             raise SandboxInterfaceException("Sandbox exit status (%d) unknown"
                                             % exitcode)
+
+    def initialize_isolate(self):
+        """Initialize isolate's box."""
+        init_cmd = (
+            [self.box_exec]
+            + (["--cg"] if self.cgroup else [])
+            + ["--box-id=%d" % self.box_id, "--init"])
+        ret = subprocess.call(init_cmd)
+        if ret != 0:
+            raise SandboxInterfaceException(
+                "Failed to initialize sandbox with command: %s "
+                "(error %d)" % (pretty_print_cmdline(init_cmd), ret))
 
     def cleanup(self):
         """Cleanup the sandbox.
@@ -1426,7 +1405,10 @@ class IsolateSandbox(SandboxBase):
             [self.box_exec]
             + (["--cg"] if self.cgroup else [])
             + ["--box-id=%d" % self.box_id]
-            + ["--cleanup"])
+            + ["--cleanup"],
+            # Use subprocess.DEVNULL when dropping Python 2.
+            stdout=io.open(os.devnull, "r+b"),
+            stderr=subprocess.STDOUT)
 
     def delete(self):
         """Delete the directory where the sandbox operated.

@@ -39,13 +39,13 @@ from six import itervalues
 
 from datetime import timedelta
 
+from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.schema import Column, ForeignKey, CheckConstraint
 from sqlalchemy.types import Integer, Unicode, DateTime, Interval, Enum, \
     Boolean, String
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ARRAY
 
-from cmscommon.datetime import make_datetime
 from cms import TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE
 
 from . import Base, CodenameConstraint
@@ -245,10 +245,33 @@ class Contest(Base):
 
     # Follows the description of the fields automatically added by
     # SQLAlchemy.
-    # tasks (list of Task objects)
-    # announcements (list of Announcement objects)
-    # participations (list of Participation objects)
     # groups (list of Group objects)
+    # These one-to-many relationships are the reversed directions of
+    # the ones defined in the "child" classes using foreign keys.
+
+    tasks = relationship(
+        "Task",
+        collection_class=ordering_list("num"),
+        order_by="[Task.num]",
+        cascade="all",
+        passive_deletes=True,
+        back_populates="contest")
+
+    announcements = relationship(
+        "Announcement",
+        order_by="[Announcement.timestamp]",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="contest")
+
+    participations = relationship(
+        "Participation",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="contest")
+
+    # TODO Add groups here?
+
 
     # Moreover, we have the following methods.
     # get_submissions (defined in __init__.py)
@@ -617,6 +640,29 @@ class Contest(Base):
 
         return res
 
+    def phase(self, timestamp):
+        """Return: -1 if contest isn't started yet at time timestamp,
+                    0 if the contest is active at time timestamp,
+                    1 if the contest has ended but analysis mode
+                      hasn't started yet
+                    2 if the contest has ended and analysis mode is active
+                    3 if the contest has ended and analysis mode is disabled or
+                      has ended
+
+        timestamp (datetime): the time we are iterested in.
+        return (int): contest phase as above.
+
+        """
+        if timestamp < self.start:
+            return -1
+        if timestamp <= self.stop:
+            return 0
+        if self.analysis_enabled:
+            if timestamp < self.analysis_start:
+                return 1
+            elif timestamp <= self.analysis_stop:
+                return 2
+        return 3
 
 class Announcement(Base):
     """Class to store a messages sent by the contest managers to all
@@ -655,8 +701,4 @@ class Announcement(Base):
         index=True)
     contest = relationship(
         Contest,
-        backref=backref(
-            'announcements',
-            order_by=[timestamp],
-            cascade="all, delete-orphan",
-            passive_deletes=True))
+        back_populates="announcements")

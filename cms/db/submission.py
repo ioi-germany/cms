@@ -40,7 +40,7 @@ from sqlalchemy import Boolean
 from sqlalchemy.schema import Column, ForeignKey, ForeignKeyConstraint, \
     UniqueConstraint
 from sqlalchemy.types import Integer, Float, String, Unicode, DateTime, Enum
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
@@ -73,9 +73,7 @@ class Submission(Base):
         index=True)
     participation = relationship(
         Participation,
-        backref=backref("submissions",
-                        cascade="all, delete-orphan",
-                        passive_deletes=True))
+        back_populates="submissions")
 
     # Task (id and object) of the submission.
     task_id = Column(
@@ -86,9 +84,7 @@ class Submission(Base):
         index=True)
     task = relationship(
         Task,
-        backref=backref("submissions",
-                        cascade="all, delete-orphan",
-                        passive_deletes=True))
+        back_populates="submissions")
 
     # Time of the submission.
     timestamp = Column(
@@ -123,11 +119,28 @@ class Submission(Base):
         String,
         nullable=True)
 
-    # Follows the description of the fields automatically added by
-    # SQLAlchemy.
-    # files (dict of File objects indexed by filename)
-    # token (Token object or None)
-    # results (list of SubmissionResult objects)
+    # These one-to-many relationships are the reversed directions of
+    # the ones defined in the "child" classes using foreign keys.
+
+    files = relationship(
+        "File",
+        collection_class=attribute_mapped_collection("filename"),
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="submission")
+
+    token = relationship(
+        "Token",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="submission")
+
+    results = relationship(
+        "SubmissionResult",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="submission")
 
     def get_result(self, dataset=None):
         """Return the result associated to a dataset.
@@ -213,11 +226,7 @@ class File(Base):
         index=True)
     submission = relationship(
         Submission,
-        backref=backref('files',
-                        collection_class=
-                            attribute_mapped_collection('filename'),
-                        cascade="all, delete-orphan",
-                        passive_deletes=True))
+        back_populates="files")
 
     # Filename and digest of the submitted file.
     filename = Column(
@@ -253,11 +262,7 @@ class Token(Base):
         index=True)
     submission = relationship(
         Submission,
-        backref=backref(
-            "token",
-            uselist=False,
-            cascade="all, delete-orphan",
-            passive_deletes=True),
+        back_populates="token",
         single_parent=True)
 
     # Time the token was played.
@@ -298,10 +303,7 @@ class SubmissionResult(Base):
         primary_key=True)
     submission = relationship(
         Submission,
-        backref=backref(
-            "results",
-            cascade="all, delete-orphan",
-            passive_deletes=True))
+        back_populates="results")
 
     dataset_id = Column(
         Integer,
@@ -408,10 +410,21 @@ class SubmissionResult(Base):
         ARRAY(String),
         nullable=True)
 
-    # Follows the description of the fields automatically added by
-    # SQLAlchemy.
-    # executables (dict of Executable objects indexed by filename)
-    # evaluations (list of Evaluation objects)
+    # These one-to-many relationships are the reversed directions of
+    # the ones defined in the "child" classes using foreign keys.
+
+    executables = relationship(
+        "Executable",
+        collection_class=attribute_mapped_collection("filename"),
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="submission_result")
+
+    evaluations = relationship(
+        "Evaluation",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="submission_result")
 
     def get_status(self):
         """Return the status of this object.
@@ -661,11 +674,7 @@ class Executable(Base):
     # SubmissionResult owning the executable.
     submission_result = relationship(
         SubmissionResult,
-        backref=backref('executables',
-                        collection_class=
-                            attribute_mapped_collection('filename'),
-                        cascade="all, delete-orphan",
-                        passive_deletes=True))
+        back_populates="executables")
 
     # Filename and digest of the generated executable.
     filename = Column(
@@ -722,9 +731,7 @@ class Evaluation(Base):
     # SubmissionResult owning the evaluation.
     submission_result = relationship(
         SubmissionResult,
-        backref=backref('evaluations',
-                        cascade="all, delete-orphan",
-                        passive_deletes=True))
+        back_populates="evaluations")
 
     # Testcase (id and object) this evaluation was performed on.
     testcase_id = Column(

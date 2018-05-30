@@ -19,7 +19,7 @@ msgstr ""
 msgid "Compilation succeeded"
 msgstr "编译成功"
 
-msgid "Your submission successfully compiled to an excutable."
+msgid "Your submission successfully compiled to an executable."
 msgstr "您的提交"
 
 msgid "Compilation failed"
@@ -40,7 +40,7 @@ msgstr "程序编译超时。比如说，这可能是因为过度使用C++模板
 msgid ""
 "Compilation killed with signal %s (could be triggered by violating memory "
 "limits)"
-msgstr "编译程序因内存违规存取而强制终止 (信号 %d)"
+msgstr "编译程序因内存违规存取而强制终止 (信号 %s)"
 
 msgid ""
 "Your submission was killed with the specified signal. Among other things, "
@@ -103,23 +103,6 @@ msgid ""
 "before the allocation that caused the signal."
 msgstr "程序因为制定信号而被强制终止。这可能是因为内存溢出。注意如果这是原因的话，程序报告中的内存使用信息是信号被发出前的信息。"
 
-#, python-format
-msgid "Execution killed because of forbidden syscall %s"
-msgstr "程序因违规存取系统函数 %s 而被强制终止"
-
-msgid ""
-"Your submission was killed because it tried to use the forbidden syscall "
-"specified in the message."
-msgstr "程序因违规系统调用而被强制终止"
-
-msgid "Execution killed because of forbidden file access"
-msgstr "程序因违规存取文件系统而被强制终止"
-
-msgid ""
-"Your submission was killed because it tried to read or write a forbidden "
-"file."
-msgstr "程序因违规读写文件而被强制终止"
-
 msgid "Execution failed because the return code was nonzero"
 msgstr "执行失败: 程序返回值非零"
 
@@ -131,8 +114,8 @@ msgid "N/A"
 msgstr "(空)"
 
 #, python-format
-msgid "Subtask %d"
-msgstr "子问题 %d"
+msgid "Subtask %(index)s"
+msgstr "子问题 %(index)s"
 
 msgid "Outcome"
 msgstr "评测结果"
@@ -916,7 +899,7 @@ msgstr "提交解答"
 
 #, python-format
 msgid "You can submit %(submissions_left)s more solution(s)."
-msgstr "您可以再上传%(submissions_left)个解答"
+msgstr "您可以再上传%(submissions_left)s个解答"
 
 msgid "submission.zip"
 msgstr "submission.zip"

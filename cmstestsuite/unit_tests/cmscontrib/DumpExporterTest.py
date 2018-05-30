@@ -30,43 +30,41 @@ from six import assertCountEqual, iteritems, itervalues
 import json
 import io
 import os
-import shutil
-import tempfile
 import unittest
 
 # Needs to be first to allow for monkey patching the DB connection string.
-from cmstestsuite.unit_tests.testdbgenerator import TestCaseWithDatabase
+from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
+from cmstestsuite.unit_tests.filesystemmixin import FileSystemMixin
 
-from cms import config
 from cms.db import Contest, Executable, Participation, Statement, Submission, \
     SubmissionResult, Task, User, version
+
+from cmscommon.digest import bytes_digest
 
 from cmscontrib.DumpExporter import DumpExporter
 
 
-class TestDumpExporter(TestCaseWithDatabase):
+class TestDumpExporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
 
     def setUp(self):
         super(TestDumpExporter, self).setUp()
-        if not os.path.exists(config.temp_dir):
-            os.makedirs(config.temp_dir)
 
-        self.base = os.path.join(tempfile.mkdtemp(), "target")
+        self.target = self.get_path("target")
         self.dump = None
 
         # Add a file to be used as a statement.
         self.st_content = b"statement"
-        self.st_digest = "bbb930cc426507ed3f6b7c343c75dd0e041494b7"
+        self.st_digest = bytes_digest(self.st_content)
         self.add_fsobject(self.st_digest, self.st_content)
 
         # Add a file to be used as a submission source.
         self.file_content = b"source"
-        self.file_digest = "828d338a9b04221c9cbe286f50cd389f68de4ecf"
+        self.file_digest = bytes_digest(self.file_content)
         self.add_fsobject(self.file_digest, self.file_content)
 
         # Add a file to be used as an executable.
         self.exe_content = b"executable"
-        self.exe_digest = "0d5602f9eacdb79b54a675b2e91433cd13ed246e"
+        self.exe_digest = bytes_digest(self.exe_content)
         self.add_fsobject(self.exe_digest, self.exe_content)
 
         self.contest = self.add_contest(description="你好")
@@ -96,7 +94,6 @@ class TestDumpExporter(TestCaseWithDatabase):
 
     def tearDown(self):
         self.delete_data()
-        shutil.rmtree(os.path.dirname(self.base))
         super(TestDumpExporter, self).tearDown()
 
     def do_export(self, contest_ids, dump_files=True, skip_generated=False,
@@ -104,13 +101,13 @@ class TestDumpExporter(TestCaseWithDatabase):
         """Create an exporter and call do_export in a convenient way"""
         r = DumpExporter(
             contest_ids,
-            self.base,
+            self.target,
             dump_files=dump_files,
             dump_model=True,
             skip_generated=skip_generated,
             skip_submissions=skip_submissions,
             skip_user_tests=False).do_export()
-        dump_path = os.path.join(self.base, "contest.json")
+        dump_path = os.path.join(self.target, "contest.json")
         try:
             with io.open(dump_path, "rt", encoding="utf-8") as f:
                 self.dump = json.load(f)
@@ -154,20 +151,20 @@ class TestDumpExporter(TestCaseWithDatabase):
                                      (cls.__name__, kwargs))
 
     def assertFileInDump(self, digest, content):
-        path = os.path.join(self.base, "files", digest)
+        path = os.path.join(self.target, "files", digest)
         self.assertTrue(os.path.exists(path))
         with io.open(path, "rb") as f:
             self.assertEqual(content, f.read())
 
     def assertFileNotInDump(self, digest):
-        path = os.path.join(self.base, "files", digest)
+        path = os.path.join(self.target, "files", digest)
         self.assertFalse(os.path.exists(path))
 
     def test_dont_overwrite(self):
-        with io.open(self.base, "wt", encoding="utf-8") as f:
+        with io.open(self.target, "wt", encoding="utf-8") as f:
             f.write("hello!")
         self.assertFalse(self.do_export(None))
-        with io.open(self.base, "rt") as f:
+        with io.open(self.target, "rt") as f:
             self.assertEqual(f.read(), "hello!")
 
     def test_export_all(self):

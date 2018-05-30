@@ -40,18 +40,17 @@ from six import iterkeys, iteritems
 
 import ipaddress
 import logging
-import pickle
-from datetime import timedelta
 
 import tornado.web
-from sqlalchemy.orm import contains_eager
 
 from cms import config, TOKEN_MODE_MIXED
-from cms.db import Contest, Participation, User
-from cms.server import compute_actual_phase, file_handler_gen, \
-    create_url_builder
+from cms.db import Contest, Submission, Task, UserTest
+from cms.server import file_handler_gen
 from cms.locale import filter_language_codes
-from cmscommon.datetime import get_timezone, make_datetime, make_timestamp
+from cms.server.contest.authentication import authenticate_request
+from cmscommon.datetime import get_timezone
+
+from ..phase_management import compute_actual_phase
 
 from .base import BaseHandler
 
@@ -62,28 +61,6 @@ logger = logging.getLogger(__name__)
 NOTIFICATION_ERROR = "error"
 NOTIFICATION_WARNING = "warning"
 NOTIFICATION_SUCCESS = "success"
-
-
-def check_ip(address, networks):
-    """Return if client IP belongs to one of the accepted networks.
-
-    address (bytes): IP address to verify.
-    networks ([ipaddress.IPv4Network|ipaddress.IPv6Network]): IP
-        networks (addresses w/ subnets) to check against.
-
-    return (bool): whether the address belongs to one of the networks.
-
-    """
-    try:
-        address = ipaddress.ip_address(str(address))
-    except ValueError:
-        return False
-
-    for network in networks:
-        if address in network:
-            return True
-
-    return False
 
 
 class ContestHandler(BaseHandler):
@@ -111,8 +88,7 @@ class ContestHandler(BaseHandler):
         super(ContestHandler, self).prepare()
 
         if self.is_multi_contest():
-            self.contest_url = \
-                create_url_builder(self.url(self.contest.name))
+            self.contest_url = self.url[self.contest.name]
         else:
             self.contest_url = self.url
 
@@ -173,134 +149,24 @@ class ContestHandler(BaseHandler):
 
         """
         cookie_name = self.contest.name + "_login"
+        cookie = self.get_secure_cookie(cookie_name)
 
-        participation = None
-
-        if self.contest.ip_autologin:
-            try:
-                participation = self._get_current_user_from_ip()
-                # If the login is IP-based, we delete previous cookies.
-                if participation is not None:
-                    self.clear_cookie(cookie_name)
-            except RuntimeError:
-                return None
-
-        if participation is None \
-                and self.contest.allow_password_authentication:
-            participation = self._get_current_user_from_cookie()
-
-        if participation is None:
-            self.clear_cookie(cookie_name)
-            return None
-
-        # Check if user is using the right IP (or is on the right subnet),
-        # and that is not hidden if hidden users are blocked.
-        ip_login_restricted = \
-            self.contest.ip_restriction and participation.ip is not None \
-            and not check_ip(self.request.remote_ip, participation.ip)
-        hidden_user_restricted = \
-            participation.hidden and self.contest.block_hidden_participations
-        if ip_login_restricted or hidden_user_restricted:
-            self.clear_cookie(cookie_name)
-            participation = None
-
-        return participation
-
-    def _get_current_user_from_ip(self):
-        """Return the current participation based on the IP address.
-
-        return (Participation|None): the only participation matching
-            the remote IP address, or None if no participations could
-            be matched.
-
-        raise (RuntimeError): if there is more than one participation
-            matching the remote IP address.
-
-        """
         try:
-            # We encode it as a network (i.e., we assign it a /32 or
-            # /128 mask) since we're comparing it for equality with
-            # other networks.
-            remote_ip = ipaddress.ip_network(str(self.request.remote_ip))
+            # In py2 Tornado gives us the IP address as a native binary
+            # string, whereas ipaddress wants text (unicode) strings.
+            ip_address = ipaddress.ip_address(str(self.request.remote_ip))
         except ValueError:
-            return None
-        participations = self.sql_session.query(Participation)\
-            .filter(Participation.contest == self.contest)\
-            .filter(Participation.ip.any(remote_ip))
-
-        # If hidden users are blocked we ignore them completely.
-        if self.contest.block_hidden_participations:
-            participations = participations\
-                .filter(Participation.hidden.is_(False))
-
-        participations = participations.all()
-
-        if len(participations) == 1:
-            return participations[0]
-
-        # Having more than participation with the same IP,
-        # is a mistake and should not happen. In such case,
-        # we disallow login for that IP completely, in order to
-        # make sure the problem is noticed.
-        if len(participations) > 1:
-            logger.error("%d participants have IP %s while"
-                         "auto-login feature is enabled." % (
-                             len(participations), remote_ip))
-            raise RuntimeError("More than one participants with the same IP.")
-
-    def _get_current_user_from_cookie(self):
-        """Return the current participation based on the cookie.
-
-        If a participation can be extracted, the cookie is refreshed.
-
-        return (Participation|None): the participation extracted from
-            the cookie, or None if not possible.
-
-        """
-        cookie_name = self.contest.name + "_login"
-
-        if self.get_secure_cookie(cookie_name) is None:
+            logger.warning("Invalid IP address provided by Tornado: %s",
+                           self.request.remote_ip)
             return None
 
-        # Parse cookie.
-        try:
-            cookie = pickle.loads(self.get_secure_cookie(cookie_name))
-            username = cookie[0]
-            password = cookie[1]
-            last_update = make_datetime(cookie[2])
-        except:
-            return None
+        participation, cookie = authenticate_request(
+            self.sql_session, self.contest, self.timestamp, cookie, ip_address)
 
-        # Check if the cookie is expired.
-        if self.timestamp - last_update > \
-                timedelta(seconds=config.cookie_duration):
-            return None
-
-        # Load participation from DB and make sure it exists.
-        participation = self.sql_session.query(Participation)\
-            .join(Participation.user)\
-            .options(contains_eager(Participation.user))\
-            .filter(Participation.contest == self.contest)\
-            .filter(User.username == username)\
-            .first()
-        if participation is None:
-            return None
-
-        # Check that the password is correct (if a contest-specific
-        # password is defined, use that instead of the user password).
-        if participation.password is None:
-            correct_password = participation.user.password
-        else:
-            correct_password = participation.password
-        if password != correct_password:
-            return None
-
-        if self.refresh_cookie:
-            self.set_secure_cookie(cookie_name,
-                                   pickle.dumps((username,
-                                                 password,
-                                                 make_timestamp())),
-                                   expires_days=None)
+        if cookie is None:
+            self.clear_cookie(cookie_name)
+        elif self.refresh_cookie:
+            self.set_secure_cookie(cookie_name, cookie, expires_days=None)
 
         return participation
 
@@ -364,6 +230,69 @@ class ContestHandler(BaseHandler):
 
         """
         return self.contest_url()
+
+    def get_task(self, task_name):
+        """Return the task in the contest with the given name.
+
+        task_name (str): the name of the task we are interested in.
+
+        return (Task|None): the corresponding task object, if found.
+
+        """
+        return self.sql_session.query(Task) \
+            .filter(Task.contest == self.contest) \
+            .filter(Task.name == task_name) \
+            .one_or_none()
+
+    def get_submission(self, task, submission_num):
+        """Return the num-th contestant's submission on the given task.
+
+        task (Task): a task for the contest that is being served.
+        submission_num (str): a positive number, in decimal encoding.
+
+        return (Submission|None): the submission_num-th submission, in
+            chronological order, that was sent by the currently logged
+            in contestant on the given task (None if not found).
+
+        """
+        return self.sql_session.query(Submission) \
+            .filter(Submission.participation == self.current_user) \
+            .filter(Submission.task == task) \
+            .order_by(Submission.timestamp) \
+            .offset(int(submission_num) - 1) \
+            .first()
+
+    def get_user_test(self, task, user_test_num):
+        """Return the num-th contestant's test on the given task.
+
+        task (Task): a task for the contest that is being served.
+        user_test_num (str): a positive number, in decimal encoding.
+
+        return (UserTest|None): the user_test_num-th user test, in
+            chronological order, that was sent by the currently logged
+            in contestant on the given task (None if not found).
+
+        """
+        return self.sql_session.query(UserTest) \
+            .filter(UserTest.participation == self.current_user) \
+            .filter(UserTest.task == task) \
+            .order_by(UserTest.timestamp) \
+            .offset(int(user_test_num) - 1) \
+            .first()
+
+    def add_notification(self, subject, text, level):
+        self.service.add_notification(
+            self.current_user.user.username, self.timestamp,
+            self._(subject), self._(text), level)
+
+    def notify_success(self, subject, text):
+        self.add_notification(subject, text, NOTIFICATION_SUCCESS)
+
+    def notify_warning(self, subject, text):
+        self.add_notification(subject, text, NOTIFICATION_WARNING)
+
+    def notify_error(self, subject, text):
+        self.add_notification(subject, text, NOTIFICATION_ERROR)
 
 
 FileHandler = file_handler_gen(ContestHandler)

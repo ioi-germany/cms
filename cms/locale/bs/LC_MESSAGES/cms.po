@@ -31,8 +31,8 @@ msgid "Compilation timed out"
 msgstr "Kompajliranje je trajalo predugo"
 
 #, python-format
-msgid "Compilation killed with signal %d (could be triggered by violating memory limits)"
-msgstr "Kompajliranje prekinuto signalom %d (možda je izazvano prekoračenjem dozvoljene memorije)"
+msgid "Compilation killed with signal %s (could be triggered by violating memory limits)"
+msgstr "Kompajliranje prekinuto signalom %s (možda je izazvano prekoračenjem dozvoljene memorije)"
 
 msgid "Execution timed out"
 msgstr "Vrijeme za izvršavanje je isteklo"
@@ -40,13 +40,6 @@ msgstr "Vrijeme za izvršavanje je isteklo"
 #, python-format
 msgid "Execution killed with signal %s (could be triggered by violating memory limits)"
 msgstr "Izvršavanje prekinuto signalom %s (možda je izazvano prekoračenjem dozvoljene memorije)"
-
-#, python-format
-msgid "Execution killed because of forbidden syscall %s"
-msgstr "Izvršenje prekinuto zbog nedozvoljenog sistemskog poziva %s"
-
-msgid "Execution killed because of forbidden file access"
-msgstr "Izvršenje prekinuto zbog nedozvoljenog datotečnog pristupa"
 
 msgid "Execution failed because the return code was nonzero"
 msgstr "Izvršenje nije uspjelo jer povratni kod nije bio nula"
@@ -62,8 +55,8 @@ msgid "Evaluation didn't produce file %s"
 msgstr "Evaluacija nije proizvela datoteku %s"
 
 #, python-format
-msgid "Subtask %d"
-msgstr "Podzadatak %d"
+msgid "Subtask %(index)s"
+msgstr "Podzadatak %(index)s"
 
 msgid "Outcome"
 msgstr "Ishod"

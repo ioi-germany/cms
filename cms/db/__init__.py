@@ -67,8 +67,7 @@ __all__ = [
     # admin
     "Admin",
     # task
-    "Task", "Statement", "Attachment", "SubmissionFormatElement", "Dataset",
-    "Manager", "Testcase",
+    "Task", "Statement", "Attachment", "Dataset", "Manager", "Testcase",
     # submission
     "Submission", "File", "Token", "SubmissionResult", "Executable",
     "Evaluation",
@@ -89,7 +88,7 @@ __all__ = [
 
 # Instantiate or import these objects.
 
-version = 30
+version = 33
 
 engine = create_engine(config.database, echo=config.database_debug,
                        pool_timeout=60, pool_recycle=120)
@@ -106,8 +105,7 @@ from .validation import CodenameConstraint, FilenameConstraint, \
 from .contest import Contest, Announcement
 from .user import User, Team, Participation, Message, Question, Group
 from .admin import Admin
-from .task import Task, Statement, Attachment, SubmissionFormatElement, \
-    Dataset, Manager, Testcase
+from .task import Task, Statement, Attachment, Dataset, Manager, Testcase
 from .submission import Submission, File, Token, SubmissionResult, \
     Executable, Evaluation
 from .usertest import UserTest, UserTestFile, UserTestManager, \
@@ -211,18 +209,3 @@ def get_submission_results_for_dataset(self, dataset):
         .all()
 
 Dataset.get_submission_results = get_submission_results_for_dataset
-
-
-# The following is a method of Participation that cannot be put in the right
-# file because of circular dependencies.
-
-def get_tokens(self):
-    """Returns a list of tokens used by a user participation.
-
-    returns (list): list of tokens.
-
-    """
-    return self.sa_session.query(Token)\
-               .join(Submission).filter(Submission.participation == self).all()
-
-Participation.get_tokens = get_tokens

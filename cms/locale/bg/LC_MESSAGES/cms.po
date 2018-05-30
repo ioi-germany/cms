@@ -20,7 +20,7 @@ msgstr ""
 msgid "Compilation succeeded"
 msgstr "Успешно компилиране"
 
-msgid "Your submission successfully compiled to an excutable."
+msgid "Your submission successfully compiled to an executable."
 msgstr "Вашето решение успешно се компилира до програма."
 
 msgid "Compilation failed"
@@ -42,7 +42,7 @@ msgid ""
 "Compilation killed with signal %s (could be triggered by violating memory "
 "limits)"
 msgstr ""
-"Компилирането беше прекратено със сигнал %d (може да бъде причинено от "
+"Компилирането беше прекратено със сигнал %s (може да бъде причинено от "
 "нарушаване на ограниченията за памет)"
 
 msgid ""
@@ -108,27 +108,6 @@ msgstr ""
 "отбележете, че показаната използвана памет в детайлите на решението е от преди"
 "заделянето на памет, което е предизвикало сигнала."
 
-#, python-format
-msgid "Execution killed because of forbidden syscall %s"
-msgstr "Изпълнението е прекратено поради използването на забранена системна функция"
-
-msgid ""
-"Your submission was killed because it tried to use the forbidden syscall "
-"specified in the message."
-msgstr ""
-"Изпълнението на програмата беше прекратено, защото тя се опита да използва"
-"забранената системна функция указана в съобщението."
-
-msgid "Execution killed because of forbidden file access"
-msgstr ""
-"Изпълнението на вашата програма беше прекратено поради забранен достъп"
-"до файлове"
-
-msgid ""
-"Your submission was killed because it tried to read or write a forbidden "
-"file."
-msgstr ""
-
 msgid "Execution failed because the return code was nonzero"
 msgstr "Изпълнението се провали, защото програмата върна ненулев резултат."
 
@@ -140,8 +119,8 @@ msgid "N/A"
 msgstr "Неизвестно"
 
 #, python-format
-msgid "Subtask %d"
-msgstr "Подзадача %d"
+msgid "Subtask %(index)s"
+msgstr "Подзадача %(index)s"
 
 msgid "Outcome"
 msgstr "Резултат"

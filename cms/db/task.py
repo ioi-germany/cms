@@ -31,21 +31,22 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
-from six import itervalues
+from six import itervalues, iteritems
 
+import copy
 from datetime import timedelta
 
 from sqlalchemy.schema import Column, ForeignKey, CheckConstraint, \
     UniqueConstraint, ForeignKeyConstraint
 from sqlalchemy.types import Boolean, Integer, Float, String, Unicode, \
     Interval, Enum
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy.orm import relationship
 from sqlalchemy.orm.collections import attribute_mapped_collection
-from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 from cms import SCORE_MODE_MAX, SCORE_MODE_MAX_TOKENED_LAST, \
     TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE
+from cms.db.validation import FilenameListConstraint
 
 from . import Base, Contest, CodenameConstraint, FilenameConstraint, \
     DigestConstraint
@@ -94,11 +95,7 @@ class Task(Base):
         index=True)
     contest = relationship(
         Contest,
-        backref=backref('tasks',
-                        collection_class=ordering_list('num'),
-                        order_by=[num],
-                        cascade="all",
-                        passive_deletes=True))
+        back_populates="tasks")
 
     # Short name and long human readable title of the task.
     name = Column(
@@ -109,6 +106,14 @@ class Task(Base):
     title = Column(
         Unicode,
         nullable=False)
+
+    # The names of the files that the contestant needs to submit (with
+    # language-specific extensions replaced by "%l").
+    submission_format = Column(
+        ARRAY(String),
+        FilenameListConstraint("submission_format"),
+        nullable=False,
+        default=[])
 
     # The language codes of the statements that will be highlighted to
     # all users for this task.
@@ -223,14 +228,43 @@ class Task(Base):
         # this relationship.
         post_update=True)
 
-    # Follows the description of the fields automatically added by
-    # SQLAlchemy.
-    # datasets (list of Dataset objects)
-    # statements (dict of Statement objects indexed by language code)
-    # attachments (dict of Attachment objects indexed by filename)
-    # submission_format (list of SubmissionFormatElement objects)
-    # submissions (list of Submission objects)
-    # user_tests (list of UserTest objects)
+    # These one-to-many relationships are the reversed directions of
+    # the ones defined in the "child" classes using foreign keys.
+
+    statements = relationship(
+        "Statement",
+        collection_class=attribute_mapped_collection("language"),
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="task")
+
+    attachments = relationship(
+        "Attachment",
+        collection_class=attribute_mapped_collection("filename"),
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="task")
+
+    datasets = relationship(
+        "Dataset",
+        # Due to active_dataset_id, SQLAlchemy cannot unambiguously
+        # figure out by itself which foreign key to use.
+        foreign_keys="[Dataset.task_id]",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="task")
+
+    submissions = relationship(
+        "Submission",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="task")
+
+    user_tests = relationship(
+        "UserTest",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="task")
 
 
 class Statement(Base):
@@ -256,11 +290,7 @@ class Statement(Base):
         index=True)
     task = relationship(
         Task,
-        backref=backref('statements',
-                        collection_class=
-                            attribute_mapped_collection('language'),
-                        cascade="all, delete-orphan",
-                        passive_deletes=True))
+        back_populates="statements")
 
     # Code for the language the statement is written in.
     # It can be an arbitrary string, but if it's in the form "en" or "en_US"
@@ -302,11 +332,7 @@ class Attachment(Base):
         index=True)
     task = relationship(
         Task,
-        backref=backref('attachments',
-                        collection_class=
-                            attribute_mapped_collection('filename'),
-                        cascade="all, delete-orphan",
-                        passive_deletes=True))
+        back_populates="attachments")
 
     # Filename and digest of the provided attachment.
     filename = Column(
@@ -316,39 +342,6 @@ class Attachment(Base):
     digest = Column(
         String,
         DigestConstraint("digest"),
-        nullable=False)
-
-
-class SubmissionFormatElement(Base):
-    """Class to store the requested files that a submission must
-    include. Filenames may include %l to represent an accepted
-    language extension.
-
-    """
-    __tablename__ = 'submission_format_elements'
-
-    # Auto increment primary key.
-    id = Column(
-        Integer,
-        primary_key=True)
-
-    # Task (id and object) owning the submission format element.
-    task_id = Column(
-        Integer,
-        ForeignKey(Task.id,
-                   onupdate="CASCADE", ondelete="CASCADE"),
-        nullable=False,
-        index=True)
-    task = relationship(
-        Task,
-        backref=backref('submission_format',
-                        cascade="all, delete-orphan",
-                        passive_deletes=True))
-
-    # Format of the given submission file.
-    filename = Column(
-        Unicode,
-        FilenameConstraint("filename"),
         nullable=False)
 
 
@@ -378,9 +371,7 @@ class Dataset(Base):
     task = relationship(
         Task,
         foreign_keys=[task_id],
-        backref=backref('datasets',
-                        cascade="all, delete-orphan",
-                        passive_deletes=True))
+        back_populates="datasets")
 
     # A human-readable text describing the dataset.
     description = Column(
@@ -397,9 +388,11 @@ class Dataset(Base):
     # Time and memory limits for every testcase.
     time_limit = Column(
         Float,
+        CheckConstraint("time_limit > 0"),
         nullable=True)
     memory_limit = Column(
         Integer,
+        CheckConstraint("memory_limit > 0"),
         nullable=True)
 
     # Name of the TaskType child class suited for the task.
@@ -422,10 +415,22 @@ class Dataset(Base):
         JSONB,
         nullable=False)
 
-    # Follows the description of the fields automatically added by
-    # SQLAlchemy.
-    # managers (dict of Manager objects indexed by filename)
-    # testcases (dict of Testcase objects indexed by codename)
+    # These one-to-many relationships are the reversed directions of
+    # the ones defined in the "child" classes using foreign keys.
+
+    managers = relationship(
+        "Manager",
+        collection_class=attribute_mapped_collection("filename"),
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="dataset")
+
+    testcases = relationship(
+        "Testcase",
+        collection_class=attribute_mapped_collection("codename"),
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="dataset")
 
     @property
     def active(self):
@@ -436,6 +441,47 @@ class Dataset(Base):
 
         """
         return self is self.task.active_dataset
+
+    @property
+    def task_type_object(self):
+        if not hasattr(self, "_cached_task_type_object") \
+                or self.task_type != self._cached_task_type \
+                or self.task_type_parameters \
+                   != self._cached_task_type_parameters:
+            # Import late to avoid a circular dependency.
+            from cms.grading.tasktypes import get_task_type
+            # This can raise.
+            self._cached_task_type_object = get_task_type(
+                self.task_type, self.task_type_parameters)
+            # If an exception is raised these updates don't take place:
+            # that way, next time this property is accessed, we get a
+            # cache miss again and the same exception is raised again.
+            self._cached_task_type = self.task_type
+            self._cached_task_type_parameters = \
+                copy.deepcopy(self.task_type_parameters)
+        return self._cached_task_type_object
+
+    @property
+    def score_type_object(self):
+        public_testcases = {k: tc.public for k, tc in iteritems(self.testcases)}
+        if not hasattr(self, "_cached_score_type_object") \
+                or self.score_type != self._cached_score_type \
+                or self.score_type_parameters \
+                   != self._cached_score_type_parameters \
+                or public_testcases != self._cached_public_testcases:
+            # Import late to avoid a circular dependency.
+            from cms.grading.scoretypes import get_score_type
+            # This can raise.
+            self._cached_score_type_object = get_score_type(
+                self.score_type, self.score_type_parameters, public_testcases)
+            # If an exception is raised these updates don't take place:
+            # that way, next time this property is accessed, we get a
+            # cache miss again and the same exception is raised again.
+            self._cached_score_type = self.score_type
+            self._cached_score_type_parameters = \
+                copy.deepcopy(self.score_type_parameters)
+            self._cached_public_testcases = public_testcases
+        return self._cached_score_type_object
 
     def clone_from(self, old_dataset, clone_managers=True,
                    clone_testcases=True, clone_results=False):
@@ -510,11 +556,7 @@ class Manager(Base):
         index=True)
     dataset = relationship(
         Dataset,
-        backref=backref('managers',
-                        collection_class=
-                            attribute_mapped_collection('filename'),
-                        cascade="all, delete-orphan",
-                        passive_deletes=True))
+        back_populates="managers")
 
     # Filename and digest of the provided manager.
     filename = Column(
@@ -550,11 +592,7 @@ class Testcase(Base):
         index=True)
     dataset = relationship(
         Dataset,
-        backref=backref('testcases',
-                        collection_class=
-                            attribute_mapped_collection('codename'),
-                        cascade="all, delete-orphan",
-                        passive_deletes=True))
+        back_populates="testcases")
 
     # Codename identifying the testcase.
     codename = Column(

@@ -121,18 +121,33 @@ class FunctionalTestFramework(object):
             self._cws_browser.login(lr)
         return self._cws_browser
 
-    def initialize_aws(self, rand):
-        """Create an admin and logs in
+    def initialize_aws(self):
+        """Create an admin.
 
-        rand (int): some random bit to add to the admin username.
+        The username will be admin_<suffix>, where <suffix> will be the first
+        integer (from 1) for which an admin with that name doesn't yet exist.
+
+        return (str): the suffix.
 
         """
         logger.info("Creating admin...")
-        self.admin_info["username"] = "admin%s" % rand
         self.admin_info["password"] = "adminpwd"
-        sh([sys.executable, "cmscontrib/AddAdmin.py",
-            "%(username)s" % self.admin_info,
-            "-p", "%(password)s" % self.admin_info])
+
+        suffix = "1"
+        while True:
+            self.admin_info["username"] = "admin_%s" % suffix
+            logger.info("Trying %(username)s" % self.admin_info)
+            try:
+                sh([sys.executable, "cmscontrib/AddAdmin.py",
+                    "%(username)s" % self.admin_info,
+                    "-p", "%(password)s" % self.admin_info],
+                   ignore_failure=False)
+            except TestException:
+                suffix = str(int(suffix) + 1)
+            else:
+                break
+
+        return suffix
 
     def get_cms_config(self):
         if self._cms_config is None:
