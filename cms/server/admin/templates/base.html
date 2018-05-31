@@ -34,9 +34,9 @@ function init()
     utils.update_notifications();
     setInterval(function() { utils.update_notifications(); }, 15000);
     {% else %}
-    utils = new CMS.AWSUtils("{{ url() }}", {{ make_timestamp(timestamp) }},
-        {{ make_timestamp(contest.main_group.start) }}, {{ make_timestamp(contest.main_group.stop) }},
-        {{ make_timestamp(contest.main_group.analysis_start) }}, {{ make_timestamp(contest.main_group.analysis_stop) }},
+    utils = new CMS.AWSUtils("{{ url() }}", {{ timestamp|make_timestamp }},
+        {{ contest.main_group.start|make_timestamp }}, {{ contest.main_group.stop|make_timestamp }},
+        {{ contest.main_group.analysis_start|make_timestamp }}, {{ contest.main_group.analysis_stop|make_timestamp }},
         {{ phase }});
 
     {% if phase < 3 %}

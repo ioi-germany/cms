@@ -41,7 +41,7 @@ from sqlalchemy.schema import Column, ForeignKey, CheckConstraint, \
     UniqueConstraint
 from sqlalchemy.types import Boolean, Integer, String, Unicode, DateTime, \
     Interval
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.dialects.postgresql import ARRAY, CIDR
 
 from cmscommon.crypto import generate_random_password, build_password
