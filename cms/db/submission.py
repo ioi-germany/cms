@@ -401,7 +401,7 @@ class SubmissionResult(Base):
         nullable=True)
 
     unit_test_score_details = Column(
-        String,
+        JSONB,
         nullable=True)
 
     # Ranking score details. It is a list of strings that are going to

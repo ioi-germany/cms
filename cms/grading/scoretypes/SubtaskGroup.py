@@ -57,8 +57,6 @@ class SubtaskGroup(ScoreType):
     N_("Memory used")
     N_("N/A")
     TEMPLATE = """\
-{% from cms.grading import format_status_text %}
-{% from cms.server import format_size %}
 {% if not details["unit_test"] %}{# Normal submission #}
 {% for st in details["subtasks"] %}
     {% if "score" in st and "max_score" in st %}
@@ -68,7 +66,7 @@ class SubtaskGroup(ScoreType):
 <div class="subtask notcorrect">
         {% else %}
 <div class="subtask partiallycorrect">
-        {% end %}
+        {% endif %}
     <div class="subtask-head">
         <span class="title" style="margin-top:-2px;">
             {{ st["name"] }}
@@ -81,21 +79,22 @@ class SubtaskGroup(ScoreType):
                     FAILED
                 {% else %}
                     PARTIALLY
-                {% end %}
+                {% endif %}
             {% else %}
-                {{ '%g' % round(st["score"], 2) }} / {{ st["max_score"] }}
-            {% end %}
+                {{ st["score"]|round(2)|format_decimal }}
+                / {{ st["max_score"]|format_decimal }}
+            {% endif %}
         </span>
     </div>
     <div class="subtask-body">
         <table class="testcase-list">
             <thead>
                 <tr>
-                    <th>{{ _("Outcome") }}</th>
-                    <th>{{ _("Details") }}</th>
-                    <th>{{ _("Execution time") }}</th>
-                    <th>{{ _("Memory used") }}</th>
-                    <th>{{ _("Group") }}</th>
+                    <th>{% trans %}Outcome{% endtrans %}</th>
+                    <th>{% trans %}Details{% endtrans %}</th>
+                    <th>{% trans %}Execution time{% endtrans %}</th>
+                    <th>{% trans %}Memory used{% endtrans %}</th>
+                    <th>{% trans %}Group{% endtrans %}</th>
                 </tr>
             </thead>
             <tbody>
@@ -107,40 +106,40 @@ class SubtaskGroup(ScoreType):
                 <tr class="notcorrect">
                 {% else %}
                 <tr class="partiallycorrect">
-                {% end %}
+                {% endif %}
                     <td>{{ _(tc["outcome"]) }}</td>
-                    <td>{{ format_status_text(tc["text"], _) }}</td>
+                    <td>{{ tc["text"]|format_status_text }}</td>
                     <td>
-                {% if "time" in tc and tc["time"] is not None %}
+                {% if "time" in tc and tc["time"] is not none %}
                         {{ "%(seconds)0.3f s" % {'seconds': tc["time"]} }}
                 {% else %}
-                        {{ _("N/A") }}
-                {% end %}
+                        {% trans %}N/A{% endtrans %}
+                {% endif %}
                     </td>
                     <td>
-                {% if "memory" in tc and tc["memory"] is not None %}
-                        {{ format_size(tc["memory"]) }}
+                {% if "memory" in tc and tc["memory"] is not none %}
+                        {{ tc["memory"]|format_size }}
                 {% else %}
-                        {{ _("N/A") }}
-                {% end %}
+                        {% trans %}N/A{% endtrans %}
+                {% endif %}
                     </td>
                 {% if "grouplen" in tc %}
                     <td rowspan="{{ tc["grouplen"] }}">{{ tc["groupnr"] }}</td>
-                {% end %}
+                {% endif %}
             {% else %}
                 <tr class="undefined">
                     <td colspan="5">
-                        {{ _("N/A") }}
+                        {% trans %}N/A{% endtrans %}
                     </td>
                 </tr>
-            {% end %}
-        {% end %}
+            {% endif %}
+        {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
-    {% end %}
-{% end %}
+    {% endif %}
+{% endfor %}
 {% else %}{# Unit test #}
 {% if "public_score_okay" in details %}
 {% if details["public_score_okay"] == True %}
@@ -208,7 +207,7 @@ class SubtaskGroup(ScoreType):
             </table>
         </div>
     </div>
-{% end %}
+{% endif %}
 {% if details["private_score_okay"] %}
     <div class="subtask correct">
         <div class="subtask-head">
@@ -255,9 +254,9 @@ class SubtaskGroup(ScoreType):
             </table>
         </div>
     </div>
-{% end %}
+{% endif %}
 <br><br>
-{% end %}
+{% endif %}
 
 {% for st in details["subtasks"] %}
     {% if st["status"][0] == 1337%}
@@ -266,7 +265,7 @@ class SubtaskGroup(ScoreType):
 <div class="subtask correct">
     {% else %}
 <div class="subtask notcorrect">
-    {% end %}
+    {% endif %}
     <div class="subtask-head">
         <span class="title" style="margin-top:-2px;">
             {{ st["name"] }}
@@ -284,11 +283,11 @@ class SubtaskGroup(ScoreType):
             <col style="width:44%;">
             <thead>
                 <tr>
-                    <th class="short">{{ _("T") }}</th>
-                    <th class="short">{{ _("M") }}</th>
-                    <th class="short">{{ _("A") }}</th>
-                    <th>{{ _("Testcase verdict") }}</th>
-                    <th>{{ _("Group verdict") }}</th>
+                    <th class="short">{% trans %}T{% endtrans %}</th>
+                    <th class="short">{% trans %}M{% endtrans %}</th>
+                    <th class="short">{% trans %}A{% endtrans %}</th>
+                    <th>{% trans %}Testcase verdict{% endtrans %}</th>
+                    <th>{% trans %}Group verdict{% endtrans %}</th>
                 </tr>
             </thead>
             <tbody>
@@ -305,7 +304,7 @@ class SubtaskGroup(ScoreType):
                     <td class="{{"unit_test_ok" if c["line"][1][1] > 0 else \
                                  "unit_test_failed" if c["line"][1][1] < 0 \
                                  else ""}} short" style="cursor:default;"
-                     title="{{ format_size(c["memory"]) }}">
+                     title="{{ c["memory"]|format_size }}">
                         {{c["line"][1][0]}}
                     </td>
                     <td class="{{"unit_test_ok" if c["line"][2][1] > 0 else \
@@ -323,8 +322,8 @@ class SubtaskGroup(ScoreType):
                         {{t}}
                 {% if i < len(x) - 1 %}
                         <br>
-                {% end %}
-            {% end %}
+                {% endif %}
+            {% endfor %}
                     </td>
             {% if first %}
                     <td rowspan={{len(g["cases"])}}
@@ -337,20 +336,20 @@ class SubtaskGroup(ScoreType):
                         {{t}}
                     {% if i < len(x) - 1 %}
                         <br>
-                    {% end %}
-                {% end %}
+                    {% endif %}
+                {% endfor %}
                     </td>
-            {% end %}
+            {% endif %}
             {% set first = False %}
                 </tr>
-        {% end %}
-    {% end %}
+        {% endfor %}
+    {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
-{% end %}
-{% end %}
+{% endfor %}
+{% endif %}
 """
 
     def feedback(self):
@@ -409,9 +408,9 @@ class SubtaskGroup(ScoreType):
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated():
             if public:
-                return 0.0, json.dumps({"unit_test": False, "subtasks": []})
+                return 0.0, {"unit_test": False, "subtasks": []}
             else:
-                return 0.0, json.dumps({"unit_test": False, "subtasks": []}), \
+                return 0.0, {"unit_test": False, "subtasks": []}, \
                     ["%lg" % 0.0 for _ in self.parameters["tcinfo"]]
 
         evaluations = dict((ev.codename, ev)
@@ -471,9 +470,9 @@ class SubtaskGroup(ScoreType):
         details = {"unit_test": False, "subtasks": subtasks}
 
         if public:
-            return score, json.dumps(details)
+            return score, details
         else:
-            return score, json.dumps(details), ranking_details
+            return score, details, ranking_details
 
     def compute_score(self, submission_result):
         """Compute the score of a normal submission.
@@ -509,8 +508,8 @@ class SubtaskGroup(ScoreType):
 
         """
         if submission_info is None:
-            return json.dumps({"unit_test": True,
-                               "verdict": (-1, "Not a Unit Test")})
+            return {"unit_test": True,
+                    "verdict": (-1, "Not a Unit Test")}
 
         wanted_public, wanted_private = \
             self.unit_test_expected_scores(submission_info)
@@ -521,8 +520,8 @@ class SubtaskGroup(ScoreType):
 
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated():
-            return json.dumps({"unit_test": True, 'subtasks': [],
-                               'verdict': (-1, "Compilation failed")})
+            return {"unit_test": True, 'subtasks': [],
+                    'verdict': (-1, "Compilation failed")}
 
         evaluations = dict((ev.codename, ev)
                            for ev in submission_result.evaluations)
@@ -665,7 +664,7 @@ class SubtaskGroup(ScoreType):
 
         details["verdict"] = (1, "Okay") if okay else (0, "Failed")
 
-        return json.dumps(details)
+        return details
 
     def get_public_outcome(self, outcome):
         """Return a public outcome from an outcome.

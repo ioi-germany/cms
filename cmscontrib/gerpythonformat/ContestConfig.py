@@ -550,7 +550,7 @@ class ContestConfig(CommonConfig):
                    password=build_password(user.password))
 
         udb.timezone = user.timezone
-        udb.preferred_languages = json.dumps(user.primary_statements)
+        udb.preferred_languages = user.primary_statements
 
         return udb
 

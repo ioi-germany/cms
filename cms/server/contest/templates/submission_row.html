@@ -22,17 +22,17 @@
     </td>
     {% if score_type is not None and score_type.max_public_score != 0 %}
     <td class="public_score undefined">{{ _("N/A") }}</td>
-    {% end %}
+    {% endif %}
     {% if score_type is not None and score_type.max_public_score != score_type.max_score %}
     <td class="total_score undefined">{{ _("N/A") }}</td>
-    {% end %}
+    {% endif %}
     {% if any_unit_tests %}
         {% if s.is_unit_test() %}
     <td class="unit_test undefined">{{ _("N/A") }}</td>
         {% else %}
     <td class="unit_test"></td>
-        {% end %}
-    {% end %}
+        {% endif %}
+    {% endif %}
 {% elif sr.compilation_outcome == "fail" %}
 <tr data-submission="{{ s_idx }}" data-status="{{ SubmissionResult.COMPILATION_FAILED }}">
     {% raw col1 %}
@@ -42,17 +42,17 @@
     </td>
     {% if score_type is not None and score_type.max_public_score != 0 %}
     <td class="public_score undefined">{{ _("N/A") }}</td>
-    {% end %}
+    {% endif %}
     {% if score_type is not None and score_type.max_public_score != score_type.max_score %}
     <td class="total_score undefined">{{ _("N/A") }}</td>
-    {% end %}
+    {% endif %}
     {% if any_unit_tests %}
         {% if s.is_unit_test() %}
     <td class="unit_test undefined">{{ _("N/A") }}</td>
         {% else %}
     <td class="unit_test"></td>
-        {% end %}
-    {% end %}
+        {% endif %}
+    {% endif %}
 {% elif not sr.evaluated() %}
 <tr data-submission="{{ s_idx }}" data-status="{{ SubmissionResult.EVALUATING }}">
     {% raw col1 %}
@@ -61,17 +61,17 @@
     </td>
     {% if score_type is not None and score_type.max_public_score != 0 %}
     <td class="public_score undefined">{{ _("N/A") }}</td>
-    {% end %}
+    {% endif %}
     {% if score_type is not None and score_type.max_public_score != score_type.max_score %}
     <td class="total_score undefined">{{ _("N/A") }}</td>
-    {% end %}
+    {% endif %}
     {% if any_unit_tests %}
         {% if s.is_unit_test() %}
     <td class="unit_test undefined">{{ _("N/A") }}</td>
         {% else %}
     <td class="unit_test"></td>
-        {% end %}
-    {% end %}
+        {% endif %}
+    {% endif %}
 {% elif not sr.scored() %}
 <tr data-submission="{{ s_idx }}" data-status="{{ SubmissionResult.SCORING }}">
     {% raw col1 %}
@@ -80,17 +80,17 @@
     </td>
     {% if score_type is not None and score_type.max_public_score != 0 %}
     <td class="public_score undefined">{{ _("N/A") }}</td>
-    {% end %}
+    {% endif %}
     {% if score_type is not None and score_type.max_public_score != score_type.max_score %}
     <td class="total_score undefined">{{ _("N/A") }}</td>
-    {% end %}
+    {% endif %}
     {% if any_unit_tests %}
         {% if s.is_unit_test() %}
     <td class="unit_test undefined">{{ _("N/A") }}</td>
         {% else %}
     <td class="unit_test"></td>
-        {% end %}
-    {% end %}
+        {% endif %}
+    {% endif %}
 {% else %}
 <tr data-submission="{{ s_idx }}" data-status="{{ SubmissionResult.SCORED }}">
     {% raw col1 %}
@@ -118,8 +118,7 @@
     <td class="total_score undefined">
         {% trans %}N/A{% endtrans %}
     </td>
-        {% end %}
-    {% end %}
+    {% endif %}
 
     {% if any_unit_tests %}
         {% if s.is_unit_test() %}
@@ -130,9 +129,9 @@
         {% else %}
     <td class="unit_test">
     </td>
-        {% end %}
-    {% end %}
-{% end %}
+        {% endif %}
+    {% endif %}
+{% endif %}
 {% if actual_phase >= +3 %}
     <td class="considered_in_score">
       {% if s.official %}

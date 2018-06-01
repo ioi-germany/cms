@@ -62,10 +62,10 @@ function update_additional_answer(element, invoker)
         <td>
           <select name="group_id">
             {% for g in contest.groups %}
-            <option value="{{ g.id }}" {% if participation.group_id == g.id %}selected{% end %}>
+            <option value="{{ g.id }}" {% if participation.group_id == g.id %}selected{% endif %}>
               {{ g.name }}
             </option>
-            {% end %}
+            {% endfor %}
           </select>
         </td>
       </tr>

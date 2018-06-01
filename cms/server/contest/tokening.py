@@ -244,10 +244,10 @@ def tokens_available(participation, task, timestamp):
     # If the contest is USACO-style (i.e., each user starts when they
     # decide so), then the tokens start being generated at the user's
     # starting time; otherwise, at the start of the contest.
-    if contest.per_user_time is not None:
+    if participation.group.per_user_time is not None:
         start = participation.starting_time
     else:
-        start = contest.start
+        start = participation.group.start
 
     # Compute separately for contest and task.
     res_contest = _tokens_available(

@@ -171,6 +171,8 @@ def instrument_generic_toolbox(env):
 
     env.tests["today"] = today
 
+    env.tests["is_unit_test"] = lambda s: s.is_unit_test()
+
 
 # TODO When dropping py2, let the arguments be `env, *, dataset` in
 # order to force the users to pass the dataset as a keyword argument.

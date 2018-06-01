@@ -31,9 +31,8 @@ from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, merge_co
 from cms import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX
 from cms.db import Task, Statement, Testcase, Dataset, \
-    SubmissionFormatElement, Attachment, Manager, Submission, File, \
+    Attachment, Manager, Submission, File, \
     SubmissionResult
-from cms.grading.scoretypes import get_score_type
 from cms.grading.tasktypes import get_task_type
 from cms.grading.languagemanager import filename_to_language
 from cms.grading.Job import CompilationJob, EvaluationJob
@@ -1350,11 +1349,11 @@ class TaskConfig(CommonConfig, Scope):
 
         if self.tasktype == "OutputOnly":
             tdb.submission_format = [
-                SubmissionFormatElement("output_%s.txt" % c.codename)
+                "output_%s.txt" % c.codename
                 for c in self.cases]
         else:
             tdb.submission_format = [
-                SubmissionFormatElement("%s.%%l" % self.name)]
+                "%s.%%l" % self.name]
         tdb.attachments = {}
         tdb.statements = {}
         primary_statements = []
@@ -1369,7 +1368,7 @@ class TaskConfig(CommonConfig, Scope):
             if statement.primary:
                 primary_statements.append(language)
 
-        tdb.primary_statements = json.dumps(primary_statements)
+        tdb.primary_statements = primary_statements
 
         # Add attachments
         for name, file in iteritems(self.attachments):
@@ -1508,7 +1507,7 @@ class TaskConfig(CommonConfig, Scope):
         # type says so.
         task_type = get_task_type(name=self.tasktype,
                                   parameters=self.tasktypeparameters)
-        required = set([sfe.filename for sfe in tdb.submission_format])
+        required = set(tdb.submission_format)
         provided = set(os.path.basename(f) for f in files)
         if not (required == provided or (task_type.ALLOW_PARTIAL_SUBMISSION
                                          and required.issuperset(provided))
@@ -1634,7 +1633,7 @@ class TaskConfig(CommonConfig, Scope):
             submission_result.set_evaluation_outcome()
 
         # Judge unit test
-        score_type = get_score_type(dataset=ddb)
+        score_type = ddb.score_type_object
         public_score, public_details = \
             score_type._compute_score(submission_result, True)
         score, details, ranking_details = \

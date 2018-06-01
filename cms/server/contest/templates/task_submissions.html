@@ -235,7 +235,7 @@ $(document).ready(function () {
         {% set num_cols = num_cols + 1 %}
     {% endif %}
 {% endif %}
-{% set any_unit_tests = any(s.is_unit_test() for s in submissions) %}
+{% set any_unit_tests = submissions|any("is_unit_test") %}
 {% if any_unit_tests %}
         <col class="unit_test"/>
 {% endif %}

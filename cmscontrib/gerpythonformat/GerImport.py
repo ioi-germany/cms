@@ -21,6 +21,8 @@
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
+from future.builtins.disabled import *
+from future.builtins import *
 
 import argparse
 import logging
@@ -34,10 +36,10 @@ from cmscontrib.gerpythonformat.LocationStack import chdir
 from cms import utf8_decoder, ServiceCoord
 from cms.db import Attachment, Contest, Dataset, Group, Manager, \
     Participation, SessionGen, Statement, Submission, \
-    SubmissionFormatElement, Task, Team, Testcase, User
+    Task, Team, Testcase, User
 from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
-from cmscontrib import BaseImporter, _is_rel
+from cmscontrib.importing import _update_object
 from cms.io import Service
 
 from six import iteritems
@@ -45,7 +47,7 @@ from six import iteritems
 logger = logging.getLogger(__name__)
 
 
-class GerImport(BaseImporter, Service):
+class GerImport(Service):
     def __init__(self, odir, no_test, clean, force):
         self.odir = odir
         self.no_test = no_test
@@ -151,11 +153,10 @@ class GerImport(BaseImporter, Service):
             Dataset: self._update_dataset,
             Team: self._update_team,
             # Default update
-            Testcase: self._update_object,
-            Manager: self._update_object,
-            Attachment: self._update_object,
-            SubmissionFormatElement: self._update_object,
-            Statement: self._update_object,
+            Testcase: _update_object,
+            Manager: _update_object,
+            Attachment: _update_object,
+            Statement: _update_object,
         }
         bla[type(old_value)](old_value, new_value)
 
@@ -163,7 +164,7 @@ class GerImport(BaseImporter, Service):
         self._update_columns(old_object, new_object)
 
         for prp in old_object._rel_props:
-            if _is_rel(prp, User.participations):
+            if prp.class_attribute == User.participations:
                 pass
             else:
                 raise RuntimeError(
@@ -174,9 +175,9 @@ class GerImport(BaseImporter, Service):
         self._update_columns(old_object, new_object)
 
         for prp in old_object._rel_props:
-            if _is_rel(prp, Group.contest):
+            if prp.class_attribute == Group.contest:
                 pass
-            elif _is_rel(prp, Group.participations):
+            elif prp.class_attribute == Group.participations:
                 pass
             else:
                 raise RuntimeError(
@@ -187,15 +188,15 @@ class GerImport(BaseImporter, Service):
         self._update_columns(old_object, new_object)
 
         for prp in old_object._rel_props:
-            if _is_rel(prp, Contest.announcements):
+            if prp.class_attribute == Contest.announcements:
                 pass
-            elif _is_rel(prp, Contest.tasks):
+            elif prp.class_attribute == Contest.tasks:
                 pass
-            elif _is_rel(prp, Contest.participations):
+            elif prp.class_attribute == Contest.participations:
                 pass
-            elif _is_rel(prp, Contest.groups):
+            elif prp.class_attribute == Contest.groups:
                 pass
-            elif _is_rel(prp, Contest.main_group):
+            elif prp.class_attribute == Contest.main_group:
                 pass
             else:
                 raise RuntimeError(
@@ -217,23 +218,23 @@ class GerImport(BaseImporter, Service):
         self._update_columns(old_object, new_object)
 
         for prp in old_object._rel_props:
-            if _is_rel(prp, Participation.contest):
+            if prp.class_attribute == Participation.contest:
                 pass
-            elif _is_rel(prp, Participation.user):
+            elif prp.class_attribute == Participation.user:
                 pass
-            elif _is_rel(prp, Participation.group):
+            elif prp.class_attribute == Participation.group:
                 pass
-            elif _is_rel(prp, Participation.team):
+            elif prp.class_attribute == Participation.team:
                 pass
-            elif _is_rel(prp, Participation.messages):
+            elif prp.class_attribute == Participation.messages:
                 pass
-            elif _is_rel(prp, Participation.questions):
+            elif prp.class_attribute == Participation.questions:
                 pass
-            elif _is_rel(prp, Participation.submissions):
+            elif prp.class_attribute == Participation.submissions:
                 pass
-            elif _is_rel(prp, Participation.user_tests):
+            elif prp.class_attribute == Participation.user_tests:
                 pass
-            elif _is_rel(prp, Participation.printjobs):
+            elif prp.class_attribute == Participation.printjobs:
                 pass
             else:
                 raise RuntimeError(
@@ -248,21 +249,21 @@ class GerImport(BaseImporter, Service):
             old_value = getattr(old_object, prp.key)
             new_value = getattr(new_object, prp.key)
 
-            if _is_rel(prp, Task.contest):
+            if prp.class_attribute == Task.contest:
                 pass
-            elif _is_rel(prp, Task.active_dataset):
+            elif prp.class_attribute == Task.active_dataset:
                 pass
-            elif _is_rel(prp, Task.submissions):
+            elif prp.class_attribute == Task.submissions:
                 pass
-            elif _is_rel(prp, Task.user_tests):
+            elif prp.class_attribute == Task.user_tests:
                 pass
-            elif _is_rel(prp, Task.datasets):
+            elif prp.class_attribute == Task.datasets:
                 pass
-            elif _is_rel(prp, Task.statements):
+            elif prp.class_attribute == Task.statements:
                 self._update_dict(old_value, new_value)
-            elif _is_rel(prp, Task.attachments):
+            elif prp.class_attribute == Task.attachments:
                 self._update_dict(old_value, new_value)
-            elif _is_rel(prp, Task.submission_format):
+            elif prp.class_attribute == Task.submission_format:
                 self._update_list(old_value, new_value)
             else:
                 raise RuntimeError(
@@ -283,11 +284,11 @@ class GerImport(BaseImporter, Service):
             old_value = getattr(old_object, prp.key)
             new_value = getattr(new_object, prp.key)
 
-            if _is_rel(prp, Dataset.task):
+            if prp.class_attribute == Dataset.task:
                 pass
-            elif _is_rel(prp, Dataset.managers):
+            elif prp.class_attribute == Dataset.managers:
                 self._update_dict(old_value, new_value)
-            elif _is_rel(prp, Dataset.testcases):
+            elif prp.class_attribute == Dataset.testcases:
                 self._update_dict(old_value, new_value)
             else:
                 raise RuntimeError(
@@ -298,7 +299,7 @@ class GerImport(BaseImporter, Service):
         self._update_columns(old_object, new_object)
 
         for prp in old_object._rel_props:
-            if _is_rel(prp, Team.participations):
+            if prp.class_attribute == Team.participations:
                 pass
             else:
                 raise RuntimeError(
@@ -477,8 +478,7 @@ class GerImport(BaseImporter, Service):
                 if self.force:
                     logger.warning("Force flace -f set.")
 
-                print("Proceed? [y/N] ", end='')
-                ans = sys.stdin.readline().strip().lower()
+                ans = input("Proceed? [y/N] ").strip().lower()
                 if ans not in ["y", "yes"]:
                     logger.error("Aborting.")
                     return

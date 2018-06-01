@@ -28,10 +28,10 @@
         <td>{{ p.user.first_name }}</td>
         <td>{{ p.user.last_name }}</td>
       </tr>
-      {% end %}
+      {% endfor %}
     </tbody>
   </table>
-  {% end %}
+  {% endif %}
 
   <div class="hr"></div>
 </div>
@@ -114,4 +114,4 @@
   <div class="hr"></div>
 </div>
 
-{% end %}
+{% endblock group %}
