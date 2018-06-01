@@ -1672,8 +1672,6 @@ class TaskConfig(CommonConfig, Scope):
                           v(status), depth=3)
 
         # Present verdict
-        details = json.loads(details)
-
         for st in details["subtasks"]:
             with myheader(st["name"], st["status"]):
                 for i, g in enumerate(st["groups"]):
