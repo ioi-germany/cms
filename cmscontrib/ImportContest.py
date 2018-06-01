@@ -51,9 +51,11 @@ import sys
 
 from cms import utf8_decoder
 from cms.db import SessionGen, User, Team, Participation, Task, Contest
+from cms.db import Group
 from cms.db.filecacher import FileCacher
 
 from cmscontrib.importing import ImportDataError, update_contest, update_task
+from cmscontrib.importing import update_group
 from cmscontrib.loaders import choose_loader, build_epilog
 
 
@@ -157,6 +159,9 @@ class ContestImporter(object):
             # Contest not present, we import it.
             logger.info("Creating contest on the database.")
             contest = new_contest
+            # Creating a new main group
+            contest.main_group = Group("main")
+            contest.groups = [contest.main_group]
             session.add(contest)
 
         else:
@@ -173,7 +178,17 @@ class ContestImporter(object):
                 # if it has changed.
                 if contest_has_changed:
                     logger.info("Contest data has changed, updating it.")
+                    # Don't update the groups
+                    groups = []
+                    for g_old in contest.groups:
+                        g = Group(name=g_old.name)
+                        update_group(g, g_old)
+                        groups.append(g)
+                    new_contest.groups = groups
                     update_contest(contest, new_contest)
+                    contest.main_group = [
+                        g for g in contest.groups
+                        if g.name == contest.main_group.name][0]
                 else:
                     logger.info("Contest data has not changed.")
 
@@ -303,6 +318,8 @@ class ContestImporter(object):
             args["ip"] = [ipaddress.ip_network(new_p["ip"])]
         if "password" in new_p:
             args["password"] = new_p["password"]
+        # Use the contest's main group
+        args["group"] = contest.main_group
 
         new_p = Participation(**args)
         session.add(new_p)

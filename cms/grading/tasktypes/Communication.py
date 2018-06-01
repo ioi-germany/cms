@@ -93,14 +93,18 @@ class Communication(TaskType):
     # in case of a user test.
     OUTPUT_FILENAME = "output.txt"
 
+    # Constants used in the parameter definition.
+    COMPILATION_ALONE = "alone"
+    COMPILATION_GRADER = "grader"
+
     ALLOW_PARTIAL_SUBMISSION = False
 
     _COMPILATION = ParameterTypeChoice(
         "Compilation",
         "compilation",
         "",
-        {"alone": "Submissions are self-sufficient",
-         "grader": "Submissions are compiled with a grader"})
+        {COMPILATION_ALONE: "Submissions are self-sufficient",
+         COMPILATION_GRADER: "Submissions are compiled with a grader"})
 
     _NUM_PROCESSES = ParameterTypeInt(
         "Number of Processes",
@@ -119,9 +123,10 @@ class Communication(TaskType):
     def __init__(self, parameters):
         super(Communication, self).__init__(parameters)
 
+        self.compilation = parameters[0]
         self.num_processes = 1
-        if len(self.parameters) > 0:
-            self.num_processes = self.parameters[0]
+        if len(self.parameters) > 1:
+            self.num_processes = self.parameters[1]
 
     def get_compilation_commands(self, submission_format):
         """See TaskType.get_compilation_commands."""
@@ -129,7 +134,9 @@ class Communication(TaskType):
         for language in LANGUAGES:
             # Collect source filenames.
             source_ext = language.source_extension
-            source_filenames = ["stub%s" % source_ext]
+            source_filenames = []
+            if self._uses_grader:
+                source_filenames.append("stub%s" % source_ext)
             for codename in submission_format:
                 source_filenames.append(codename.replace(".%l", source_ext))
             # Compute executable name.
@@ -142,11 +149,17 @@ class Communication(TaskType):
 
     def get_user_managers(self):
         """See TaskType.get_user_managers."""
-        return ["stub.%l"]
+        if self._uses_grader():
+            return ["stub.%l"]
+        else:
+            return []
 
     def get_auto_managers(self):
         """See TaskType.get_auto_managers."""
         return ["manager"]
+
+    def _uses_grader(self):
+        return self.compilation == Communication.COMPILATION_GRADER
 
     @staticmethod
     def _executable_filename(codenames):
@@ -171,10 +184,11 @@ class Communication(TaskType):
         files_to_get = {}
         source_filenames = []
         # The stub, that must have been provided (copy and add to compilation).
-        stub_filename = "stub%s" % source_ext
-        if not check_manager_present(job, stub_filename):
-            return
-        source_filenames.append(stub_filename)
+        if self._uses_grader():
+            stub_filename = "stub%s" % source_ext
+            if not check_manager_present(job, stub_filename):
+                return
+            source_filenames.append(stub_filename)
         files_to_get[stub_filename] = job.managers[stub_filename].digest
         # User's submitted file(s) (copy and add to compilation).
         for codename, file_ in iteritems(job.files):
@@ -307,7 +321,7 @@ class Communication(TaskType):
             args = [fifo_out[i], fifo_in[i]]
             if self.num_processes != 1:
                 args.append(str(i))
-            if self.parameters[0] == "grader":
+            if self._uses_grader():
                 main = "stub"
             else:
                 main = executable_filename

@@ -62,6 +62,12 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
             "name": "contestname",
             "description": "contest description 你好",
             "tasks": ["task_key"],
+            "groups": ["group_key"],
+            "main_group": "group_key",
+        },
+        "group_key": {
+            "_class": "Group",
+            "name": "groupname",
         },
         "task_key": {
             "_class": "Task",
@@ -95,6 +101,7 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
             "_class": "Participation",
             "user": "user_key",
             "contest": "contest_key",
+            "group": "group_key",
             "submissions": ["sub_key"],
         },
         "sub_key": {
@@ -307,6 +314,12 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
                 "token_total": 100,
                 "token_max": 100,
                 "tasks": ["task_key"],
+                "groups": ["group_key"],
+                "main_group": "group_key",
+            },
+            "group_key": {
+                "_class": "Group",
+                "name": "groupname",
             },
             "task_key": {
                 "_class": "Task",
@@ -341,6 +354,7 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
                 "ip": "0.0.0.0",
                 "preferred_languages": "[\"en\", \"it_IT\"]",
                 "contest": "contest_key",
+                "group": "group_key",
                 "submissions": ["sub_key"],
             },
             "sub_key": {

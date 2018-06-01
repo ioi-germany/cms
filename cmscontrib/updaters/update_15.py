@@ -81,7 +81,7 @@ class Updater(object):
             "extra_time", "ip",
             "messages", "usertests",
             "questions", "starting_time",
-            "submissions", "hidden")
+            "submissions", "hidden", "group")
         self.objs[new_participation_id] = participation_data
 
         assert user_data["_class"] == "User"

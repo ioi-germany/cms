@@ -31,7 +31,7 @@ from six import iterkeys
 
 import functools
 
-from cms.db import Contest, Dataset, Task
+from cms.db import Contest, Dataset, Task, Group
 
 
 __all__ = [
@@ -303,8 +303,21 @@ def update_task(old_task, new_task, parent=None, get_statements=True):
     }, parent=parent)
 
 
+def update_group(old_group, new_group, parent=None):
+    """Update old_group with information from new_group"""
+    _update_object(old_group, new_group, {
+        Group.contest: False,
+        Group.participations: False,
+    }, parent=parent)
+
+
 def update_contest(old_contest, new_contest, parent=None):
     """Update old_contest with information from new_contest"""
+    def update_groups_fn(o, n, parent=None):
+        _update_list_with_key(
+            o, n, key=lambda g: g.name, preserve_old=True,
+            update_value_fn=functools.partial(update_group, parent=parent))
+
     _update_object(old_contest, new_contest, {
         # Announcements are not provided by the loader, we should keep
         # those we have.
@@ -313,4 +326,8 @@ def update_contest(old_contest, new_contest, parent=None):
         # must be handled differently.
         Contest.tasks: False,
         Contest.participations: False,
+        # We update the list groups in the standard way.
+        Contest.groups: update_groups_fn,
+        # The main group has to be set manually in the end.
+        Contest.main_group: False,
     }, parent=parent)
