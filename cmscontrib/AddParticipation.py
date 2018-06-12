@@ -44,6 +44,7 @@ import sys
 from cms import utf8_decoder
 from cms.db import Contest, Participation, SessionGen, Team, User, \
     ask_for_contest
+from cms.db import Group
 from cmscommon.crypto import build_password, hash_password
 
 from sqlalchemy.exc import IntegrityError
@@ -54,7 +55,7 @@ logger = logging.getLogger(__name__)
 
 def add_participation(username, contest_id, ip, delay_time, extra_time,
                       password, method, is_hashed, team_code, hidden,
-                      unrestricted):
+                      unrestricted, groupname):
     logger.info("Creating the user's participation in the database.")
     delay_time = delay_time if delay_time is not None else 0
     extra_time = extra_time if extra_time is not None else 0
@@ -75,6 +76,16 @@ def add_participation(username, contest_id, ip, delay_time, extra_time,
             if contest is None:
                 logger.error("No contest with id `%s' found.", contest_id)
                 return False
+            if groupname is None:
+                group = contest.main_group
+            else:
+                group = \
+                    session.query(Group) \
+                        .filter(Group.contest_id == contest_id,
+                                Group.name == groupname).first()
+                if group is None:
+                    logger.error("No group with name `%s' found.", groupname)
+                    return False
             team = None
             if team_code is not None:
                 team = \
@@ -91,6 +102,7 @@ def add_participation(username, contest_id, ip, delay_time, extra_time,
             participation = Participation(
                 user=user,
                 contest=contest,
+                group=group,
                 ip=[ipaddress.ip_network(ip)] if ip is not None else None,
                 delay_time=datetime.timedelta(seconds=delay_time),
                 extra_time=datetime.timedelta(seconds=extra_time),
@@ -131,6 +143,8 @@ def main():
                         help="if the participation is hidden")
     parser.add_argument("--unrestricted", action="store_true",
                         help="if the participation is unrestricted")
+    parser.add_argument("-g", "--group", action="store", type=utf8_decoder,
+                        help="name of the group to use")
     password_group = parser.add_mutually_exclusive_group()
     password_group.add_argument(
         "-p", "--plaintext-password", action="store", type=utf8_decoder,
@@ -159,7 +173,7 @@ def main():
         args.plaintext_password or args.hashed_password,
         args.method or "plaintext",
         args.hashed_password is not None, args.team,
-        args.hidden, args.unrestricted)
+        args.hidden, args.unrestricted, args.group)
     return 0 if success is True else 1
 
 

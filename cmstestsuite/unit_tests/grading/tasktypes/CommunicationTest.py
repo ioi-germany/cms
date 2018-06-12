@@ -58,7 +58,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
         self.languages.update({LANG_1, LANG_2})
 
     def test_single_process(self):
-        tt = Communication([1])
+        tt = Communication(["grader", 1])
         cc = tt.get_compilation_commands(["foo.%l"])
         self.assertEqual(cc, {
             "L1": fake_compilation_commands(
@@ -70,7 +70,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
     def test_two_processes(self):
         # Compilation commands are the same regardless of the number of
         # processes.
-        tt = Communication([2])
+        tt = Communication(["grader", 2])
         cc = tt.get_compilation_commands(["foo.%l"])
         self.assertEqual(cc, {
             "L1": fake_compilation_commands(
@@ -82,7 +82,7 @@ class TestGetCompilationCommands(TaskTypeTestMixin, unittest.TestCase):
     def test_many_files(self):
         # Communication supports multiple files in the submission format, that
         # are just compiled together.
-        tt = Communication([1])
+        tt = Communication(["grader", 1])
         cc = tt.get_compilation_commands(["foo.%l", "bar.%l"])
         self.assertEqual(cc, {
             "L1": fake_compilation_commands(
@@ -135,7 +135,7 @@ class TestCompile(TaskTypeTestMixin, unittest.TestCase):
 
     def test_one_file_success(self):
         tt, job = self.prepare(
-            [1], {"foo.%l": FILE_FOO_L1}, {"stub.l1": STUB_L1})
+            ["grader", 1], {"foo.%l": FILE_FOO_L1}, {"stub.l1": STUB_L1})
         sandbox = self.expect_sandbox()
         sandbox.get_file_to_storage.return_value = "exe_digest"
 
@@ -159,7 +159,7 @@ class TestCompile(TaskTypeTestMixin, unittest.TestCase):
 
     def test_one_file_compilation_failure(self):
         tt, job = self.prepare(
-            [1], {"foo.%l": FILE_FOO_L1}, {"stub.l1": STUB_L1})
+            ["grader", 1], {"foo.%l": FILE_FOO_L1}, {"stub.l1": STUB_L1})
         self.compilation_step.return_value = True, False, TEXT, STATS_RE
         sandbox = self.expect_sandbox()
 
@@ -175,7 +175,7 @@ class TestCompile(TaskTypeTestMixin, unittest.TestCase):
     def test_one_file_sandbox_failure(self):
         # Sandbox (or CMS) failure. It's the admins' fault.
         tt, job = self.prepare(
-            [1], {"foo.%l": FILE_FOO_L1}, {"stub.l1": STUB_L1})
+            ["grader", 1], {"foo.%l": FILE_FOO_L1}, {"stub.l1": STUB_L1})
         self.compilation_step.return_value = False, None, None, None
         sandbox = self.expect_sandbox()
 
@@ -188,7 +188,7 @@ class TestCompile(TaskTypeTestMixin, unittest.TestCase):
 
     def test_many_files_success(self):
         tt, job = self.prepare(
-            [1], {"foo.%l": FILE_FOO_L1, "bar.%l": FILE_BAR_L1},
+            ["grader", 1], {"foo.%l": FILE_FOO_L1, "bar.%l": FILE_BAR_L1},
             {"stub.l1": STUB_L1})
         sandbox = self.expect_sandbox()
         sandbox.get_file_to_storage.return_value = "exe_digest"
@@ -282,7 +282,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
     @patch.object(config, "trusted_sandbox_max_time_s", 4321)
     @patch.object(config, "trusted_sandbox_max_memory_kib", 1024 * 1234)
     def test_single_process_success(self):
-        tt, job = self.prepare([1], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 1], {"foo": EXE_FOO}, {"manager": MANAGER})
         sandbox_mgr = self.expect_sandbox()
         sandbox_usr = self.expect_sandbox()
 
@@ -334,7 +335,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
     def test_single_process_success_long_time_limit(self):
         # If the time limit is longer than trusted step default time limit,
         # the manager run should use the task time limit.
-        tt, job = self.prepare([1], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 1], {"foo": EXE_FOO}, {"manager": MANAGER})
         sandbox_mgr = self.expect_sandbox()
         self.expect_sandbox()
 
@@ -346,7 +348,7 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
 
     def test_single_process_missing_manager(self):
         # Manager is missing, should terminate without creating sandboxes.
-        tt, job = self.prepare([1], {"foo": EXE_FOO}, {})
+        tt, job = self.prepare(["grader", 1], {"foo": EXE_FOO}, {})
 
         tt.evaluate(job, self.file_cacher)
 
@@ -355,7 +357,7 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
     def test_single_process_zero_executables(self):
         # For some reason, no user executables. Should terminate without
         # creating sandboxes.
-        tt, job = self.prepare([1], {}, {"manager": MANAGER})
+        tt, job = self.prepare(["grader", 1], {}, {"manager": MANAGER})
 
         tt.evaluate(job, self.file_cacher)
 
@@ -364,8 +366,9 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
     def test_single_process_many_executables(self):
         # For some reason, two user executables. Should terminate without
         # creating sandboxes.
-        tt, job = self.prepare([1], {"foo": EXE_FOO, "bar": EXE_FOO},
-                               {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 1], {"foo": EXE_FOO, "bar": EXE_FOO},
+            {"manager": MANAGER})
 
         tt.evaluate(job, self.file_cacher)
 
@@ -373,7 +376,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
 
     def test_single_process_manager_failure(self):
         # Manager had problems, it's not the user's fault.
-        tt, job = self.prepare([1], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 1], {"foo": EXE_FOO}, {"manager": MANAGER})
         sandbox_mgr = self.expect_sandbox()
         sandbox_usr = self.expect_sandbox()
         self._set_evaluation_step_return_values({
@@ -389,7 +393,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
 
     def test_single_process_manager_sandbox_failure(self):
         # Manager sandbox had problems, it's not the user's fault.
-        tt, job = self.prepare([1], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 1], {"foo": EXE_FOO}, {"manager": MANAGER})
         sandbox_mgr = self.expect_sandbox()
         sandbox_usr = self.expect_sandbox()
         self._set_evaluation_step_return_values({
@@ -406,7 +411,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
     def test_single_process_manager_and_user_failure(self):
         # Manager had problems, it's not the user's fault even if also their
         # submission had problems.
-        tt, job = self.prepare([1], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 1], {"foo": EXE_FOO}, {"manager": MANAGER})
         sandbox_mgr = self.expect_sandbox()
         sandbox_usr = self.expect_sandbox()
         self._set_evaluation_step_return_values({
@@ -422,7 +428,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
 
     def test_single_process_user_sandbox_failure(self):
         # User sandbox had problems, it's not the user's fault.
-        tt, job = self.prepare([1], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 1], {"foo": EXE_FOO}, {"manager": MANAGER})
         sandbox_mgr = self.expect_sandbox()
         sandbox_usr = self.expect_sandbox()
         self._set_evaluation_step_return_values({
@@ -438,7 +445,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
 
     def test_single_process_user_failure(self):
         # User program had problems, it's the user's fault.
-        tt, job = self.prepare([1], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 1], {"foo": EXE_FOO}, {"manager": MANAGER})
         sandbox_mgr = self.expect_sandbox()
         sandbox_usr = self.expect_sandbox()
         self._set_evaluation_step_return_values({
@@ -455,7 +463,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         sandbox_usr.delete.assert_called_once()
 
     def test_single_process_get_output_success(self):
-        tt, job = self.prepare([1], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 1], {"foo": EXE_FOO}, {"manager": MANAGER})
         job.get_output = True
         sandbox_mgr = self.expect_sandbox()
         self.expect_sandbox()
@@ -473,7 +482,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         self.assertEqual(job.success, True)
 
     def test_single_process_only_execution_success(self):
-        tt, job = self.prepare([1], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 1], {"foo": EXE_FOO}, {"manager": MANAGER})
         job.only_execution = True
         self.expect_sandbox()
         self.expect_sandbox()
@@ -488,7 +498,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
     @patch.object(config, "trusted_sandbox_max_time_s", 4321)
     @patch.object(config, "trusted_sandbox_max_memory_kib", 1024 * 1234)
     def test_many_processes_success(self):
-        tt, job = self.prepare([2], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 2], {"foo": EXE_FOO}, {"manager": MANAGER})
         sandbox_mgr = self.expect_sandbox()
         sandbox_usr0 = self.expect_sandbox()
         sandbox_usr1 = self.expect_sandbox()
@@ -557,7 +568,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
     def test_many_processes_success_long_time_limit(self):
         # If the time limit is longer than trusted step default time limit,
         # the manager run should use the task time limit.
-        tt, job = self.prepare([2], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 2], {"foo": EXE_FOO}, {"manager": MANAGER})
         sandbox_mgr = self.expect_sandbox()
         self.expect_sandbox()
         self.expect_sandbox()
@@ -570,7 +582,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
 
     def test_many_processes_first_user_failure(self):
         # One of the user programs had problems, it's the user's fault.
-        tt, job = self.prepare([2], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 2], {"foo": EXE_FOO}, {"manager": MANAGER})
         sandbox_mgr = self.expect_sandbox()
         sandbox_usr0 = self.expect_sandbox()
         sandbox_usr1 = self.expect_sandbox()
@@ -591,7 +604,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
 
     def test_many_processes_last_user_failure(self):
         # One of the user programs had problems, it's the user's fault.
-        tt, job = self.prepare([2], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 2], {"foo": EXE_FOO}, {"manager": MANAGER})
         sandbox_mgr = self.expect_sandbox()
         sandbox_usr0 = self.expect_sandbox()
         sandbox_usr1 = self.expect_sandbox()
@@ -612,7 +626,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
 
     def test_many_processes_merged_timeout(self):
         # Solution was ok, but considering all runtimes, it hit timeout.
-        tt, job = self.prepare([2], {"foo": EXE_FOO}, {"manager": MANAGER})
+        tt, job = self.prepare(
+            ["grader", 2], {"foo": EXE_FOO}, {"manager": MANAGER})
         job.time_limit = 2.5
         stats0 = dict(STATS_OK)
         stats0["execution_time"] = 1.0

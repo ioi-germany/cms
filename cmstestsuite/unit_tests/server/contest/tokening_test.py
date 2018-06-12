@@ -233,7 +233,7 @@ class TestTokensAvailable(DatabaseMixin, unittest.TestCase):
         self.assertEqual(self.call(10), (-1, None, None))
 
     def test_usaco_like(self):
-        self.contest.per_user_time = timedelta(seconds=100)
+        self.contest.main_group.per_user_time = timedelta(seconds=100)
         self.participation.starting_time = self.at(1000)
 
         self.set_contest_token_finite(initial=2, number=1, interval=10, max_=10)

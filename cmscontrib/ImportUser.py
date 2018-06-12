@@ -91,7 +91,8 @@ class UserImporter(object):
             if contest is not None:
                 logger.info("Creating participation of user %s in contest %s.",
                             user.username, contest.name)
-                session.add(Participation(user=user, contest=contest))
+                session.add(Participation(user=user, contest=contest,
+                                          group=contest.main_group))
 
             session.commit()
             user_id = user.id

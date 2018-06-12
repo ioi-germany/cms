@@ -57,18 +57,25 @@ class TestScoringService(DatabaseMixin, unittest.TestCase):
                            unique_long_id(), unique_long_id(),
                            [unique_unicode_id(), unique_unicode_id()])
 
+        self.unit_test_score_info = unique_long_id()
+
         patcher = patch("cms.db.Dataset.score_type_object",
                         new_callable=PropertyMock)
         self.score_type = patcher.start().return_value
         self.addCleanup(patcher.stop)
         self.call_args = list()
         self.score_type.compute_score.side_effect = self.compute_score
+        self.score_type.compute_unit_test_score.side_effect = \
+            self.compute_unit_test_score
 
         self.contest = self.add_contest()
 
     def compute_score(self, sr):
         self.call_args.append((sr.submission_id, sr.dataset_id))
         return self.score_info
+
+    def compute_unit_test_score(self, sr, si):
+        return self.unit_test_score_info
 
     def new_sr_to_score(self):
         task = self.add_task(contest=self.contest)

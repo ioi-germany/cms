@@ -92,7 +92,7 @@ class TestGetCommunications(DatabaseMixin, unittest.TestCase):
             contest = self.contest
         super(TestGetCommunications, self).add_announcement(
             subject=subject, text=text, timestamp=self.at(timestamp),
-            contest=contest)
+            contest=contest, src="web")
         d = {"type": "announcement", "subject": subject, "text": text,
              "timestamp": make_timestamp(self.timestamp) + timestamp}
         return d

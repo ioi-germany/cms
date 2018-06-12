@@ -62,6 +62,7 @@ from cms.db import Announcement, Base, Contest, Dataset, Evaluation, \
     Statement, Submission, SubmissionResult, Task, Team, Testcase, User, \
     UserTest, UserTestResult, drop_db, init_db, Token, UserTestFile, \
     UserTestManager
+from cms.db import Group
 from cms.db.filecacher import DBBackend
 
 
@@ -111,13 +112,20 @@ class DatabaseMixin(object):
         fobj.write(content)
         dbbackend.commit_file(fobj, digest)
 
-    @staticmethod
-    def get_contest(**kwargs):
+    @classmethod
+    def get_contest(cls, **kwargs):
         """Create a contest"""
+        grpargs = {}
+        for a in ["start", "stop", "per_user_time"]:
+            if a in kwargs:
+                grpargs[a] = kwargs[a]
+                del kwargs[a]
         args = {
             "name": unique_unicode_id(),
             "description": unique_unicode_id(),
+            "main_group": cls.get_group(**grpargs),
         }
+        args["groups"] = [args["main_group"]]
         args.update(kwargs)
         contest = Contest(**args)
         return contest
@@ -129,6 +137,16 @@ class DatabaseMixin(object):
         return contest
 
     @staticmethod
+    def get_group(**kwargs):
+        """Create a group"""
+        args = {
+            "name": "main"
+        }
+        args.update(kwargs)
+        group = Group(**args)
+        return group
+
+    @staticmethod
     def get_announcement(contest=None, **kwargs):
         """Create an announcement"""
         contest = contest \
@@ -137,7 +155,8 @@ class DatabaseMixin(object):
             "contest": contest,
             "subject": unique_unicode_id(),
             "text": unique_unicode_id(),
-            "timestamp": (contest.start + timedelta(0, unique_long_id())),
+            "timestamp": (contest.main_group.start
+                          + timedelta(0, unique_long_id())),
         }
         args.update(kwargs)
         announcement = Announcement(**args)
@@ -177,6 +196,7 @@ class DatabaseMixin(object):
         args = {
             "user": user,
             "contest": contest,
+            "group": contest.main_group,
         }
         args.update(kwargs)
         participation = Participation(**args)
@@ -197,7 +217,7 @@ class DatabaseMixin(object):
             "participation": participation,
             "subject": unique_unicode_id(),
             "text": unique_unicode_id(),
-            "timestamp": (participation.contest.start
+            "timestamp": (participation.group.start
                           + timedelta(0, unique_long_id())),
         }
         args.update(kwargs)
@@ -219,7 +239,7 @@ class DatabaseMixin(object):
             "participation": participation,
             "subject": unique_unicode_id(),
             "text": unique_unicode_id(),
-            "question_timestamp": (participation.contest.start
+            "question_timestamp": (participation.group.start
                                    + timedelta(0, unique_long_id())),
         }
         args.update(kwargs)
@@ -333,7 +353,8 @@ class DatabaseMixin(object):
         args = {
             "task": task,
             "participation": participation,
-            "timestamp": (task.contest.start + timedelta(0, unique_long_id())),
+            "timestamp": (participation.group.start
+                          + timedelta(0, unique_long_id())),
         }
         args.update(kwargs)
         submission = Submission(**args)
@@ -360,7 +381,7 @@ class DatabaseMixin(object):
             submission = self.add_submission()
         args = {
             "submission": submission,
-            "timestamp": (submission.task.contest.start
+            "timestamp": (submission.participation.group.start
                           + timedelta(seconds=unique_long_id())),
         }
         args.update(kwargs)
@@ -434,7 +455,8 @@ class DatabaseMixin(object):
             "task": task,
             "participation": participation,
             "input": unique_digest(),
-            "timestamp": (task.contest.start + timedelta(0, unique_long_id())),
+            "timestamp": (participation.group.start
+                          + timedelta(0, unique_long_id())),
         }
         args.update(kwargs)
         user_test = UserTest(**args)
