@@ -39,7 +39,8 @@ from future.builtins import *  # noqa
 from sqlalchemy import Boolean
 from sqlalchemy.schema import Column, ForeignKey, ForeignKeyConstraint, \
     UniqueConstraint
-from sqlalchemy.types import Integer, Float, String, Unicode, DateTime, Enum
+from sqlalchemy.types import Integer, Float, String, Unicode, DateTime, Enum, \
+    BigInteger
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
@@ -352,7 +353,7 @@ class SubmissionResult(Base):
         Float,
         nullable=True)
     compilation_memory = Column(
-        Integer,
+        BigInteger,
         nullable=True)
 
     # Worker shard and sandbox where the compilation was performed.
@@ -769,7 +770,7 @@ class Evaluation(Base):
 
     # Memory used by the evaluation, in bytes.
     execution_memory = Column(
-        Integer,
+        BigInteger,
         nullable=True)
 
     # Worker shard and sandbox where the evaluation was performed.
