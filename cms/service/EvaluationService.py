@@ -52,10 +52,9 @@ from sqlalchemy.orm import joinedload
 
 from cms import ServiceCoord, get_service_shards
 from cms.io import Executor, TriggeredService, rpc_method
-from cms.db import SessionGen, Dataset, Submission, UserTest
+from cms.db import SessionGen, Dataset, Submission, UserTest, get_submissions, \
+    get_submission_results, get_datasets_to_judge
 from cms.db.filecacher import FileCacher
-from cms.service import get_datasets_to_judge, \
-    get_submissions, get_submission_results
 from cms.grading.Job import JobGroup
 
 from .esoperations import ESOperation, get_relevant_operations, \
@@ -91,10 +90,6 @@ class EvaluationExecutor(Executor):
 
         # Lock used to guard the currently executing operations
         self._current_execution_lock = gevent.lock.RLock()
-
-        # Whether execute need to drop the currently executing
-        # operation.
-        self._drop_current = False
 
         for i in range(get_service_shards("Worker")):
             worker = ServiceCoord("Worker", i)
@@ -149,7 +144,6 @@ class EvaluationExecutor(Executor):
                 # re-enqueue it.
                 operation.side_data = (entry.priority, entry.timestamp)
                 self._currently_executing.append(operation)
-        res = None
         while len(self._currently_executing) > 0:
             self.pool.wait_for_workers()
             with self._current_execution_lock:
@@ -157,7 +151,6 @@ class EvaluationExecutor(Executor):
                     break
                 res = self.pool.acquire_worker(self._currently_executing)
                 if res is not None:
-                    self._drop_current = False
                     self._currently_executing = []
                     break
 
@@ -913,11 +906,12 @@ class EvaluationService(TriggeredService):
                 task_id = Dataset.get_from_id(dataset_id, session).task_id
             # First we load all involved submissions.
             submissions = get_submissions(
+                session,
                 # Give contest_id only if all others are None.
                 contest_id
                 if {participation_id, task_id, submission_id} == {None}
                 else None,
-                participation_id, task_id, submission_id, session)
+                participation_id, task_id, submission_id).all()
 
             # Then we get all relevant operations, and we remove them
             # both from the queue and from the pool (i.e., we ignore
@@ -937,6 +931,7 @@ class EvaluationService(TriggeredService):
             # Then we find all existing results in the database, and
             # we remove them.
             submission_results = get_submission_results(
+                session,
                 # Give contest_id only if all others are None.
                 contest_id
                 if {participation_id,
@@ -948,7 +943,7 @@ class EvaluationService(TriggeredService):
                 # Provide the task_id only if the entire task has to be
                 # reevaluated and not only a specific dataset.
                 task_id if dataset_id is None else None,
-                submission_id, dataset_id, session)
+                submission_id, dataset_id).all()
             logger.info("Submission results to invalidate %s for: %d.",
                         level, len(submission_results))
             for submission_result in submission_results:
