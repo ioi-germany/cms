@@ -291,8 +291,7 @@ class SubtaskGroup(ScoreType):
                 </tr>
             </thead>
             <tbody>
-    {% for i, g in enumerate(st["groups"]) %}
-        {% set first = True %}
+    {% for g in st["groups"] %}
         {% for c in g["cases"] %}
                 <tr>
                     <td class="{{"unit_test_ok" if c["line"][0][1] > 0 else \
@@ -317,30 +316,29 @@ class SubtaskGroup(ScoreType):
                                  "unit_test_ok" if c["verdict"][0] > 0 else \
                                  "unit_test_failed"}}">
 
-            {% set x = c["verdict"][1].split(chr(10)) %}
-            {% for i,t in enumerate(x) %}
-                        {{t}}
-                {% if i < len(x) - 1 %}
+            {% set x = c["verdict"][1].split("\n") %}
+            {% for t in x %}
+                {% if not loop.first %}
                         <br>
                 {% endif %}
+                        {{t}}
             {% endfor %}
                     </td>
-            {% if first %}
-                    <td rowspan={{len(g["cases"])}}
+            {% if loop.first %}
+                    <td rowspan={{g["cases"]|length}}
                      class="{{"unit_test_mid" if g["verdict"][0] == 1337 else \
                               "unit_test_ok" if g["verdict"][0] > 0 else \
                               "unit_test_failed"}}">
 
-                {% set x = g["verdict"][1].split(chr(10)) %}
-                {% for i,t in enumerate(x) %}
-                        {{t}}
-                    {% if i < len(x) - 1 %}
+                {% set x = g["verdict"][1].split("\n") %}
+                {% for t in x %}
+                    {% if not loop.first %}
                         <br>
                     {% endif %}
+                        {{t}}
                 {% endfor %}
                     </td>
             {% endif %}
-            {% set first = False %}
                 </tr>
         {% endfor %}
     {% endfor %}

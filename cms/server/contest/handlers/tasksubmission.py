@@ -229,7 +229,7 @@ class SubmissionStatusHandler(ContestHandler):
                     sr.score_details, task.score_precision,
                     translation=self.translation)
             if submission.is_unit_test():
-                utd = json.loads(sr.unit_test_score_details)
+                utd = sr.unit_test_score_details
                 data["verdict"] = utd["verdict"]
                 data["comment"] = submission.comment
 

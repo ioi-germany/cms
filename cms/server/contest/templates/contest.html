@@ -30,6 +30,7 @@ var utils = new CMS.CWSUtils("{{ url() }}", "{{ contest_url() }}", "{{ contest.n
                              {{ current_phase_begin|make_timestamp }},
                              {{ current_phase_end|make_timestamp }},
                              {{ actual_phase }});
+$(document).ready(function () {
     utils.update_time({% if participation.group.per_user_time is not none %}true{% else %}false{% endif %});
     setInterval(function() {
         utils.update_time({% if participation.group.per_user_time is not none %}true{% else %}false{% endif %});

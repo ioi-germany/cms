@@ -30,18 +30,32 @@ from future.builtins import *  # noqa
 from six import iterkeys
 
 import functools
+import logging
 
-from cms.db import Contest, Dataset, Task, Group
+from cms.db import Contest, Dataset, Task, Group, User, Team, Participation
 
 
 __all__ = [
     "contest_from_db", "task_from_db",
-    "update_contest", "update_task"
+    "update_contest", "update_task",
+    "update_user", "update_team", "update_group", "update_participation",
+    "_update_list_with_key", "_copy", "_to_delete"
 ]
+
+
+logger = logging.getLogger(__name__)
 
 
 class ImportDataError(Exception):
     pass
+
+
+_update_prefix = []
+_to_delete = []
+
+
+def _attrstr(a):
+    return ".".join(_update_prefix + [a])
 
 
 def contest_from_db(contest_id, session):
@@ -84,6 +98,35 @@ def task_from_db(task_name, session):
     return task
 
 
+def _copy(new_object):
+    """ Create a recursive copy of a database object.
+
+    Subobjects contained in a dict or list relation are copied recursively.
+    """
+    # Copy scalar properties.
+    di = {prp.key: getattr(new_object, prp.key)
+            for prp in new_object._col_props}
+    old_object = type(new_object)(**di)
+
+    for prp in old_object._rel_props:
+        old_value = getattr(old_object, prp.key)
+        new_value = getattr(new_object, prp.key)
+
+        # Copy relational dict properties.
+        if isinstance(old_value, dict):
+            assert len(old_value) == 0
+            for key, value in new_value.items():
+                old_value[key] = _copy(value)
+
+        # Copy relational list properties.
+        elif isinstance(old_value, list):
+            assert len(old_value) == 0
+            for value in new_value:
+                old_value.append(_copy(value))
+
+    return old_object
+
+
 def _update_columns(old_object, new_object, spec=None):
     """Update the scalar columns of the object
 
@@ -98,7 +141,12 @@ def _update_columns(old_object, new_object, spec=None):
         if spec.get(prp.class_attribute, True) is False:
             continue
         if hasattr(new_object, prp.key):
-            setattr(old_object, prp.key, getattr(new_object, prp.key))
+            old_value = getattr(old_object, prp.key)
+            new_value = getattr(new_object, prp.key)
+            if old_value != new_value:
+                logger.info("Changing {} from {} to {}".format(
+                    _attrstr(prp.key), old_value, new_value))
+                setattr(old_object, prp.key, getattr(new_object, prp.key))
 
 
 def _update_object(old_object, new_object, spec=None, parent=None):
@@ -190,19 +238,29 @@ def _update_list(old_list, new_list, update_value_fn=None):
     new_len = len(new_list)
 
     # Update common elements.
-    for old_value, new_value in zip(old_list, new_list):
+    for i, old_value, new_value in enumerate(zip(old_list, new_list)):
+        _update_prefix.append("{}[{}]".format(type(old_value).__name__, i))
         update_value_fn(old_value, new_value)
+        _update_prefix.pop()
 
     # Delete additional elements of old_list.
+    for i in range(new_len, old_len):
+        logger.info("Deleting {}".format(
+            _attrstr("{}[{}]".format(type(old_list[i]).__name__, i))))
+    for i in range(new_len, old_len):
+        _to_delete.append(old_list[i])
     del old_list[new_len:]
 
     # Move additional elements from new_list to old_list.
     for _ in range(old_len, new_len):
+        logger.info("Creating {}".format(
+            _attrstr("{}[{}]".format(type(new_list[old_len]).__name__, len(old_list)))))
         # For some funny behavior of SQLAlchemy-instrumented collections when
         # copying values, that resulted in new objects being added to the
         # session.
         temp = new_list[old_len]
         del new_list[old_len]
+        temp = _copy(temp)
         old_list.append(temp)
 
 
@@ -221,23 +279,32 @@ def _update_dict(old_dict, new_dict, update_value_fn=None):
     for key in set(iterkeys(old_dict)) | set(iterkeys(new_dict)):
         if key in new_dict:
             if key not in old_dict:
+                logger.info("Creating {}".format(
+                    _attrstr("{}({})".format(type(new_dict[key]).__name__, key))))
                 # Move the object from new_dict to old_dict. For some funny
                 # behavior of SQLAlchemy-instrumented collections when
                 # copying values, that resulted in new objects being added
                 # to the session.
                 temp = new_dict[key]
                 del new_dict[key]
+                temp = _copy(temp)
                 old_dict[key] = temp
             else:
                 # Update the old value with the new value.
+                _update_prefix.append("{}({})".format(type(old_dict[key]).__name__, key))
                 update_value_fn(old_dict[key], new_dict[key])
+                _update_prefix.pop()
         else:
             # Delete the old value if no new value for that key.
+            logger.info("Deleting {}".format(
+                _attrstr("{}({})".format(type(old_dict[key]).__name__, key))))
+            _to_delete.append(old_dict[key])
             del old_dict[key]
 
 
 def _update_list_with_key(old_list, new_list, key,
-                          preserve_old=False, update_value_fn=None):
+                          preserve_old=False, update_value_fn=None,
+                          creator_fn=None):
     """Update a SQLAlchemy list-relationship, using key for identity
 
     Make old_list look like new_list, in a similar way to _update_dict, as
@@ -245,6 +312,8 @@ def _update_list_with_key(old_list, new_list, key,
 
     If preserve_old is true, elements in old_list with a key not present in
     new_list will be preserved.
+
+    Calls creator_fn(key, value) for each newly created object.
 
     """
     if update_value_fn is None:
@@ -257,15 +326,28 @@ def _update_list_with_key(old_list, new_list, key,
         if k in new_dict:
             if k not in old_dict:
                 # Add new value to the old dictionary.
+                logger.info("Creating {}".format(
+                    _attrstr("{}({})".format(type(new_dict[k]).__name__, k))))
                 temp = new_dict[k]
-                new_list.remove(temp)
+                temp = _copy(temp)
                 old_list.append(temp)
+                old_dict[k] = temp
+                if creator_fn is not None:
+                    creator_fn(k, temp)
             else:
                 # Update the value in old_dict with the new value.
+                _update_prefix.append("{}({})".format(type(old_dict[k]).__name__, k))
                 update_value_fn(old_dict[k], new_dict[k])
+                _update_prefix.pop()
         elif not preserve_old:
             # Remove the old value not anymore present.
+            logger.info("Deleting {}".format(
+                _attrstr("{}({})".format(type(old_dict[k]).__name__, k))))
             old_list.remove(old_dict[k])
+            _to_delete.append(old_dict[k])
+            del old_dict[k]
+
+    return old_dict
 
 
 def update_dataset(old_dataset, new_dataset, parent=None):
@@ -331,3 +413,33 @@ def update_contest(old_contest, new_contest, parent=None):
         # The main group has to be set manually in the end.
         Contest.main_group: False,
     }, parent=parent)
+
+
+def update_user(old_user, new_user):
+    """Update old_user with information from new_user"""
+    _update_object(old_user, new_user, {
+        User.participations: False,
+    })
+
+
+def update_team(old_team, new_team):
+    """Update old_team with information from new_team"""
+    _update_object(old_team, new_team, {
+        Team.participations: False,
+    })
+
+
+def update_participation(old_participation, new_participation):
+    """Update old_participation with information from new_participation"""
+    _update_object(old_participation, new_participation, {
+        Participation.contest: False,
+        Participation.user: False,
+        Participation.group: False,
+        Participation.team: False,
+        Participation.messages: False,
+        Participation.questions: False,
+        Participation.submissions: False,
+        Participation.user_tests: False,
+        Participation.printjobs: False,
+        Participation.starting_time: False,
+    })

@@ -500,7 +500,7 @@ class MySubmission(object):
                     self.expectations[item.unique_name] += encode(key)
 
         # JSON doesn't allow lists nor tuples as keys so we dump them, too
-        self.expectations = {json.dumps(key): val for key, val
+        self.expectations = {json.dumps(key, sort_keys=True): val for key, val
                              in iteritems(self.expectations)}
 
     def _should_test(self, local_test):
@@ -1386,13 +1386,13 @@ class TaskConfig(CommonConfig, Scope):
             {'feedback': self.feedback,
              'tcinfo':
              [{'name': s.description,
-               'key': s.unique_name,
+               'key': list(s.unique_name),
                'public': s.public,
                'for_public_score': s.for_public_score,
                'for_private_score': s.for_private_score,
                'partial': s.partial,
                'groups': [{'points': g.points,
-                           'key': g.unique_name,
+                           'key': list(g.unique_name),
                            'cases': [c.codename for c
                                      in g.cases]}
                           for g in s.groups]}
@@ -1585,7 +1585,7 @@ class TaskConfig(CommonConfig, Scope):
              "expected_public_score_info": submission.public_score_info,
              "expected_partial_score": submission.partial_score,
              "expected_partial_score_info": submission.partial_score_info,
-             "task_name": self.name})
+             "task_name": self.name}, sort_keys=True)
 
         return sdb
 

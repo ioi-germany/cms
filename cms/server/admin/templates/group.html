@@ -1,6 +1,6 @@
-{% extends base.html %}
+{% extends "base.html" %}
 
-{% block group %}
+{% block core %}
 
 <h1>
   Group {{ group.name }} in <a href="{{ url("contest", contest.id) }}">{{ contest.name }}</a>
@@ -8,7 +8,7 @@
 
 <h2 id="title_submissions" class="toggling_on">Users</h2>
 <div id="users">
-  {% if len(group.participations) == 0 %}
+  {% if group.participations|length < 1 %}
   <p>No users found.</p>
 
   {% else %}
@@ -22,7 +22,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for p in sorted(group.participations, key=lambda p: p.user.username) %}
+      {% for p in group.participations %}
       <tr>
         <td><a href="{{ url("contest", contest.id, "user", p.user.id, "edit") }}">{{ p.user.username }}</a></td>
         <td>{{ p.user.first_name }}</td>
@@ -59,7 +59,7 @@
           Start time (in UTC)
         </td>
         <td>
-          <input type="text" name="start" value="{{ str(group.start) }}"/>
+          <input type="text" name="start" value="{{ group.start }}"/>
         </td>
       </tr>
       <tr>
@@ -69,7 +69,7 @@
           End time (in UTC)
         </td>
         <td>
-          <input type="text" name="stop" value="{{ str(group.stop) }}"/>
+          <input type="text" name="stop" value="{{ group.stop }}"/>
         </td>
       </tr>
       <tr>
@@ -79,7 +79,7 @@
                                     If specified, only up to this length after the first log in (or up to the end of the contest, whichever comes first)."></span>
           Length of the contest
         </td>
-        <td><input type="text" name="per_user_time" value="{{ int(group.per_user_time.total_seconds()) if group.per_user_time is not None else "" }}"></td>
+        <td><input type="text" name="per_user_time" value="{{ group.per_user_time.total_seconds() if group.per_user_time is not none else "" }}"></td>
       </tr>
       <tr><td colspan=2><h2>Analysis mode</h2></td></tr>
       <tr>
@@ -97,7 +97,7 @@
                                     Example: '2015-12-31 15:00:00'."></span>
           Analysis mode start time (in UTC)
         </td>
-        <td><input type="text" name="analysis_start" value="{{ str(group.analysis_start) }}"></td>
+        <td><input type="text" name="analysis_start" value="{{ group.analysis_start }}"></td>
       </tr>
       <tr>
         <td>
@@ -105,13 +105,18 @@
                                     Example: '2015-12-31 18:00:00'."></span>
           Analysis mode end time (in UTC)
         </td>
-        <td><input type="text" name="analysis_stop" value="{{ str(group.analysis_stop) }}"></td>
+        <td><input type="text" name="analysis_stop" value="{{ group.analysis_stop }}"></td>
       </tr>
     </table>
-    <input type="submit" value="Update" />
+    <input type="submit"
+        value="Update"
+{% if not admin.permission_all %}
+         disabled
+{% endif %}
+        />
     <input type="reset" value="Reset" />
   </form>
   <div class="hr"></div>
 </div>
 
-{% endblock group %}
+{% endblock core %}

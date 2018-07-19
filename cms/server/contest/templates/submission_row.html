@@ -20,86 +20,8 @@
         <a class="details">{% trans %}details{% endtrans %}</a>
 {% endif %}
     </td>
-    {% if score_type is not None and score_type.max_public_score != 0 %}
-    <td class="public_score undefined">{{ _("N/A") }}</td>
-    {% endif %}
-    {% if score_type is not None and score_type.max_public_score != score_type.max_score %}
-    <td class="total_score undefined">{{ _("N/A") }}</td>
-    {% endif %}
-    {% if any_unit_tests %}
-        {% if s.is_unit_test() %}
-    <td class="unit_test undefined">{{ _("N/A") }}</td>
-        {% else %}
-    <td class="unit_test"></td>
-        {% endif %}
-    {% endif %}
-{% elif sr.compilation_outcome == "fail" %}
-<tr data-submission="{{ s_idx }}" data-status="{{ SubmissionResult.COMPILATION_FAILED }}">
-    {% raw col1 %}
-    <td class="status">
-        {{ _("Compilation failed") }}
-        <a class="details">{{ _("details") }}</a>
-    </td>
-    {% if score_type is not None and score_type.max_public_score != 0 %}
-    <td class="public_score undefined">{{ _("N/A") }}</td>
-    {% endif %}
-    {% if score_type is not None and score_type.max_public_score != score_type.max_score %}
-    <td class="total_score undefined">{{ _("N/A") }}</td>
-    {% endif %}
-    {% if any_unit_tests %}
-        {% if s.is_unit_test() %}
-    <td class="unit_test undefined">{{ _("N/A") }}</td>
-        {% else %}
-    <td class="unit_test"></td>
-        {% endif %}
-    {% endif %}
-{% elif not sr.evaluated() %}
-<tr data-submission="{{ s_idx }}" data-status="{{ SubmissionResult.EVALUATING }}">
-    {% raw col1 %}
-    <td class="status">
-        {{ _("Evaluating...") }}
-    </td>
-    {% if score_type is not None and score_type.max_public_score != 0 %}
-    <td class="public_score undefined">{{ _("N/A") }}</td>
-    {% endif %}
-    {% if score_type is not None and score_type.max_public_score != score_type.max_score %}
-    <td class="total_score undefined">{{ _("N/A") }}</td>
-    {% endif %}
-    {% if any_unit_tests %}
-        {% if s.is_unit_test() %}
-    <td class="unit_test undefined">{{ _("N/A") }}</td>
-        {% else %}
-    <td class="unit_test"></td>
-        {% endif %}
-    {% endif %}
-{% elif not sr.scored() %}
-<tr data-submission="{{ s_idx }}" data-status="{{ SubmissionResult.SCORING }}">
-    {% raw col1 %}
-    <td class="status">
-        {{ _("Scoring...") }}
-    </td>
-    {% if score_type is not None and score_type.max_public_score != 0 %}
-    <td class="public_score undefined">{{ _("N/A") }}</td>
-    {% endif %}
-    {% if score_type is not None and score_type.max_public_score != score_type.max_score %}
-    <td class="total_score undefined">{{ _("N/A") }}</td>
-    {% endif %}
-    {% if any_unit_tests %}
-        {% if s.is_unit_test() %}
-    <td class="unit_test undefined">{{ _("N/A") }}</td>
-        {% else %}
-    <td class="unit_test"></td>
-        {% endif %}
-    {% endif %}
-{% else %}
-<tr data-submission="{{ s_idx }}" data-status="{{ SubmissionResult.SCORED }}">
-    {% raw col1 %}
-    <td class="status">
-        {{ _("Evaluated") }}
-        <a class="details">{{ _("details") }}</a>
-    </td>
-
-    {% if score_type.max_public_score > 0 %}
+{% if score_type is defined and score_type.max_public_score > 0 %}
+    {% if status == SubmissionResult.SCORED %}
     <td class="public_score {{ get_score_class(sr.public_score, score_type.max_public_score) }}">
         {{ score_type.format_score(sr.public_score, score_type.max_public_score, sr.public_score_details, task.score_precision, translation=translation) }}
     </td>
@@ -119,17 +41,18 @@
         {% trans %}N/A{% endtrans %}
     </td>
     {% endif %}
-
-    {% if any_unit_tests %}
-        {% if s.is_unit_test() %}
-            {% set utd = json.loads(sr.unit_test_score_details) %}
-    <td class="unit_test {{ get_score_class(utd["verdict"][0], 1) }}">
-        {{ utd["verdict"][1] }} ({{ s.comment }})
+{% endif %}
+{% if any_unit_tests %}
+    {% if s.is_unit_test() %}
+        {% if status == SubmissionResult.SCORED %}
+    <td class="unit_test {{ get_score_class(score_type.unit_test_result(sr.unit_test_score_details), 1) }}">
+        {{ score_type.format_unit_test_verdict(sr.unit_test_score_details) }} ({{ s.comment }})
     </td>
         {% else %}
-    <td class="unit_test">
-    </td>
+    <td class="unit_test undefined">{{ _("N/A") }}</td>
         {% endif %}
+    {% else %}
+    <td class="unit_test"></td>
     {% endif %}
 {% endif %}
 {% if actual_phase >= +3 %}

@@ -189,7 +189,7 @@ class Communication(TaskType):
             if not check_manager_present(job, stub_filename):
                 return
             source_filenames.append(stub_filename)
-        files_to_get[stub_filename] = job.managers[stub_filename].digest
+            files_to_get[stub_filename] = job.managers[stub_filename].digest
         # User's submitted file(s) (copy and add to compilation).
         for codename, file_ in iteritems(job.files):
             source_filename = codename.replace(".%l", source_ext)
@@ -288,6 +288,7 @@ class Communication(TaskType):
         manager_command = ["./%s" % Communication.MANAGER_FILENAME]
         for i in indices:
             manager_command += [fifo_in[i], fifo_out[i]]
+        manager_command += [fifo_solution_quitter, fifo_manager_quitter]
         # We could use trusted_step for the manager, since it's fully
         # admin-controlled. But trusted_step is only synchronous at the moment.
         # Thus we use evaluation_step, and we set a time limit generous enough
@@ -309,10 +310,14 @@ class Communication(TaskType):
             manager_command,
             manager_time_limit,
             config.trusted_sandbox_max_memory_kib // 1024,
-            allow_dirs=fifo_dir,
+            allow_dirs=fifo_dir+[abortion_control_fifo_dir],
             writable_files=[Communication.OUTPUT_FILENAME],
             stdin_redirect=Communication.INPUT_FILENAME,
             multiprocess=job.multithreaded_sandbox)
+
+        solution_quitter = open(fifo_solution_quitter, "r")
+        manager_quitter = open(fifo_manager_quitter, "w")
+        manager_quitter_open = True
 
         # Start the user submissions compiled with the stub.
         language = get_language(job.language)
@@ -340,10 +345,24 @@ class Communication(TaskType):
                 job.time_limit,
                 job.memory_limit,
                 allow_dirs=[fifo_dir[i]],
+                stdin_redirect=fifo_in[i],
+                stdout_redirect=fifo_out[i],
                 multiprocess=job.multithreaded_sandbox)
+
+        # Manager still running but wants to quit
+        if solution_quitter.read() == "<3":
+            for i in indices:
+                processes[i].send_signal(signal.SIGINT)  # Kill user
+            wait_without_std(processes)
+            manager_quitter.close()
+            manager_quitter_open = False
 
         # Wait for the processes to conclude, without blocking them on I/O.
         wait_without_std(processes + [manager])
+
+        solution_quitter.close()
+        if manager_quitter_open:
+            manager_quitter.close()
 
         # Get the results of the manager sandbox.
         box_success_mgr, evaluation_success_mgr, unused_stats_mgr = \

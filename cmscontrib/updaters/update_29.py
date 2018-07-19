@@ -48,6 +48,8 @@ def fix_text(t):
     except ValueError:
         t = [t]
     t[0] = t[0].replace("%d", "%s")
+    for i in range(1, len(t)):
+        t[i] = str(t[i])
     return t
 
 
@@ -74,6 +76,9 @@ class Updater(object):
                 if v["public_score_details"] is not None:
                     v["public_score_details"] = \
                         json.loads(v["public_score_details"])
+                if v["unit_test_score_details"] is not None:
+                    v["unit_test_score_details"] = \
+                        json.loads(v["unit_test_score_details"])
                 if v["ranking_score_details"] is not None:
                     v["ranking_score_details"] = \
                         json.loads(v["ranking_score_details"])

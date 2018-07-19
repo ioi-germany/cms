@@ -159,25 +159,25 @@
                         <div class="control-table" style="margin-top:2px;">
                             <div class="two-cols">
                                 <div>
-                                {% for key in TaskInfo.entries()[:len(TaskInfo.entries()) / 2] %}
+                                {% for key in TaskInfo.entries()[:len(TaskInfo.entries()) // 2] %}
                                     <div class="checkbox">
                                         <input type="checkbox" id="col-{{key}}">
                                         <label for="col-{{key}}">
                                         {% raw TaskInfo.desc()[key] %}
                                         </label>
                                     </div>
-                                {% endfor %}
+                                {% end %}
                                 </div>
 
                                 <div>
-                                {% for key in TaskInfo.entries()[len(TaskInfo.entries()) / 2:] %}
+                                {% for key in TaskInfo.entries()[len(TaskInfo.entries()) // 2:] %}
                                     <div class="checkbox">
                                         <input type="checkbox" id="col-{{key}}">
                                         <label for="col-{{key}}">
                                         {% raw TaskInfo.desc()[key] %}
                                         </label>
                                     </div>
-                                {% endfor %}
+                                {% end %}
                                 </div>
                             </div>
                         </div>

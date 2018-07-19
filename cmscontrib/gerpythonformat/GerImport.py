@@ -41,6 +41,7 @@ from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 from cmscontrib.importing import _update_object
 from cms.io import Service
+from cmscontrib.importing import update_contest, update_task, update_user, update_group, update_team, update_participation, _update_list_with_key, _copy, _to_delete
 
 from six import iteritems
 
@@ -54,257 +55,7 @@ class GerImport(Service):
         self.clean = clean
         self.force = force
 
-        self.to_delete = []
-
-        self.update_prefix = []
-
         Service.__init__(self)
-
-    def attrstr(self, a):
-        return ".".join(self.update_prefix + [a])
-
-    def _update_columns(self, old_object, new_object, ignore=None):
-        ignore = ignore if ignore is not None else set()
-        for prp in old_object._col_props:
-            if prp.key in ignore:
-                continue
-            if hasattr(new_object, prp.key):
-                old_value = getattr(old_object, prp.key)
-                new_value = getattr(new_object, prp.key)
-                if old_value != new_value:
-                    logger.info("Changing {} from {} to {}".format(
-                        self.attrstr(prp.key), old_value, new_value))
-                    setattr(old_object, prp.key, getattr(new_object, prp.key))
-
-    # Create a recursive copy of a database object.
-    # Subobjects contained in a dict or list relation are copied recursively.
-    def _copy(self, new_object):
-        # Copy scalar properties.
-        di = {prp.key: getattr(new_object, prp.key)
-              for prp in new_object._col_props}
-        old_object = type(new_object)(**di)
-
-        for prp in old_object._rel_props:
-            old_value = getattr(old_object, prp.key)
-            new_value = getattr(new_object, prp.key)
-
-            # Copy relational dict properties.
-            if isinstance(old_value, dict):
-                assert len(old_value) == 0
-                for key, value in new_value.items():
-                    old_value[key] = self._copy(value)
-
-            # Copy relational list properties.
-            elif isinstance(old_value, list):
-                assert len(old_value) == 0
-                for value in new_value:
-                    old_value.append(self._copy(value))
-
-        return old_object
-
-    def _update_dict(self, old_value, new_value, delete=True,
-                     creator_function=None):
-        old_keys = set(old_value.keys())
-        new_keys = set(new_value.keys())
-        # delete
-        if delete:
-            for key in sorted(old_keys - new_keys):
-                logger.info("Deleting {}".format(
-                    self.attrstr("{}({})".format(type(old_value[key]).__name__, key))))
-                self.to_delete.append(old_value[key])
-        # create
-        for key in sorted(new_keys - old_keys):
-            logger.info("Creating {}".format(
-                self.attrstr("{}({})".format(type(new_value[key]).__name__, key))))
-            v = self._copy(new_value[key])
-            old_value[key] = v
-            if creator_function is not None:
-                creator_function(key, v)
-        # update
-        for key in sorted(new_keys & old_keys):
-            self.update_prefix.append("{}({})".format(type(old_value[key]).__name__, key))
-            self._update_dispatcher(old_value[key], new_value[key])
-            self.update_prefix.pop()
-        return {key: old_value[key] for key in new_value}
-
-    def _update_list(self, old_value, new_value):
-        old_len = len(old_value)
-        new_len = len(new_value)
-        # update
-        for i in xrange(min(old_len, new_len)):
-            self._update_dispatcher(old_value[i], new_value[i])
-        if old_len > new_len:
-            # delete
-            for v in old_value[new_len:]:
-                self.to_delete.append(v)
-        elif new_len > old_len:
-            # create
-            for v in new_value[old_len:]:
-                old_value.append(self._copy(v))
-
-    def _update_dispatcher(self, old_value, new_value):
-        bla = {
-            # Custom update
-            User: self._update_user,
-            Group: self._update_group,
-            Contest: self._update_contest,
-            Participation: self._update_participation,
-            Task: self._update_task,
-            Dataset: self._update_dataset,
-            Team: self._update_team,
-            # Default update
-            Testcase: _update_object,
-            Manager: _update_object,
-            Attachment: _update_object,
-            Statement: _update_object,
-        }
-        bla[type(old_value)](old_value, new_value)
-
-    def _update_user(self, old_object, new_object):
-        self._update_columns(old_object, new_object)
-
-        for prp in old_object._rel_props:
-            if prp.class_attribute == User.participations:
-                pass
-            else:
-                raise RuntimeError(
-                    "Unknown type of relationship for %s.%s." %
-                    (prp.parent.class_.__name__, prp.key))
-
-    def _update_group(self, old_object, new_object):
-        self._update_columns(old_object, new_object)
-
-        for prp in old_object._rel_props:
-            if prp.class_attribute == Group.contest:
-                pass
-            elif prp.class_attribute == Group.participations:
-                pass
-            else:
-                raise RuntimeError(
-                    "Unknown type of relationship for %s.%s." %
-                    (prp.parent.class_.__name__, prp.key))
-
-    def _update_contest(self, old_object, new_object):
-        self._update_columns(old_object, new_object)
-
-        for prp in old_object._rel_props:
-            if prp.class_attribute == Contest.announcements:
-                pass
-            elif prp.class_attribute == Contest.tasks:
-                pass
-            elif prp.class_attribute == Contest.participations:
-                pass
-            elif prp.class_attribute == Contest.groups:
-                pass
-            elif prp.class_attribute == Contest.main_group:
-                pass
-            else:
-                raise RuntimeError(
-                    "Unknown type of relationship for %s.%s." %
-                    (prp.parent.class_.__name__, prp.key))
-
-        old_groups = {g.name: g for g in old_object.groups}
-        new_groups = {g.name: g for g in new_object.groups}
-        self._update_dict(old_groups, new_groups, delete=True,
-                          creator_function=lambda _, v:
-                              old_object.groups.append(v))
-
-        if old_object.main_group is None or \
-                old_object.main_group.name != new_object.main_group.name:
-            old_object.main_group = old_object.get_group(
-                new_object.main_group.name)
-
-    def _update_participation(self, old_object, new_object):
-        self._update_columns(old_object, new_object)
-
-        for prp in old_object._rel_props:
-            if prp.class_attribute == Participation.contest:
-                pass
-            elif prp.class_attribute == Participation.user:
-                pass
-            elif prp.class_attribute == Participation.group:
-                pass
-            elif prp.class_attribute == Participation.team:
-                pass
-            elif prp.class_attribute == Participation.messages:
-                pass
-            elif prp.class_attribute == Participation.questions:
-                pass
-            elif prp.class_attribute == Participation.submissions:
-                pass
-            elif prp.class_attribute == Participation.user_tests:
-                pass
-            elif prp.class_attribute == Participation.printjobs:
-                pass
-            else:
-                raise RuntimeError(
-                    "Unknown type of relationship for %s.%s." %
-                    (prp.parent.class_.__name__, prp.key))
-        old_object.group = old_object.contest.get_group(new_object.group.name)
-
-    def _update_task(self, old_object, new_object):
-        self._update_columns(old_object, new_object)
-
-        for prp in old_object._rel_props:
-            old_value = getattr(old_object, prp.key)
-            new_value = getattr(new_object, prp.key)
-
-            if prp.class_attribute == Task.contest:
-                pass
-            elif prp.class_attribute == Task.active_dataset:
-                pass
-            elif prp.class_attribute == Task.submissions:
-                pass
-            elif prp.class_attribute == Task.user_tests:
-                pass
-            elif prp.class_attribute == Task.datasets:
-                pass
-            elif prp.class_attribute == Task.statements:
-                self._update_dict(old_value, new_value)
-            elif prp.class_attribute == Task.attachments:
-                self._update_dict(old_value, new_value)
-            elif prp.class_attribute == Task.submission_format:
-                self._update_list(old_value, new_value)
-            else:
-                raise RuntimeError(
-                    "Unknown type of relationship for %s.%s." %
-                    (prp.parent.class_.__name__, prp.key))
-
-        old_datasets = {g.description: g for g in old_object.datasets}
-        new_datasets = {g.description: g for g in new_object.datasets}
-        assert len(new_datasets) == 1
-        self._update_dict(old_datasets, new_datasets, delete=False,
-                          creator_function=lambda _, v:
-                              old_object.datasets.append(v))
-
-    def _update_dataset(self, old_object, new_object):
-        self._update_columns(old_object, new_object)
-
-        for prp in old_object._rel_props:
-            old_value = getattr(old_object, prp.key)
-            new_value = getattr(new_object, prp.key)
-
-            if prp.class_attribute == Dataset.task:
-                pass
-            elif prp.class_attribute == Dataset.managers:
-                self._update_dict(old_value, new_value)
-            elif prp.class_attribute == Dataset.testcases:
-                self._update_dict(old_value, new_value)
-            else:
-                raise RuntimeError(
-                    "Unknown type of relationship for %s.%s." %
-                    (prp.parent.class_.__name__, prp.key))
-
-    def _update_team(self, old_object, new_object):
-        self._update_columns(old_object, new_object)
-
-        for prp in old_object._rel_props:
-            if prp.class_attribute == Team.participations:
-                pass
-            else:
-                raise RuntimeError(
-                    "Unknown type of relationship for %s.%s." %
-                    (prp.parent.class_.__name__, prp.key))
 
     def make(self):
         self.file_cacher = FileCacher()
@@ -337,39 +88,59 @@ class GerImport(Service):
             contestconfig._readconfig("contest-config.py")
 
             with SessionGen() as session:
+                def session_add(k, v):
+                    session.add(v)
+
+                # Variables like udbs, teamdbs, cdb, ... contain objects before
+                # they've been put into the database.
+                # Their counterpars udb1s, teamdb1s, cdb1, ... contain the
+                # objects that are actually in the database (which are copies
+                # of the objects in udbs, ...).
+
                 # Create users in the database.
-                # FIXME This has running time proportional to the total number
-                # of users, not just the number of users for this contest.
-                udbs = {u: contestconfig._makeuser(
-                    u) for u in contestconfig.users}
-                udb1s = {u.username: u for u in session.query(User).all()}
-                self._update_dict(udb1s, udbs, delete=False,
-                                  creator_function=lambda _, v: session.add(v))
+                udbs = [contestconfig._makeuser(u) for u in contestconfig.users]
+                udb1s = _update_list_with_key(session.query(User).all(),
+                                              udbs,
+                                              lambda u : u.username,
+                                              preserve_old=True,
+                                              update_value_fn=update_user,
+                                              creator_fn=session_add)
+                udbs = {u.username : u for u in udbs}
 
                 # Create teams in the database.
-                teamdbs = {t: contestconfig._maketeam(
-                    t) for t in contestconfig.teams}
-                teamdb1s = {t.code: t for t in session.query(Team)}
-                self._update_dict(teamdb1s, teamdbs, delete=False,
-                                  creator_function=lambda _, v: session.add(v))
+                teamdbs = [contestconfig._maketeam(t) for t in contestconfig.teams]
+                teamdb1s = _update_list_with_key(session.query(Team),
+                                                 teamdbs,
+                                                 lambda t : t.code,
+                                                 preserve_old=True,
+                                                 update_value_fn=update_team,
+                                                 creator_fn=session_add)
+                teamdbs = {t.code : t for t in teamdbs}
 
-                # Create contest in the database.
+                # Create contest (including associated user groups) in the database.
                 cdb = contestconfig._makecontest()
-                cdbs = {cdb.name: cdb}
-                cdb1s = {c.name: c for c in session.query(Contest).all()}
-                self._update_dict(cdb1s, cdbs, delete=False,
-                                  creator_function=lambda _, v: session.add(v))
+                cdbs = [cdb]
+                cdb1s = _update_list_with_key(session.query(Contest).all(),
+                                              cdbs,
+                                              lambda c : c.name,
+                                              preserve_old=True,
+                                              update_value_fn=update_contest,
+                                              creator_fn=session_add)
                 cdb1 = cdb1s[cdb.name]
-                cdb1.main_group = cdb1.get_group(cdb.main_group.name)
+
+                # Set the contest's main group.
+                cdb1.main_group = cdb1.get_group(contestconfig.defaultgroup.name)
 
                 # Create participations in the database.
+
+                # Team object for a given user
                 def user_team(u):
                     t = contestconfig.users[u].team
                     if t is None:
                         return None
                     else:
                         return teamdbs[t.code]
-
+                # Team object in the database for a given user
                 def user_team1(u):
                     t = contestconfig.users[u].team
                     if t is None:
@@ -382,11 +153,14 @@ class GerImport(Service):
                     return contestconfig._makeparticipation(u, cdb, udbs[u],
                                                             gdb, user_team(u))
 
-                pdbs = {u: make_participation(u) for u in contestconfig.users}
-                pdb1s = {p.user.username: p for p in cdb1.participations}
-                pdb1s = self._update_dict(pdb1s, pdbs, delete=True,
-                                          creator_function=lambda _, v:
-                                              cdb1.participations.append(v))
+                pdbs = [make_participation(u) for u in contestconfig.users]
+                pdb1s = _update_list_with_key(cdb1.participations,
+                                              pdbs,
+                                              lambda p : p.user.username,
+                                              preserve_old=True,
+                                              update_value_fn=update_participation)
+                pdbs = {p.user.username : p for p in pdbs}
+
                 for username, u in iteritems(pdb1s):
                     u.user = udb1s[username]
                     u.group = cdb1.get_group(
@@ -397,7 +171,6 @@ class GerImport(Service):
                 test_pdb = pdbs[contestconfig._mytestuser.username]
                 test_pdb1 = pdb1s[contestconfig._mytestuser.username]
 
-                # FIXME
                 # This is an ugly hack to prevent problems when reordering or
                 # adding tasks. Since we delete after adding and updating,
                 # there might otherwise at one point be two tasks with the same
@@ -405,24 +178,28 @@ class GerImport(Service):
                 for t in cdb1.tasks:
                     t.num += len(contestconfig.tasks) + len(cdb1.tasks)
 
-                tdbs = {n: t._makedbobject(cdb, self.file_cacher)
-                        for n, t in iteritems(contestconfig.tasks)}
-                tdb1s = {t.name: t for t in cdb1.tasks}
+                tdbs = [t._makedbobject(cdb, self.file_cacher)
+                        for t in contestconfig.tasks.values()]
+                tdbs_dict = {t.name: t for t in tdbs}
                 # We only set the active dataset when importing a new task.
                 # Afterwards, the active dataset has to be set using the web
                 # interface.
 
                 def task_creator(name, v):
-                    tdb = tdbs[name]
-                    cdb1.tasks.append(v)
+                    tdb = tdbs_dict[name]
                     ddb1 = session.query(Dataset) \
                         .filter(Dataset.task == v) \
                         .filter(Dataset.description ==
                                 tdb.active_dataset.description).first()
                     assert ddb1 is not None
                     v.active_dataset = ddb1
-                self._update_dict(tdb1s, tdbs, delete=True,
-                                  creator_function=task_creator)
+                tdb1s = _update_list_with_key(cdb1.tasks,
+                                              tdbs,
+                                              lambda t : t.name,
+                                              preserve_old=False,
+                                              update_value_fn=update_task,
+                                              creator_fn=task_creator)
+                tdbs = {t.name : t for t in tdbs}
 
                 sdb1ss = {}
                 if not self.no_test:
@@ -437,21 +214,21 @@ class GerImport(Service):
                             .filter(Submission.additional_info != None).all()
                         for sdb1 in sdb1s:
                             assert sdb1.is_unit_test()
-                            self.to_delete.append(sdb1)
+                            _to_delete.append(sdb1)
 
                         # Create test submissions in the database.
                         sdbs = contestconfig.tasks[t]._make_test_submissions(
                             test_pdb, tdb, False)
                         sdb1s = []
                         for sdb in sdbs:
-                            sdb1 = self._copy(sdb)
+                            sdb1 = _copy(sdb)
                             sdb1.task = tdb1
                             sdb1.participation = test_pdb1
                             session.add(sdb1)
                             sdb1s.append(sdb1)
                         sdb1ss[t] = sdb1s
 
-                for v in self.to_delete:
+                for v in _to_delete:
                     if isinstance(v, Task):
                         logger.warning("Removing task {}"
                                        .format(v.name))
@@ -484,7 +261,7 @@ class GerImport(Service):
                     return
 
                 # Delete marked objects
-                for v in self.to_delete:
+                for v in _to_delete:
                     session.delete(v)
 
                 session.commit()

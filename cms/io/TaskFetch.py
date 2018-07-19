@@ -27,7 +27,7 @@ import sys
 from sys import exc_info
 from traceback import format_exception
 from multiprocessing import Process, Manager
-from StringIO import StringIO
+from six import StringIO
 
 from cms.io.TaskInfo import TaskInfo
 
