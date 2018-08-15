@@ -6,7 +6,7 @@
 </div>
 
 <form action="{{ url("contest", contest.id, "groups", "add") }}" method="POST">
-  {% module xsrf_form_html() %}
+    {{ xsrf_form_html|safe }}
   Add a new group named
   <input type="text" name="name"/>
   <input type="submit"
@@ -17,7 +17,7 @@
 </form>
 
 <form action="{{ url("contest", contest.id, "groups") }}" method="POST">
-  {% module xsrf_form_html() %}
+    {{ xsrf_form_html|safe }}
   Edit selected group:
   <input type="submit"
          name="operation"
@@ -40,7 +40,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for g in sorted(contest.groups, cmp = lambda x, y: cmp(x.name, y.name)) %}
+      {% for g in contest.groups %}
       <tr>
         <td>
           <input type="radio" name="group_id" value="{{ g.id }}"/>

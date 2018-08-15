@@ -1,6 +1,6 @@
 {% extends base.html %}
 
-{% block core %}
+{% block group %}
 
 <h1>
   Group {{ group.name }} in <a href="{{ url("contest", contest.id) }}">{{ contest.name }}</a>
@@ -41,7 +41,7 @@
 <div id="group_info">
   <!-- We use "multipart/form-data" to have Tornado distinguish between missing and empty values. -->
   <form enctype="multipart/form-data" action="{{ url("contest", contest.id, "group", group.id, "edit") }}" method="POST">
-    {% module xsrf_form_html() %}
+      {{ xsrf_form_html|safe }}
     <table>
       <tr>
         <td>
