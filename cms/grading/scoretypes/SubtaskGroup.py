@@ -93,14 +93,18 @@ class SubtaskGroup(ScoreType):
                 <tr>
                     <th>{% trans %}Outcome{% endtrans %}</th>
                     <th>{% trans %}Details{% endtrans %}</th>
+        {% if feedback_level == FEEDBACK_LEVEL_FULL %}
                     <th>{% trans %}Execution time{% endtrans %}</th>
                     <th>{% trans %}Memory used{% endtrans %}</th>
+        {% endif %}
                     <th>{% trans %}Group{% endtrans %}</th>
                 </tr>
             </thead>
             <tbody>
         {% for tc in st["testcases"] %}
-            {% if "outcome" in tc and "text" in tc %}
+            {% if "outcome" in tc
+                   and (feedback_level == FEEDBACK_LEVEL_FULL
+                        or tc["show_in_restricted_feedback"])%}
                 {% if tc["outcome"] == "Correct" %}
                 <tr class="correct">
                 {% elif tc["outcome"] == "Not correct" %}
@@ -111,25 +115,31 @@ class SubtaskGroup(ScoreType):
                     <td>{{ _(tc["outcome"]) }}</td>
                     <td>{{ tc["text"]|format_status_text }}</td>
                     <td>
-                {% if "time" in tc and tc["time"] is not none %}
+                {% if feedback_level == FEEDBACK_LEVEL_FULL %}
+                    {% if "time" in tc and tc["time"] is not none %}
                         {{ "%(seconds)0.3f s" % {'seconds': tc["time"]} }}
-                {% else %}
+                    {% else %}
                         {% trans %}N/A{% endtrans %}
-                {% endif %}
+                    {% endif %}
                     </td>
                     <td>
-                {% if "memory" in tc and tc["memory"] is not none %}
+                    {% if "memory" in tc and tc["memory"] is not none %}
                         {{ tc["memory"]|format_size }}
-                {% else %}
+                    {% else %}
                         {% trans %}N/A{% endtrans %}
-                {% endif %}
+                    {% endif %}
                     </td>
+                {% endif %}
                 {% if "grouplen" in tc %}
                     <td rowspan="{{ tc["grouplen"] }}">{{ tc["groupnr"] }}</td>
                 {% endif %}
             {% else %}
                 <tr class="undefined">
+                {% if feedback_level == FEEDBACK_LEVEL_FULL %}
                     <td colspan="5">
+                {% else %}
+                    <td colspan="3">
+                {% endif %}
                         {% trans %}N/A{% endtrans %}
                     </td>
                 </tr>
@@ -432,6 +442,7 @@ class SubtaskGroup(ScoreType):
                     st_maxscore += group["points"]
 
                     first = True
+                    previous_tc_all_correct = True
                     for idx in group["cases"]:
                         oc = self.get_public_outcome(
                             float(evaluations[idx].outcome))
@@ -439,6 +450,8 @@ class SubtaskGroup(ScoreType):
                               "text": evaluations[idx].text,
                               "time": evaluations[idx].execution_time,
                               "memory": evaluations[idx].execution_memory,
+                              "show_in_restricted_feedback":
+                                  previous_tc_all_correct,
                               }
                         if first:
                             first = False
@@ -446,6 +459,10 @@ class SubtaskGroup(ScoreType):
                             tc["grouplen"] = len(group["cases"])
 
                         testcases.append(tc)
+
+                        if oc != "Correct":
+                            previous_tc_all_correct = False
+
                 if (public and subtask["for_public_score"]) or \
                    (not public and subtask["for_private_score"]):
                     score += st_score

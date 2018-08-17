@@ -456,7 +456,8 @@ class ContestConfig(CommonConfig):
         This has the following consequences:
          a) The token modes for the contest and for all tasks are set to
             'infinite'.
-         b) All test cases are offered for download.
+         b) The feedback level for all tasks is set to "full".
+         c) All test cases are offered for download.
 
         WARNING: Be careful with user groups: Users that shall not be allowed
         to participate in the analysis mode must not be able to log in! Set

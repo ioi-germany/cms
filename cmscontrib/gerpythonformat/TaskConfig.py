@@ -30,6 +30,7 @@ from cmscontrib.gerpythonformat.Executable import ExitCodeException
 from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, merge_constraints
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX
+from cms import FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
 from cms.db import Task, Statement, Testcase, Dataset, \
     Attachment, Manager, Submission, File, \
     SubmissionResult
@@ -633,6 +634,8 @@ class TaskConfig(CommonConfig, Scope):
         self._feedback_param = feedback
         self.feedback = feedback[0]
 
+        self.feedback_level_restricted()
+
         # Score mode
         self._score_mode = None
 
@@ -1210,6 +1213,27 @@ class TaskConfig(CommonConfig, Scope):
             MySubmission(self, [os.path.abspath(s) for s in args], **kwargs))
 
     @exported_function
+    def feedback_level_full(self):
+        """
+        Show information about all test cases in public subtasks to the
+        contestants.
+
+        """
+        self._feedback_level = FEEDBACK_LEVEL_FULL
+
+    @exported_function
+    def feedback_level_restricted(self):
+        """
+        In each public group, hide all test cases after the first one that
+        doesn't have outcome "Correct". Additionally, used time and memory are
+        hidden.
+
+        This is the default for all tasks.
+
+        """
+        self._feedback_level = FEEDBACK_LEVEL_RESTRICTED
+
+    @exported_function
     def score_mode_max_tokened_last(self):
         """
         The score for a task will be the maximum of the score of all
@@ -1341,10 +1365,13 @@ class TaskConfig(CommonConfig, Scope):
         if self.contest._analysis:
             self.infinite_tokens()
         self._set_tokens(tdb)
+        if self.contest._analysis:
+            self.feedback_level_full()
         tdb.max_submission_number = self.max_submission_number
         tdb.min_submission_interval = self.min_submission_interval
         tdb.max_user_test_number = self.max_user_test_number
         tdb.min_user_test_interval = self.min_user_test_interval
+        tdb.feedback_level = self._feedback_level
         tdb.score_mode = self.score_mode()
 
         if self.tasktype == "OutputOnly":
