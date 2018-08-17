@@ -51,7 +51,8 @@ else:
     import __builtin__
     raw_object = __builtin__.object
 
-from . import engine, CastingArray
+from . import engine, metadata, CastingArray, Codename, Filename, \
+    FilenameSchema, FilenameSchemaArray, Digest
 
 
 _TYPE_MAP = {
@@ -63,10 +64,15 @@ _TYPE_MAP = {
     Enum: six.text_type,
     Unicode: six.text_type,
     String: six.string_types,  # TODO Use six.binary_type.
+    Codename: six.text_type,
+    Filename: six.text_type,
+    FilenameSchema: six.text_type,
+    Digest: six.text_type,
     DateTime: datetime,
     Interval: timedelta,
     ARRAY: list,
     CastingArray: list,
+    FilenameSchemaArray: list,
     CIDR: (ipaddress.IPv4Network, ipaddress.IPv6Network),
     JSONB: raw_object,
 }
@@ -331,7 +337,4 @@ class Base(object):
                 attrs.popitem()[0])
 
 
-Base = declarative_base(engine, cls=Base, constructor=None)
-
-
-metadata = Base.metadata
+Base = declarative_base(engine, metadata=metadata, cls=Base, constructor=None)

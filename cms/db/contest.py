@@ -35,7 +35,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
-from six import itervalues
 
 from datetime import timedelta
 
@@ -48,7 +47,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 
 from cms import TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE
 
-from . import Base, CodenameConstraint
+from . import Codename, Base
 
 
 class Contest(Base):
@@ -68,8 +67,7 @@ class Contest(Base):
 
     # Short name of the contest.
     name = Column(
-        Unicode,
-        CodenameConstraint("name"),
+        Codename,
         nullable=False,
         unique=True)
     # Description of the contest (human readable).
@@ -151,7 +149,7 @@ class Contest(Base):
         Enum(TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE,
              name="token_mode"),
         nullable=False,
-        default="infinite")
+        default=TOKEN_MODE_INFINITE)
 
     # The maximum number of tokens a contestant is allowed to use
     # during the whole contest (on all tasks).

@@ -564,10 +564,10 @@ class EvaluationJob(Job):
             files=dict(submission.files),
             managers=dict(dataset.managers),
             executables=dict(submission_result.executables),
-            time_limit=time_limit,
-            memory_limit=memory_limit,
             input=testcase.input,
             output=testcase.output,
+            time_limit=time_limit,
+            memory_limit=memory_limit,
             info=info
         )
 

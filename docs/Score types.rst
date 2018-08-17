@@ -58,6 +58,7 @@ The task needs to be crafted in such a way that the meaning of the outcome is ap
 
 For Batch tasks, this means that the tasks creates the outcome through a comparator program. Using diff does not make sense given that its outcomes can only be 0.0 or 1.0.
 
+
 .. _scoretypes_subtaskgroup:
 
 SubtaskGroup
@@ -70,3 +71,9 @@ Each subtask has a name (which is displayed to the contestants) and can be eithe
 Test cases can occur in any number of groups. They will all be evaluated exactly once but can be taken into account for computing the scores of multiple groups.
 
 The parameter string is a (json encoded) list of subtask specifications. A subtask specification is a dictionary with entries :samp:`name` (a string), :samp:`public` (a boolean) and :samp:`groups` (a list of group specifications). A group specification is a dictionary with entries :samp:`points` (the maximum number of points for this group) and :samp:`cases` (a list of test case code names).
+
+
+Custom score types
+==================
+
+Additional score types can be defined if necessary. This works in the same way :ref:`as with task types <tasktypes_custom>`: the classes need to extend :py:class:`cms.grading.scoretypes.ScoreType` and the entry point group is called `cms.grading.scoretypes`.

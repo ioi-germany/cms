@@ -46,7 +46,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, CIDR
 
 from cmscommon.crypto import generate_random_password, build_password
 
-from . import Base, Contest, CastingArray, CodenameConstraint
+from . import CastingArray, Codename, Base, Contest
 
 
 class Group(Base):
@@ -165,8 +165,7 @@ class User(Base):
 
     # Username and password to log in the CWS.
     username = Column(
-        Unicode,
-        CodenameConstraint("username"),
+        Codename,
         nullable=False,
         unique=True)
     password = Column(
@@ -228,8 +227,7 @@ class Team(Base):
 
     # Team code (e.g. the ISO 3166-1 code of a country)
     code = Column(
-        Unicode,
-        CodenameConstraint("code"),
+        Codename,
         nullable=False,
         unique=True)
 

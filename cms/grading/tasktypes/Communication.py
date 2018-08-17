@@ -41,13 +41,11 @@ from cms.grading.Sandbox import wait_without_std, Sandbox
 from cms.grading.steps import compilation_step,  evaluation_step_before_run, \
     evaluation_step_after_run, extract_outcome_and_text, \
     human_evaluation_message, merge_execution_stats, trusted_step
-from cms.grading.languagemanager import \
-    LANGUAGES, HEADER_EXTS, SOURCE_EXTS, OBJECT_EXTS, get_language
+from cms.grading.languagemanager import LANGUAGES, get_language
 from cms.grading.ParameterTypes import ParameterTypeChoice, ParameterTypeInt
-from cms.grading.TaskType import TaskType, check_executables_number, \
-    check_manager_present, create_sandbox, delete_sandbox, \
-    is_manager_for_compilation
 from cms.db import Executable
+from . import TaskType, check_executables_number, check_manager_present, \
+    create_sandbox, delete_sandbox, is_manager_for_compilation
 
 
 logger = logging.getLogger(__name__)

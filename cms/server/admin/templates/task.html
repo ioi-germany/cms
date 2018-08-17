@@ -18,8 +18,6 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
 {% endblock js_init %}
 
 {% block core %}
-{% set task_type_list = plugin_list("cms.grading.tasktypes", "tasktypes") %}
-{% set score_type_list = plugin_list("cms.grading.scoretypes", "scoretypes") %}
 
 <div class="core_title">
   <h1>{{ task.title }} ({{ task.name }})</h1>
@@ -132,6 +130,18 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
           <input type="text" name="submission_format" value="{{ task.submission_format|join(", ") }}"/>
         </td>
       </tr>
+      <tr>
+        <td>
+          <span class="info" title="With 'restricted' contestants only see limited technical information about each testcase; with 'full' they see more details, but malicious contestants might use this data to get some information about the test data."></span>
+          Feedback level
+        </td>
+        <td>
+          <select name="feedback_level">
+            <option value={{ FEEDBACK_LEVEL_RESTRICTED }} {{ "selected" if task.feedback_level == FEEDBACK_LEVEL_RESTRICTED else "" }}>Restricted</option>
+            <option value={{ FEEDBACK_LEVEL_FULL }} {{ "selected" if task.feedback_level == FEEDBACK_LEVEL_FULL else "" }}>Full</option>
+          </select>
+        </td>
+      </tr>
       <tr><td colspan=2><h2>Tokens parameters (<a href="http://cms.readthedocs.org/en/{{ rtd_version }}/Configuring%20a%20contest.html#feedback-to-contestants" target="_blank">documentation</a>)</h2></td></tr>
       <tr>
         <td>
@@ -141,9 +151,9 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
         </td>
         <td>
           <select name="token_mode">
-            <option value="disabled" {{ "selected" if task.token_mode == "disabled" else "" }}>Disabled</option>
-            <option value="finite" {{ "selected" if task.token_mode == "finite" else "" }}>Finite</option>
-            <option value="infinite" {{ "selected" if task.token_mode == "infinite" else "" }}>Infinite</option>
+            <option value="{{ TOKEN_MODE_DISABLED }}" {{ "selected" if task.token_mode == TOKEN_MODE_DISABLED else "" }}>Disabled</option>
+            <option value="{{ TOKEN_MODE_FINITE }}" {{ "selected" if task.token_mode == TOKEN_MODE_FINITE else "" }}>Finite</option>
+            <option value="{{ TOKEN_MODE_INFINITE }}" {{ "selected" if task.token_mode == TOKEN_MODE_INFINITE else "" }}>Infinite</option>
           </select>
         </td>
       </tr>
@@ -298,7 +308,7 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
 
     <h4 id="title_task_type_{{ dataset.id }}" class="toggling_on">Dataset configuration</h4>
 
-    {% if dataset.task_type not in task_type_list|map(attribute="__name__")|list %}
+    {% if dataset.task_type not in TASK_TYPES %}
     <script type="text/javascript">
       $(document).ready(function() {
       utils.display_notification("notification",
@@ -311,7 +321,7 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
     </script>
     {% endif %}
 
-    {% if dataset.score_type not in score_type_list|map(attribute="__name__")|list %}
+    {% if dataset.score_type not in SCORE_TYPES %}
     <script type="text/javascript">
       $(document).ready(function() {
       utils.display_notification("notification",
@@ -352,21 +362,21 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
           <td>
 
             <select name="task_type_{{ dataset.id }}">
-              {% for task_type in task_type_list %}
-              <option value="{{ task_type.__name__ }}" {% if dataset.task_type == task_type.__name__ %}selected{% endif %}>{{ task_type.__name__ }}</option>
+              {% for task_type_name, task_type in iteritems(TASK_TYPES) %}
+              <option value="{{ task_type_name }}" {% if dataset.task_type == task_type_name %}selected{% endif %}>{{ task_type_name }}</option>
               {% endfor %}
             </select>
           {% set parameters = dataset.task_type_parameters %}
 
-          {% for task_type in task_type_list %}
-          <table class="TaskTypeOptions TaskTypeOptions_{{ dataset.id }} bordered" id="TaskType{{ task_type.__name__ }}Options_{{ dataset.id }}" style="display: none;">
+          {% for task_type_name, task_type in iteritems(TASK_TYPES) %}
+          <table class="TaskTypeOptions TaskTypeOptions_{{ dataset.id }} bordered" id="TaskType{{ task_type_name }}Options_{{ dataset.id }}" style="display: none;">
             {% for i in range(task_type.ACCEPTED_PARAMETERS|length) %}
               {% set param_def = task_type.ACCEPTED_PARAMETERS[i] %}
-              {% set parameter_value = parameters[i] if dataset.task_type == task_type.__name__ and parameters is not none and i < parameters|length else none %}
+              {% set parameter_value = parameters[i] if dataset.task_type == task_type_name and parameters is not none and i < parameters|length else none %}
               <tr>
                 <td>{{ param_def.name }}</td>
                 <td>
-                  {{ param_def.render("TaskTypeOptions_%d_%s_"|format(dataset.id, task_type.__name__), parameter_value)|safe }}
+                  {{ param_def.render("TaskTypeOptions_%d_%s_"|format(dataset.id, task_type_name), parameter_value)|safe }}
                 </td>
               </tr>
             {% endfor %}
@@ -405,8 +415,8 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
           </td>
           <td>
             <select name="score_type_{{ dataset.id }}">
-              {% for score_type in score_type_list %}
-              <option value="{{ score_type.__name__}}" {% if dataset.score_type == score_type.__name__ %}selected{% endif %}>{{ score_type.__name__ }}</option>
+              {% for score_type_name, score_type in iteritems(SCORE_TYPES) %}
+              <option value="{{ score_type_name }}" {% if dataset.score_type == score_type_name %}selected{% endif %}>{{ score_type_name }}</option>
               {% endfor %}
             </select>
           </td>

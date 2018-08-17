@@ -76,9 +76,9 @@ EVALUATION_MESSAGES = MessageCollection([
                     "visible in the submission details might be much smaller "
                     "than the time limit.")),
     HumanMessage("signal",
-                 N_("Execution killed with signal %s (could be triggered by "
-                    "violating memory limits)"),
-                 N_("Your submission was killed with the specified signal. "
+                 N_("Execution killed (could be triggered by violating memory "
+                    "limits)"),
+                 N_("The evaluation was killed by a signal."
                     "Among other things, this might be caused by exceeding "
                     "the memory limit. Note that if this is the reason, "
                     "the memory usage visible in the submission details is "
@@ -273,8 +273,7 @@ def human_evaluation_message(stats):
     elif exit_status == Sandbox.EXIT_TIMEOUT_WALL:
         return [EVALUATION_MESSAGES.get("walltimeout").message]
     elif exit_status == Sandbox.EXIT_SIGNAL:
-        return [EVALUATION_MESSAGES.get("signal").message,
-                str(stats['signal'])]
+        return [EVALUATION_MESSAGES.get("signal").message]
     elif exit_status == Sandbox.EXIT_SANDBOX_ERROR:
         # Contestants won't see this, the submission will still be evaluating.
         return []

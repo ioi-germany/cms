@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -27,20 +27,30 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
-from six import iteritems
 
 import logging
 
-from cms import plugin_lookup
+from cms import plugin_list
+from .abc import ScoreType, ScoreTypeAlone, ScoreTypeGroup
 
 
 logger = logging.getLogger(__name__)
 
 
+__all__ = [
+    "SCORE_TYPES", "get_score_type", "get_score_type_class",
+    # abc
+    "ScoreType", "ScoreTypeAlone", "ScoreTypeGroup",
+]
+
+
+SCORE_TYPES = dict((cls.__name__, cls)
+                   for cls in plugin_list("cms.grading.scoretypes"))
+
+
 def get_score_type_class(name):
     """Load the ScoreType class given as parameter."""
-    return plugin_lookup(name,
-                         "cms.grading.scoretypes", "scoretypes")
+    return SCORE_TYPES[name]
 
 
 def get_score_type(name, parameters, public_testcases):

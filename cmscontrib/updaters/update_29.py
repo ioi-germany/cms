@@ -19,7 +19,7 @@
 
 """A class to update a dump created by CMS.
 
-Used by ContestImporter and DumpUpdater.
+Used by DumpImporter and DumpUpdater.
 
 This updater changes the in-database column type for some columns.
 
@@ -48,9 +48,8 @@ def fix_text(t):
     except ValueError:
         t = [t]
     t[0] = t[0].replace("%d", "%s")
-    for i in range(1, len(t)):
-        t[i] = str(t[i])
-    return t
+    # Some items were stored as numbers instead of strings.
+    return [str(x) for x in t]
 
 
 class Updater(object):

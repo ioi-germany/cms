@@ -26,7 +26,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from cms.grading.ScoreType import ScoreType
-from cms.grading import UnitTest, format_status_text
+from cms.grading import format_status_text
+from cms.grading.scoring import UnitTest
 
 import json
 import logging
