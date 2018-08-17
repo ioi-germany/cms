@@ -28,7 +28,7 @@ from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header,
 from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
 from cmscontrib.gerpythonformat.Executable import ExitCodeException
 from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, merge_constraints
-from cms import SCORE_MODE_MAX_TOKENED_LAST, \
+from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX
 from cms.db import Task, Statement, Testcase, Dataset, \
     Attachment, Manager, Submission, File, \

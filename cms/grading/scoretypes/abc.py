@@ -115,6 +115,14 @@ class ScoreType(with_metaclass(ABCMeta, object)):
             translation.format_decimal(round(score, score_precision)),
             translation.format_decimal(round(max_score, score_precision)))
 
+    @staticmethod
+    def unit_test_result(unit_test_score_details):
+        return unit_test_score_details["verdict"][0]
+
+    @staticmethod
+    def format_unit_test_verdict(unit_test_score_details):
+        return unit_test_score_details["verdict"][1]
+
     def get_html_details(self, score_details,
                          feedback_level=FEEDBACK_LEVEL_RESTRICTED,
                          translation=DEFAULT_TRANSLATION):
