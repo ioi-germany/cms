@@ -51,6 +51,13 @@ size_t get_file_size(FILE *f) {
     return length;
 }
 
+/* Get *remaining* number of chars in given file (which must be readable)
+ * After successful execution the cursor will be at its original position
+ */
+size_t get_remaining_file_size(FILE *f) {
+    return get_file_size(f) - ftell(f);
+}
+
 /* General method for getting a string from a readable file */
 string generic_read(FILE *f, bool rewind_me, bool restore_cursor) {
     fpos_t old_pos;
@@ -58,7 +65,7 @@ string generic_read(FILE *f, bool rewind_me, bool restore_cursor) {
 
     if (rewind_me) rewind(f);
 
-    size_t eof = get_file_size(f);
+    size_t eof = get_remaining_file_size(f);
     size_t buffer_size = eof + SAFETY_OFFSET;
     char *buffer = new char[buffer_size + SAFETY_OFFSET];
     fread(buffer, 1, buffer_size, f);
