@@ -87,6 +87,8 @@ class Communication(TaskType):
     # Filename of the input in the manager sandbox. The content will be
     # redirected to stdin, and managers should read from there.
     INPUT_FILENAME = "input.txt"
+    # Filename of the reference output.
+    OK_FILENAME = "ok.txt"
     # Filename where the manager can write additional output to show to users
     # in case of a user test.
     OUTPUT_FILENAME = "output.txt"
@@ -264,13 +266,16 @@ class Communication(TaskType):
         os.chmod(fifo_solution_quitter, 0o666)
         os.chmod(fifo_manager_quitter, 0o666)
 
-        # Create the manager sandbox and copy manager and input.
+        # Create the manager sandbox and copy manager and input and
+        # reference output.
         sandbox_mgr = create_sandbox(file_cacher, name="manager_evaluate")
         job.sandboxes.append(sandbox_mgr.path)
         sandbox_mgr.create_file_from_storage(
             Communication.MANAGER_FILENAME, manager_digest, executable=True)
         sandbox_mgr.create_file_from_storage(
             Communication.INPUT_FILENAME, job.input)
+        sandbox_mgr.create_file_from_storage(
+            Communication.OK_FILENAME, job.output)
 
         # Create the user sandbox(es) and copy the executable.
         sandbox_user = [create_sandbox(file_cacher, name="user_evaluate")

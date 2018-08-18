@@ -28,8 +28,6 @@
 #include <iostream>
 #include <computil.h>
 
-float STD_FAILURE_SCORE = 0.0; // Score if the comparator fails for unknown reasons
-
 void __attribute__((noreturn)) __attribute__((format(printf, 2, 3)))
 result(float points, const char *msg, ...) {
     va_list args;

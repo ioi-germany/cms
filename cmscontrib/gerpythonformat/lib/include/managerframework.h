@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Framework for simple comparators
+/* Framework for simple managers for communication tasks
  * Include this file and write your check function yourself
  */
 
@@ -26,32 +26,38 @@
 #include <cstdarg>
 #include <cstdlib>
 #include <iostream>
+#include <signal.h>
 #include <computil.h>
 
-float STD_FAILURE_SCORE = 0.0; // Score if the comparator fails for unknown reasons
-
 FILE *fin; // The input file
-FILE *fcommout; // The file to send messages to the submission through
-FILE *fcommin; // The file to receive messages from the submission through
-FILE *fout; // Contestant output file (the manager should write some stuff to it)
 FILE *fok; // Reference output file
+
+FILE *fcommout; // Pipe for sending messages to the submission
+FILE *fcommin; // Pipe for receiving messages from the submission
+
+FILE *fout; // Output file (the manager can write some stuff to it for debugging purposes)
+
 FILE *fquitter; // Tell the cms to kill the submission
 FILE *fquittingresponse; // Waiting for the response
 
 void __attribute__((noreturn)) __attribute__((format(printf, 2, 3)))
 result(float points, const char *msg, ...) {
+    // Ask cms to kill the submission.
     if(fquitter != 0) {
         fprintf(fquitter, "<3");
         fclose(fquitter);
     }
 
+    // Write the verdict text to stderr.
     va_list args;
     va_start(args, msg);
     vfprintf(stderr, msg, args);
     fprintf(stderr, "\n");
     va_end(args);
+    // Write the score to stdout.
     fprintf(stdout, "%f", points);
 
+    // Wait for cms to confirm the solution has terminated (by closing fquittingresponse).
     if (fquittingresponse != 0) {
         char x;
         fread(&x, 1, 1, fquittingresponse);
@@ -63,19 +69,27 @@ result(float points, const char *msg, ...) {
 void check(); // You have to write this function yourself!
 
 int main(int argc, char **argv) {
+    // If the solution closes its stdin and we then write, SIGPIPE is thrown.
+    // We ignore the signal and keep running.
+    signal(SIGPIPE, SIG_IGN);
+
     std::ios_base::sync_with_stdio();
     assert(argc == 3 || argc == 5);
     fin = fopen("input.txt", "r");
-    fout = fopen("output.txt", "w");
+    fok = fopen("ok.txt", "r");
     if(argc == 5) {
         fquitter = fopen(argv[3], "w");
         fquittingresponse = fopen(argv[4], "r");
     } else {
         fquitter = fquittingresponse = 0;
     }
+
+    // We need to open the pipes in the same order as the solution program (in isolate) to avoid deadlocks.
     fcommout = fopen(argv[1], "w");
     fcommin = fopen(argv[2], "r");
-    fok = fopen("res.txt", "r");
+
+    fout = fopen("output.txt", "w");
+
     check();
     return 1;
 }
