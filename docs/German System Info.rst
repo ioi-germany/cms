@@ -8,10 +8,10 @@ Um Zugriff auf den Wettbewerbsserver zu bekommen, musst du einem Coach deinen ö
 
 Den SSH-Schlüssel kann dieser unter ``~/.ssh/authorized_keys`` und ``~cmsserveruser/.ssh/authorized_keys`` hinzufügen.
 
-Du solltest dich jetzt per ``ssh root@contest.ioi-training.de`` auf dem
+Du solltest dich jetzt per ``ssh cmsserveruser@contest.ioi-training.de`` auf dem
 Server einloggen können.
-Wenn du dann ``screen -x`` ausführst, kannst du die dort laufenden shells
-bewundern. (``Strg-a``, dann eine Ziffer wechelt den Tab; mit ``Strg-a``, dann ``d``
+Wenn du dann ``tmux a`` ausführst, kannst du die dort laufenden shells
+bewundern. (``Strg-b``, dann eine Ziffer wechelt den Tab; mit ``Strg-b``, dann ``d``
 kommst du wieder raus)
 
 Mit ``git clone cmsserveruser@contest.ioi-training.de:aioi.git`` kannst du das
