@@ -287,6 +287,7 @@ class TelegramBot:
                                   # this id (will be set during startup)
         self.questions = {}
         self.q_notifications = {}
+        self.messages_issued = []
         self.contest = contest
 
         self.updater = Updater(token=config.bot_token)
@@ -303,11 +304,20 @@ class TelegramBot:
         self.dispatcher.add_handler(CommandHandler('allannouncements',
                                                    self.list_all_announcements))
         self.dispatcher.add_handler(CommandHandler('help', self.help))
+        self.dispatcher.add_handler(CommandHandler('purge', self.purge))
         self.dispatcher.add_handler(MessageHandler(Filters.reply,
                                                    self.on_reply))
         self.dispatcher.add_handler(CallbackQueryHandler(self.button_callback))
 
         self.job_queue.run_repeating(self.update, interval=5, first=0)
+
+    def issue_message(self, bot, **kwargs):
+        self.messages_issued.append(bot.send_message(**kwargs))
+        return self.messages_issued[-1]
+
+    def issue_reply(self, msg, *args, **kwargs):
+        self.messages_issued.append(msg.reply_text(*args, **kwargs))
+        return self.messages_issued[-1]
 
     def start(self, bot, update, args=None):
         """ The registration process
@@ -372,11 +382,13 @@ class TelegramBot:
         header, msg = split_off_header(strip_cmd(update.message.text))
 
         if not self.contest.announce(header, msg):
-            update.message.reply_text("I have announced the following:\n\n" +
-                                      bold(header) + "\n" + msg,
-                                      parse_mode="Markdown")
+            self.issue_reply(update.message,
+                             "I have announced the following:\n\n" +
+                             bold(header) + "\n" + msg,
+                             parse_mode="Markdown")
         else:
-            update.message.reply_text("Sorry, this didn't work...")
+            self.issue_reply(update.message,
+                             "Sorry, this didn't work...")
 
 
     def button_callback(self, bot, update):
@@ -387,30 +399,51 @@ class TelegramBot:
                            "in a chat I'm not registered in!")
 
             if self.id is not None:
-                bot.send_message(chat_id=self.id,
-                                 text="Warning! Someone tried to use the "
-                                      "inline keyboard in another chat!")
+                self.issue_message(bot,
+                                   chat_id=self.id,
+                                   text="Warning! Someone tried to use the "
+                                        "inline keyboard in another chat!")
             return
 
         a = cq.data
+        
+        if len(a) < 2:
+            logger.warning("A weird callback has occured!")
+            self.issue_message(bot,
+                               chat_id=self.id,
+                               text="Warning! A weird callback that I can't "
+                                    "interprete has occured!")
+        
+        if a[0] == 'R':
+            self._callback_reply(cq, a[2:])
+        elif a[0] == 'P':
+            self._callback_purge(cq, a[2:])
+        else:
+            logger.warning("A weird callback has occured!")
+            self.issue_message(bot,
+                               chat_id=self.id,
+                               text="Warning! A weird callback that I can't "
+                                    "interprete has occured!")
+            
+    def _callback_reply(cq, a):
         msg_id = cq.message.message_id
         q = self.questions[msg_id]
 
         self.reply_question(cq, q, a, short_answer=True)
     
     def _question_notification_params(self, q, new):
-        kb =  [[InlineKeyboardButton(text="Yes", callback_data="Yes"),
-                InlineKeyboardButton(text="No",  callback_data="No")],
+        kb =  [[InlineKeyboardButton(text="Yes", callback_data="R_Yes"),
+                InlineKeyboardButton(text="No",  callback_data="R_No")],
                [InlineKeyboardButton(text="Answered in task description",
-                                     callback_data="Answered in task "
+                                     callback_data="R_Answered in task "
                                                    "description")],
                [InlineKeyboardButton(text="No comment",
-                                     callback_data="No comment"),
+                                     callback_data="R_No comment"),
                 InlineKeyboardButton(text="Invalid question",
-                                     callback_data="Invalid question")],
+                                     callback_data="R_Invalid question")],
                [InlineKeyboardButton(text="〈ignore question〉",
                                      parse_mode="Markdown",
-                                     callback_data="/ignore")]]
+                                     callback_data="R_/ignore")]]
         
         return {"text": q.format(new), "parse_mode": "Markdown",
                 "reply_markup": InlineKeyboardMarkup(kb)}
@@ -418,8 +451,9 @@ class TelegramBot:
     def _notify_question(self, bot, q, new, show_status):
         Q = q.question
 
-        msg = bot.send_message(chat_id=self.id,
-                               **self._question_notification_params(q, new))
+        msg = self.issue_message(bot,
+                                 chat_id=self.id,
+                                 **self._question_notification_params(q, new))
         self.questions[msg.message_id] = q
         
         if Q.id not in self.q_notifications:
@@ -436,9 +470,10 @@ class TelegramBot:
         notification = "This question has been answered via CMS:\n\n" if new \
                        else "The answer has been edited via CMS:\n\n"
 
-        reply = msg.reply_text(text=notification + q.format_answer(),
-                               quote=True,
-                               parse_mode="Markdown")
+        reply = self.issue_reply(msg,
+                                 text=notification + q.format_answer(),
+                                 quote=True,
+                                 parse_mode="Markdown")
 
         self.questions[reply.message_id] = q
         self._update_question(q)
@@ -449,17 +484,19 @@ class TelegramBot:
         notification = italic("This question has been "
                               "{}ignored.\n\n".format("" if ignore else "un"))
 
-        reply = msg.reply_text(text=notification,
-                               quote=True,
-                               parse_mode="Markdown")
+        reply = self.issue_reply(msg,
+                                 text=notification,
+                                 quote=True,
+                                 parse_mode="Markdown")
 
         self.questions[reply.message_id] = q
         self._update_question(q)
 
     def _notify_announcement(self, bot, a, new):
-        bot.send_message(chat_id=self.id,
-                         text=a.format(new),
-                         parse_mode="Markdown")
+        self.issue_message(bot,
+                           chat_id=self.id,
+                           text=a.format(new),
+                           parse_mode="Markdown")
 
     def update(self, bot, job):
         """ Check for new questions, answers, and announcements
@@ -499,9 +536,10 @@ class TelegramBot:
         if self.id != update.message.chat_id:
             logger.warning("Warning! Someone tried to list open questions in "
                            "a chat I'm not registered in!")
-            bot.send_message(chat_id=self.id,
-                             text="Warning! Someone tried to list open "
-                             "questions in another chat!")
+            self.issue_message(bot,
+                               chat_id=self.id,
+                               text="Warning! Someone tried to list open "
+                                    "questions in another chat!")
             return
 
         qs = self.contest.get_all_open_questions()
@@ -515,9 +553,10 @@ class TelegramBot:
                            bold("no" if len(qs) == 0 else str(len(qs))) + \
                            " open questions" + ("" if len(qs) == 0 else ":")
 
-        bot.send_message(chat_id=self.id,
-                         text=notification,
-                         parse_mode="Markdown")
+        self.issue_message(bot,
+                           chat_id=self.id,
+                           text=notification,
+                           parse_mode="Markdown")
 
         for q in qs:
             self._notify_question(bot, q, False, False)
@@ -531,9 +570,10 @@ class TelegramBot:
         if self.id != update.message.chat_id:
             logger.warning("Warning! Someone tried to list all questions in "
                            "a chat I'm not registered in!")
-            bot.send_message(chat_id=self.id,
-                             text="Warning! Someone tried to list all "
-                             "questions in another chat!")
+            self.issue_message(bot,
+                               chat_id=self.id,
+                               text="Warning! Someone tried to list all "
+                                    "questions in another chat!")
             return
 
         qs = self.contest.get_all_questions()
@@ -545,9 +585,10 @@ class TelegramBot:
                            bold("no" if len(qs) == 0 else str(len(qs))) + " "\
                            "questions" + ("" if len(qs) == 0 else ":")
 
-        bot.send_message(chat_id=self.id,
-                         text=notification,
-                         parse_mode="Markdown")
+        self.issue_message(bot,
+                           chat_id=self.id, 
+                           text=notification,
+                           parse_mode="Markdown")
 
         for q in qs:
             self._notify_question(bot, q, False, True)
@@ -561,9 +602,10 @@ class TelegramBot:
         if self.id != update.message.chat_id:
             logger.warning("Warning! Someone tried to list all announcements "
                            "in a chat I'm not registered in!")
-            bot.send_message(chat_id=self.id,
-                             text="Warning! Someone tried to list all "
-                             "announcements in another chat!")
+            self.issue_message(bot,
+                               chat_id=self.id,
+                               text="Warning! Someone tried to list all "
+                                    "announcements in another chat!")
             return
 
         announcements = self.contest.get_all_announcements()
@@ -577,9 +619,10 @@ class TelegramBot:
                            "announcements" + ("" if len(announcements) == 0
                                                  else ":")
 
-        bot.send_message(chat_id=self.id,
-                         text=notification,
-                         parse_mode="Markdown")
+        self.issue_message(bot,
+                           chat_id=self.id,
+                           text=notification,
+                           parse_mode="Markdown")
 
         for a in announcements:
             self._notify_announcement(bot, a, False)
@@ -597,7 +640,9 @@ class TelegramBot:
                                   "/openquestions - shows all unanswered "
                                   "questions\n"
                                   "/allquestions - shows all questions\n"
-                                  "/help - shows this message\n\n"
+                                  "/help - shows this message\n"
+                                  "/purge - deletes all messages sent by the "
+                                  "bot during the current session\n\n"
                                   "In addition this bot will post all new "
                                   "questions appearing in the system. You can "
                                   "answer them by replying to the "
@@ -605,6 +650,57 @@ class TelegramBot:
                                   "given via the web interface will also be "
                                   "posted and you can edit them by replying to "
                                   "the corresponding message")
+
+    def purge(self, bot, update):
+        """ TODO: Insert warning?
+        """
+        if self.id is None:
+            update.message.reply_text("You have to register me first (using "
+                                      "the /start command) — and then there "
+                                      "will be nothing to purge at the "
+                                      "moment anyhow…")
+            return
+
+        if self.id != update.message.chat_id:
+            logger.warning("Warning! Someone issued /purge in a chat I'm not "
+                           "registered in!")
+            self.issue_message(bot,
+                               chat_id=self.id,
+                               text="Warning! Someone tried to issue /purge in "
+                                    "another chat!")
+            return
+
+        kb =  [[InlineKeyboardButton(text="Yes, of course. Why wouldn't I?",
+                                     callback_data="P_Yes")],
+               [InlineKeyboardButton(text="Oh my god, no! Stop it! STOP!!!",
+                                     callback_data="P_No")]]
+
+        update.message.reply_text(text="Are you sure you want me to " + 
+                                       bold("delete ") + "all messages I sent "
+                                       "during the current session?",
+                                  parse_mode="Markdown",
+                                  reply_markup=InlineKeyboardMarkup(kb))
+
+    def _callback_purge(self, update, decision):
+        bot = update.bot
+    
+        if decision == "Yes":
+            update.answer(text="Fine, I will delete all my recent messages.")
+            self._do_purge(bot)
+        else:
+            update.answer(text="Okay, I won't delete nothing.")
+
+        bot.delete_message(chat_id=self.id,
+                           message_id=update.message.message_id)
+    
+    def _do_purge(self, bot):        
+        for msg in self.messages_issued:
+            if self.id == msg.chat_id:
+                bot.delete_message(chat_id=self.id,
+                                   message_id=msg.message_id)
+
+        self.messages_issued.clear()
+        self.q_notifications.clear()
 
     def on_reply(self, bot, update):
         """ Replying to a user question posted in the chat uploads the reply as
@@ -652,7 +748,9 @@ class TelegramBot:
                 if short_answer:
                     update.answer(text=IGNORE_FAIL_MSG)
                 else:
-                    update.message.reply_text(IGNORE_FAIL_MSG, quote=True)
+                    self.issue_reply(update.message,
+                                     IGNORE_FAIL_MSG,
+                                     quote=True)
 
             else:
                 q.ignore()
@@ -660,8 +758,9 @@ class TelegramBot:
                 if short_answer:
                     update.answer(text="I have ignored this question!")
                 else:
-                    update.message.reply_text("I have ignored this question!",
-                                              quote=True)
+                    self.issue_reply(update.message,
+                                     "I have ignored this question!",
+                                     quote=True)
 
             return
 
@@ -670,8 +769,9 @@ class TelegramBot:
         if short_answer:
             update.answer(text="I have added your answer (“{}”)!".format(a))
         else:
-            msg = update.message.reply_text("I have added your answer!",
-                                            quote=True)
+            msg = self.issue_reply(update.message,
+                                   "I have added your answer!",
+                                   quote=True)
             self.questions[msg.message_id] = q
      
         self._update_question(q)
