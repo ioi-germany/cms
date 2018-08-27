@@ -113,10 +113,10 @@ class MyQuestion(WithDatabaseAccess):
     def format(self, new):
         Q = self.question
     
-        return ("New question" if new else "Question") + " by " + \
-               italic(Q.participation.user.username) + \
-               " (Timestamp: {}):\n\n".format(Q.question_timestamp) + \
-               (bold(Q.subject) + "\n" + Q.text).strip() + "\n\n" + \
+        return bold(("NEW " if new else "") + "QUESTION\n") +  \
+               italic("    from: ") + Q.participation.user.username + "\n" + \
+               italic("    timestamp: ") + "{}".format(Q.question_timestamp) + \
+               "\n\n" + (bold(Q.subject) + "\n" + Q.text).strip() + "\n\n" + \
                self.status_text()
 
 
@@ -210,8 +210,11 @@ class MyAnnouncement(WithDatabaseAccess):
             __init__(Session.object_session(self.announcement))    
 
     def format(self, new):
-        return ("New announcement" if new else "Announcement") + ":\n\n" + \
-               bold(self.announcement.subject) + "\n" + self.announcement.text
+        A = self.announcement
+    
+        return bold(("NEW " if new else "") + "ANNOUNCEMENT\n") + \
+               italic("    timestamp: ") + "{}\n\n".format(A.timestamp) + \
+               bold(A.subject) + "\n" + A.text
 
 
 class AnnouncementList(ListOfDatabaseEntries):
