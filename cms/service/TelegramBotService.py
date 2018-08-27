@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2017-2018 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -341,7 +341,7 @@ class TelegramBot:
 
         header, msg = split_off_header(strip_cmd(update.message.text))
 
-        if self.contest.announce(header, msg):
+        if not self.contest.announce(header, msg):
             update.message.reply_text("I have announced the following:\n\n" +
                                       bold(header) + "\n" + msg,
                                       parse_mode="Markdown")
