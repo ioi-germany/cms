@@ -373,7 +373,7 @@ class TelegramBot:
         msg_id = cq.message.message_id
         q = self.questions[msg_id]
 
-        self.reply_question(cq, q, a)
+        self.reply_question(cq, q, a, short_answer=True)
 
     def _notify_question(self, bot, q, new, show_status):
         if q.answered():
@@ -623,28 +623,39 @@ class TelegramBot:
 
         self.reply_question(update, q, new_msg.text)
 
-    def reply_question(self, update, q, a):
+    def reply_question(self, update, q, a, short_answer=False):
         """ Reply to the user question q with the answer a
         """
         # q.update()
-
         if a.strip() == "/ignore":
             if q.answered():
-                update.message.reply_text("This question is already answered; I "
-                                          "can't ignore it any more ☹ .",
-                                          quote=True)
+                IGNORE_FAIL_MSG = "This question has already been answered; " \
+                                  "I can't ignore it anymore ☹."
+
+                if short_answer:
+                    update.answer(text=IGNORE_FAIL_MSG)
+                else:
+                    update.message.reply_text(IGNORE_FAIL_MSG, quote=True)
 
             else:
                 q.ignore()
-                update.message.reply_text("I have ignored this question!",
-                                          quote=True)
+                
+                if short_answer:
+                    update.answer(text="I have ignored this question!")
+                else:
+                    update.message.reply_text("I have ignored this question!",
+                                              quote=True)
 
             return
 
         q.answer(a)
 
-        msg = update.message.reply_text("I have added your answer!", quote=True)
-        self.questions[msg.message_id] = q
+        if short_answer:
+            update.answer(text="I have added your answer (“{}”)!".format(a))
+        else:
+            msg = update.message.reply_text("I have added your answer!",
+                                            quote=True)
+            self.questions[msg.message_id] = q
 
     def run(self):
         self.updater.start_polling()
