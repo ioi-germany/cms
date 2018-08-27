@@ -56,14 +56,6 @@ class WithDatabaseAccess(object):
 
     def _commit(self):
         self.sql_session.commit()
-        """try:
-            self.sql_session.commit()
-        except IntegrityError as e:
-            logger.error("Couldn't apply commit to database. Message: {}".\
-                             format(e))
-            return False
-        else:
-            return True"""
 
 
 class MyQuestion(WithDatabaseAccess):
@@ -104,6 +96,28 @@ class MyQuestion(WithDatabaseAccess):
 
     def get_answer(self):
         return self.question.reply_subject, self.question.reply_text
+
+    def format_answer(self):
+        x,y = self.get_answer()
+        return bold(x) if x else y
+
+    def status_text(self):
+        if self.answered():
+            return italic("This question has been answered:\n\n") + \
+                   self.format_answer()
+        elif self.ignored():
+            return italic("This question has been ignored.")
+        else:
+            return italic("This question is currently open.")
+
+    def format(self, new):
+        Q = self.question
+    
+        return ("New question" if new else "Question") + " by " + \
+               italic(Q.participation.user.username) + \
+               " (Timestamp: {}):\n\n".format(Q.question_timestamp) + \
+               (bold(Q.subject) + "\n" + Q.text).strip() + "\n\n" + \
+               self.status_text()
 
 
 class ListOfDatabaseEntries(object):
@@ -187,6 +201,19 @@ class QuestionList(ListOfDatabaseEntries):
                    .order_by(Question.id).all()
 
 
+class MyAnnouncement(WithDatabaseAccess):
+    """ Thin wrapper around announcement
+    """
+    def __init__(self, announcement):
+        self.announcement = announcement
+        super(MyAnnouncement, self).\
+            __init__(Session.object_session(self.announcement))    
+
+    def format(self, new):
+        return ("New announcement" if new else "Announcement") + ":\n\n" + \
+               bold(self.announcement.subject) + "\n" + self.announcement.text
+
+
 class AnnouncementList(ListOfDatabaseEntries):
     """ Keeps track of all announcements
     """
@@ -200,12 +227,12 @@ class AnnouncementList(ListOfDatabaseEntries):
         for a in self._get_announcements():
             if a.id not in self.announcements and a.src == "web":
                 self.announcements.add(a.id)
-                r.append((a.subject, a.text))
+                r.append(MyAnnouncement(a))
 
         return r
 
     def all(self):
-        return [(a.subject, a.text) for a in self._get_announcements()]
+        return [MyAnnouncement(a) for a in self._get_announcements()]
 
     def _get_announcements(self):
         self._new_session()
@@ -348,13 +375,6 @@ class TelegramBot:
         else:
             update.message.reply_text("Sorry, this didn't work...")
 
-    def _format_answer(self, rep_rep):
-        (reply_subject, reply_text) = rep_rep
-        return bold(reply_subject) if reply_subject else reply_text
-
-    def _format_announcement(self, hea_bod):
-        (header, body) = hea_bod
-        return bold(header) + "\n" + body
 
     def button_callback(self, bot, update):
         cq = update.callback_query
@@ -376,14 +396,6 @@ class TelegramBot:
         self.reply_question(cq, q, a, short_answer=True)
 
     def _notify_question(self, bot, q, new, show_status):
-        if q.answered():
-            status = italic("This question has been answered:\n\n") + \
-                         self._format_answer(q.get_answer())
-        elif q.ignored():
-            status = italic("This question has been ignored.")
-        else:
-            status = italic("This question is open.")
-
         kb =  [[InlineKeyboardButton(text="Yes", callback_data="Yes"),
                 InlineKeyboardButton(text="No",  callback_data="No")],
                [InlineKeyboardButton(text="Answered in task description",
@@ -400,13 +412,7 @@ class TelegramBot:
         Q = q.question
 
         msg = bot.send_message(chat_id=self.id,
-                               text=("New question" if new else "Question") +
-                                    " by " +
-                                    italic(Q.participation.user.username) +
-                                    " (Timestamp: {}):\n\n".\
-                                       format(Q.question_timestamp) +
-                                    (bold(Q.subject) + "\n" + Q.text).strip() +
-                                    "\n\n" +  (status if show_status else ""),
+                               text=q.format(new),
                                parse_mode="Markdown",
                                reply_markup=InlineKeyboardMarkup(kb))
         self.questions[msg.message_id] = q
@@ -414,12 +420,11 @@ class TelegramBot:
 
     def _notify_answer(self, q, new):
         msg = self.q_notifications[q.question.id]
-        answer = q.get_answer()
 
         notification = "This question has been answered via CMS:\n\n" if new \
                        else "The answer has been edited via CMS:\n\n"
 
-        reply = msg.reply_text(text=notification + self._format_answer(answer),
+        reply = msg.reply_text(text=notification + q.format_answer(),
                                quote=True,
                                parse_mode="Markdown")
 
@@ -437,11 +442,9 @@ class TelegramBot:
 
         self.questions[reply.message_id] = q
 
-
     def _notify_announcement(self, bot, a, new):
         bot.send_message(chat_id=self.id,
-                         text=("New announcement:\n\n" if new else "") +\
-                              self._format_announcement(a),
+                         text=a.format(new),
                          parse_mode="Markdown")
 
     def update(self, bot, job):
