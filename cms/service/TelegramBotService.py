@@ -397,8 +397,8 @@ class TelegramBot:
         q = self.questions[msg_id]
 
         self.reply_question(cq, q, a, short_answer=True)
-
-    def _notify_question(self, bot, q, new, show_status):
+    
+    def _question_notification_params(self, q, new):
         kb =  [[InlineKeyboardButton(text="Yes", callback_data="Yes"),
                 InlineKeyboardButton(text="No",  callback_data="No")],
                [InlineKeyboardButton(text="Answered in task description",
@@ -411,18 +411,27 @@ class TelegramBot:
                [InlineKeyboardButton(text="〈ignore question〉",
                                      parse_mode="Markdown",
                                      callback_data="/ignore")]]
+        
+        return {"text": q.format(new), "parse_mode": "Markdown",
+                "reply_markup": InlineKeyboardMarkup(kb)}
 
+    def _notify_question(self, bot, q, new, show_status):
         Q = q.question
 
         msg = bot.send_message(chat_id=self.id,
-                               text=q.format(new),
-                               parse_mode="Markdown",
-                               reply_markup=InlineKeyboardMarkup(kb))
+                               **self._question_notification_params(q, new))
         self.questions[msg.message_id] = q
-        self.q_notifications[Q.id] = msg
+        
+        if Q.id not in self.q_notifications:
+            self.q_notifications[Q.id] = []
+        self.q_notifications[Q.id].append(msg)
+
+    def _update_question(self, q):
+        for msg in self.q_notifications[q.question.id]:
+            msg.edit_text(**self._question_notification_params(q, False))
 
     def _notify_answer(self, q, new):
-        msg = self.q_notifications[q.question.id]
+        msg = self.q_notifications[q.question.id][-1]
 
         notification = "This question has been answered via CMS:\n\n" if new \
                        else "The answer has been edited via CMS:\n\n"
@@ -432,9 +441,10 @@ class TelegramBot:
                                parse_mode="Markdown")
 
         self.questions[reply.message_id] = q
+        self._update_question(q)
 
     def _notify_question_ignore(self, q, ignore):
-        msg = self.q_notifications[q.question.id]
+        msg = self.q_notifications[q.question.id][-1]
 
         notification = italic("This question has been "
                               "{}ignored.\n\n".format("" if ignore else "un"))
@@ -444,6 +454,7 @@ class TelegramBot:
                                parse_mode="Markdown")
 
         self.questions[reply.message_id] = q
+        self._update_question(q)
 
     def _notify_announcement(self, bot, a, new):
         bot.send_message(chat_id=self.id,
@@ -662,6 +673,8 @@ class TelegramBot:
             msg = update.message.reply_text("I have added your answer!",
                                             quote=True)
             self.questions[msg.message_id] = q
+     
+        self._update_question(q)
 
     def run(self):
         self.updater.start_polling()
