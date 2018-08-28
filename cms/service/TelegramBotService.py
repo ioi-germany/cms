@@ -425,7 +425,7 @@ class TelegramBot:
                                text="Warning! A weird callback that I can't "
                                     "interprete has occured!")
             
-    def _callback_reply(cq, a):
+    def _callback_reply(self, cq, a):
         msg_id = cq.message.message_id
         q = self.questions[msg_id]
 
@@ -628,32 +628,49 @@ class TelegramBot:
             self._notify_announcement(bot, a, False)
 
     def help(self, bot, update):
-        update.message.reply_text("A bot allowing to access clarification "
-                                  "requests and announcements of a CMS contest "
-                                  "via Telegram.\n\n"
-                                  "/start <pwd> - Registers the bot with the "
-                                  "current chat. The bot can be only bound to "
-                                  "a single chat; further binding attempts "
-                                  "will be rejected.\n"
-                                  "/announce - adds the rest of the message as "
-                                  "an announcement to the current contest.\n"
-                                  "/openquestions - shows all unanswered "
-                                  "questions\n"
-                                  "/allquestions - shows all questions\n"
-                                  "/help - shows this message\n"
-                                  "/purge - deletes all messages sent by the "
-                                  "bot during the current session\n\n"
-                                  "In addition this bot will post all new "
-                                  "questions appearing in the system. You can "
-                                  "answer them by replying to the "
-                                  "corresponding post. Moreover, all answers "
-                                  "given via the web interface will also be "
-                                  "posted and you can edit them by replying to "
-                                  "the corresponding message")
+        HELP_TEXT = "A bot allowing to access clarification requests and " \
+                    "announcements of a CMS contest via Telegram.\n\n" + \
+                    bold("/start") + " 〈" + italic("pwd") + "〉 — tries to " \
+                    "bind the bot to the current chat when used with the " \
+                    "correct password; the bot can only be bound to a single " \
+                    "chat at a time and all further binding attempts will be " \
+                    "rejected until the bot service has been restarted\n" + \
+                    bold("/announce") + " — adds the rest of the message as " \
+                    "an announcement to the current contest; everything " \
+                    "before the first line break will be used as header\n" + \
+                    bold("/openquestions") + " — shows all " + \
+                    italic("unanswered") + " questions of the current " \
+                    "contest\n" + \
+                    bold("/allquestions") + " — shows " + italic("all") + " " \
+                    "questions of the current contest (" + \
+                    italic("use this with care as it tends to produce quite a " 
+                           "lot of output") + "!)\n" + \
+                    bold("/allannouncements") + " — shows all announcements " \
+                    "of the current contest (" + \
+                    italic("use this with care as it could produce quite a " 
+                           "lot of output") + ")\n" + \
+                    bold("/help") + " — prints this message\n" + \
+                    bold("/purge") + " — deletes all messages sent by the " \
+                    "bot during the current session (" + \
+                    italic("standard restrictions apply: no messages older "
+                           "than 48h will be deleted") + ")\n\n" \
+                    "In addition this bot will post all new questions " \
+                    "appearing in the system. You can answer them by " \
+                    "replying to the corresponding post or using the " \
+                    "respective inline buttons. Moreover, all answers given " \
+                    "and announcements made via the web interface will also " \
+                    "be posted and you can edit answers by replying to the " \
+                    "corresponding message"
+        
+        if update.message.chat_id == self.id:
+            self.issue_reply(update.message,
+                             HELP_TEXT,
+                             parse_mode="Markdown")
+        else:            
+            update.message.reply_text(HELP_TEXT,
+                                      parse_mode="Markdown")
 
     def purge(self, bot, update):
-        """ TODO: Insert warning?
-        """
         if self.id is None:
             update.message.reply_text("You have to register me first (using "
                                       "the /start command) — and then there "
@@ -676,8 +693,8 @@ class TelegramBot:
                                      callback_data="P_No")]]
 
         update.message.reply_text(text="Are you sure you want me to " + 
-                                       bold("delete ") + "all messages I sent "
-                                       "during the current session?",
+                                       bold("delete ") + "all messages I've "
+                                       "sent during the current session?",
                                   parse_mode="Markdown",
                                   reply_markup=InlineKeyboardMarkup(kb))
 
@@ -685,7 +702,8 @@ class TelegramBot:
         bot = update.bot
     
         if decision == "Yes":
-            update.answer(text="Fine, I will delete all my recent messages.")
+            update.answer(text="(passive-aggressive voice) Fine, I'll delete "
+                               "my recent messages.")
             self._do_purge(bot)
         else:
             update.answer(text="Okay, I won't delete nothing.")
