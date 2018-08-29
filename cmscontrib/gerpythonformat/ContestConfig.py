@@ -114,15 +114,19 @@ class ContestConfig(CommonConfig):
 
         # Export variables
         self.exported["contest"] = self
-        self.exported["no_feedback"] = ("no", TaskConfig.no_feedback)
-        self.exported["partial_feedback"] = ("partial",
+        self.exported["no_feedback"] = ("no", True, 
+                                        TaskConfig.no_feedback)
+        self.exported["partial_feedback"] = ("partial", False,
                                              TaskConfig.partial_feedback)
-        self.exported["full_feedback"] = ("full", TaskConfig.full_feedback)
+        self.exported["full_feedback"] = ("full", True,
+                                          TaskConfig.full_feedback)
+        self.exported["restricted_feedback"] = ("full", False,
+                                                TaskConfig.full_feedback)
         self.exported["token_feedback"] = self._token_feedback
         self.exported["std_token_feedback"] = self._token_feedback(3, 2)
 
         # Feedback for minimal mode (inaccessible from config.py)
-        self._dummy_feedback = ("dummy", lambda _: None)
+        self._dummy_feedback = ("dummy", False, lambda _: None)
 
         # Default submission limits
         self.submission_limits(None, None)
@@ -156,7 +160,8 @@ class ContestConfig(CommonConfig):
 
     def _token_feedback(self, gen_initial, gen_number,
                         gen_interval=timedelta(minutes=30), gen_max=None,
-                        min_interval=timedelta(), max_number=None):
+                        min_interval=timedelta(), max_number=None,
+                        all_cases=True):
         """
         Specify the number of tokens available.
 
@@ -172,9 +177,12 @@ class ContestConfig(CommonConfig):
                                   token before he can use another token
 
         total (int): maximum number of tokens the user can use in total
+        
+        all_cases (boolean): should we show the results of all cases?
+                             (as opposed to restricted feedback)
 
         """
-        return ("token", TaskConfig.tokens, gen_initial, gen_number,
+        return ("token", all_cases, TaskConfig.tokens, gen_initial, gen_number,
                 gen_interval, gen_max, min_interval, max_number)
 
     @exported_function

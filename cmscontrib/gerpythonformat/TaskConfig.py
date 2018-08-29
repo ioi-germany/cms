@@ -634,7 +634,10 @@ class TaskConfig(CommonConfig, Scope):
         self._feedback_param = feedback
         self.feedback = feedback[0]
 
-        self.feedback_level_restricted()
+        if feedback[1]:
+            self._feedback_level_full()
+        else:
+            self._feedback_level_restricted()
 
         # Score mode
         self._score_mode = None
@@ -1108,8 +1111,6 @@ class TaskConfig(CommonConfig, Scope):
         """
         Call this only after all testcases have been added
         """
-        self.feedback = "full"
-
         for s in self.subtasks:
             if s.public:
                 s.for_public_score = False
@@ -1121,6 +1122,7 @@ class TaskConfig(CommonConfig, Scope):
                 for g in s.groups:
                     for c in g.cases:
                         c.public = True
+
 
     def partial_feedback(self, description_suffix=" (Partial Feedback)",
                          name_suffix="_feedback"):
@@ -1138,7 +1140,7 @@ class TaskConfig(CommonConfig, Scope):
                               name of the subtask to obtain the
                               name of the detailed feedback subtask
 
-        """
+        """        
         for s in self.subtasks:
             if s.public:
                 s.for_public_score = False
@@ -1146,13 +1148,15 @@ class TaskConfig(CommonConfig, Scope):
         for s in self.subtasks:
             s.put_feedback(s.description + description_suffix,
                            s.name + name_suffix)
+        
+        self._feedback_level_full() # TODO: Is this what we want?
 
     def no_feedback(self):
         pass
 
     def _activate_feedback(self):
-        func = self._feedback_param[1]
-        args = (self, ) + self._feedback_param[2:]
+        func = self._feedback_param[2]
+        args = (self, ) + self._feedback_param[3:]
         func(*args)
 
     @exported_function
@@ -1212,8 +1216,7 @@ class TaskConfig(CommonConfig, Scope):
         self.testsubmissions.append(
             MySubmission(self, [os.path.abspath(s) for s in args], **kwargs))
 
-    @exported_function
-    def feedback_level_full(self):
+    def _feedback_level_full(self):
         """
         Show information about all test cases in public subtasks to the
         contestants.
@@ -1221,8 +1224,7 @@ class TaskConfig(CommonConfig, Scope):
         """
         self._feedback_level = FEEDBACK_LEVEL_FULL
 
-    @exported_function
-    def feedback_level_restricted(self):
+    def _feedback_level_restricted(self):
         """
         In each public group, hide all test cases after the first one that
         doesn't have outcome "Correct". Additionally, used time and memory are
@@ -1232,6 +1234,9 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         self._feedback_level = FEEDBACK_LEVEL_RESTRICTED
+
+    def _has_restricted_feedback_level(self):
+        return self._feedback_level == FEEDBACK_LEVEL_RESTRICTED
 
     @exported_function
     def score_mode_max_tokened_last(self):

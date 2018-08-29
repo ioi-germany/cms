@@ -59,6 +59,11 @@ class LgTemplate(PlainTemplate):
         # Tell Latex where bar.pdf can be found
         task.supply("latex", def_latex("barpdf", "bar.pdf"))
         task.supply("latex", def_latex("feedback", task.feedback))
+
+        task.supply("latex", r"\newif\ifrestricted")
+        if task._has_restricted_feedback_level():
+            task.supply("latex", r"\restrictedtrue")
+
         self.mktestcasetable(task)
 
     def mktestcasetable(self, task):
