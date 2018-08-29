@@ -712,6 +712,10 @@ th.short {
     width: 100px;
 }
 
+#submission_detail table.testcase-list thead th.group {
+    width: 8%;
+}
+
 #submission_detail table.testcase-list tbody tr:not(.undefined) td.outcome {
     padding: 5px;
 }

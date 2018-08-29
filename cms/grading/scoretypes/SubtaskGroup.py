@@ -60,6 +60,7 @@ class SubtaskGroup(ScoreType):
     TEMPLATE = """\
 {% if not details["unit_test"] %}{# Normal submission #}
 {% for st in details["subtasks"] %}
+    {% set show_full_feedback = (feedback_level == FEEDBACK_LEVEL_FULL or not st["for_private_score"]) %}
     {% if "score" in st and "max_score" in st %}
         {% if st["score"] >= st["max_score"] %}
 <div class="subtask correct">
@@ -91,59 +92,65 @@ class SubtaskGroup(ScoreType):
         <table class="testcase-list">
             <thead>
                 <tr>
-                    <th>{% trans %}Outcome{% endtrans %}</th>
-                    <th>{% trans %}Details{% endtrans %}</th>
-        {% if feedback_level == FEEDBACK_LEVEL_FULL %}
-                    <th>{% trans %}Execution time{% endtrans %}</th>
-                    <th>{% trans %}Memory used{% endtrans %}</th>
+                    <th class="idx">{% trans %}Case{% endtrans %}</th>
+                    <th class="outcome">{% trans %}Outcome{% endtrans %}</th>
+                    <th class="details">{% trans %}Details{% endtrans %}</th>
+        {% if show_full_feedback %}
+                    <th class="execution-time">{% trans %}Execution time{% endtrans %}</th>
+                    <th class="memory-used">{% trans %}Memory used{% endtrans %}</th>
         {% endif %}
-                    <th>{% trans %}Group{% endtrans %}</th>
+                    <th class="group">{% trans %}Group{% endtrans %}</th>
                 </tr>
             </thead>
             <tbody>
-        {% for tc in st["testcases"] %}
-            {% if "outcome" in tc
-                   and (feedback_level == FEEDBACK_LEVEL_FULL
-                        or tc["show_in_restricted_feedback"])%}
-                {% if tc["outcome"] == "Correct" %}
+        {% for group in st["groups"] %}
+            {% with %}
+                {% if show_full_feedback %}
+                    {% set shown_cases = group["testcases"] %}
+                {% else %}
+                    {% set shown_cases = group["first_worst_testcase"] %}
+                {% endif %}
+                {% for tc in shown_cases %}
+                    {% if tc["outcome"] == "Correct" %}
                 <tr class="correct">
-                {% elif tc["outcome"] == "Not correct" %}
+                    {% elif tc["outcome"] == "Not correct" %}
                 <tr class="notcorrect">
-                {% else %}
+                    {% else %}
                 <tr class="partiallycorrect">
-                {% endif %}
-                    <td>{{ _(tc["outcome"]) }}</td>
-                    <td>{{ tc["text"]|format_status_text }}</td>
-                    <td>
-                {% if feedback_level == FEEDBACK_LEVEL_FULL %}
-                    {% if "time" in tc and tc["time"] is not none %}
-                        {{ "%(seconds)0.3f s" % {'seconds': tc["time"]} }}
-                    {% else %}
-                        {% trans %}N/A{% endtrans %}
                     {% endif %}
+                    <td class="idx">{{ tc["number_in_group"] }}</td>
+                    <td class="outcome">{{ _(tc["outcome"]) }}</td>
+                    <td class="details">{{ tc["text"]|format_status_text }}</td>
+                    {% if show_full_feedback %}
+                    <td class="execution-time">
+                        {% if "time" in tc and tc["time"] is not none %}
+                        {{ tc["time"]|format_duration }}
+                        {% else %}
+                        {% trans %}N/A{% endtrans %}
+                        {% endif %}
                     </td>
-                    <td>
-                    {% if "memory" in tc and tc["memory"] is not none %}
+                    <td class="memory-used">
+                        {% if "memory" in tc and tc["memory"] is not none %}
                         {{ tc["memory"]|format_size }}
-                    {% else %}
+                        {% else %}
                         {% trans %}N/A{% endtrans %}
+                        {% endif %}
+                    </td>
                     {% endif %}
-                    </td>
-                {% endif %}
-                {% if "grouplen" in tc %}
-                    <td rowspan="{{ tc["grouplen"] }}">{{ tc["groupnr"] }}</td>
-                {% endif %}
-            {% else %}
-                <tr class="undefined">
-                {% if feedback_level == FEEDBACK_LEVEL_FULL %}
-                    <td colspan="5">
-                {% else %}
-                    <td colspan="3">
-                {% endif %}
-                        {% trans %}N/A{% endtrans %}
-                    </td>
+                    {% if loop.first %}
+                    <td class="group" rowspan="{{ shown_cases|length }}">{{ group["number"] }}</td>
+                    {% endif %}
                 </tr>
-            {% endif %}
+                {% endfor %}
+                {% if shown_cases|length == 0 and not show_full_feedback %}
+                <tr class="correct">
+                    <td class="idx"></td>
+                    <td class="outcome">{% trans %}All correct{% endtrans %}</td>
+                    <td class="details"></td>
+                    <td class="group">{{ group["number"] }}</td>
+                </tr>
+                {% endif %}
+            {% endwith %}
         {% endfor %}
             </tbody>
         </table>
@@ -433,35 +440,43 @@ class SubtaskGroup(ScoreType):
             if subtask["public"] or not public:  # Shakespeare has been here
                 st_score = 0
                 st_maxscore = 0
-                testcases = []
+                groups = []
                 for groupnr, group in enumerate(subtask["groups"]):
-                    outcomes = [float(evaluations[idx].outcome)
-                                for idx in group["cases"]]
-                    gr_score = min(outcomes) * group["points"]
+                    # The minimum (relative) score of testcases in this group.
+                    gr_relative_score = float(1.0)
+                    # The first test case in this group with minimum score.
+                    # None if all test cases get full score.
+                    first_worst_testcase_idx = None
+                    for idx in group["cases"]:
+                        tc_relative_score = float(evaluations[idx].outcome)
+                        if tc_relative_score < gr_relative_score:
+                            gr_relative_score = tc_relative_score
+                            first_worst_testcase_idx = idx
+                    gr_score = gr_relative_score * group["points"]
                     st_score += gr_score
                     st_maxscore += group["points"]
 
-                    first = True
-                    previous_tc_all_correct = True
-                    for idx in group["cases"]:
+                    testcases = []
+                    first_worst_testcase = []
+                    for casenr, idx in enumerate(group["cases"]):
                         oc = self.get_public_outcome(
                             float(evaluations[idx].outcome))
-                        tc = {"outcome": oc,
+                        tc = {"number_in_group": casenr + 1,
+                              "outcome": oc,
                               "text": evaluations[idx].text,
                               "time": evaluations[idx].execution_time,
                               "memory": evaluations[idx].execution_memory,
-                              "show_in_restricted_feedback":
-                                  previous_tc_all_correct,
                               }
-                        if first:
-                            first = False
-                            tc["groupnr"] = groupnr + 1
-                            tc["grouplen"] = len(group["cases"])
 
                         testcases.append(tc)
+                        if idx == first_worst_testcase_idx:
+                            first_worst_testcase.append(tc)
 
-                        if oc != "Correct":
-                            previous_tc_all_correct = False
+                    groups.append({
+                        "number": groupnr + 1,
+                        "testcases": testcases,
+                        "first_worst_testcase": first_worst_testcase,
+                    })
 
                 if (public and subtask["for_public_score"]) or \
                    (not public and subtask["for_private_score"]):
@@ -473,15 +488,10 @@ class SubtaskGroup(ScoreType):
                     "name": subtask["name"],
                     "score": st_score,
                     "max_score": st_maxscore,
-                    "testcases": testcases,
+                    "groups": groups,
                 })
                 if not public:
                     ranking_details.append("%lg" % round(st_score, 2))
-            else:
-                subtasks.append({
-                    "name": subtask["name"],
-                    "testcases": [],
-                })
 
         details = {"unit_test": False, "subtasks": subtasks}
 
