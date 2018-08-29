@@ -138,9 +138,9 @@ class Batch(TaskType):
         self._actual_input = self.input_filename
         self._actual_output = self.output_filename
         if len(self.input_filename) == 0:
-            self._actual_input = Batch.DEFAULT_INPUT_FILENAME
+            self._actual_input = self.DEFAULT_INPUT_FILENAME
         if len(self.output_filename) == 0:
-            self._actual_output = Batch.DEFAULT_OUTPUT_FILENAME
+            self._actual_output = self.DEFAULT_OUTPUT_FILENAME
 
     def get_compilation_commands(self, submission_format):
         """See TaskType.get_compilation_commands."""
@@ -148,9 +148,9 @@ class Batch(TaskType):
         # If a grader is specified, we add to the command line (and to
         # the files to get) the corresponding manager.
         if self._uses_grader():
-            source_filenames.append(Batch.GRADER_BASENAME + ".%l")
-        source_filenames.append(submission_format[0])
-        executable_filename = submission_format[0].replace(".%l", "")
+            source_filenames.append(self.GRADER_BASENAME + ".%l")
+        source_filenames.extend(submission_format)
+        executable_filename = self._executable_filename(submission_format)
         res = dict()
         for language in LANGUAGES:
             res[language.name] = language.get_compilation_commands(
@@ -164,7 +164,7 @@ class Batch(TaskType):
         # In case the task uses a grader, we let the user provide their own
         # grader (which is usually a simplified grader provided by the admins).
         if self._uses_grader():
-            return ["grader.%l"]
+            return [self.GRADER_BASENAME + ".%l"]
         else:
             return []
 
@@ -173,29 +173,41 @@ class Batch(TaskType):
         return []
 
     def _uses_grader(self):
-        return self.compilation == Batch.COMPILATION_GRADER
+        return self.compilation == self.COMPILATION_GRADER
 
     def _uses_checker(self):
-        return self.output_eval == Batch.OUTPUT_EVAL_CHECKER
+        return self.output_eval == self.OUTPUT_EVAL_CHECKER
+
+    @staticmethod
+    def _executable_filename(codenames):
+        """Return the chosen executable name computed from the codenames.
+
+        codenames ([str]): submission format or codename of submitted files,
+            may contain %l.
+
+        return (str): a deterministic executable name.
+
+        """
+        return "_".join(sorted(codename.replace(".%l", "")
+                               for codename in codenames))
 
     def compile(self, job, file_cacher):
         """See TaskType.compile."""
         language = get_language(job.language)
         source_ext = language.source_extension
 
-        if not check_files_number(job, 1):
+        if not check_files_number(job, 1, or_more=True):
             return
 
-        user_file_format = next(iterkeys(job.files))
-        user_source_filename = user_file_format.replace(".%l", source_ext)
-        executable_filename = user_file_format.replace(".%l", "")
+        executable_filename = self._executable_filename(iterkeys(job.files))
 
         # Create the list of filenames to be passed to the compiler. If we use
         # a grader, it needs to be in first position in the command line, and
         # we check that it exists.
-        source_filenames = [user_source_filename]
+        source_filenames = [codename.replace(".%l", source_ext)
+                            for codename in iterkeys(job.files)]
         if self._uses_grader():
-            grader_source_filename = Batch.GRADER_BASENAME + source_ext
+            grader_source_filename = self.GRADER_BASENAME + source_ext
             if not check_manager_present(job, grader_source_filename):
                 return
             source_filenames.insert(0, grader_source_filename)
@@ -206,11 +218,12 @@ class Batch(TaskType):
 
         # Create the sandbox.
         sandbox = create_sandbox(file_cacher, name="compile")
-        job.sandboxes.append(sandbox.path)
+        job.sandboxes.append(sandbox.get_root_path())
 
         # Copy required files in the sandbox (includes the grader if present).
-        sandbox.create_file_from_storage(
-            user_source_filename, job.files[user_file_format].digest)
+        for codename, file_ in iteritems(job.files):
+            filename = codename.replace(".%l", source_ext)
+            sandbox.create_file_from_storage(filename, file_.digest)
         for filename, manager in iteritems(job.managers):
             if is_manager_for_compilation(filename, language):
                 sandbox.create_file_from_storage(filename, manager.digest)
@@ -242,7 +255,7 @@ class Batch(TaskType):
         # Prepare the execution
         executable_filename = next(iterkeys(job.executables))
         language = get_language(job.language)
-        main = Batch.GRADER_BASENAME \
+        main = self.GRADER_BASENAME \
             if self._uses_grader() else executable_filename
         commands = language.get_evaluation_commands(
             executable_filename, main=main)
@@ -268,7 +281,7 @@ class Batch(TaskType):
 
         # Create the sandbox
         sandbox = create_sandbox(file_cacher, name="evaluate")
-        job.sandboxes.append(sandbox.path)
+        job.sandboxes.append(sandbox.get_root_path())
 
         # Put the required files into the sandbox
         for filename, digest in iteritems(executables_to_get):
@@ -329,7 +342,7 @@ class Batch(TaskType):
                 else:
                     box_success, outcome, text = eval_output(
                         file_cacher, job,
-                        Batch.CHECKER_CODENAME
+                        self.CHECKER_CODENAME
                         if self._uses_checker() else None,
                         user_output_path=sandbox.relative_path(
                             self._actual_output),

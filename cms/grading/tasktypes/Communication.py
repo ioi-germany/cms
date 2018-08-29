@@ -44,6 +44,7 @@ from cms.grading.steps import compilation_step,  evaluation_step_before_run, \
 from cms.grading.languagemanager import LANGUAGES, get_language
 from cms.grading.ParameterTypes import ParameterTypeChoice, ParameterTypeInt
 from cms.db import Executable
+from cms.grading.tasktypes import check_files_number
 from . import TaskType, check_executables_number, check_manager_present, \
     create_sandbox, delete_sandbox, is_manager_for_compilation
 
@@ -84,6 +85,9 @@ class Communication(TaskType):
     """
     # Filename of the manager (the stand-alone, admin-provided program).
     MANAGER_FILENAME = "manager"
+    # Basename of the stub, used in the stub filename and as the main class in
+    # languages that require us to specify it.
+    STUB_BASENAME = "stub"
     # Filename of the input in the manager sandbox. The content will be
     # redirected to stdin, and managers should read from there.
     INPUT_FILENAME = "input.txt"
@@ -136,7 +140,7 @@ class Communication(TaskType):
             source_ext = language.source_extension
             source_filenames = []
             if self._uses_grader:
-                source_filenames.append("stub%s" % source_ext)
+                source_filenames.append(self.STUB_BASENAME + source_ext)
             for codename in submission_format:
                 source_filenames.append(codename.replace(".%l", source_ext))
             # Compute executable name.
@@ -150,13 +154,13 @@ class Communication(TaskType):
     def get_user_managers(self):
         """See TaskType.get_user_managers."""
         if self._uses_grader():
-            return ["stub.%l"]
+            return [self.STUB_BASENAME + ".%l"]
         else:
             return []
 
     def get_auto_managers(self):
         """See TaskType.get_auto_managers."""
-        return ["manager"]
+        return [self.MANAGER_FILENAME]
 
     def _uses_grader(self):
         return self.compilation == Communication.COMPILATION_GRADER
@@ -179,13 +183,16 @@ class Communication(TaskType):
         language = get_language(job.language)
         source_ext = language.source_extension
 
+        if not check_files_number(job, 1, or_more=True):
+            return
+
         # Prepare the files to copy in the sandbox and to add to the
         # compilation command.
         files_to_get = {}
         source_filenames = []
         # The stub, that must have been provided (copy and add to compilation).
         if self._uses_grader():
-            stub_filename = "stub%s" % source_ext
+            stub_filename = self.STUB_BASENAME + source_ext
             if not check_manager_present(job, stub_filename):
                 return
             source_filenames.append(stub_filename)
@@ -207,7 +214,7 @@ class Communication(TaskType):
 
         # Create the sandbox.
         sandbox = create_sandbox(file_cacher, name="compile")
-        job.sandboxes.append(sandbox.path)
+        job.sandboxes.append(sandbox.get_root_path())
 
         # Copy all required files in the sandbox.
         for filename, digest in iteritems(files_to_get):
@@ -240,9 +247,9 @@ class Communication(TaskType):
         executable_digest = job.executables[executable_filename].digest
 
         # Make sure the required manager is among the job managers.
-        if not check_manager_present(job, Communication.MANAGER_FILENAME):
+        if not check_manager_present(job, self.MANAGER_FILENAME):
             return
-        manager_digest = job.managers[Communication.MANAGER_FILENAME].digest
+        manager_digest = job.managers[self.MANAGER_FILENAME].digest
 
         # Indices for the objects related to each user process.
         indices = range(self.num_processes)
@@ -250,37 +257,51 @@ class Communication(TaskType):
         # Create FIFOs.
         fifo_dir = [tempfile.mkdtemp(dir=config.temp_dir) for i in indices]
         abortion_control_fifo_dir = tempfile.mkdtemp(dir=config.temp_dir)
-        fifo_in = [os.path.join(fifo_dir[i], "in%d" % i) for i in indices]
-        fifo_out = [os.path.join(fifo_dir[i], "out%d" % i) for i in indices]
+        fifo_user_to_manager = [
+            os.path.join(fifo_dir[i], "u%d_to_m" % i) for i in indices]
+        fifo_manager_to_user = [
+            os.path.join(fifo_dir[i], "m_to_u%d" % i) for i in indices]
         fifo_solution_quitter = os.path.join(abortion_control_fifo_dir, "sq")
         fifo_manager_quitter = os.path.join(abortion_control_fifo_dir, "mq")
         for i in indices:
-            os.mkfifo(fifo_in[i])
-            os.mkfifo(fifo_out[i])
+            os.mkfifo(fifo_user_to_manager[i])
+            os.mkfifo(fifo_manager_to_user[i])
             os.chmod(fifo_dir[i], 0o755)
-            os.chmod(fifo_in[i], 0o666)
-            os.chmod(fifo_out[i], 0o666)
+            os.chmod(fifo_user_to_manager[i], 0o666)
+            os.chmod(fifo_manager_to_user[i], 0o666)
         os.mkfifo(fifo_solution_quitter)
         os.mkfifo(fifo_manager_quitter)
         os.chmod(abortion_control_fifo_dir, 0o755)
         os.chmod(fifo_solution_quitter, 0o666)
         os.chmod(fifo_manager_quitter, 0o666)
 
+        # Names of the fifos after being mapped inside the sandboxes.
+        sandbox_fifo_dir = ["/fifo%d" % i for i in indices]
+        sandbox_fifo_user_to_manager = [
+            os.path.join(sandbox_fifo_dir[i], "u%d_to_m" % i) for i in indices]
+        sandbox_fifo_manager_to_user = [
+            os.path.join(sandbox_fifo_dir[i], "m_to_u%d" % i) for i in indices]
+        sandbox_abortion_control_fifo_dir = "/abort"
+        sandbox_fifo_solution_quitter = \
+            os.path.join(sandbox_abortion_control_fifo_dir, "sq")
+        sandbox_fifo_manager_quitter = \
+            os.path.join(sandbox_abortion_control_fifo_dir, "mq")
+
         # Create the manager sandbox and copy manager and input and
         # reference output.
         sandbox_mgr = create_sandbox(file_cacher, name="manager_evaluate")
-        job.sandboxes.append(sandbox_mgr.path)
+        job.sandboxes.append(sandbox_mgr.get_root_path())
         sandbox_mgr.create_file_from_storage(
-            Communication.MANAGER_FILENAME, manager_digest, executable=True)
+            self.MANAGER_FILENAME, manager_digest, executable=True)
         sandbox_mgr.create_file_from_storage(
-            Communication.INPUT_FILENAME, job.input)
+            self.INPUT_FILENAME, job.input)
         sandbox_mgr.create_file_from_storage(
-            Communication.OK_FILENAME, job.output)
+            self.OK_FILENAME, job.output)
 
         # Create the user sandbox(es) and copy the executable.
         sandbox_user = [create_sandbox(file_cacher, name="user_evaluate")
                         for i in indices]
-        job.sandboxes.extend(s.path for s in sandbox_user)
+        job.sandboxes.extend(s.get_root_path() for s in sandbox_user)
         for i in indices:
             sandbox_user[i].create_file_from_storage(
                 executable_filename, executable_digest, executable=True)
@@ -288,10 +309,12 @@ class Communication(TaskType):
         # Start the manager. Redirecting to stdin is unnecessary, but for
         # historical reasons the manager can choose to read from there
         # instead than from INPUT_FILENAME.
-        manager_command = ["./%s" % Communication.MANAGER_FILENAME]
+        manager_command = ["./%s" % self.MANAGER_FILENAME]
         for i in indices:
-            manager_command += [fifo_in[i], fifo_out[i]]
-        manager_command += [fifo_solution_quitter, fifo_manager_quitter]
+            manager_command += [sandbox_fifo_manager_to_user[i],
+                                sandbox_fifo_user_to_manager[i]]
+        manager_command += [sandbox_fifo_solution_quitter,
+                            sandbox_fifo_manager_quitter]
         # We could use trusted_step for the manager, since it's fully
         # admin-controlled. But trusted_step is only synchronous at the moment.
         # Thus we use evaluation_step, and we set a time limit generous enough
@@ -308,14 +331,18 @@ class Communication(TaskType):
         #     programs terminated.
         manager_time_limit = max(self.num_processes * (job.time_limit + 1.0),
                                  config.trusted_sandbox_max_time_s)
+        manager_dirs_map = dict((fifo_dir[i], (sandbox_fifo_dir[i], "rw"))
+                                for i in indices)
+        manager_dirs_map[abortion_control_fifo_dir] = \
+            (sandbox_abortion_control_fifo_dir, "rw")
         manager = evaluation_step_before_run(
             sandbox_mgr,
             manager_command,
             manager_time_limit,
             config.trusted_sandbox_max_memory_kib // 1024,
-            allow_dirs=fifo_dir+[abortion_control_fifo_dir],
-            writable_files=[Communication.OUTPUT_FILENAME],
-            stdin_redirect=Communication.INPUT_FILENAME,
+            dirs_map=manager_dirs_map,
+            writable_files=[self.OUTPUT_FILENAME],
+            stdin_redirect=self.INPUT_FILENAME,
             multiprocess=job.multithreaded_sandbox)
 
         solution_quitter = open(fifo_solution_quitter, "r")
@@ -326,11 +353,12 @@ class Communication(TaskType):
         language = get_language(job.language)
         processes = [None for i in indices]
         for i in indices:
-            args = [fifo_out[i], fifo_in[i]]
+            args = [sandbox_fifo_manager_to_user[i],
+                    sandbox_fifo_user_to_manager[i]]
             if self.num_processes != 1:
                 args.append(str(i))
             if self._uses_grader():
-                main = "stub"
+                main = self.STUB_BASENAME
             else:
                 main = executable_filename
             commands = language.get_evaluation_commands(
@@ -347,9 +375,9 @@ class Communication(TaskType):
                 commands[-1],
                 job.time_limit,
                 job.memory_limit,
-                allow_dirs=[fifo_dir[i]],
-                stdin_redirect=fifo_in[i],
-                stdout_redirect=fifo_out[i],
+                dirs_map={fifo_dir[i]: (sandbox_fifo_dir[i], "rw")},
+                stdin_redirect=sandbox_fifo_manager_to_user[i],
+                stdout_redirect=sandbox_fifo_user_to_manager[i],
                 multiprocess=job.multithreaded_sandbox)
 
         # Manager still running but wants to quit
@@ -414,9 +442,9 @@ class Communication(TaskType):
         # If asked so, save the output file with additional information,
         # provided that it exists.
         if job.get_output:
-            if sandbox_mgr.file_exists(Communication.OUTPUT_FILENAME):
+            if sandbox_mgr.file_exists(self.OUTPUT_FILENAME):
                 job.user_output = sandbox_mgr.get_file_to_storage(
-                    Communication.OUTPUT_FILENAME,
+                    self.OUTPUT_FILENAME,
                     "Output file in job %s" % job.info,
                     trunc_len=100 * 1024)
             else:

@@ -155,7 +155,7 @@ class TestCompile(TaskTypeTestMixin, unittest.TestCase):
         # Results put in job, executable stored and sandbox deleted.
         self.assertResultsInJob(job, True, True, TEXT, STATS_OK)
         sandbox.get_file_to_storage.assert_called_once_with("foo", ANY)
-        sandbox.delete.assert_called_once()
+        sandbox.cleanup.assert_called_once_with(delete=True)
 
     def test_one_file_compilation_failure(self):
         tt, job = self.prepare(
@@ -170,7 +170,7 @@ class TestCompile(TaskTypeTestMixin, unittest.TestCase):
         # But no executable stored.
         sandbox.get_file_to_storage.assert_not_called()
         # Still, we delete the sandbox, since it's not an error.
-        sandbox.delete.assert_called_once()
+        sandbox.cleanup.assert_called_once_with(delete=True)
 
     def test_one_file_sandbox_failure(self):
         # Sandbox (or CMS) failure. It's the admins' fault.
@@ -184,7 +184,7 @@ class TestCompile(TaskTypeTestMixin, unittest.TestCase):
         self.assertResultsInJob(job, False, None, None, None)
         sandbox.get_file_to_storage.assert_not_called()
         # We preserve the sandbox to let admins check the problem.
-        sandbox.delete.assert_not_called()
+        sandbox.cleanup.assert_called_once_with(delete=False)
 
     def test_many_files_success(self):
         tt, job = self.prepare(
@@ -212,7 +212,7 @@ class TestCompile(TaskTypeTestMixin, unittest.TestCase):
         # Results put in job, executable stored and sandbox deleted.
         self.assertResultsInJob(job, True, True, TEXT, STATS_OK)
         sandbox.get_file_to_storage.assert_called_once_with("bar_foo", ANY)
-        sandbox.delete.assert_called_once()
+        sandbox.cleanup.assert_called_once_with(delete=True)
 
 
 class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
@@ -310,26 +310,24 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         # redirects, and no (other) writable files. For the user's command,
         # see fake_evaluation_commands in the mixin.
         cmdline_mgr = ["./manager",
-                       "%s/0/in0" % self.base_dir,
-                       "%s/0/out0" % self.base_dir]
+                       "/fifo0/u0_to_m", "/fifo0/m_to_u0"]
         cmdline_usr = ["run1", "foo", "stub",
-                       "%s/0/out0" % self.base_dir,
-                       "%s/0/in0" % self.base_dir]
+                       "/fifo0/m_to_u0", "/fifo0/u0_to_m"]
         self.evaluation_step_before_run.assert_has_calls([
             call(sandbox_mgr, cmdline_mgr, 4321, 1234,
-                 allow_dirs=[os.path.join(self.base_dir, "0")],
+                 dirs_map={os.path.join(self.base_dir, "0"): ("/fifo0", "rw")},
                  writable_files=["output.txt"],
                  stdin_redirect="input.txt", multiprocess=True),
             call(sandbox_usr, cmdline_usr, 2.5, 123,
-                 allow_dirs=[os.path.join(self.base_dir, "0")],
+                 dirs_map={os.path.join(self.base_dir, "0"): ("/fifo0", "rw")},
                  multiprocess=True),
         ], any_order=True)
         self.assertEqual(self.evaluation_step_before_run.call_count, 2)
         self.assertEqual(self.evaluation_step_after_run.call_count, 2)
         # Results put in job and sandbox deleted.
         self.assertResultsInJob(job, True, str(OUTCOME), TEXT, STATS_OK)
-        sandbox_mgr.delete.assert_called_once()
-        sandbox_usr.delete.assert_called_once()
+        sandbox_mgr.cleanup.assert_called_once_with(delete=True)
+        sandbox_usr.cleanup.assert_called_once_with(delete=True)
 
     @patch.object(config, "trusted_sandbox_max_time_s", 1)
     def test_single_process_success_long_time_limit(self):
@@ -343,7 +341,7 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         tt.evaluate(job, self.file_cacher)
 
         self.evaluation_step_before_run.assert_has_calls([
-            call(sandbox_mgr, ANY, 2.5 + 1, ANY, allow_dirs=ANY,
+            call(sandbox_mgr, ANY, 2.5 + 1, ANY, dirs_map=ANY,
                  writable_files=ANY, stdin_redirect=ANY, multiprocess=ANY)])
 
     def test_single_process_missing_manager(self):
@@ -388,8 +386,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         tt.evaluate(job, self.file_cacher)
 
         self.assertResultsInJob(job, False, None, None, None)
-        sandbox_mgr.delete.assert_not_called()
-        sandbox_usr.delete.assert_not_called()
+        sandbox_mgr.cleanup.assert_called_once_with(delete=False)
+        sandbox_usr.cleanup.assert_called_once_with(delete=False)
 
     def test_single_process_manager_sandbox_failure(self):
         # Manager sandbox had problems, it's not the user's fault.
@@ -405,8 +403,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         tt.evaluate(job, self.file_cacher)
 
         self.assertResultsInJob(job, False, None, None, None)
-        sandbox_mgr.delete.assert_not_called()
-        sandbox_usr.delete.assert_not_called()
+        sandbox_mgr.cleanup.assert_called_once_with(delete=False)
+        sandbox_usr.cleanup.assert_called_once_with(delete=False)
 
     def test_single_process_manager_and_user_failure(self):
         # Manager had problems, it's not the user's fault even if also their
@@ -423,8 +421,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         tt.evaluate(job, self.file_cacher)
 
         self.assertResultsInJob(job, False, None, None, None)
-        sandbox_mgr.delete.assert_not_called()
-        sandbox_usr.delete.assert_not_called()
+        sandbox_mgr.cleanup.assert_called_once_with(delete=False)
+        sandbox_usr.cleanup.assert_called_once_with(delete=False)
 
     def test_single_process_user_sandbox_failure(self):
         # User sandbox had problems, it's not the user's fault.
@@ -440,8 +438,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         tt.evaluate(job, self.file_cacher)
 
         self.assertResultsInJob(job, False, None, None, None)
-        sandbox_mgr.delete.assert_not_called()
-        sandbox_usr.delete.assert_not_called()
+        sandbox_mgr.cleanup.assert_called_once_with(delete=False)
+        sandbox_usr.cleanup.assert_called_once_with(delete=False)
 
     def test_single_process_user_failure(self):
         # User program had problems, it's the user's fault.
@@ -459,8 +457,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         self.assertResultsInJob(
             job, True, str(0.0), self.human_evaluation_message.return_value,
             STATS_RE)
-        sandbox_mgr.delete.assert_called_once()
-        sandbox_usr.delete.assert_called_once()
+        sandbox_mgr.cleanup.assert_called_once_with(delete=True)
+        sandbox_usr.cleanup.assert_called_once_with(delete=True)
 
     def test_single_process_get_output_success(self):
         tt, job = self.prepare(
@@ -530,29 +528,25 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         # redirects, and no (other) writable files. For the user's command,
         # see fake_evaluation_commands in the mixin.
         cmdline_mgr = ["./manager",
-                       "%s/0/in0" % self.base_dir,
-                       "%s/0/out0" % self.base_dir,
-                       "%s/1/in1" % self.base_dir,
-                       "%s/1/out1" % self.base_dir]
+                       "/fifo0/u0_to_m", "/fifo0/m_to_u0",
+                       "/fifo1/u1_to_m", "/fifo1/m_to_u1"]
         cmdline_usr0 = ["run1", "foo", "stub",
-                        "%s/0/out0" % self.base_dir,
-                        "%s/0/in0" % self.base_dir,
-                        "0"]
+                        "/fifo0/m_to_u0", "/fifo0/u0_to_m", "0"]
         cmdline_usr1 = ["run1", "foo", "stub",
-                        "%s/1/out1" % self.base_dir,
-                        "%s/1/in1" % self.base_dir,
-                        "1"]
+                        "/fifo1/m_to_u1", "/fifo1/u1_to_m", "1"]
         self.evaluation_step_before_run.assert_has_calls([
             call(sandbox_mgr, cmdline_mgr, 4321, 1234,
-                 allow_dirs=[os.path.join(self.base_dir, "0"),
-                             os.path.join(self.base_dir, "1")],
+                 dirs_map={
+                     os.path.join(self.base_dir, "0"): ("/fifo0", "rw"),
+                     os.path.join(self.base_dir, "1"): ("/fifo1", "rw"),
+                 },
                  writable_files=["output.txt"],
                  stdin_redirect="input.txt", multiprocess=True),
             call(sandbox_usr0, cmdline_usr0, 2.5, 123,
-                 allow_dirs=[os.path.join(self.base_dir, "0")],
+                 dirs_map={os.path.join(self.base_dir, "0"): ("/fifo0", "rw")},
                  multiprocess=True),
             call(sandbox_usr1, cmdline_usr1, 2.5, 123,
-                 allow_dirs=[os.path.join(self.base_dir, "1")],
+                 dirs_map={os.path.join(self.base_dir, "1"): ("/fifo1", "rw")},
                  multiprocess=True),
         ], any_order=True)
         self.assertEqual(self.evaluation_step_before_run.call_count, 3)
@@ -560,9 +554,9 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         # Results put in job and sandbox deleted.
         self.assertResultsInJob(job, True, str(OUTCOME), TEXT,
                                 merge_execution_stats(STATS_OK, STATS_OK))
-        sandbox_mgr.delete.assert_called_once()
-        sandbox_usr0.delete.assert_called_once()
-        sandbox_usr1.delete.assert_called_once()
+        sandbox_mgr.cleanup.assert_called_once_with(delete=True)
+        sandbox_usr0.cleanup.assert_called_once_with(delete=True)
+        sandbox_usr1.cleanup.assert_called_once_with(delete=True)
 
     @patch.object(config, "trusted_sandbox_max_time_s", 3)
     def test_many_processes_success_long_time_limit(self):
@@ -577,7 +571,7 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         tt.evaluate(job, self.file_cacher)
 
         self.evaluation_step_before_run.assert_has_calls([
-            call(sandbox_mgr, ANY, 2 * (2.5 + 1), ANY, allow_dirs=ANY,
+            call(sandbox_mgr, ANY, 2 * (2.5 + 1), ANY, dirs_map=ANY,
                  writable_files=ANY, stdin_redirect=ANY, multiprocess=ANY)])
 
     def test_many_processes_first_user_failure(self):
@@ -598,9 +592,9 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         self.assertResultsInJob(
             job, True, str(0.0), self.human_evaluation_message.return_value,
             merge_execution_stats(STATS_RE, STATS_OK))
-        sandbox_mgr.delete.assert_called_once()
-        sandbox_usr0.delete.assert_called_once()
-        sandbox_usr1.delete.assert_called_once()
+        sandbox_mgr.cleanup.assert_called_once_with(delete=True)
+        sandbox_usr0.cleanup.assert_called_once_with(delete=True)
+        sandbox_usr1.cleanup.assert_called_once_with(delete=True)
 
     def test_many_processes_last_user_failure(self):
         # One of the user programs had problems, it's the user's fault.
@@ -620,9 +614,9 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         self.assertResultsInJob(
             job, True, str(0.0), self.human_evaluation_message.return_value,
             merge_execution_stats(STATS_OK, STATS_RE))
-        sandbox_mgr.delete.assert_called_once()
-        sandbox_usr0.delete.assert_called_once()
-        sandbox_usr1.delete.assert_called_once()
+        sandbox_mgr.cleanup.assert_called_once_with(delete=True)
+        sandbox_usr0.cleanup.assert_called_once_with(delete=True)
+        sandbox_usr1.cleanup.assert_called_once_with(delete=True)
 
     def test_many_processes_merged_timeout(self):
         # Solution was ok, but considering all runtimes, it hit timeout.
@@ -651,9 +645,9 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         self.assertResultsInJob(
             job, True, str(0.0), self.human_evaluation_message.return_value,
             stats)
-        sandbox_mgr.delete.assert_called_once()
-        sandbox_usr0.delete.assert_called_once()
-        sandbox_usr1.delete.assert_called_once()
+        sandbox_mgr.cleanup.assert_called_once_with(delete=True)
+        sandbox_usr0.cleanup.assert_called_once_with(delete=True)
+        sandbox_usr1.cleanup.assert_called_once_with(delete=True)
 
 
 if __name__ == "__main__":
