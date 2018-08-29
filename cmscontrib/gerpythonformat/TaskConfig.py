@@ -1226,9 +1226,9 @@ class TaskConfig(CommonConfig, Scope):
 
     def _feedback_level_restricted(self):
         """
-        In each public group, hide all test cases after the first one that
-        doesn't have outcome "Correct". Additionally, used time and memory are
-        hidden.
+        In each group that contributes to the official (private) score, show
+        only the first test case with minimum score. Additionally, used time
+        and memory are hidden in those groups.
 
         This is the default for all tasks.
 
