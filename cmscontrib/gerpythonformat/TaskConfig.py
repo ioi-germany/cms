@@ -838,7 +838,7 @@ class TaskConfig(CommonConfig, Scope):
         self.managers["manager"] = manager.get_path()
         compilation_param = "alone"
         if stub:
-            compilation_param = "stub"
+            compilation_param = "grader"
         self.tasktypeparameters = ([compilation_param, 1])
 
     @exported_function
