@@ -32,7 +32,7 @@ from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX
 from cms import FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
 from cms.db import Task, Statement, Testcase, Dataset, \
-    Attachment, Manager, Submission, File, \
+    Attachment, Addendum, Manager, Submission, File, \
     SubmissionResult
 from cms.grading.tasktypes import get_task_type
 from cms.grading.languagemanager import filename_to_language
@@ -567,6 +567,7 @@ class TaskConfig(CommonConfig, Scope):
     :ivar cases: List of the test cases
     :ivar testsubmissions: List of the test submissions
     :ivar attachments: Dictionary of the attachments
+    :ivar addenda: Dictionary of the addenda
     :ivar saved: List of the saved (public) test cases
 
     This object is exported as a variable called :samp:`task`.
@@ -603,6 +604,7 @@ class TaskConfig(CommonConfig, Scope):
         self.output_generator = None
         self.testsubmissions = []
         self.attachments = {}
+        self.addenda = {}
         self.managers = {}
         self.tasktype = None
         self.saved = []
@@ -759,6 +761,18 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         self.attachments[publicname] = os.path.abspath(localname)
+
+    @exported_function
+    def addendum(self, localname, publicname):
+        """
+        Add an addendum.
+
+        localname (string): name of the file to add
+
+        publicname (string): file name displayed in CMS
+
+        """
+        self.addenda[publicname] = os.path.abspath(localname)
 
     """
     **Task types**
@@ -1140,7 +1154,7 @@ class TaskConfig(CommonConfig, Scope):
                               name of the subtask to obtain the
                               name of the detailed feedback subtask
 
-        """        
+        """
         for s in self.subtasks:
             if s.public:
                 s.for_public_score = False
@@ -1148,7 +1162,7 @@ class TaskConfig(CommonConfig, Scope):
         for s in self.subtasks:
             s.put_feedback(s.description + description_suffix,
                            s.name + name_suffix)
-        
+
         self._feedback_level_full() # TODO: Is this what we want?
 
     def no_feedback(self):
@@ -1299,7 +1313,7 @@ class TaskConfig(CommonConfig, Scope):
 
     def _makeallzip(self):
         """
-        Create and add an attachment containing all test cases.
+        Create and add an addendum containing all test cases.
         """
         zipname = os.path.join(self.wdir, "allcases.zip")
         contents = {}
@@ -1307,7 +1321,7 @@ class TaskConfig(CommonConfig, Scope):
             contents["%d.in" % (i + 1)] = c.infile
             contents["%d.out" % (i + 1)] = c.outfile
         ZipRule(self.rules, zipname, contents).ensure()
-        self.attachment(zipname, "%s_all.zip" % self.name)
+        self.addendum(zipname, "%s_all.zip" % self.name)
 
     def _makeinputzip(self):
         """
@@ -1360,8 +1374,8 @@ class TaskConfig(CommonConfig, Scope):
 
         # Automatically make a ZIP file containing the saved test cases
         self._makesavedzip()
-        if self.contest._analysis:
-            self._makeallzip()
+        # Automatically make a ZIP file containing all test cases for analysis mode
+        self._makeallzip()
         if self.tasktype == "OutputOnly":
             self._makeinputzip()
         self.file_cacher = file_cacher
@@ -1371,7 +1385,7 @@ class TaskConfig(CommonConfig, Scope):
             self.infinite_tokens()
         self._set_tokens(tdb)
         if self.contest._analysis:
-            self.feedback_level_full()
+            self._feedback_level_full()
         tdb.max_submission_number = self.max_submission_number
         tdb.min_submission_interval = self.min_submission_interval
         tdb.max_user_test_number = self.max_user_test_number
@@ -1387,6 +1401,7 @@ class TaskConfig(CommonConfig, Scope):
             tdb.submission_format = [
                 "%s.%%l" % self.name]
         tdb.attachments = {}
+        tdb.addenda = {}
         tdb.statements = {}
         primary_statements = []
 
@@ -1408,6 +1423,13 @@ class TaskConfig(CommonConfig, Scope):
                 file,
                 "Attachment %s to task %s" % (name, self.name))
             tdb.attachments[name] = Attachment(filename=name, digest=digest)
+
+        # Add addenda
+        for name, file in iteritems(self.addenda):
+            digest = file_cacher.put_file_from_path(
+                file,
+                "Addendum %s to task %s" % (name, self.name))
+            tdb.addenda[name] = Addendum(filename=name, digest=digest)
 
         tdb.active_dataset = self._makedataset(file_cacher, tdb)
 

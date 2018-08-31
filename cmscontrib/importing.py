@@ -379,6 +379,7 @@ def update_task(old_task, new_task, parent=None, get_statements=True):
         Task.statements: get_statements,
         Task.datasets: update_datasets_fn,
         Task.attachments: True,
+        Task.addenda: True,
         # Scalar columns exceptions.
         Task.num: False,
         Task.primary_statements: get_statements,
