@@ -40,7 +40,8 @@ import traceback
 
 import tornado.web
 
-from cms.db import Attachment, Dataset, Session, Statement, Submission, Task
+from cms.db import Attachment, Addendum, Dataset, Session, Statement, \
+    Submission, Task
 from cmscommon.datetime import make_datetime
 
 from .base import BaseHandler, SimpleHandler, require_permission
@@ -354,7 +355,6 @@ class AddAttachmentHandler(BaseHandler):
         else:
             self.redirect(fallback_page)
 
-
 class AttachmentHandler(BaseHandler):
     """Delete an attachment.
 
@@ -371,6 +371,76 @@ class AttachmentHandler(BaseHandler):
             raise tornado.web.HTTPError(404)
 
         self.sql_session.delete(attachment)
+        self.try_commit()
+
+        # Page to redirect to.
+        self.write("%s" % task.id)
+
+class AddAddendumHandler(BaseHandler):
+    """Add an addendum to a task.
+
+    """
+    @require_permission(BaseHandler.PERMISSION_ALL)
+    def get(self, task_id):
+        task = self.safe_get_item(Task, task_id)
+        self.contest = task.contest
+
+        self.r_params = self.render_params()
+        self.r_params["task"] = task
+        self.render("add_addendum.html", **self.r_params)
+
+    @require_permission(BaseHandler.PERMISSION_ALL)
+    def post(self, task_id):
+        fallback_page = self.url("task", task_id, "addendum", "add")
+
+        task = self.safe_get_item(Task, task_id)
+
+        addendum = self.request.files["addendum"][0]
+        task_name = task.name
+        self.sql_session.close()
+
+        try:
+            digest = self.service.file_cacher.put_file_content(
+                addendum["body"],
+                "Task addendum for %s" % task_name)
+        except Exception as error:
+            self.service.add_notification(
+                make_datetime(),
+                "Addendum storage failed",
+                repr(error))
+            self.redirect(fallback_page)
+            return
+
+        # TODO verify that there's no other Addendum with that filename
+        # otherwise we'd trigger an IntegrityError for constraint violation
+
+        self.sql_session = Session()
+        task = self.safe_get_item(Task, task_id)
+
+        addendum = Addendum(addendum["filename"], digest, task=task)
+        self.sql_session.add(addendum)
+
+        if self.try_commit():
+            self.redirect(self.url("task", task_id))
+        else:
+            self.redirect(fallback_page)
+
+class AddendumHandler(BaseHandler):
+    """Delete an addendum.
+
+    """
+    # No page for single addendum.
+
+    @require_permission(BaseHandler.PERMISSION_ALL)
+    def delete(self, task_id, addendum_id):
+        addendum = self.safe_get_item(Addendum, addendum_id)
+        task = self.safe_get_item(Task, task_id)
+
+        # Protect against URLs providing incompatible parameters.
+        if addendum.task is not task:
+            raise tornado.web.HTTPError(404)
+
+        self.sql_session.delete(addendum)
         self.try_commit()
 
         # Page to redirect to.

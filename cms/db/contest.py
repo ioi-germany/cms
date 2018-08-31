@@ -346,6 +346,10 @@ class Contest(Base):
             for file_ in itervalues(task.attachments):
                 files.add(file_.digest)
 
+            # Enumerate addenda
+            for file_ in itervalues(task.addenda):
+                files.add(file_.digest)
+
             # Enumerate managers
             for dataset in task.datasets:
                 for file_ in itervalues(dataset.managers):
