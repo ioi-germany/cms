@@ -346,8 +346,8 @@ class Contest(Base):
             for file_ in itervalues(task.attachments):
                 files.add(file_.digest)
 
-            # Enumerate addenda
-            for file_ in itervalues(task.addenda):
+            # Enumerate spoilers
+            for file_ in itervalues(task.spoilers):
                 files.add(file_.digest)
 
             # Enumerate managers

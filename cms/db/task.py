@@ -251,8 +251,8 @@ class Task(Base):
         passive_deletes=True,
         back_populates="task")
 
-    addenda = relationship(
-        "Addendum",
+    spoilers = relationship(
+        "Spoiler",
         collection_class=attribute_mapped_collection("filename"),
         cascade="all, delete-orphan",
         passive_deletes=True,
@@ -354,12 +354,12 @@ class Attachment(Base):
         Digest,
         nullable=False)
 
-class Addendum(Base):
+class Spoiler(Base):
     """Class to store additional files to give to the user together
     with the statement of the task during analysis mode.
 
     """
-    __tablename__ = 'addenda'
+    __tablename__ = 'spoilers'
     __table_args__ = (
         UniqueConstraint('task_id', 'filename'),
     )
@@ -369,7 +369,7 @@ class Addendum(Base):
         Integer,
         primary_key=True)
 
-    # Task (id and object) owning the addendum.
+    # Task (id and object) owning the spoiler.
     task_id = Column(
         Integer,
         ForeignKey(Task.id,
@@ -378,9 +378,9 @@ class Addendum(Base):
         index=True)
     task = relationship(
         Task,
-        back_populates="addenda")
+        back_populates="spoilers")
 
-    # Filename and digest of the provided addendum.
+    # Filename and digest of the provided spoiler.
     filename = Column(
         Filename,
         nullable=False)

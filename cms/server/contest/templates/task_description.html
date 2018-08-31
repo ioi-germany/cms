@@ -199,11 +199,11 @@
 {% endif %}
 
 {% if participation.group.analysis_enabled and actual_phase == +3 %}
-    {% if task.addenda|length > 0 %}
-        <h2>{% trans %}Analysis Addenda{% endtrans %}</h2>
+    {% if task.spoilers|length > 0 %}
+        <h2>{% trans %}Analysis Spoilers{% endtrans %}</h2>
         <div class="attachments">
             <ul>
-        {% for filename, addendum in task.addenda|dictsort(by="key") %}
+        {% for filename, spoiler in task.spoilers|dictsort(by="key") %}
             {% set mime_type = get_mimetype_for_file_name(filename) %}
             {% if mime_type is not none %}
                 {% set type_name = get_name_for_mimetype(mime_type) %}
@@ -212,9 +212,9 @@
                 {% set type_name = none %}
                 {% set type_icon = none %}
             {% endif %}
-            {% set file_size = handler.application.service.file_cacher.get_size(addendum.digest) %}
+            {% set file_size = handler.application.service.file_cacher.get_size(spoiler.digest) %}
                 <li>
-                    <a href="{{ contest_url("tasks", task.name, "addenda", filename) }}" class="btn">
+                    <a href="{{ contest_url("tasks", task.name, "spoilers", filename) }}" class="btn">
                 {% if type_icon is not none %}
                         <img src="{{ url("static", "img", "mimetypes", "%s.png"|format(type_icon)) }}" alt="{{ mime_type }}" />
                 {% else %}

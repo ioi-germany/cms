@@ -38,7 +38,7 @@ from sqlalchemy.exc import OperationalError
 
 from cms import ConfigError
 from . import SessionGen, Digest, Contest, Participation, Statement, \
-    Attachment, Addendum, Task, Manager, Dataset, Testcase, Submission, File, \
+    Attachment, Spoiler, Task, Manager, Dataset, Testcase, Submission, File, \
     SubmissionResult, Executable, UserTest, UserTestFile, UserTestManager, \
     UserTestResult, UserTestExecutable, PrintJob
 
@@ -296,8 +296,8 @@ def enumerate_files(
     queries.append(task_q.join(Task.statements).with_entities(Statement.digest))
     queries.append(task_q.join(Task.attachments)
                    .with_entities(Attachment.digest))
-    queries.append(task_q.join(Task.addenda)
-                   .with_entities(Addendum.digest))
+    queries.append(task_q.join(Task.spoilers)
+                   .with_entities(Spoiler.digest))
 
     dataset_q = task_q.join(Task.datasets)
     queries.append(dataset_q.join(Dataset.managers)

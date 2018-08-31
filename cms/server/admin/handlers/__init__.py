@@ -72,8 +72,8 @@ from .task import \
     StatementHandler, \
     AddAttachmentHandler, \
     AttachmentHandler, \
-    AddAddendumHandler, \
-    AddendumHandler, \
+    AddSpoilerHandler, \
+    SpoilerHandler, \
     TaskListHandler, \
     RemoveTaskHandler
 from .dataset import \
@@ -190,8 +190,8 @@ HANDLERS = [
     (r"/task/([0-9]+)/statement/([0-9]+)", StatementHandler),
     (r"/task/([0-9]+)/attachments/add", AddAttachmentHandler),
     (r"/task/([0-9]+)/attachment/([0-9]+)", AttachmentHandler),
-    (r"/task/([0-9]+)/addenda/add", AddAddendumHandler),
-    (r"/task/([0-9]+)/addendum/([0-9]+)", AddendumHandler),
+    (r"/task/([0-9]+)/spoilers/add", AddSpoilerHandler),
+    (r"/task/([0-9]+)/spoiler/([0-9]+)", SpoilerHandler),
 
     # Datasets
 

@@ -117,8 +117,8 @@ class TaskAttachmentViewHandler(FileHandler):
         self.fetch(attachment, mimetype, filename)
 
 
-class TaskAddendumViewHandler(FileHandler):
-    """Shows an analysis addendum file of a task in the contest.
+class TaskSpoilerViewHandler(FileHandler):
+    """Shows an analysis spoiler file of a task in the contest.
 
     """
     @tornado.web.authenticated
@@ -129,14 +129,14 @@ class TaskAddendumViewHandler(FileHandler):
         if task is None:
             raise tornado.web.HTTPError(404)
 
-        if filename not in task.addenda:
+        if filename not in task.spoilers:
             raise tornado.web.HTTPError(404)
 
-        addendum = task.addenda[filename].digest
+        spoiler = task.spoilers[filename].digest
         self.sql_session.close()
 
         mimetype = get_type_for_file_name(filename)
         if mimetype is None:
             mimetype = 'application/octet-stream'
 
-        self.fetch(addendum, mimetype, filename)
+        self.fetch(spoiler, mimetype, filename)

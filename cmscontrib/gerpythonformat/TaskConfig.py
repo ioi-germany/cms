@@ -753,7 +753,7 @@ class TaskConfig(CommonConfig, Scope):
     @exported_function
     def attachment(self, localname, publicname):
         """
-        Add an attachment.
+        Add an attachment, which contestants can see when competing.
 
         localname (string): name of the file to add
 
@@ -763,9 +763,9 @@ class TaskConfig(CommonConfig, Scope):
         self.attachments[publicname] = os.path.abspath(localname)
 
     @exported_function
-    def addendum(self, localname, publicname):
+    def spoiler(self, localname, publicname):
         """
-        Add an addendum.
+        Add a spoiler, i.e. an attachment that contestants can only see during analysis mode.
 
         localname (string): name of the file to add
 
@@ -1313,7 +1313,7 @@ class TaskConfig(CommonConfig, Scope):
 
     def _makeallzip(self):
         """
-        Create and add an addendum containing all test cases.
+        Create and add a spoiler containing all test cases.
         """
         zipname = os.path.join(self.wdir, "allcases.zip")
         contents = {}
@@ -1321,7 +1321,7 @@ class TaskConfig(CommonConfig, Scope):
             contents["%d.in" % (i + 1)] = c.infile
             contents["%d.out" % (i + 1)] = c.outfile
         ZipRule(self.rules, zipname, contents).ensure()
-        self.addendum(zipname, "%s_all.zip" % self.name)
+        self.spoiler(zipname, "%s_all.zip" % self.name)
 
     def _makeinputzip(self):
         """
