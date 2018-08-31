@@ -47,24 +47,24 @@
         {% trans %}The analysis mode hasn't started yet.{% endtrans %}
         </p>
         <p>
-        {% trans start_time=contest.analysis_start|format_datetime_smart,
-                 stop_time=contest.analysis_stop|format_datetime_smart %}
+        {% trans start_time=participation.group.analysis_start|format_datetime_smart,
+                 stop_time=participation.group.analysis_stop|format_datetime_smart %}
           The analysis mode will start at {{ start_time }} and will end at {{ stop_time }}.
         {% endtrans %}
   {% elif phase == +2 %}
         {% trans %}The analysis mode is currently running.{% endtrans %}
         </p>
         <p>
-        {% trans start_time=contest.analysis_start|format_datetime_smart,
-                 stop_time=contest.analysis_stop|format_datetime_smart %}
+        {% trans start_time=participation.group.analysis_start|format_datetime_smart,
+                 stop_time=participation.group.analysis_stop|format_datetime_smart %}
           The analysis mode started at {{ start_time }} and will end at {{ stop_time }}.
         {% endtrans %}
   {% elif phase == +3 %}
         {% trans %}The analysis mode has already ended.{% endtrans %}
         </p>
         <p>
-        {% trans start_time=contest.analysis_start|format_datetime_smart,
-                 stop_time=contest.analysis_stop|format_datetime_smart %}
+        {% trans start_time=participation.group.analysis_start|format_datetime_smart,
+                 stop_time=participation.group.analysis_stop|format_datetime_smart %}
           The analysis mode started at {{ start_time }} and ended at {{ stop_time }}.
         {% endtrans %}
   {% endif %}
@@ -147,16 +147,16 @@
         {% trans %}By clicking on the button below you can start your time frame.{% endtrans %}
         {% trans %}Once you start, you can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.{% endtrans %}
     {% elif actual_phase == 0 %}
-        {% trans start_time=participation.group.starting_time|format_datetime_smart %}You started your time frame at {{ start_time }}.{% endtrans %}
+        {% trans start_time=participation.starting_time|format_datetime_smart %}You started your time frame at {{ start_time }}.{% endtrans %}
         {% trans %}You can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.{% endtrans %}
     {% elif actual_phase == +1 %}
-        {% trans start_time=participation.group.starting_time|format_datetime_smart %}You started your time frame at {{ start_time }} and you already finished it.{% endtrans %}
+        {% trans start_time=participation.starting_time|format_datetime_smart %}You started your time frame at {{ start_time }} and you already finished it.{% endtrans %}
         {% trans %}There's nothing you can do now.{% endtrans %}
     {% elif actual_phase == +2 %}
-        {% if participation.group.starting_time is none %}
+        {% if participation.starting_time is none %}
             {% trans %}You never started your time frame. Now it's too late.{% endtrans %}
         {% else %}
-            {% trans start_time=participation.group.starting_time|format_datetime_smart %}You started your time frame at {{ start_time }} and you already finished it.{% endtrans %}
+            {% trans start_time=participation.starting_time|format_datetime_smart %}You started your time frame at {{ start_time }} and you already finished it.{% endtrans %}
         {% endif %}
         {% trans %}There's nothing you can do now.{% endtrans %}
     {% endif %}
