@@ -355,6 +355,7 @@ class AddAttachmentHandler(BaseHandler):
         else:
             self.redirect(fallback_page)
 
+
 class AttachmentHandler(BaseHandler):
     """Delete an attachment.
 
