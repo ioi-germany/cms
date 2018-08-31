@@ -32,7 +32,7 @@ from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX
 from cms import FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
 from cms.db import Task, Statement, Testcase, Dataset, \
-    Attachment, Addendum, Manager, Submission, File, \
+    Attachment, Spoiler, Manager, Submission, File, \
     SubmissionResult
 from cms.grading.tasktypes import get_task_type
 from cms.grading.languagemanager import filename_to_language
@@ -567,7 +567,7 @@ class TaskConfig(CommonConfig, Scope):
     :ivar cases: List of the test cases
     :ivar testsubmissions: List of the test submissions
     :ivar attachments: Dictionary of the attachments
-    :ivar addenda: Dictionary of the addenda
+    :ivar spoilers: Dictionary of the spoilers
     :ivar saved: List of the saved (public) test cases
 
     This object is exported as a variable called :samp:`task`.
@@ -604,7 +604,7 @@ class TaskConfig(CommonConfig, Scope):
         self.output_generator = None
         self.testsubmissions = []
         self.attachments = {}
-        self.addenda = {}
+        self.spoilers = {}
         self.managers = {}
         self.tasktype = None
         self.saved = []
@@ -772,7 +772,7 @@ class TaskConfig(CommonConfig, Scope):
         publicname (string): file name displayed in CMS
 
         """
-        self.addenda[publicname] = os.path.abspath(localname)
+        self.spoilers[publicname] = os.path.abspath(localname)
 
     """
     **Task types**
@@ -1401,7 +1401,7 @@ class TaskConfig(CommonConfig, Scope):
             tdb.submission_format = [
                 "%s.%%l" % self.name]
         tdb.attachments = {}
-        tdb.addenda = {}
+        tdb.spoilers = {}
         tdb.statements = {}
         primary_statements = []
 
@@ -1424,12 +1424,12 @@ class TaskConfig(CommonConfig, Scope):
                 "Attachment %s to task %s" % (name, self.name))
             tdb.attachments[name] = Attachment(filename=name, digest=digest)
 
-        # Add addenda
-        for name, file in iteritems(self.addenda):
+        # Add spoilers
+        for name, file in iteritems(self.spoilers):
             digest = file_cacher.put_file_from_path(
                 file,
-                "Addendum %s to task %s" % (name, self.name))
-            tdb.addenda[name] = Addendum(filename=name, digest=digest)
+                "Spoiler %s to task %s" % (name, self.name))
+            tdb.spoilers[name] = Spoiler(filename=name, digest=digest)
 
         tdb.active_dataset = self._makedataset(file_cacher, tdb)
 

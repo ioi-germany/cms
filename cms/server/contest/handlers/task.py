@@ -122,7 +122,7 @@ class TaskSpoilerViewHandler(FileHandler):
 
     """
     @tornado.web.authenticated
-    @actual_phase_required(3, 3)
+    @actual_phase_required(3)
     @multi_contest
     def get(self, task_name, filename):
         task = self.get_task(task_name)

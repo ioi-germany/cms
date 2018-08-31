@@ -34,7 +34,7 @@ import sys
 from cmscontrib.gerpythonformat.ContestConfig import ContestConfig
 from cmscontrib.gerpythonformat.LocationStack import chdir
 from cms import utf8_decoder, ServiceCoord
-from cms.db import Attachment, Addendum, Contest, Dataset, Group, Manager, \
+from cms.db import Attachment, Spoiler, Contest, Dataset, Group, Manager, \
     Participation, SessionGen, Statement, Submission, \
     Task, Team, Testcase, User
 from cms.db.filecacher import FileCacher
