@@ -729,7 +729,7 @@ class TaskConfig(CommonConfig, Scope):
 
         return (string): LaTeX string
         """
-        return "${}\,$MB".format(self._memorylimit)
+        return "${}\,$MiB".format(self._memorylimit)
 
     @exported_function
     def statement(self, s, language="en", primary=None):
