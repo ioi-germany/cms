@@ -272,34 +272,58 @@ The usual way to specify subtasks, groups and test cases is the following::
     chk = compile("checker")  # Compile chk.cpp
     checker(chk.p(0))  # Add the command "checker 0" as a global test case checker
     # Create the public subtask
-    with subtask("Public", "public", public=True):  # Create a public subtask
-        with group(100):  # Group with 100 points
-            testcase(explicit("1.in"))
+    with subtask("Public", "public", sample=True):  # Create a subtask with sample test cases
+        with group(1):  # Group with 1 point
+            testcase(explicit("1.in"), save=True)  # save=True saves the test case to a zip file attachment for the contestants and displays it in the task statement
+        with group(1):  # Group with 1 point
+            testcase(explicit("2.in"), save=True)  # save=True saves the test case to a zip file attachment for the contestants and displays it in the task statement
     # Create the first subtask
     with subtask("Subtask 1", "small"):  # "small" is the internal name of this subtask
         checker(chk.p(1))  # Add the command "checker 1" as a test case checker for this subtask
         with group(20):  # Group with 20 points
-            testcase(gen.i(1, 5), feedback=True)
+            testcase(gen.i(1, 5), feedback=True)  # feedback=True means that this test case will be used for partial feedback
             testcase(gen.i(2, 7))
         with group(20):  # Group with 20 points
             testcase(gen.i(3, 9))
-            testcase(gen.i(4, 11))
-    partial_feedback()  # Generate detailed feedback subtasks
+            testcase(gen.i(4, 11), feedback=True)
 
 The :py:meth:`.TaskConfig.testcase` method generates a test case (using :py:meth:`.make_testcase`) and adds it to the current group (w.r.t. the :samp:`with` statements). If you have already generated a test case using :py:meth:`.make_testcase`, you can use :py:meth:`.TaskConfig.add_testcase` to add it to the current group.
 
-Detailed (partial) feedback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Feedback modes
+--------------
 
-We can give partial feedback by creating a (public) detailed feedback subtask containing a subset of the official test cases. These detailed feedback subtasks can be automatically created using :py:meth:`.partial_feedback` after you have marked the wanted test cases by handing :samp:`feedback=True` to :py:meth:`.TaskConfig.add_testcase` (or :py:meth:`.TaskConfig.testcase`).
+The feedback mode (specified in the call to :py:meth:`.ContestConfig.task`) specifies how much information the contestants receive during the contest about their score and the outcomes of the test cases.
+
+The contestants always get full information (including time and memory usage) about the sample subtask. For all other subtask, the amount of information depends on the feedback mode:
+
+No feedback
+^^^^^^^^^^^
+
+No further information is shown.
+
+Partial feedback
+^^^^^^^^^^^^^^^^
+
+Only the outcomes of the test cases added with :samp:`feedback=True` are shown to the contestants.
+
+Time and memory usage are shown.
 
 Full feedback
 ^^^^^^^^^^^^^
 
-We can give full feedback by calling :py:meth:`.full_feedback`.
+The contestants get full information about all the outcomes of all test cases.
+
+Time and memory usage are shown.
+
+Restricted feedback
+^^^^^^^^^^^^^^^^^^^
+
+In each group, only the first test case with the least score is shown.
+
+Time and memory usage are hidden.
 
 Test case checkers
-^^^^^^^^^^^^^^^^^^
+------------------
 
 To check if your test cases are all valid, you can specify test case checkers using :py:meth:`.checker`. You can add checkers to the task, to a subtask or to a group (the scope is again determined using the :samp:`with` statements). A test case checker is run whenever a test case is added to a group (not when it is created!). It receives the input file through stdin and the output file name is prepended to the list of command line arguments. The checker should return with an exit code different from 0 to indicate that the case is invalid.
 
@@ -311,7 +335,7 @@ Constraints
 You can add simple constraints (e.g., 5 <= N <= 100) to the task, a subtask or a group using :py:meth:`.constraint`. They are automatically provided to both the task statement and test case checkers.
 
 Referencing test cases
-^^^^^^^^^^^^^^^^^^^^^^
+----------------------
 
 For test submission result specifications (see below), you need some way to reference test cases. Doing so by code name (a number) can be cumbersome, in particular if you decide to add test cases later. For this reason, you can give subtasks, groups and test cases internal (short) names. If you have a subtask called "small" containing a group called "nastycases", then you can reference the second test case in this group by :samp:`task.small.nastycases.t1` (notice the 0-based indexing!). The fact that we add attributes of the given names to task/subtask/group objects, unfortunately makes this a bit fragile, so you have to choose reasonable names that aren't attributes, yet. This name-based referencing can also be found in the :file:`subtasks` output directory (you can find the test cases both in :file:`subtasks` and :file:`cases`).
 

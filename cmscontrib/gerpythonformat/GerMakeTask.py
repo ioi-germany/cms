@@ -78,7 +78,7 @@ class GerMakeTask:
                                 os.path.join(self.wdir, "c.py"))
                 contestconfig._readconfig("c.py")
                 contestconfig._task(
-                    self.task, contestconfig._dummy_feedback, self.minimal)
+                    self.task, contestconfig.full_feedback, self.minimal)
 
                 if not self.minimal:
                     cdb = contestconfig._makecontest()

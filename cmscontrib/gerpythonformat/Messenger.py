@@ -23,7 +23,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import division
 
-import codecs
+#import codecs
 from functools import wraps
 import os
 import sys

@@ -209,7 +209,7 @@ class SubmissionStatusHandler(ContestHandler):
                 self._("Evaluated"), self._("details"))
 
             score_type = task.active_dataset.score_type_object
-            if score_type.max_public_score > 0:
+            if True:
                 data["max_public_score"] = \
                     round(score_type.max_public_score,
                           task.score_precision)
@@ -219,7 +219,7 @@ class SubmissionStatusHandler(ContestHandler):
                     sr.public_score, score_type.max_public_score,
                     sr.public_score_details, task.score_precision,
                     translation=self.translation)
-            if submission.token is not None:
+            if submission.token is not None or self.r_params["actual_phase"] == 3 or score_type.feedback() == "full":
                 data["max_score"] = \
                     round(score_type.max_score, task.score_precision)
                 data["score"] = \
@@ -259,7 +259,7 @@ class SubmissionDetailsHandler(ContestHandler):
         if sr is not None:
             if submission.is_unit_test():
                 details = sr.unit_test_score_details
-            elif submission.tokened():
+            elif submission.tokened() or self.r_params["actual_phase"] == 3 or score_type.feedback() == "full":
                 details = sr.score_details
             else:
                 details = sr.public_score_details

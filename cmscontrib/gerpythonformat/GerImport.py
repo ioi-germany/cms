@@ -29,19 +29,15 @@ import logging
 import os
 import resource
 import shutil
-import sys
 
 from cmscontrib.gerpythonformat.ContestConfig import ContestConfig
 from cmscontrib.gerpythonformat.LocationStack import chdir
 from cms import utf8_decoder, ServiceCoord
-from cms.db import Attachment, Spoiler, Contest, Dataset, Group, Manager, \
-    Participation, SessionGen, Statement, Submission, \
-    Task, Team, Testcase, User
+from cms.db import Contest, Dataset, Participation, SessionGen, Submission, Task, Team, User
 from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
-from cmscontrib.importing import _update_object
 from cms.io import Service
-from cmscontrib.importing import update_contest, update_task, update_user, update_group, update_team, update_participation, _update_list_with_key, _copy, _to_delete
+from cmscontrib.importing import update_contest, update_task, update_user, update_team, update_participation, _update_list_with_key, _copy, _to_delete
 
 from six import iteritems
 

@@ -226,14 +226,9 @@ $(document).ready(function () {
 {% endif %}
         <col class="status"/>
 {% if score_type is defined %}
-    {% if 0 < score_type.max_public_score < score_type.max_score %}
         <col class="public_score"/>
         <col class="total_score"/>
         {% set num_cols = num_cols + 2 %}
-    {% else %}
-        <col class="total_score"/>
-        {% set num_cols = num_cols + 1 %}
-    {% endif %}
 {% endif %}
 {% set any_unit_tests = submissions|any("is_unit_test") %}
 {% if any_unit_tests %}
@@ -261,12 +256,8 @@ $(document).ready(function () {
 {% endif %}
             <th class="status">{% trans %}Status{% endtrans %}</th>
 {% if score_type is defined %}
-    {% if 0 < score_type.max_public_score < score_type.max_score %}
-            <th class="public_score">{% trans %}Public score{% endtrans %}</th>
-            <th class="total_score">{% trans %}Total score{% endtrans %}</th>
-    {% else %}
-            <th class="total_score">{% trans %}Score{% endtrans %}</th>
-    {% endif %}
+            <th class="public_score">{{ score_type.public_score_header }}</th>
+            <th class="total_score">{{ score_type.private_score_header }}</th>
 {% endif %}
 {% if any_unit_tests %}
             <th class="unit_test">{{ _("Unit test") }}</th>

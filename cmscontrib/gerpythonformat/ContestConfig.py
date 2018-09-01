@@ -33,7 +33,6 @@ import shutil
 from datetime import datetime, timedelta
 from importlib import import_module
 import pytz
-import json
 
 
 class MyGroup(object):
@@ -114,25 +113,18 @@ class ContestConfig(CommonConfig):
 
         # Export variables
         self.exported["contest"] = self
-        self.exported["no_feedback"] = ("no", True, 
-                                        TaskConfig.no_feedback)
-        self.exported["partial_feedback"] = ("partial", False,
-                                             TaskConfig.partial_feedback)
-        self.exported["full_feedback"] = ("full", True,
-                                          TaskConfig.full_feedback)
-        self.exported["restricted_feedback"] = ("full", False,
-                                                TaskConfig.full_feedback)
-        self.exported["token_feedback"] = self._token_feedback
-        self.exported["std_token_feedback"] = self._token_feedback(3, 2)
+        self.exported["no_feedback"] = self.no_feedback = ("no", True)
+        self.exported["partial_feedback"] = self.partial_feedback = ("partial", True)
+        self.exported["full_feedback"] = self.full_feedback = ("full", True)
+        self.exported["restricted_feedback"] = self.restricted_feedback = ("full", False)
 
-        # Feedback for minimal mode (inaccessible from config.py)
-        self._dummy_feedback = ("dummy", False, lambda _: None)
+        # TODO
+        #self.exported["token_feedback"] = self._token_feedback
+        #self.exported["std_token_feedback"] = self._token_feedback(3, 2)
 
         # Default submission limits
         self.submission_limits(None, None)
         self.user_test_limits(None, None)
-
-        self._analysis = False
 
         # a standard tokenwise comparator (specified here so that it has to be
         # compiled at most once per contest)
@@ -177,7 +169,7 @@ class ContestConfig(CommonConfig):
                                   token before he can use another token
 
         total (int): maximum number of tokens the user can use in total
-        
+
         all_cases (boolean): should we show the results of all cases?
                              (as opposed to restricted feedback)
 
@@ -395,7 +387,7 @@ class ContestConfig(CommonConfig):
         s (unicode): task name; the task description has to reside in the
                      folder with the same name
         feedback:    type of feedback (one of the variables no_feedback,
-                     full_feedback, partial_feedback)
+                     partial_feedback, full_feedback, restricted_feedback)
         minimal (bool): only try to compile statement?
 
         """
@@ -424,7 +416,6 @@ class ContestConfig(CommonConfig):
                 for f in self.ontasks:
                     f(taskconfig)
                 taskconfig._readconfig("config.py")
-                taskconfig._activate_feedback()
                 taskconfig._printresult()
                 self.tasks[s] = taskconfig
             if minimal:
@@ -441,7 +432,7 @@ class ContestConfig(CommonConfig):
         s (unicode): task name; the task description has to reside in the
                      folder with the same name
         feedback:    type of feedback (one of the variables no_feedback,
-                     full_feedback, partial_feedback)
+                     partial_feedback, full_feedback, restricted_feedback)
 
         """
         self._task(s, feedback, False)
@@ -455,25 +446,6 @@ class ContestConfig(CommonConfig):
 
         """
         self._mytestuser = u
-
-    @exported_function
-    def analysis(self):
-        """
-        Activate analysis mode for all users (subject to the start and end
-        times specified for the corresponding user groups).
-        This has the following consequences:
-         a) The token modes for the contest and for all tasks are set to
-            'infinite'.
-         b) The feedback level for all tasks is set to "full".
-         c) All test cases are offered for download.
-
-        WARNING: Be careful with user groups: Users that shall not be allowed
-        to participate in the analysis mode must not be able to log in! Set
-        their start and end time to a point in the far future.
-
-        WARNING: Export the scores before activating the analysis mode!
-        """
-        self._analysis = True
 
     def short_path(self, f):
         """
@@ -501,8 +473,6 @@ class ContestConfig(CommonConfig):
         cdb.timezone = self._timezone
         cdb.allowed_localizations = self._allowed_localizations
         cdb.languages = self._languages
-        if self._analysis:
-            self.infinite_tokens()
         self._set_tokens(cdb)
         cdb.max_submission_number = self.max_submission_number
         cdb.min_submission_interval = self.min_submission_interval

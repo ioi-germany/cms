@@ -59,9 +59,10 @@ class SubtaskGroup(ScoreType):
     N_("N/A")
     TEMPLATE = """\
 {% if not details["unit_test"] %}{# Normal submission #}
+{% if details["evaluated"] %}
 {% for st in details["subtasks"] %}
-    {% set show_full_feedback = (feedback_level == FEEDBACK_LEVEL_FULL or not st["for_private_score"]) %}
-    {% if "score" in st and "max_score" in st %}
+    {% with %}
+        {% set show_full_feedback = (feedback_level == FEEDBACK_LEVEL_FULL or st["sample"]) %}
         {% if st["score"] >= st["max_score"] %}
 <div class="subtask correct">
         {% elif st["score"] <= 0.0 %}
@@ -74,18 +75,9 @@ class SubtaskGroup(ScoreType):
             {{ st["name"] }}
         </span>
         <span class="score">
-            {% if st["public"] and not st["for_public_score"] %}
-                {% if st["score"] >= st["max_score"] %}
-                    OKAY
-                {% elif st["score"] <= 0.0 %}
-                    FAILED
-                {% else %}
-                    PARTIALLY
-                {% endif %}
-            {% else %}
-                {{ st["score"]|round(2)|format_decimal }}
-                / {{ st["max_score"]|format_decimal }}
-            {% endif %}
+            {% if st["sample"] %}({% endif %}
+            {{ st["score"]|round(2)|format_decimal }} / {{ st["max_score"]|format_decimal }}
+            {% if st["sample"] %}){% endif %}
         </span>
     </div>
     <div class="subtask-body">
@@ -105,10 +97,11 @@ class SubtaskGroup(ScoreType):
             <tbody>
         {% for group in st["groups"] %}
             {% with %}
+                {% set grouploop = loop %}
                 {% if show_full_feedback %}
                     {% set shown_cases = group["testcases"] %}
                 {% else %}
-                    {% set shown_cases = group["first_worst_testcase"] %}
+                    {% set shown_cases = group["first_worst_testcases"] %}
                 {% endif %}
                 {% for tc in shown_cases %}
                     {% if tc["outcome"] == "Correct" %}
@@ -123,14 +116,14 @@ class SubtaskGroup(ScoreType):
                     <td class="details">{{ tc["text"]|format_status_text }}</td>
                     {% if show_full_feedback %}
                     <td class="execution-time">
-                        {% if "time" in tc and tc["time"] is not none %}
+                        {% if tc["time"] is not none %}
                         {{ tc["time"]|format_duration }}
                         {% else %}
                         {% trans %}N/A{% endtrans %}
                         {% endif %}
                     </td>
                     <td class="memory-used">
-                        {% if "memory" in tc and tc["memory"] is not none %}
+                        {% if tc["memory"] is not none %}
                         {{ tc["memory"]|format_size }}
                         {% else %}
                         {% trans %}N/A{% endtrans %}
@@ -138,16 +131,14 @@ class SubtaskGroup(ScoreType):
                     </td>
                     {% endif %}
                     {% if loop.first %}
-                    <td class="group" rowspan="{{ shown_cases|length }}">{{ group["number"] }}</td>
+                    <td class="group" rowspan="{{ shown_cases|length }}">{{ grouploop.index }}</td>
                     {% endif %}
                 </tr>
                 {% endfor %}
                 {% if shown_cases|length == 0 and not show_full_feedback %}
                 <tr class="correct">
-                    <td class="idx"></td>
-                    <td class="outcome">{% trans %}All correct{% endtrans %}</td>
-                    <td class="details"></td>
-                    <td class="group">{{ group["number"] }}</td>
+                    <td class="outcome" colspan="3">{% trans %}All correct{% endtrans %}</td>
+                    <td class="group">{{ grouploop.index }}</td>
                 </tr>
                 {% endif %}
             {% endwith %}
@@ -156,125 +147,79 @@ class SubtaskGroup(ScoreType):
         </table>
     </div>
 </div>
-    {% endif %}
+    {% endwith %}
 {% endfor %}
+{% endif %}
 {% else %}{# Unit test #}
-{% if "public_score_okay" in details %}
-{% if details["public_score_okay"] == True %}
-    <div class="subtask correct">
-        <div class="subtask-head">
-            <span class="title" style="margin-top:-2px">
-                Public score
-            </span>
-            <span class="score">
-                OKAY
-            </span>
-        </div>
-        <div class="subtask-body">
-            <table class="table table-bordered table-striped">
-                <tr>
-                <td>
-                    Expected: {{details["wanted_public"]}}
-                </td>
-                <td>
-                    Got: {{details["public"]}}
-                </td>
-                </tr>
-            </table>
-        </div>
+<div class="subtask {% if details["sample_score_okay"] %}correct{% else %}notcorrect{% endif %}">
+    <div class="subtask-head">
+        <span class="title" style="margin-top:-2px">
+            Sample score
+        </span>
+        <span class="score">
+            {% if details["sample_score_okay"] %}OKAY{% else %}FAILED{% endif %}
+        </span>
     </div>
-{% elif details["public_score_okay"] == False %}
-    <div class="subtask notcorrect">
-        <div class="subtask-head">
-            <span class="title" style="margin-top:-2px">
-                Public score
-            </span>
-            <span class="score">
-                FAILED
-            </span>
-        </div>
-        <div class="subtask-body">
-            <table class="table table-bordered table-striped">
-                <tr>
-                <td>
-                    Expected: {{details["wanted_public"]}}
-                </td>
-                <td>
-                    Got: {{details["public"]}}
-                </td>
-                </tr>
-            </table>
-        </div>
+    <div class="subtask-body">
+        <table class="table table-bordered table-striped">
+            <tr>
+            <td>
+                Expected: {{details["expected_sample_score"]}}
+            </td>
+            <td>
+                Got: {{details["sample_score"]}}
+            </td>
+            </tr>
+        </table>
     </div>
-{% else %}
-    <div class="subtask correct">
-        <div class="subtask-head">
-            <span class="title" style="margin-top:-2px">
-                Public score
-            </span>
-            <span class="score">
-                ———
-            </span>
-        </div>
-        <div class="subtask-body">
-            <table class="table table-bordered table-striped">
-                <tr><td>
-                    This is a full feedback task, hence there is no
-                    such thing as a public score.
-                </td></tr>
-            </table>
-        </div>
+</div>
+{% if details["partial_feedback_enabled"] %}
+<div class="subtask {% if details["partial_feedback_score_okay"] %}correct{% else %}notcorrect{% endif %}">
+    <div class="subtask-head">
+        <span class="title" style="margin-top:-2px">
+            Partial feedback score
+        </span>
+        <span class="score">
+            {% if details["partial_feedback_score_okay"] %}OKAY{% else %}FAILED{% endif %}
+        </span>
     </div>
+    <div class="subtask-body">
+        <table class="table table-bordered table-striped">
+            <tr>
+            <td>
+                Expected: {{details["expected_partial_feedback_score"]}}
+            </td>
+            <td>
+                Got: {{details["partial_feedback_score"]}}
+            </td>
+            </tr>
+        </table>
+    </div>
+</div>
 {% endif %}
-{% if details["private_score_okay"] %}
-    <div class="subtask correct">
-        <div class="subtask-head">
-            <span class="title" style="margin-top:-2px">
-                Total score
-            </span>
-            <span class="score">
-                OKAY
-            </span>
-        </div>
-        <div class="subtask-body">
-            <table class="table table-bordered table-striped">
-                <tr>
-                <td>
-                    Expected: {{details["wanted_private"]}}
-                </td>
-                <td>
-                    Got: {{details["private"]}}
-                </td>
-                </tr>
-            </table>
-        </div>
+<div class="subtask {% if details["final_score_okay"] %}correct{% else %}notcorrect{% endif %}">
+    <div class="subtask-head">
+        <span class="title" style="margin-top:-2px">
+            Final score
+        </span>
+        <span class="score">
+            {% if details["final_score_okay"] %}OKAY{% else %}FAILED{% endif %}
+        </span>
     </div>
-{% else %}
-    <div class="subtask notcorrect">
-        <div class="subtask-head">
-            <span class="title" style="margin-top:-2px">
-                Total score
-            </span>
-            <span class="score">
-                FAILED
-            </span>
-        </div>
-        <div class="subtask-body">
-            <table class="table table-bordered table-striped">
-                <tr>
-                <td>
-                    Expected: {{details["wanted_private"]}}
-                </td>
-                <td>
-                    Got: {{details["private"]}}
-                </td>
-                </tr>
-            </table>
-        </div>
+    <div class="subtask-body">
+        <table class="table table-bordered table-striped">
+            <tr>
+            <td>
+                Expected: {{details["expected_final_score"]}}
+            </td>
+            <td>
+                Got: {{details["final_score"]}}
+            </td>
+            </tr>
+        </table>
     </div>
-{% endif %}
+</div>
 <br><br>
-{% endif %}
 
 {% for st in details["subtasks"] %}
     {% if st["status"][0] == 1337%}
@@ -371,134 +316,159 @@ class SubtaskGroup(ScoreType):
     def feedback(self):
         return self.parameters["feedback"]
 
-    def unit_test_expected_scores(self, submission_info):
-        submission_info = json.loads(submission_info)
-
-        public = submission_info.get("expected_public_score", 0)
-        private = submission_info.get("expected_score", 0)
-
-        if self.feedback() == "partial":
-            public = submission_info.get("expected_partial_score", 0)
-
-        return public, private
-
-    def unit_test_expected_scores_info(self, submission_info):
-        submission_info = json.loads(submission_info)
-
-        public = submission_info.get("expected_public_score_info", 0)
-        private = submission_info.get("expected_score_info", 0)
-
-        if self.feedback() == "partial":
-            public = submission_info.get("expected_partial_score_info", 0)
-
-        return public, private
-
     def max_scores(self):
         """Compute the maximum score of a submission.
 
         See the same method in ScoreType for details.
 
         """
-        private_score = 0.0
-        public_score = 0.0
+        final_score = 0.0
+        sample_score = 0.0
         headers = list()
 
-        for subtask in self.parameters["tcinfo"]:
-            st_score = 0
+        for subtask in self.parameters["subtasks"]:
+            st_score = 0.0
             for group in subtask["groups"]:
                 st_score += group["points"]
-            if subtask["for_public_score"]:
-                public_score += st_score
-            if subtask["for_private_score"]:
-                private_score += st_score
-            headers += ["%s (%g)" % (subtask["name"], st_score)]
+            if subtask["sample"]:
+                sample_score += st_score
+            else:
+                final_score += st_score
+                headers += ["%s (%g)" % (subtask["name"], st_score)]
+
+        # TODO Also show sample subtasks and detailed feedback in RWS?
+
+        private_score = final_score
+        if self.parameters["feedback"] in ["full", "no"]:
+            public_score = sample_score
+        elif self.parameters["feedback"] == "partial":
+            public_score = final_score
+        else:
+            raise Exception("Unknown feedback type '{}'".format(
+                self.parameters["feedback"]))
 
         return private_score, public_score, headers
 
-    def _compute_score(self, submission_result, public):
-        """Compute the score of a normal submission.
+    def score_column_headers(self):
+        """Returns the headers of the two (public, private) score columns in
+        the submissions list in CWS.
 
-        See the same method in ScoreType for details.
+        return (string, string): public score header, private score header
 
         """
-        # Actually, this means it didn't even compile!
-        if not submission_result.evaluated():
-            if public:
-                return 0.0, {"unit_test": False, "subtasks": []}
-            else:
-                return 0.0, {"unit_test": False, "subtasks": []}, \
-                    ["%lg" % 0.0 for _ in self.parameters["tcinfo"]]
+        if self.parameters["feedback"] in ["full", "no"]:
+            public_score_header = "Sample score"
+        elif self.parameters["feedback"] == "partial":
+            public_score_header = "Partial feedback score"
+        else:
+            raise Exception("Unknown feedback type '{}'".format(
+                self.parameters["feedback"]))
+
+        private_score_header = "Final score"
+
+        return public_score_header, private_score_header
+
+    def _compute_score(self, submission_result, score_type):
+        assert score_type in ["sample", "partial", "final"]
+
+        evaluated = submission_result.evaluated()
 
         evaluations = dict((ev.codename, ev)
                            for ev in submission_result.evaluations)
-        subtasks = []
-        score = 0
-        if not public:
-            ranking_details = []
+        score = 0.0
+        details_sts = []
 
-        for subtask in self.parameters["tcinfo"]:
-            if subtask["public"] or not public:  # Shakespeare has been here
-                st_score = 0
-                st_maxscore = 0
-                groups = []
-                for groupnr, group in enumerate(subtask["groups"]):
-                    # The minimum (relative) score of testcases in this group.
-                    gr_relative_score = float(1.0)
-                    # The first test case in this group with minimum score.
-                    # None if all test cases get full score.
-                    first_worst_testcase_idx = None
-                    for idx in group["cases"]:
-                        tc_relative_score = float(evaluations[idx].outcome)
-                        if tc_relative_score < gr_relative_score:
-                            gr_relative_score = tc_relative_score
-                            first_worst_testcase_idx = idx
-                    gr_score = gr_relative_score * group["points"]
+        for subtask in self.parameters["subtasks"]:
+            if score_type != "sample" or subtask["sample"]:
+                st_max_score = 0.0
+                st_score = 0.0
+                details_grs = []
+                for group in subtask["groups"]:
+                    gr_max_score = group["points"]
+
+                    used_cases = [
+                        testcase
+                        for testcase in group["testcases"]
+                        if score_type == "final" \
+                            or subtask["sample"] \
+                            or testcase["in_partial_feedback"]
+                        ]
+
+                    if evaluated:
+                        gr_relative_score = 1.0
+                        first_worst_itc = None
+                        for itc, testcase in enumerate(used_cases):
+                            codename = testcase["codename"]
+                            tc_relative_score = \
+                                float(evaluations[codename].outcome)
+                            if gr_relative_score > tc_relative_score:
+                                gr_relative_score = tc_relative_score
+                                first_worst_itc = itc
+                        gr_score = gr_relative_score * gr_max_score
+                    else:
+                        gr_score = 0.0
+
+                    st_max_score += gr_max_score
                     st_score += gr_score
-                    st_maxscore += group["points"]
 
-                    testcases = []
-                    first_worst_testcase = []
-                    for casenr, idx in enumerate(group["cases"]):
-                        oc = self.get_public_outcome(
-                            float(evaluations[idx].outcome))
-                        tc = {"number_in_group": casenr + 1,
-                              "outcome": oc,
-                              "text": evaluations[idx].text,
-                              "time": evaluations[idx].execution_time,
-                              "memory": evaluations[idx].execution_memory,
-                              }
+                    if evaluated:
+                        details_tcs = []
+                        details_first_worst_tcs = []
+                        for itc, testcase in enumerate(used_cases):
+                            codename = testcase["codename"]
+                            outcome = self.get_public_outcome(
+                                float(evaluations[codename].outcome))
+                            details_tc = {
+                                "number_in_group": itc + 1,
+                                "outcome": outcome,
+                                "text": evaluations[codename].text,
+                                "time": evaluations[codename].execution_time,
+                                "memory": evaluations[codename].execution_memory,
+                                }
+                            details_tcs.append(details_tc)
+                            if itc == first_worst_itc:
+                                details_first_worst_tcs.append(details_tc)
 
-                        testcases.append(tc)
-                        if idx == first_worst_testcase_idx:
-                            first_worst_testcase.append(tc)
+                        details_gr = {
+                            "score": gr_score,
+                            "max_score": gr_max_score,
+                            "testcases": details_tcs,
+                            "first_worst_testcases": details_first_worst_tcs,
+                            }
+                        details_grs.append(details_gr)
 
-                    groups.append({
-                        "number": groupnr + 1,
-                        "testcases": testcases,
-                        "first_worst_testcase": first_worst_testcase,
-                    })
-
-                if (public and subtask["for_public_score"]) or \
-                   (not public and subtask["for_private_score"]):
+                if score_type == "sample" or not subtask["sample"]:
                     score += st_score
-                subtasks.append({
-                    "public": subtask["public"],  # TODO depends on public?
-                    "for_public_score": subtask["for_public_score"],
-                    "for_private_score": subtask["for_private_score"],
-                    "name": subtask["name"],
-                    "score": st_score,
-                    "max_score": st_maxscore,
-                    "groups": groups,
-                })
-                if not public:
-                    ranking_details.append("%lg" % round(st_score, 2))
 
-        details = {"unit_test": False, "subtasks": subtasks}
+                if score_type == "partial" and not subtask["sample"]:
+                    name = subtask["name"] + " (partial feedback)"
+                else:
+                    name = subtask["name"]
 
-        if public:
-            return score, details
-        else:
-            return score, details, ranking_details
+                if evaluated:
+                    details_sts.append({
+                        "name": name,
+                        "sample": subtask["sample"],
+                        "score": st_score,
+                        "max_score": st_max_score,
+                        "groups": details_grs,
+                        })
+                else:
+                    details_sts.append({
+                        "name": name,
+                        "sample": subtask["sample"],
+                        "score": st_score,
+                        "max_score": st_max_score,
+                        })
+
+        details = {
+            "unit_test": False,
+            # Whether compilation succeeded
+            "evaluated": evaluated,
+            "subtasks": details_sts,
+            }
+
+        return score, details
 
     def compute_score(self, submission_result):
         """Compute the score of a normal submission.
@@ -506,13 +476,29 @@ class SubtaskGroup(ScoreType):
         See the same method in ScoreType for details.
 
         """
-        public_score, public_score_details = \
-            self._compute_score(submission_result, True)
-        score, score_details, ranking_score_details = \
-            self._compute_score(submission_result, False)
+        if self.parameters["feedback"] in ["full", "no"]:
+            public_score, public_score_details = \
+                self._compute_score(submission_result, "sample")
+        elif self.parameters["feedback"] == "partial":
+            public_score, public_score_details = \
+                self._compute_score(submission_result, "partial")
+        else:
+            raise Exception("Unknown feedback type '{}'".format(
+                self.parameters["feedback"]))
+
+        score, score_details = \
+            self._compute_score(submission_result, "final")
+
+        ranking_score_details = [
+            "%lg" % round(subtask["score"], 2)
+            for subtask in score_details["subtasks"]
+            if not subtask["sample"]
+            ]
+
         return score, score_details, \
             public_score, public_score_details, \
             ranking_score_details
+
 
     def compute_unit_test_score(self, submission_result,
                                 submission_info):
@@ -537,158 +523,159 @@ class SubtaskGroup(ScoreType):
             return {"unit_test": True,
                     "verdict": (-1, "Not a Unit Test")}
 
-        wanted_public, wanted_private = \
-            self.unit_test_expected_scores(submission_info)
-        wanted_public_info, wanted_private_info = \
-            self.unit_test_expected_scores_info(submission_info)
-
         submission_info = json.loads(submission_info)
 
-        # Actually, this means it didn't even compile!
-        if not submission_result.evaluated():
-            return {"unit_test": True, 'subtasks': [],
-                    'verdict': (-1, "Compilation failed")}
-
-        evaluations = dict((ev.codename, ev)
-                           for ev in submission_result.evaluations)
-        subtasks = []
-        public_score = 0
-        private_score = 0
+        expected_sample_score = submission_info["expected_sample_score"]
+        expected_partial_feedback_score = submission_info["expected_partial_feedback_score"]
+        expected_final_score = submission_info["expected_final_score"]
+        expected_sample_score_info = submission_info["expected_sample_score_info"]
+        expected_partial_feedback_score_info = submission_info["expected_partial_feedback_score_info"]
+        expected_final_score_info = submission_info["expected_final_score_info"]
 
         expectations = {tuple(json.loads(key)): val for key, val
                         in iteritems(submission_info["expected"])}
         case_expectations = submission_info["expected_case"]
         possible_task = expectations[()]
-        subtasks_failed = False
 
-        for subtask in self.parameters["tcinfo"]:
-            subtasks.append({"name": subtask["name"], "groups": []})
+        # Actually, this means it didn't even compile
+        if not submission_result.evaluated():
+            subtasks_failed = True
+            subtasks = []
+        else:
+            evaluations = dict((ev.codename, ev)
+                            for ev in submission_result.evaluations)
 
-            # There are no expectations for partial feedback subtasks
-            if subtask["partial"]:
-                possible_subtask = []
-            else:
+            subtasks = []
+            subtasks_failed = False
+
+            for subtask in self.parameters["subtasks"]:
+                subtasks.append({
+                    "name": subtask["name"],
+                    "groups": []
+                    })
+
                 possible_subtask = expectations[tuple(subtask["key"])]
 
-            group_score = 0
+                worst_group = (1, "okay")
+                group_status = []
 
-            worst_group = (1, "okay")
-            group_status = []
-
-            for i, g in enumerate(subtask["groups"]):
-                # There are no expectations for partial feedback subtasks
-                if subtask["partial"]:
-                    possible_group = []
-                else:
+                for i, g in enumerate(subtask["groups"]):
                     possible_group = expectations[tuple(g["key"])]
 
-                possible = possible_task + possible_subtask + possible_group
+                    possible = possible_task + possible_subtask + possible_group
 
-                subtasks[-1]["groups"].append({"verdict": (42, ""),
-                                               "cases": []})
-                min_f = 1.0  # Minimum "score" of a test case in this group
+                    subtasks[-1]["groups"].append({"verdict": (42, ""),
+                                                "cases": []})
+                    min_f = 1.0  # Minimum "score" of a test case in this group
 
-                cases_failed = False
+                    cases_failed = False
 
-                # List of all results of all test cases in this group
-                case_results = []
-                extended_results = []
+                    # List of all results of all test cases in this group
+                    case_results = []
+                    extended_results = []
 
-                for idx in g["cases"]:
-                    r = UnitTest.get_result(submission_info["limits"],
-                                            evaluations[idx])
-                    min_f = min(min_f, float(evaluations[idx].outcome))
+                    for testcase in g["testcases"]:
+                        idx = testcase["codename"]
+                        r = UnitTest.get_result(submission_info["limits"],
+                                                evaluations[idx])
+                        min_f = min(min_f, float(evaluations[idx].outcome))
 
-                    mandatory = case_expectations[idx]
+                        mandatory = case_expectations[idx]
 
-                    l = UnitTest.case_line(r, mandatory, possible)
-                    v = (42, "No case-specific expectations.")
+                        l = UnitTest.case_line(r, mandatory, possible)
+                        v = (42, "No case-specific expectations.")
 
-                    # Test case expectations
-                    if len(mandatory) != 0:
-                        accepted, desc = v = \
-                            UnitTest.judge_case(r, mandatory, possible)
-                        if accepted <= 0:
-                            cases_failed = True
-                        extended_results += r
-                        case_results += \
-                            [x for x in r if not UnitTest.ignore(x, mandatory)
-                             and x not in mandatory]
-                    else:
-                        case_results += r
+                        # Test case expectations
+                        if len(mandatory) != 0:
+                            accepted, desc = v = \
+                                UnitTest.judge_case(r, mandatory, possible)
+                            if accepted <= 0:
+                                cases_failed = True
+                            extended_results += r
+                            case_results += \
+                                [x for x in r if not UnitTest.ignore(x, mandatory)
+                                and x not in mandatory]
+                        else:
+                            case_results += r
 
-                    v = (v[0],
-                         v[1] + "\nGrader output: " +
-                         format_status_text((evaluations[idx].text)).strip())
+                        v = (v[0],
+                            v[1] + "\nGrader output: " +
+                            format_status_text((evaluations[idx].text)).strip())
 
-                    subtasks[-1]["groups"][-1]["cases"].\
-                        append({"line": l, "verdict": v,
-                                "time": evaluations[idx].execution_time,
-                                "memory": evaluations[idx].execution_memory})
+                        subtasks[-1]["groups"][-1]["cases"].\
+                            append({"line": l, "verdict": v,
+                                    "time": evaluations[idx].execution_time,
+                                    "memory": evaluations[idx].execution_memory})
 
-                group_score += min_f * g["points"]
+                    status, short, desc = \
+                        UnitTest.judge_group(case_results, extended_results,
+                                            possible, [])
 
-                status, short, desc = \
-                    UnitTest.judge_group(case_results, extended_results,
-                                         possible, [])
+                    if cases_failed:
+                        if status > 0:
+                            desc = ""
+                        else:
+                            desc += "\n\n"
 
-                if cases_failed:
-                    if status > 0:
-                        desc = ""
-                    else:
-                        desc += "\n\n"
+                        status = -1
+                        desc += "At least one testcase did not behave as " \
+                                "expected, cf. the \"test verdict\" column."
+                        short = "failed"
 
-                    status = -1
-                    desc += "At least one testcase did not behave as " \
-                            "expected, cf. the \"test verdict\" column."
-                    short = "failed"
+                    subtasks[-1]["groups"][-1]["verdict"] = (status, desc)
+                    worst_group = min(worst_group, (status, short))
+                    group_status.append(status)
 
-                subtasks[-1]["groups"][-1]["verdict"] = (status, desc)
-                worst_group = min(worst_group, (status, short))
-                group_status.append(status)
+                subtasks[-1]["status"] = (worst_group[0], worst_group[1].upper())
 
-            if subtask["for_public_score"]:
-                public_score += group_score
-            if subtask["for_private_score"]:
-                private_score += group_score
+                if all(s == 1337 for s in group_status):
+                    subtasks[-1]["status"] = (1337, "IGNORED")
+                elif subtasks[-1]["status"][0] > 0 and any(s == 1337
+                                                        for s in group_status):
+                        subtasks[-1]["status"] = (1337, "PARTIALLY IGNORED")
 
-            subtasks[-1]["status"] = (worst_group[0], worst_group[1].upper())
+                if len(group_status) == 0:
+                    subtasks[-1]["status"] = (1337, "EMPTY")
 
-            if all(s == 1337 for s in group_status):
-                subtasks[-1]["status"] = (1337, "IGNORED")
-            elif subtasks[-1]["status"][0] > 0 and any(s == 1337
-                                                       for s in group_status):
-                    subtasks[-1]["status"] = (1337, "PARTIALLY IGNORED")
-
-            if len(group_status) == 0:
-                subtasks[-1]["status"] = (1337, "EMPTY")
-
-            # we ignore partial feedback subtasks (except for the score)
-            if subtask["partial"]:
-                subtasks.pop()
-            elif subtasks[-1]["status"][0] <= 0:
-                subtasks_failed = True
+                if subtasks[-1]["status"][0] <= 0:
+                    subtasks_failed = True
 
         def is_in(x, l):
             return l[0] <= x <= l[1]
 
-        private_score_okay = is_in(private_score, wanted_private)
-        public_score_okay = is_in(public_score, wanted_public)
+        sample_score = self._compute_score(submission_result, "sample")[0]
+        partial_feedback_score = self._compute_score(submission_result, "partial")[0]
+        final_score = self._compute_score(submission_result, "final")[0]
 
-        details = {"unit_test": True, "subtasks": subtasks,
-                   "private_score_okay": private_score_okay,
-                   "public_score_okay": None if self.feedback() == "full"
-                   else public_score_okay,
-                   "public": public_score,
-                   "wanted_public": wanted_public_info,
-                   "private": private_score,
-                   "wanted_private": wanted_private_info}
+        sample_score_okay = is_in(sample_score, expected_sample_score)
+        partial_feedback_score_okay = is_in(partial_feedback_score, expected_partial_feedback_score)
+        final_score_okay = is_in(final_score, expected_final_score)
 
-        okay = private_score_okay and \
-            (public_score_okay or self.feedback() == "full") \
-            and not subtasks_failed
+        partial_feedback_enabled = self.parameters["feedback"] == "partial"
 
-        details["verdict"] = (1, "Okay") if okay else (0, "Failed")
+        okay = not subtasks_failed \
+            and sample_score_okay \
+            and (partial_feedback_score_okay or not partial_feedback_enabled) \
+            and final_score_okay \
+
+        details = {
+            "unit_test": True,
+            "subtasks": subtasks,
+            "verdict": (1, "Okay") if okay else (0, "Failed"),
+
+            "sample_score_okay": sample_score_okay,
+            "sample_score": sample_score,
+            "expected_sample_score": expected_sample_score_info,
+
+            "partial_feedback_enabled": partial_feedback_enabled,
+            "partial_feedback_score_okay": partial_feedback_score_okay,
+            "partial_feedback_score": partial_feedback_score,
+            "expected_partial_feedback_score": expected_partial_feedback_score_info,
+
+            "final_score_okay": final_score_okay,
+            "final_score": final_score,
+            "expected_final_score": expected_final_score_info,
+            }
 
         return details
 

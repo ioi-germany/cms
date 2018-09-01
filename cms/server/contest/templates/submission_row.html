@@ -20,7 +20,7 @@
         <a class="details">{% trans %}details{% endtrans %}</a>
 {% endif %}
     </td>
-{% if score_type is defined and score_type.max_public_score > 0 %}
+{% if score_type is defined %}
     {% if status == SubmissionResult.SCORED %}
     <td class="public_score {{ get_score_class(sr.public_score, score_type.max_public_score) }}">
         {{ score_type.format_score(sr.public_score, score_type.max_public_score, sr.public_score_details, task.score_precision, translation=translation) }}
@@ -31,8 +31,8 @@
     </td>
     {% endif %}
 {% endif %}
-{% if score_type is defined and score_type.max_public_score < score_type.max_score %}
-    {% if status == SubmissionResult.SCORED and (s.token is not none or actual_phase == 3) %}
+{% if score_type is defined %}
+    {% if status == SubmissionResult.SCORED and (s.token is not none or actual_phase == 3 or score_type.feedback() == "full") %}
     <td class="total_score {{ get_score_class(sr.score, score_type.max_score) }}">
         {{ score_type.format_score(sr.score, score_type.max_score, sr.score_details, task.score_precision, translation=translation) }}
     </td>

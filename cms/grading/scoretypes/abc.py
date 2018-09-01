@@ -41,6 +41,7 @@ from future.builtins.disabled import *  # noqa
 from future.builtins import *  # noqa
 from six import iterkeys, with_metaclass
 
+import json
 import logging
 import re
 from abc import ABCMeta, abstractmethod
@@ -82,6 +83,9 @@ class ScoreType(with_metaclass(ABCMeta, object)):
         try:
             self.max_score, self.max_public_score, self.ranking_headers = \
                 self.max_scores()
+
+            self.public_score_header, self.private_score_header = \
+                self.score_column_headers()
         except Exception as e:
             raise ValueError(
                 "Unable to instantiate score type (probably due to invalid "

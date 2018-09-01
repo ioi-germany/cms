@@ -70,8 +70,6 @@ Each subtask has a name (which is displayed to the contestants) and can be eithe
 
 Test cases can occur in any number of groups. They will all be evaluated exactly once but can be taken into account for computing the scores of multiple groups.
 
-The parameter string is a (json encoded) list of subtask specifications. A subtask specification is a dictionary with entries :samp:`name` (a string), :samp:`public` (a boolean) and :samp:`groups` (a list of group specifications). A group specification is a dictionary with entries :samp:`points` (the maximum number of points for this group) and :samp:`cases` (a list of test case code names).
-
 
 Custom score types
 ==================

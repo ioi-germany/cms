@@ -22,7 +22,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header, red, green, gray, blue, \
+from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header, red, green, gray, \
     yellow, box, side_by_side, pad_left, add_line_breaks, \
     remaining_line_length, indent
 from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
@@ -92,7 +92,7 @@ class Scope(object):
 
         if silent is None:
             silent = (isinstance(self, MyGroup)
-                      or (isinstance(self, MySubtask) and self.public))
+                      or (isinstance(self, MySubtask) and self.sample))
 
         self.constraints.append(ConstraintList.parse(s, silent))
 
@@ -101,21 +101,16 @@ class MySubtask(Scope):
     """
     :ivar description: Decription of this subtask
     :ivar name: Internal (short) name of this subtask
-    :ivar public: Whether this subtask is public
+    :ivar sample: Whether this is the sample test case subtask
     :ivar groups: Groups contained in this subtask
-    :ivar partial: Is this a partial feedback subtask?
     """
 
-    def __init__(self, task, description, name, public,
-                 for_public_score, for_private_score, partial):
+    def __init__(self, task, description, name, sample):
         super(MySubtask, self).__init__(task)
         self.task = task
         self.description = description
         self.name = name
-        self.public = public
-        self.for_public_score = for_public_score
-        self.for_private_score = for_private_score
-        self.partial = partial
+        self.sample = sample
         self.groups = []
         self.feedbackcases = []
         self.checkers = []
@@ -123,10 +118,7 @@ class MySubtask(Scope):
             os.mkdir(self.directory)
 
     def __enter__(self):
-        info = ""
-        if self.public:
-            info = ", public"
-        self.indenter = header("Subtask {}".format(self.description) + info,
+        self.indenter = header("Subtask {}".format(self.description),
                                depth=3)
         self.indenter.start()
 
@@ -182,31 +174,6 @@ class MySubtask(Scope):
 
         return group
 
-    def put_feedback(self, description, name, points=None):
-        """
-        Create a subtask containing all cases inside the current subtask
-        that have been marked as detailed feedback cases. All the test cases
-        will be put into a single test case group.
-
-        description (string): description of the subtask to create
-
-        name (string): name of the subtask to create
-
-        points (int): number of points the subtask should get (by default
-                      the sum of the numbers of points of the groups in this
-                      subtask)
-
-        """
-        if len(self.feedbackcases) == 0:
-            return
-        if points is None:
-            points = sum(g.points for g in self.groups)
-        with self.task.subtask(description, name=name, public=True,
-                               partial=True) as s:
-            with s.group(points) as g:
-                for case in self.feedbackcases:
-                    g.add_testcase(case, must_still_be_checked=False)
-
     def _get_cases(self):
         """
         Utility method for being able to find the test cases contained in a
@@ -235,7 +202,11 @@ class MyGroup(Scope):
         self.subtask = subtask
         self.points = points
         self.name = name
+        # List of test cases in this group
         self.cases = []
+        # List of bools specifying for each test case whether it contributes to
+        # partial feedback.
+        self.feedback = []
         if not os.path.exists(self.directory):
             os.mkdir(self.directory)
 
@@ -324,11 +295,9 @@ class MyGroup(Scope):
         print_msg("Added test case {} ({})".format(case.codename, name))
 
         self.cases.append(case)
-        if self.subtask.public:
-            case.public = True
 
-        if feedback:
-            self.subtask.feedbackcases.append(case)
+        self.feedback.append(feedback)
+
         if save:
             self.task.saved.append(case)
 
@@ -364,7 +333,8 @@ class MyGroup(Scope):
 class MyCase(object):
     """
     :ivar codename: The code name of this test case (usually a four-digit
-    number).
+                    number).
+
     """
 
     def __init__(self, task, codename):
@@ -416,19 +386,23 @@ class MyCase(object):
 
 
 class MySubmission(object):
-    def __init__(self, task, filenames, score, public_score,
-                 partial_score=0, expected={},
+    def __init__(self, task, filenames, score, sample_score,
+                 partial_feedback_score=None,
+                 expected={},
                  weak_time_limit=None, strong_time_limit=None,
                  weak_mem_limit=None, strong_mem_limit=None):
         self.task = task
         self.filenames = filenames
         self.score = MySubmission.score_machine_readable(score)
         self.score_info = MySubmission.score_human_readable(score)
-        self.public_score = MySubmission.score_machine_readable(public_score)
-        self.public_score_info = MySubmission.score_human_readable(public_score)
-        self.partial_score = MySubmission.score_machine_readable(partial_score)
-        self.partial_score_info = \
-            MySubmission.score_human_readable(partial_score)
+        self.sample_score = MySubmission.score_machine_readable(sample_score)
+        self.sample_score_info = MySubmission.score_human_readable(sample_score)
+        # By default, we assume that the partial feedback score equals the
+        # final score.
+        if partial_feedback_score is None:
+            partial_feedback_score = score
+        self.partial_feedback_score = MySubmission.score_machine_readable(partial_feedback_score)
+        self.partial_feedback_score_info = MySubmission.score_human_readable(partial_feedback_score)
 
         if weak_time_limit is None:
             weak_time_limit = task.weak_time_limit
@@ -868,7 +842,7 @@ class TaskConfig(CommonConfig, Scope):
                         the expected output should be written to stdout)
 
         """
-        print_msg("Registered global solution {}".format(s), headerdepth=10)
+        print_msg("Registered output generator {}".format(s), headerdepth=10)
         self.output_generator = s
 
     # Test cases (subtasks, groups, ...)
@@ -949,9 +923,7 @@ class TaskConfig(CommonConfig, Scope):
         return self.encapsulate(curried)
 
     @exported_function
-    def subtask(self, description, name=None, public=False,
-                counts_for_public=None, counts_for_private=None,
-                partial=False):
+    def subtask(self, description, name=None, sample=False):
         """
         Specify the start of a new subtask. The number of points awarded
         for a subtask is the sum of the numbers of points awarded for each
@@ -959,6 +931,7 @@ class TaskConfig(CommonConfig, Scope):
 
         You usually use this function in the following way:
         ::
+
             with subtask("Subtask 1", "small"):
                 ...
 
@@ -972,35 +945,15 @@ class TaskConfig(CommonConfig, Scope):
                        by default, we take sNR where NR is the index of this
                        subtask (starting at 0)
 
-        public (bool): whether this subtask is public (displayed to the
-                       contestant during the contest without token usage);
-                       detailed feedback subtasks should usually be marked
-                       public
-
-        counts_for_public (bool): whether the subtask counts toward public
-                       score
-                       if the value is None this is set to public
-
-        counts for private (bool): whether the subtask counts toward private
-                       score
-                       if the value is None this is set to not public
-
-        partial(bool): is this a partial feedback subtask?
+        sample (bool): whether this subtask is for sample test cases
 
         return (MySubtask): object representing the created subtask
 
         """
-        if counts_for_public is None:
-            counts_for_public = public
-        if counts_for_private is None:
-            counts_for_private = not public
-
         if name is None:
             name = "s" + str(len(self.subtasks))
 
-        subtask = MySubtask(self, description, name, public,
-                            counts_for_public, counts_for_private,
-                            partial)
+        subtask = MySubtask(self, description, name, sample)
 
         self.subtasks.append(subtask)
 
@@ -1020,9 +973,11 @@ class TaskConfig(CommonConfig, Scope):
 
         You usually use this function in the following way:
         ::
+
             with subtask("Subtask 1", "small"):
                 with group(50):
                     ...
+
         """
         if len(self.subtask_stack) == 0:
             raise Exception("group() called outside subtask")
@@ -1068,9 +1023,12 @@ class TaskConfig(CommonConfig, Scope):
 
         You usually use this function in the following way:
         ::
+
+            t = make_testcase(...)
             with subtask("Subtask 1", "small"):
                 with group(50):
-                    add_testcase(...)
+                    add_testcase(t, ...)
+
         """
         if len(self.group_stack) == 0:
             raise Exception("add_testcase() called outside group")
@@ -1085,9 +1043,11 @@ class TaskConfig(CommonConfig, Scope):
 
         You usually use this function in the following way:
         ::
+
             with subtask("Subtask 1", "small"):
                 with group(50):
                     testcase(...)
+
         """
         if not kwargs.get("save") and self.minimal:
             print_msg("Skipping testcase (minimal mode)")
@@ -1121,58 +1081,6 @@ class TaskConfig(CommonConfig, Scope):
     def _level(self):
         return 0
 
-    def full_feedback(self):
-        """
-        Call this only after all testcases have been added
-        """
-        for s in self.subtasks:
-            if s.public:
-                s.for_public_score = False
-            else:
-                s.public = True
-                s.for_private_score = True
-                s.for_public_score = True
-
-                for g in s.groups:
-                    for c in g.cases:
-                        c.public = True
-
-
-    def partial_feedback(self, description_suffix=" (Partial Feedback)",
-                         name_suffix="_feedback"):
-        """
-        Generate detailed feedback subtasks for all subtasks generated
-        so far (that contain at least one test case marked for detailed
-        feedback)
-
-        description_suffix (string): this string will be appended to the
-                                     description of the subtask to obtain the
-                                     description of the detailed feedback
-                                     subtask
-
-        name_suffix (string): this string will be appended to the
-                              name of the subtask to obtain the
-                              name of the detailed feedback subtask
-
-        """
-        for s in self.subtasks:
-            if s.public:
-                s.for_public_score = False
-
-        for s in self.subtasks:
-            s.put_feedback(s.description + description_suffix,
-                           s.name + name_suffix)
-
-        self._feedback_level_full() # TODO: Is this what we want?
-
-    def no_feedback(self):
-        pass
-
-    def _activate_feedback(self):
-        func = self._feedback_param[2]
-        args = (self, ) + self._feedback_param[3:]
-        func(*args)
-
     @exported_function
     def test_submission_limits(self,
                                weak_time_limit=None, strong_time_limit=None,
@@ -1197,9 +1105,14 @@ class TaskConfig(CommonConfig, Scope):
 
         non-keyword arguments (list): the (source) file names
 
-        score (float): the expected official (private) score
+        score (float): the expected official (final) score
 
-        public_score (float): the expected public score
+        sample_score (float): the expected score in the sample test cases
+                              (= in subtasks with sample=True)
+
+        partial_feedback_score (float): the expected score in partial feedback
+                                        mode; by default, this equals the
+                                        expected final score.
 
         expected (dict): the expectations for the test cases;
                          by default, we expect all test cases to succeed
@@ -1240,11 +1153,9 @@ class TaskConfig(CommonConfig, Scope):
 
     def _feedback_level_restricted(self):
         """
-        In each group that contributes to the official (private) score, show
-        only the first test case with minimum score. Additionally, used time
-        and memory are hidden in those groups.
-
-        This is the default for all tasks.
+        In each non-sample group, show only the first test case with minimum
+        score.
+        Additionally, used time and memory are hidden in those groups.
 
         """
         self._feedback_level = FEEDBACK_LEVEL_RESTRICTED
@@ -1296,6 +1207,8 @@ class TaskConfig(CommonConfig, Scope):
             print_msg("Number of subtasks: {}".format(len(self.subtasks)))
             print_msg("Number of test cases: {}".format(len(self.cases)))
             print_msg("Score mode: {}".format(self.score_mode()))
+            print_msg("Feedback mode: {}".format(self.feedback))
+            print_msg("Feedback level: {}".format(self._feedback_level))
             if not self.everything_checked:
                 print_msg("Not every test case has been checked", error=True)
 
@@ -1381,11 +1294,7 @@ class TaskConfig(CommonConfig, Scope):
         self.file_cacher = file_cacher
         if self.tasktype is None:
             raise Exception("You have to specify a task type")
-        if self.contest._analysis:
-            self.infinite_tokens()
         self._set_tokens(tdb)
-        if self.contest._analysis:
-            self._feedback_level_full()
         tdb.max_submission_number = self.max_submission_number
         tdb.min_submission_interval = self.min_submission_interval
         tdb.max_user_test_number = self.max_user_test_number
@@ -1436,21 +1345,30 @@ class TaskConfig(CommonConfig, Scope):
         return tdb
 
     def _makedataset(self, file_cacher, tdb):
-        score_type_parameters = (
-            {'feedback': self.feedback,
-             'tcinfo':
-             [{'name': s.description,
-               'key': list(s.unique_name),
-               'public': s.public,
-               'for_public_score': s.for_public_score,
-               'for_private_score': s.for_private_score,
-               'partial': s.partial,
-               'groups': [{'points': g.points,
-                           'key': list(g.unique_name),
-                           'cases': [c.codename for c
-                                     in g.cases]}
-                          for g in s.groups]}
-              for s in self.subtasks]})
+        def make_subtask_parameters(s):
+            return {
+                'name': s.description,
+                'key': list(s.unique_name),
+                'sample': s.sample,
+                'groups': [make_group_parameters(g) for g in s.groups],
+                }
+        def make_group_parameters(g):
+            return {
+                'points': g.points,
+                'key': list(g.unique_name),
+                'testcases': [make_case_parameters(c, f)
+                              for c, f in zip(g.cases, g.feedback)],
+                }
+        def make_case_parameters(c, f):
+            return {
+                'codename': c.codename,
+                'in_partial_feedback': f,
+                }
+        score_type_parameters = {
+            'feedback': self.feedback,
+            'subtasks': [make_subtask_parameters(s) for s in self.subtasks],
+            }
+
         ddb = Dataset(task=tdb,
                       description=self._dataset,
                       task_type=self.tasktype,
@@ -1633,12 +1551,12 @@ class TaskConfig(CommonConfig, Scope):
              "unit_test": True,
              "expected": submission.expectations,
              "expected_case": submission.case_expectations,
-             "expected_score": submission.score,
-             "expected_score_info": submission.score_info,
-             "expected_public_score": submission.public_score,
-             "expected_public_score_info": submission.public_score_info,
-             "expected_partial_score": submission.partial_score,
-             "expected_partial_score_info": submission.partial_score_info,
+             "expected_sample_score": submission.sample_score,
+             "expected_sample_score_info": submission.sample_score_info,
+             "expected_partial_feedback_score": submission.partial_feedback_score,
+             "expected_partial_feedback_score_info": submission.partial_feedback_score_info,
+             "expected_final_score": submission.score,
+             "expected_final_score_info": submission.score_info,
              "task_name": self.name}, sort_keys=True)
 
         return sdb
@@ -1688,14 +1606,15 @@ class TaskConfig(CommonConfig, Scope):
 
         # Judge unit test
         score_type = ddb.score_type_object
-        public_score, public_details = \
-            score_type._compute_score(submission_result, True)
-        score, details, ranking_details = \
-            score_type._compute_score(submission_result, False)
+        _, sample_details = \
+            score_type._compute_score(submission_result, "sample")
+        _, partial_details = \
+            score_type._compute_score(submission_result, "partial")
+        _, final_details = \
+            score_type._compute_score(submission_result, "final")
+
         details = score_type.compute_unit_test_score(submission_result,
                                                      sdb.additional_info)
-        expected_public, expected_private = \
-            score_type.unit_test_expected_scores_info(sdb.additional_info)
 
         def v(acc_des, z=False):
             (accepted, desc) = acc_des
@@ -1758,19 +1677,23 @@ class TaskConfig(CommonConfig, Scope):
             print()
 
         if compile_ok:
-            public_score = green("{}".format(public_score)) if \
-                details["public_score_okay"] else \
-                red("{}".format(public_score))
-            score = green("{}".format(score)) if \
-                details["private_score_okay"] else \
-                red("{}".format(score))
+            def print_score_info(prefix, name):
+                score = details[prefix + "_score"]
+                if details[prefix + "_score_okay"]:
+                    score = green(score)
+                else:
+                    score = red(score)
+                expected_score = details["expected_" + prefix + "_score"]
+                print_msg("{} score: {}; expected: {}".
+                        format(name, score, expected_score))
 
-            if score_type.feedback() != "full":
-                print_msg("Public Score: {}; expected: {}".
-                          format(public_score, expected_public))
+            print_score_info("sample", "Sample")
 
-            print_msg("Total Score: {}; expected: {}".format(score,
-                                                             expected_private))
+            if details["partial_feedback_enabled"]:
+                print_score_info("partial_feedback", "Partial feedback")
+
+            print_score_info("final", "Final")
+
             print()
 
         verd = details["verdict"]
