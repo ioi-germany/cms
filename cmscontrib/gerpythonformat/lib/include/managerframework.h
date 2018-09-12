@@ -85,8 +85,8 @@ int main(int argc, char **argv) {
     }
 
     // We need to open the pipes in the same order as the solution program (in isolate) to avoid deadlocks.
-    fcommout = fopen(argv[1], "w");
-    fcommin = fopen(argv[2], "r");
+    fcommout = fopen(argv[2], "w");
+    fcommin = fopen(argv[1], "r");
 
     fout = fopen("output.txt", "w");
 
