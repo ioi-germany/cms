@@ -51,8 +51,6 @@ def copyrecursivelyifnecessary(source, destination, ignore=set()):
     destination (string): destination file/directory name
 
     """
-    if source in ignore:
-        return
     if os.path.isfile(source):
         copyifnecessary(source, destination)
     elif os.path.isdir(source):
@@ -60,6 +58,8 @@ def copyrecursivelyifnecessary(source, destination, ignore=set()):
             os.mkdir(destination)
         names = os.listdir(source)
         for name in names:
+            if name in ignore:
+                continue
             copyrecursivelyifnecessary(os.path.join(source, name),
                                        os.path.join(destination, name),
                                        ignore)

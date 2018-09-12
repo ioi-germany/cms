@@ -62,7 +62,10 @@ class GerMakeTask:
         taskdir = os.path.join(self.odir, self.task)
         wtdir = os.path.join(self.wdir, self.task)
 
-        copyrecursivelyifnecessary(taskdir, wtdir, set([self.wdir]))
+        # We have to avoid copying the folder task/build into itself.
+        # For this reason, we ignore all files and directories named "build"
+        # when copying recursively.
+        copyrecursivelyifnecessary(taskdir, wtdir, set(["build"]))
         self.wdir = os.path.abspath(self.wdir)
 
     def build(self):
