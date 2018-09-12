@@ -25,7 +25,7 @@ from __future__ import unicode_literals
 from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header
 from cmscontrib.gerpythonformat.Executable import CPPProgram, InternalPython, ExternalScript, \
     ExternalPython, asy_keyword_list
-from cms.rules.Rule import LaTeXRule, CommandRule
+from cms.rules.Rule import LaTeXRule, CommandRule, ZipRule
 from cmscontrib.gerpythonformat.Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
 import inspect
 import io
@@ -399,6 +399,18 @@ class CommonConfig(object):
             raise Exception("Extension {} not known".format(extension))
         x = f(basename, **kwargs)
         return x
+
+    # Zip file
+
+    @exported_function
+    def make_zip(self, zipname, contents):
+        zipfile = os.path.abspath(zipname)
+        with header("Creating zip file {}"
+                    .format(self.short_path(zipfile)),
+                    depth=10):
+
+            r = ZipRule(self.rules, zipfile, contents).ensure()
+        return zipfile
 
     # Executables
 

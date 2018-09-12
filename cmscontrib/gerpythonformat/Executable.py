@@ -425,3 +425,6 @@ class ExternalScript(Executable):
             raise ExitCodeException(
                 "Error executing script {} with parameters {}"
                 .format(self.path, str(list(args) + keyword_list(kwargs))))
+
+    def get_path(self):
+        return self.path
