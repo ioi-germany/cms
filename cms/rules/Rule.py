@@ -27,6 +27,7 @@ import io
 import json
 import os
 import subprocess
+import time
 
 from six import iteritems
 
@@ -193,24 +194,31 @@ class RuleResult(object):
         """
         return compute_file_hash(filename)
 
-        # FIXME The following doesn't work on some systems, since getctime
-        # only has a precision of 1 second. But on all systems, it returns a
-        # floating point number and has therefore rounding errors!
+        # TODO Check that the following works reliably on all systems.
+        # For example, getctime sometimes only has a precision of 1 second.
+        # It also always returns a floating point number and has therefore
+        # rounding errors!
 
-        # filename = os.path.abspath(filename)
-        # hasher = hashlib.sha256()
-        # hasher.update(json.dumps({'type': 'filehash',
-        #                           'file': filename,
-        #                           'ctime': os.path.getctime(filename)},
-        #                          sort_keys=True))
-        # hashfile = os.path.join(self.rulesdir, hasher.hexdigest())
-        # if os.path.exists(hashfile):
-        #     return readfile(hashfile)
-        # else:
-        #     hash_ = compute_file_hash(filename)
-        #     with io.open(hashfile, 'wb') as f:
-        #         f.write(hash_)
-        #     return hash_
+        #filename = os.path.abspath(filename)
+        #hasher = hashlib.sha256()
+        #hasher.update(json.dumps({'type': 'filehash',
+                                  #'file': filename,
+                                  #'ctime': os.path.getctime(filename)},
+                                 #sort_keys=True).encode('utf-8'))
+        #hashfile = os.path.join(self.rulesdir, hasher.hexdigest())
+        #if os.path.exists(hashfile):
+            #return readfile(hashfile)
+        #else:
+            #time_before_hash = time.time()
+            #hash_ = compute_file_hash(filename)
+            ## Only remember this hash if the file's ctime is at least 10 seconds ago.
+            ## Thus, if the file changes after hashing, its ctime has to change, too.
+            ## (Even if ctime has only low resolution!)
+            ## See also https://mirrors.edge.kernel.org/pub/software/scm/git/docs/technical/racy-git.html.
+            #if os.path.getctime(filename)+10 < time_before_hash:
+                #with io.open(hashfile, 'w', encoding='utf-8') as f:
+                    #f.write(hash_)
+            #return hash_
 
     def add_dependency(self, filename):
         """Add a file using its current hash value.
