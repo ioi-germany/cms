@@ -631,6 +631,22 @@ class TaskConfig(CommonConfig, Scope):
         with header("Loading task {}".format(self.name), depth=2):
             super(TaskConfig, self)._readconfig(filename)
 
+        # Are we allowed to use tokens?
+        if self.token_mode != "disabled" and \
+           self.upstream.token_mode != "disabled":
+            self.feedback = "token"
+
+        print_msg("Creating test case zip files")
+        # Automatically make a ZIP file containing the saved test cases
+        self._makesavedzip()
+        # Automatically make a ZIP file containing all test cases for analysis mode
+        self._makeallzip()
+        if self.tasktype == "OutputOnly":
+            self._makeinputzip()
+
+        if self.tasktype is None:
+            raise Exception("You have to specify a task type")
+
     # Supplement helpers
 
     def cpp_constraints(self):
@@ -768,15 +784,15 @@ class TaskConfig(CommonConfig, Scope):
         library (bool): whether to use a library for linking contestant
                         solutions;
                         submissions are linked together with
-                        interface.{c,cpp,pas} and, if existent, taskname.h
-                        and tasknamelib.pas.
+                        interface.{c,cpp,pas} and, if existent, lib.h
+                        and lib.pas.
 
         """
         self.tasktype = "Batch"
         grader_param = "alone"
         if library:
             grader_param = "grader"
-            for end in ["c", "cpp", "pas"]:
+            for end in ["c", "cpp", "pas", "java"]:
                 self.managers["grader." + end] = \
                     os.path.join(self.wdir, "interface." + end)
             if os.path.exists(os.path.join(self.wdir, "lib.h")):
@@ -822,10 +838,16 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         self.tasktype = "Communication"
-        for end in ["c", "cpp", "pas"]:
-            interfacefile = os.path.join(self.wdir, "interface." + end)
-            if stub:
-                self.managers["stub." + end] = interfacefile
+        if stub:
+            for end in ["c", "cpp", "pas", "java"]:
+                self.managers["stub." + end] = \
+                    os.path.join(self.wdir, "interface." + end)
+            if os.path.exists(os.path.join(self.wdir, "lib.h")):
+                self.managers["%s.h" % self.name] = \
+                    os.path.join(self.wdir, "lib.h")
+            if os.path.exists(os.path.join(self.wdir, "lib.pas")):
+                self.managers["%slib.pas" % self.name] = \
+                    os.path.join(self.wdir, "lib.pas")
         self.managers["manager"] = manager.get_path()
         compilation_param = "alone"
         if stub:
@@ -1204,6 +1226,8 @@ class TaskConfig(CommonConfig, Scope):
                                     " (primary)" if s.primary else "")
                    for l, s in iteritems(self._statements)]
             print_msg("Task statements: {}".format(", ".join(sts)))
+            print_msg("Attachments: {}".format(", ".join(self.attachments)))
+            print_msg("Spoilers: {}".format(", ".join(self.spoilers)))
             print_msg("Number of subtasks: {}".format(len(self.subtasks)))
             print_msg("Number of test cases: {}".format(len(self.cases)))
             print_msg("Score mode: {}".format(self.score_mode()))
@@ -1275,25 +1299,12 @@ class TaskConfig(CommonConfig, Scope):
         return (Task): database object for the task
 
         """
+        self.file_cacher = file_cacher
+
         tdb = Task(name=self.name,
                    title=self._title,
                    num=self.num,
                    contest=contest)
-
-        # Are we allowed to use tokens?
-        if self.token_mode != "disabled" and \
-           self.upstream.token_mode != "disabled":
-            self.feedback = "token"
-
-        # Automatically make a ZIP file containing the saved test cases
-        self._makesavedzip()
-        # Automatically make a ZIP file containing all test cases for analysis mode
-        self._makeallzip()
-        if self.tasktype == "OutputOnly":
-            self._makeinputzip()
-        self.file_cacher = file_cacher
-        if self.tasktype is None:
-            raise Exception("You have to specify a task type")
         self._set_tokens(tdb)
         tdb.max_submission_number = self.max_submission_number
         tdb.min_submission_interval = self.min_submission_interval
