@@ -192,15 +192,43 @@ class ConstraintList(object):
 
         return ConstraintList(res, silent)
 
+#For two constraining intervals, return their intersection, where there
+#shall be no boundary that is explicitly specified less strict in the second
+#than in the first (e.g., (_,100) in the first and (_,1000) in the second).
+def merge(c1, c2, var):
+    if c1[0] == None:
+        a = c2[0]
+    elif c2[0] == None:
+        a = c1[0]
+    elif c1[0] > c2[0]:
+        raise ValueError("Constraint ("+var+">" + str(c2[0]) + ") of subscope "
+                         "mustn't be less constraining than of superscope "
+                         + "("+var+">" + str(c1[0]) + ").")
+    else:
+        a = c2[0]
+
+    if c1[1] == None:
+        b = c2[1]
+    elif c2[1] == None:
+        b = c1[1]
+    elif c1[1] < c2[1]:
+        raise ValueError("Constraint ("+var+"<" + str(c2[1]) + ") of subscope "
+                         "mustn't be less constraining than of superscope "
+                         + "("+var+"<" + str(c1[1]) + ").")
+    else:
+        b = c2[1]
+
+    return (a, b)
+
+#For two unpacked constraint lists, return their logical and, where there
+#shall be no inequality that is explicitly specified less strict in the second
+#than in the first (e.g., (_,100) in the first and (_,1000) in the second).
 
 def merge_constraints(cl1, cl2):
     res = dict(cl1)
     for var, ran in iteritems(cl2):
         if var in res:
-            a, b = res[var]
-        if ran[0] is not None:
-            a = ran[0]
-        if ran[1] is not None:
-            b = ran[1]
-        res[var] = (a, b)
+            res[var] = merge(res[var], ran, var)
+        else:
+            res[var] = ran
     return res
