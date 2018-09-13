@@ -72,7 +72,11 @@ class GerImport(Service):
             shutil.rmtree(self.wdir)
         if not os.path.exists(self.wdir):
             os.mkdir(self.wdir)
-        copyrecursivelyifnecessary(self.odir, self.wdir, set([self.wdir]))
+        # We have to avoid copying the folder contest/build
+        # or contest/task/build into contest/build.
+        # For this reason, we ignore all files and directories named "build"
+        # when copying recursively.
+        copyrecursivelyifnecessary(self.odir, self.wdir, set(["build"]))
 
         self.wdir = os.path.abspath(self.wdir)
         with chdir(self.wdir):

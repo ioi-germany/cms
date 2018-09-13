@@ -66,8 +66,12 @@ class GerLoader(Loader):
                                                    resource.RLIM_INFINITY))
 
         self.buildpath = os.path.join(self.path, "build")
+        # We have to avoid copying the folder contest/build
+        # or contest/task/build into contest/build.
+        # For this reason, we ignore all files and directories named "build"
+        # when copying recursively.
         copyrecursivelyifnecessary((self.path), self.buildpath,
-                                   set([self.buildpath]))
+                                   set(["build"]))
         with chdir(self.buildpath):
             rules = ".rules"
             if not os.path.exists(rules):
