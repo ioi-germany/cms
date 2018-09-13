@@ -109,7 +109,7 @@ class GerImport(Service):
 
                 # Create teams in the database.
                 teamdbs = [contestconfig._maketeam(t) for t in contestconfig.teams]
-                teamdb1s = _update_list_with_key(session.query(Team),
+                teamdb1s = _update_list_with_key(session.query(Team).all(),
                                                  teamdbs,
                                                  lambda t : t.code,
                                                  preserve_old=True,
