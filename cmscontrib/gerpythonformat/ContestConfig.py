@@ -36,10 +36,12 @@ import pytz
 
 
 class MyGroup(object):
-    def __init__(self, name, start, stop, per_user_time):
+    def __init__(self, name, start, stop, analysis_start, analysis_stop, per_user_time):
         self.name = name
         self.start = start
         self.stop = stop
+        self.analysis_start = analysis_start
+        self.analysis_stop = analysis_stop
         self.per_user_time = per_user_time
 
 
@@ -259,7 +261,7 @@ class ContestConfig(CommonConfig):
         self._languages = languages
 
     @exported_function
-    def user_group(self, s, start, stop, per_user_time=None):
+    def user_group(self, s, start, stop, analysis_start=None, analysis_stop=None, per_user_time=None):
         """
         Create a user group.
 
@@ -270,6 +272,10 @@ class ContestConfig(CommonConfig):
         start (string): start time (should be created via a call to time())
 
         stop (string): stop time (should be created via a call to time())
+
+        analysis_start (string): enable analysis with this start time (should be created via a call to time())
+
+        analysis_stop (string): enable analysis with this stop time (should be created via a call to time())
 
         per_user_time (timedelta): enable USACO mode with this time per user;
             see :ref:`configuringacontest_usaco-like-contests`
@@ -283,12 +289,19 @@ class ContestConfig(CommonConfig):
         if self.minimal:
             return
 
+        if (analysis_start is None) ^ (analysis_stop is None):
+            raise Exception("Analysis start and stop time can only be used together")
+
         usaco_mode_str = ""
         if per_user_time is not None:
             usaco_mode_str = \
                 " in USACO mode with time {}".format(per_user_time)
-        print_msg("Creating user group {} (working from {} to {}{})"
-                  .format(s, start, stop, usaco_mode_str), headerdepth=10)
+        analysis_mode_str = ""
+        if analysis_start is not None:
+            analysis_mode_str = \
+                ", analysing from {} to {}".format(analysis_start,analysis_stop)
+        print_msg("Creating user group {} (working from {} to {}{}{})"
+                  .format(s, start, stop, usaco_mode_str, analysis_mode_str), headerdepth=10)
 
         # We allow specifying an integer or a timedelta
         try:
@@ -296,7 +309,7 @@ class ContestConfig(CommonConfig):
         except AttributeError:
             pass
 
-        self.groups[s] = r = MyGroup(s, start, stop, per_user_time)
+        self.groups[s] = r = MyGroup(s, start, stop, analysis_start, analysis_stop, per_user_time)
         if s == "main":
             self.defaultgroup = r
         return r
@@ -497,6 +510,10 @@ class ContestConfig(CommonConfig):
         gdb.contest = cdb
         gdb.start = group.start
         gdb.stop = group.stop
+        gdb.analysis_enabled = group.analysis_start is not None
+        if gdb.analysis_enabled:
+            gdb.analysis_start = group.analysis_start
+            gdb.analysis_stop = group.analysis_stop
         gdb.per_user_time = None if group.per_user_time is None else \
             timedelta(seconds=group.per_user_time)
         return gdb
