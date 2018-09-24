@@ -7,6 +7,8 @@
 %\usepackage[scaled=0.85,lining]{FiraMono}
 \usepackage[italic,nolessnomore,noplusnominus,noequal]{mathastext}
 
+\translationheader
+
 % this is evil: we reload the FiraSans package with slightly different parameters
 % in order to use oldstyle figures in text and lining figures in math mode
 \makeatletter
@@ -27,7 +29,7 @@
 \rhead{\vbox to \headh{\vbox to 0pt{\vskip-2in\hbox to 0pt{\hskip\hsize\hskip-1.5in\includegraphics{\barpdf}}}\quad\null}}
 \lhead{}
 
-\def\sthelper#1#2{{\sffamily\bfseries Teilaufgabe\ #1 (#2 Punkte).\enspace}}
+\def\sthelper#1#2{{\sffamily\bfseries \tSubtask\ #1 (#2 \tPoints).\enspace}}
 \newcount\stcount
 \stcount=0
 \def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}
@@ -35,24 +37,24 @@
 \def\currconstraint#1{\scopedconstraint{\the\stcount}{#1}}
 \def\currconstraints{\currconstraint{@ll}}
 
-\def\showcases{\ifnum\numsamples=1\sheading{Beispiel}\else\sheading{Beispiele}\fi\testcasetable}
-\def\showlimits{\sheading{Limits}%
-Zeit: \timelimit\\
-Speicher: \memlimit}
+\def\showcases{\ifnum\numsamples=1\sheading{\tSample}\else\sheading{\tSamples}\fi\testcasetable}
+\def\showlimits{\sheading{\tLimits}%
+\tTime: \timelimit\\
+\tMemory: \memlimit}
 
-\def\feedbackheading{\sheading{Feedback}}
-\def\nofeedback{\feedbackheading Für diese Aufgabe ist kein erweitertes Feedback verfügbar. Die angegebene öffentliche Punktzahl entspricht nur deinem Ergebnis auf den öffentlichen Testfällen und hat im Allgemeinen wenig mit deiner tatsächlichen Punktzahl gemein.}
-\def\partialfeedback{\feedbackheading Für diese Aufgabe ist \emph{partial feedback} verfügbar, d.h.~du bekommst das Abschneiden deines Programms auf einer festen Auswahl der Testfälle zu sehen. Die angegebene Punktzahl bezieht sich auf diese Auswahl der Testfälle und gibt damit einen Hinweis auf die endgültige Punktzahl deiner Einsendung. Letztere kann allerdings sowohl höher als auch niedriger als die angezeigte Punktzahl sein.}
-\def\fullfeedback{\feedbackheading Für diese Aufgabe ist \ifrestricted\emph{restricted feedback}\else\emph{full feedback}\fi\ verfügbar. Das bedeutet, die angezeigte Punktzahl entspricht der endgültigen Punktzahl deiner Einsendung.
+\def\feedbackheading{\sheading{\tFeedback}}
+\def\nofeedback{\feedbackheading \tNofeedback}
+\def\partialfeedback{\feedbackheading \tPartialfeedback}
+\def\fullfeedback{\feedbackheading\def\feedbackmode{\ifrestricted\emph{restricted feedback}\else\emph{full feedback}\fi} \tFullfeedbackGeneral\
 \ifrestricted
-Allerdings werden dir für jede Testfallgruppe immer nur die Testfälle bis zum ersten Testfall mit minimaler Punktzahl innerhalb der entsprechenden Gruppe angezeigt. (Hierbei ist die Reihenfolge der Fälle innerhalb der jeweiligen Gruppen fest.)
+\tRestrictedfeedbackPrecise
 \else
-Ferner kannst du für jeden Testfall das jeweilige Urteil des Graders über deine Einsendung einsehen.
+\tFullfeedbackPrecise
 \fi}
-\def\tokenfeedback{\feedbackheading Für diese Aufgabe sind \emph{Tokens} verfügbar, d.h.~du kannst für eine begrenzte Anzahl von Einsendungen vollständiges Feedback erhalten, indem du ein sogenanntes Token einsetzt. Weitere Informationen, z.B. über die Anzahl der verfügbaren Tokens, findest du im Wettbewerbssystem.
+\def\tokenfeedback{\feedbackheading \tTokenFeedback
 
 \ifrestricted
-Allerdings werden dir auch nach Einsetzen eines Tokens für jede Testfallgruppe immer nur die Testfälle bis zum ersten Testfall mit minimaler Punktzahl innerhalb der entsprechenden Gruppe angezeigt. (Hierbei ist die Reihenfolge der Fälle innerhalb der jeweiligen Gruppen fest.)
+\tTokenRestrictedFeedback
 \fi}
 \let\dummyfeedack=\relax
 \def\showfeedback{\csname\feedback feedback\endcsname}

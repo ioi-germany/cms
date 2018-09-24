@@ -44,6 +44,12 @@ class LgTemplate(PlainTemplate):
                     os.path.join(task.wdir, "taskheader.tex"))
         task.supply("latex", def_latex("taskheader",
                                        input_latex("taskheader.tex")))
+        # Register translation.tex as \translationheader
+        shutil.copyfile(os.path.join(os.path.dirname(__file__),
+                                     "translation.tex"),
+                        os.path.join(task.wdir, "translation.tex"))
+        task.supply("latex", def_latex("translationheader",
+                                       input_latex("translation.tex")))
         # Compile bar.asy
         shutil.copyfile(os.path.join(os.path.dirname(__file__), "mystyle.asy"),
                         "mystyle.asy")
