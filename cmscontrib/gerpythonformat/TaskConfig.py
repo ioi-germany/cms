@@ -1052,6 +1052,11 @@ class TaskConfig(CommonConfig, Scope):
                     add_testcase(t, ...)
 
         """
+        if self.minimal:
+            print_msg("Skipping testcase (minimal mode)")
+            self.group_stack[-1]._dummy_case(kwargs.get("name"))
+            return
+        
         if len(self.group_stack) == 0:
             raise Exception("add_testcase() called outside group")
         return self.group_stack[-1].add_testcase(*args, **kwargs)
