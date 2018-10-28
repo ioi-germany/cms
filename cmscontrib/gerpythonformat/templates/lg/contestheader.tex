@@ -29,7 +29,7 @@
 \rhead{\vbox to \headh{\vbox to 0pt{\vskip-2in\hbox to 0pt{\hskip\hsize\hskip-1.5in\includegraphics{\barpdf}}}\quad\null}}
 \lhead{}
 
-\def\sthelper#1#2{{\sffamily\bfseries \tSubtask\ #1 (#2 \tPoints).\enspace}}
+\def\sthelper#1#2{{\sffamily\bfseries \tSubtask\ #1 (#2 \ifnum#2=1\tPoint\else\tPoints\fi).\enspace}}
 \newcount\stcount
 \stcount=0
 \def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}
