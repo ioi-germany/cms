@@ -1,30 +1,14 @@
 \basicheader
 \usepackage[ngerman]{babel}
-\usepackage{ifpdf}
 \usepackage{colortbl}
-\usepackage[math]{kurier}
-\usepackage[sfdefault,tabular,lining,scaled=.9]{FiraSans}
-%\usepackage[scaled=0.85,lining]{FiraMono}
-\usepackage[italic,nolessnomore,noplusnominus,noequal]{mathastext}
+
+\usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
+\usepackage[lining,scaled=.9]{FiraMono}
+\usepackage[mathrm=sym]{unicode-math}
+\usepackage[Scale=.9]{firamath-otf}
+\usepackage{microtype}
 
 \translationheader
-
-% this is evil: we reload the FiraSans package with slightly different parameters
-% in order to use oldstyle figures in text and lining figures in math mode
-\makeatletter
-\count1=\the\catcode`\.
-\catcode`\.=11
-\let\ver@FiraSans.sty = \undefined
-\let\opt@FiraSans.sty = \undefined
-\let\FiraSans@scale = \undefined
-\let\FiraSansOT@scale = \undefined
-\catcode`\.=\count1
-\makeatother
-\usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
-
-\ifpdf
-\usepackage{microtype}
-\fi
 
 \rhead{\vbox to \headh{\vbox to 0pt{\vskip-2in\hbox to 0pt{\hskip\hsize\hskip-1.5in\includegraphics{\barpdf}}}\quad\null}}
 \lhead{}
@@ -37,7 +21,11 @@
 \def\currconstraint#1{\scopedconstraint{\the\stcount}{#1}}
 \def\currconstraints{\currconstraint{@ll}}
 
-\def\showcases{\ifnum\numsamples=1\sheading{\tSample}\else\sheading{\tSamples}\fi\testcasetable}
+\def\showcases{\ifnum\numsamples=1\sheading{\tSample}\else\sheading{\tSamples}\fi%
+\begingroup%
+\microtypesetup{activate=false}%
+\testcasetable%
+\endgroup}
 \def\showlimits{\sheading{\tLimits}%
 \tTime: \timelimit\\
 \tMemory: \memlimit}

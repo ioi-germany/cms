@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2018 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -295,7 +295,7 @@ class CommonConfig(object):
         if self.ignore_latex:
             return output
 
-        with header("Compile {} to {} using LaTeX"
+        with header("Compile {} to {} using LuaLaTeX"
                     .format(self.short_path(source), self.short_path(output)),
                     depth=10):
             self._build_supplements("latex")
@@ -325,8 +325,7 @@ class CommonConfig(object):
         return output
 
     @exported_function
-    def compileasy(self, basename, stdin=None, output=None, pdf=True,
-                   **kwargs):
+    def compileasy(self, basename, stdin=None, output=None, **kwargs):
         """
         Compile and run an asymptote file to generate a pdf file.
 
@@ -337,15 +336,13 @@ class CommonConfig(object):
         output (string): file name of the picture to generate (by default
                          basename.eps or basename.pdf, cf. next parameter)
 
-        pdf (boolean): whether we should generate a pdf file (True by default)
-
         The remaining keyword arguments are passed to asy as command line
         arguments.
 
         """
         source = basename + ".asy"
         if output is None:
-            output = basename + (".pdf" if pdf else ".eps")
+            output = basename + ".pdf"
 
         with header("Compile {} to {} using Asymptote"
                     .format(self.short_path(source), self.short_path(output)),
@@ -356,7 +353,7 @@ class CommonConfig(object):
             dep = [source] + self._get_supplement_extension_files("asy")
 
             r = CommandRule(self.rules,
-                            ["asy"] + (["-f", "pdf"] if pdf else []) +
+                            ["asy"] + ["-tex", "lualatex"] +
                             ["-o", output] + asy_keyword_list(kwargs) +
                             [source], stdin=stdin, dependencies=dep,
                             outputs=[output], dependonexe=False).ensure()

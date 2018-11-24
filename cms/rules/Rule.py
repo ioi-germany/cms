@@ -3,6 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2018 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -510,7 +511,8 @@ class LaTeXRule(CommandRule):
         extra (string): additional command line arguments passed to latexmk
 
         """
-        command = ["latexmk", "-g", "-pdf",
+        command = ["latexmk", "-g", "-pdflua",
+                   "-latexoption=-interaction=nonstopmode",
                    "-deps", "-deps-out=.deps"] + extra + [source]
         super(LaTeXRule, self).__init__(rulesdir, command, dependonexe=False,
                                         read_stdout=False, read_stderr=False)
