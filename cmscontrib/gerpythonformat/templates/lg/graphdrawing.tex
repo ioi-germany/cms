@@ -1,0 +1,30 @@
+\input paths.tex
+\usetikzlibrary{graphs}
+\usetikzlibrary{graphdrawing}
+
+\usegdlibrary{force, layered}
+
+\directlua{require("graphdrawing.lua")}
+
+\let\oldedgecallback=\pgfgdtikzedgecallback
+\def\saveedgepath#1#2{} % this macro will be defined dynamically using Lua
+\def\myedgecallback#1#2#3#4#5#6#7{%
+\oldedgecallback{#1}{#2}{#3}{#4, save path=\currpath}{#5}{#6}{#7}%
+\passpathtolua{currpath}%
+\saveedgepath{#1}{#2}}
+\let\pgfgdtikzedgecallback=\myedgecallback
+
+\newcommand\drawgraph[2][]{%
+\directlua{g = Graph:new("#1", "#2")}%
+\begin{tikzpicture}[vertex/.style={circle,draw, inner sep=.2em,
+                                   minimum size=1.9em},
+                    annotation/.style={rectangle,inner xsep=.15em, 
+                                       inner ysep=.1em, label distance=-.15cm,
+                                       yshift=-.05cm,fill=white,draw},
+                    edgelabel/.style={draw=red}, line width = .6pt,
+                    line cap=round]
+\directlua{g:basic_layout()}
+\directlua{g:draw_edges()}
+\directlua{g:place_labels()}
+\end{tikzpicture}
+}

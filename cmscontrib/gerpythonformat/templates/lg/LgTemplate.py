@@ -38,6 +38,17 @@ class LgTemplate(PlainTemplate):
         """ Some additional supplies for the latex format
         """
         super(LgTemplate, self).ontask(task)
+
+        # Provide access to our graphdrawing headers
+        shutil.copy(os.path.join(os.path.dirname(__file__), "paths.tex"),
+                    os.path.join(task.wdir, "paths.tex"))
+        shutil.copy(os.path.join(os.path.dirname(__file__), "paths.lua"),
+                    os.path.join(task.wdir, "paths.lua"))
+        shutil.copy(os.path.join(os.path.dirname(__file__), "graphdrawing.tex"),
+                    os.path.join(task.wdir, "graphdrawing.tex"))
+        shutil.copy(os.path.join(os.path.dirname(__file__), "graphdrawing.lua"),
+                    os.path.join(task.wdir, "graphdrawing.lua"))
+
         # Register contestheader.tex as \taskheader
         shutil.copy(os.path.join(os.path.dirname(__file__),
                                  "contestheader.tex"),
