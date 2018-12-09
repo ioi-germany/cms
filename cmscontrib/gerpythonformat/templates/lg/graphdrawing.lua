@@ -245,7 +245,8 @@ function Graph:basic_layout()
                        additional_options .. 
                        "]{")
 
-    for i, n in pairs(self.nodes) do
+    for i = self.first_node_id, self.first_node_id + self.N - 1 do
+        local n = self.nodes[i]
         local label = ""
         
         for _, a in ipairs(n.annotations) do
