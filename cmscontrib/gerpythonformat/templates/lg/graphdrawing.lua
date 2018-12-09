@@ -191,8 +191,24 @@ function Graph:new(param_string, file_name)
     
     table.insert(Graph.instances, g)
     g.id = #Graph.instances
+    Graph.curr_instance = g.id
     
     return g
+end
+
+function Graph:ctx_eval(expr)
+    local r, err = load("return " .. expr, "Graph:ctx_eval", "t", 
+                        {N = self.N, M = self.M})
+
+    if r == nil and err ~= nil then
+        error(err)
+    end
+    
+    return r()
+end
+
+function Graph:mark_node(idx, m)
+    table.insert(self.nodes[self:ctx_eval(idx)].markings, self:ctx_eval(m))
 end
 
 function store_tikz_point_deferred(pointname, varname)
@@ -533,7 +549,7 @@ function Graph:place_labels()
     end
 
     for i, e in pairs(self.edge_list) do
-        if g.args.follow_edges then
+        if self.args.follow_edges then
             e.anchor_normal = e.label_normal
         else
             e.anchor_normal = 5 * round_dir(e.label_normal)
@@ -582,7 +598,7 @@ function Graph:place_labels()
         local alpha = e.anchor_normal:angle()  
         local theta = alpha * 180 / math.pi
                 
-        if g.args.follow_edges then
+        if self.args.follow_edges then
             local phi = (theta - 90) % 360
 
             local eps = 2.5
@@ -615,5 +631,13 @@ function Graph:place_labels()
                       tostring(theta) .. ":" .. e.label .. "}] at " ..
                       e.label_anchor:tikz_repr() .. " {};")
         end
+    end
+end
+
+function Graph:select_instance(x)
+    if x ~= nil then
+        return Graph.instances[x]
+    else
+        return Graph.instances[Graph.curr_instance]
     end
 end

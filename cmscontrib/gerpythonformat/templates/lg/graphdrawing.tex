@@ -31,3 +31,39 @@
 \directlua{g:place_labels()}
 \end{tikzpicture}
 }
+
+\makeatletter
+\newcommand\dg@load[2][]{\directlua{Graph:new("#1", "#2")}}
+\newcommand\dg@marknode[3][]{%
+\directlua{Graph:select_instance(#1):mark_node("#2", "#3")}}
+% As TeX code printed inside directlua only comes into effect once returning to
+% the TeX level, we have to split these function calls into different directlua
+% instances... 
+\newcommand\dg@draw[1][]{\directlua{Graph:select_instance(#1):basic_layout()}%
+\directlua{Graph:select_instance(#1):draw_edges()}%
+\directlua{Graph:select_instance(#1):place_labels()}}
+
+\newenvironment{graphpicture}[1][]{\begindrawgraph{#1}}{\enddrawgraph}
+\def\begindrawgraph#1{%
+\begingroup%
+\let\load=\dg@load%
+\let\marknode=\dg@marknode%
+\let\drawit=\dg@draw%
+\begin{tikzpicture}[vertex/.style={circle, draw, inner sep=.2em,
+                                   minimum size=1.9em},
+                    annotation/.style={rectangle,inner xsep=.15em, 
+                                       inner ysep=.1em, label distance=-.15cm,
+                                       yshift=-.05cm,fill=white,draw},
+                    marking 1/.style={rectangle, inner sep=.1em,
+                                      minimum size=1.8em},
+                    marking 2/.style={fill=darkgray, text=white},
+                    marking 3/.style={line width=1.8pt},
+                    line width=.6pt, line cap=round,
+                    #1]
+}
+\def\enddrawgraph{%
+\drawit%
+\end{tikzpicture}%
+\endgroup%
+}
+\makeatother
