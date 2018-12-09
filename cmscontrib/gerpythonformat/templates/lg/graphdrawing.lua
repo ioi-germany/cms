@@ -58,6 +58,7 @@ function Node:new(text)
     
     n.text = text
     n.annotations = {}
+    n.markings = {}
     
     return n
 end
@@ -97,6 +98,7 @@ function Graph:new(param_string, file_name)
               weighted=false,
               annotated=false,
               zero_based=false,
+              markings=0,
               skip=0,
               skip_before=0,
               
@@ -127,6 +129,9 @@ function Graph:new(param_string, file_name)
     -- skip entries if necessary
     for i = 1, g.args.skip do f:read("*number") end
     
+    -- create nodes
+    g.nodes = {}
+        
     g.first_node_id = 1
     g.first_edge_id = 1
     
@@ -135,13 +140,27 @@ function Graph:new(param_string, file_name)
         g.first_edge_id = 0
     end
     
-    -- create nodes (and read annotations if necessary)
-    g.nodes = {}
-    
     for i = g.first_node_id, g.first_node_id + g.N - 1 do
         g.nodes[i] = Node:new("$" .. tostring(i) .. "$")
+    end
+    
+    -- read markings if necessary
+    local num_markings = {}
+    
+    for i = 1, g.args.markings do
+        table.insert(num_markings, f:read("*number"))
+    end
         
-        if g.args.annotated then
+    for i = 1, g.args.markings do
+        for _ = 1, num_markings[i] do
+            table.insert(g.nodes[f:read("*number")].markings, i)
+        end
+    end
+
+    
+    -- read annotations if necessary
+    if g.args.annotated then
+        for i = g.first_node_id, g.first_node_id + g.N - 1 do
             g.nodes[i]:annotate("$" .. tostring(f:read("*number")) .. "$")
         end
     end
@@ -229,12 +248,19 @@ function Graph:basic_layout()
     for i, n in pairs(self.nodes) do
         local label = ""
         
-        for j, a in ipairs(n.annotations) do
+        for _, a in ipairs(n.annotations) do
             label = ", label={[name=a" .. i ..  ",annotation] above right: " ..
                     a.text .. "}"
         end
+        
+        local markings = ""
+        
+        for _, m in ipairs(n.markings) do
+            markings = markings .. ", marking " .. tostring(m)
+        end
 
-        tex.print("v" .. tostring(i) .. " [as = " .. n.text .. label .. "];")
+        tex.print("v" .. tostring(i) .. " [as = " .. n.text .. label .. 
+                  markings .. "];")
     end
     
     for u = self.first_node_id, self.first_node_id + self.N - 1 do

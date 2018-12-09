@@ -16,13 +16,16 @@
 
 \newcommand\drawgraph[2][]{%
 \directlua{g = Graph:new("#1", "#2")}%
-\begin{tikzpicture}[vertex/.style={circle,draw, inner sep=.2em,
+\begin{tikzpicture}[vertex/.style={circle, draw, inner sep=.2em,
                                    minimum size=1.9em},
                     annotation/.style={rectangle,inner xsep=.15em, 
                                        inner ysep=.1em, label distance=-.15cm,
                                        yshift=-.05cm,fill=white,draw},
-                    edgelabel/.style={draw=red}, line width = .6pt,
-                    line cap=round]
+                    marking 1/.style={rectangle, inner sep=.1em,
+                                      minimum size=1.8em},
+                    marking 2/.style={fill=darkgray, text=white},
+                    marking 3/.style={line width=1.8pt},
+                    line width=.6pt, line cap=round]
 \directlua{g:basic_layout()}
 \directlua{g:draw_edges()}
 \directlua{g:place_labels()}
