@@ -220,8 +220,8 @@ function store_tikz_point_deferred(pointname, varname)
 end
 
 function Graph:_add_edge_path(from, to, path)
-    from = tonumber(from:sub(2))
-    to = tonumber(to:sub(2))
+    from = tonumber(from)
+    to = tonumber(to)
 
     for _, ref in ipairs(self.edge_table[from][to]) do
         local e = self.edge_list[ref]
@@ -249,37 +249,25 @@ function Graph:basic_layout()
                              tostring(self.args.node_distance) .. "pt"
     end
 
+    local node_style = "circle,draw, inner sep=.2em, minimum size=1.9em"
+
     tex.print("\\graph[random seed = " .. tostring(self.args.random_seed) ..
                        "," .. "spring electrical layout, " ..
                        "approximate remote forces = false, " ..
                        "convergence tolerance = 0, " ..
                        "iterations=500, " ..
                        "downsize ratio=0.5, " ..
-                       "nodes={circle,draw, inner sep=.2em, " ..
-                              "minimum size=1.9em}," ..
+                       "nodes={" .. node_style .. ", " ..
+                               "draw=none,text opacity=0}," ..
                        "component align=counterclockwise" .. 
                        additional_options .. 
                        "]{")
 
-    for i = self.first_node_id, self.first_node_id + self.N - 1 do
-        local n = self.nodes[i]
-        local label = ""
-        
-        for _, a in ipairs(n.annotations) do
-            label = ", label={[name=a" .. i ..  ",annotation] above right: " ..
-                    a.text .. "}"
-        end
-        
-        local markings = ""
-        
-        for _, m in ipairs(n.markings) do
-            markings = markings .. ", marking " .. tostring(m)
-        end
-
-        tex.print("v" .. tostring(i) .. " [as = " .. n.text .. label .. 
-                  markings .. "];")
-    end
+    local isolated_nodes = {}
     
+    -- TikZ' graphdrawing behaves non-deterministically when we declare all
+    -- nodes first! Hopefully, this workaround is deterministic even in the 
+    -- presence of isolated nodes...
     for u = self.first_node_id, self.first_node_id + self.N - 1 do
         if self.edge_table[u] then
             for v = self.first_node_id, self.first_node_id + self.N - 1 do
@@ -298,14 +286,40 @@ function Graph:basic_layout()
                         e.fixed_normal = true
                     end
                         
-                    tex.print("v" .. tostring(u) .. "" .. "--[draw=none," ..
-                              bending ..  " ]" .. " v" .. tostring(v) .. ";")
+                    tex.print(tostring(u) .. "[as=]" ..
+                              "--[draw=none," .. bending ..  " ]" .. " " ..
+                              tostring(v) .. "[as=];")
                 end
             end
+        else
+            table.insert(isolated_nodes, u);
         end
     end
     
+    for _, n in ipairs(isolated_nodes) do
+        tex.print(n .. ";")
+    end
+    
     tex.print("};")
+    
+    for i, n in pairs(self.nodes) do
+        local label = ""
+        
+        for _, a in ipairs(n.annotations) do
+            label = ", label={[name=a" .. i ..  ",annotation] above right: " ..
+                    a.text .. "}"
+        end
+        
+        local markings = ""
+        
+        for _, m in ipairs(n.markings) do
+            markings = markings .. ", marking " .. tostring(m)
+        end
+        
+        tex.print("\\node[" .. node_style .. label .. markings .. "] " ..
+                  "(v" .. tostring(i) .. ") at (" .. tostring(i) .. ")" ..
+                  "{" .. n.text .. "};")
+    end
     
     for i, n in pairs(self.nodes) do
         for j, a in ipairs(n.annotations) do
