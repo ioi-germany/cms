@@ -62,8 +62,6 @@ class LgTemplate(PlainTemplate):
         task.supply("latex", def_latex("translationheader",
                                        input_latex("translation.tex")))
         # Compile bar.asy
-        shutil.copyfile(os.path.join(os.path.dirname(__file__), "graphics.cfg"),
-                        "graphics.cfg")
         shutil.copyfile(os.path.join(os.path.dirname(__file__), "mystyle.asy"),
                         "mystyle.asy")
         shutil.copyfile(os.path.join(os.path.dirname(__file__), "logo.eps"),

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -69,6 +69,8 @@ class PlainTemplate(Template):
         super(PlainTemplate, self).ontask(task)
         self.supply_cases(task)
         task.supplement_file("latex", "taskinfo.tex")
+        shutil.copyfile(os.path.join(os.path.dirname(__file__), "graphics.cfg"),
+                        "graphics.cfg")
         shutil.copy(os.path.join(os.path.dirname(__file__), "header.tex"),
                     os.path.join(task.wdir, "header.tex"))
         task.supply("latex", def_latex("basicheader",
