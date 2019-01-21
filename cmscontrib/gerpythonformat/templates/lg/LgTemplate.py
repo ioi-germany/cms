@@ -88,14 +88,19 @@ class LgTemplate(PlainTemplate):
     def mktestcasetable(self, task):
         """ Fancy testcase table
         """
+        head = r"""\hline""" \
+               r"""\multicolumn{1}{|c}{\sffamily Input} && """ \
+               r"""\multicolumn{1}{c|}{\sffamily Output} \\ """ \
+               r"""\hline"""
+        
         self.supply_case_table(
             task,
-            start=r"""\begin{tabular}{p{\inputwidth}@{\hskip0pt}p{.52cm}"""
-                  r"""@{\hskip0pt}p{\outputwidth}}\hline"""
-                  r"""\multicolumn{1}{|c}{\sffamily Input} && """
-                  r"""\multicolumn{1}{c|}{\sffamily Output} \\ """
-                  r"""\hline \noalign{\smallskip}""",
+            start=r"""\begin{longtable}[l]{p{\inputwidth}@{\hskip0pt}p{.52cm}"""
+                  r"""@{\hskip0pt}p{\outputwidth}}""" + head +
+                  r"""\noalign{\smallskip}\endfirsthead""" +
+                  head + r"""\endhead""",
+            end=r"""\end{longtable}""",
             aftereachline=r"\\ \noalign{\smallskip}",
             sep="&&",
-            beforeeachcell=r"\cellcolor[gray]{.9}\vspace{-3ex}",
-            aftereachcell=r"\vspace{-4.8ex}\ \null")
+            beforeeachcell=r"\cellcolor[gray]{.9}\vspace{-3.5ex}",
+            aftereachcell=r"\vspace{-3.8ex}\ \null")
