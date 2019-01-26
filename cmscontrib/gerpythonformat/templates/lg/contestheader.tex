@@ -3,6 +3,8 @@
 \usepackage{colortbl}
 \usepackage{longtable}
 
+\setlength{\LTpost}{\medskipamount}
+
 \usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
 \usepackage[lining,scaled=.9]{FiraMono}
 \usepackage[mathrm=sym]{unicode-math}
@@ -28,8 +30,8 @@
 \def\currconstraints{\currconstraint{@ll}}
 
 \makeatletter
-\def\myc@ption#1#2#3{\noalign{\subsection*{#3}\removelastskip}}
-\def\showcases{\begingroup%
+\def\myc@ption#1#2#3{\noalign{\bfseries\large #3}}
+\def\showcases{\removelastskip\par\bigskip\begingroup%
 % This is evil: we hijack LT@makecaption to force longtable to place the heading
 % same page as the table...
 \let\LT@makecaption=\myc@ption
