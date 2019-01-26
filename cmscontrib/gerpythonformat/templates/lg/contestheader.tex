@@ -27,14 +27,21 @@
 \def\currconstraint#1{\scopedconstraint{\the\stcount}{#1}}
 \def\currconstraints{\currconstraint{@ll}}
 
-\def\showcases{\ifnum\numsamples=1\sheading{\tSample}\else\sheading{\tSamples}\fi%
+\makeatletter
+\def\myc@ption#1#2#3{\noalign{\subsection*{#3}\removelastskip}}
+\def\showcases{\begingroup%
+% This is evil: we hijack LT@makecaption to force longtable to place the heading
+% same page as the table...
+\let\LT@makecaption=\myc@ption
 \begingroup%
 \microtypesetup{activate=false}%
 \testcasetable%
+\endgroup%
 \endgroup}
 \def\showlimits{\sheading{\tLimits}%
 \tTime: \timelimit\\
 \tMemory: \memlimit}
+\makeatother
 
 \def\feedbackheading{\sheading{\tFeedback}}
 \def\nofeedback{\feedbackheading \tNofeedback}

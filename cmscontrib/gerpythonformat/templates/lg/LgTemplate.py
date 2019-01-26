@@ -96,7 +96,9 @@ class LgTemplate(PlainTemplate):
         self.supply_case_table(
             task,
             start=r"""\begin{longtable}[l]{p{\inputwidth}@{\hskip0pt}p{.52cm}"""
-                  r"""@{\hskip0pt}p{\outputwidth}}""" + head +
+                  r"""@{\hskip0pt}p{\outputwidth}}""" + 
+                  r"""\caption*{\ifnum\numsamples=1{\tSample}"""
+                  r"""\else{\tSamples}\fi}\\""" + head +
                   r"""\noalign{\smallskip}\endfirsthead""" +
                   head + r"""\endhead""",
             end=r"""\end{longtable}""",
