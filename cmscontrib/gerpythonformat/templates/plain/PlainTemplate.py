@@ -27,7 +27,7 @@ Commands for standard tasks
 """
 from cmscontrib.gerpythonformat.templates.Template import Template
 from cmscontrib.gerpythonformat.Supplement import def_latex, input_latex
-from cmscontrib.gerpythonformat.ConstraintParser import Constraint
+from cmscontrib.gerpythonformat.ConstraintParser import Constraint, merge
 
 from collections import OrderedDict
 
@@ -123,7 +123,7 @@ class PlainTemplate(Template):
                 res += g.constraints
         return res
 
-    def make_scoped_constraints(self, i, constraint_lists):
+    def curr_scope_constraints(self, i, constraint_lists):
         l = []
         for cl in constraint_lists:
             if not cl.silent:
@@ -173,6 +173,48 @@ class PlainTemplate(Template):
         res += "}\n"
         return res
 
+    def scoped_constraints(self, task):
+        r = []
+        acc_constraints = {}
+        
+        def constraint_values_for_scope(i, scope_list):
+            curr_constraints = acc_constraints.copy()
+
+            for cl in scope_list:
+                for c in cl.constraints:
+                    for var in c.variables:
+                        try:
+                            curr = curr_constraints[var]
+                        except KeyError:
+                            curr = (None, None)
+
+                        curr_constraints[var] = (c.min or curr[0],
+                                                 c.max or curr[1])
+
+            for key, value in curr_constraints.items():
+                if value[0] is not None:
+                    r.append(r"\makescopedconstraintlower{" + "{}".format(i) +
+                             "}{" + key + "}{$" + Constraint.pretty(value[0]) +
+                             "$}\n")
+                if value[1] is not None:
+                    r.append(r"\makescopedconstraintupper{" + "{}".format(i) +
+                             "}{" + key + "}{$" + Constraint.pretty(value[1]) +
+                             "$}\n")
+                if value[0] == value[1] and value[0] is not None:
+                    r.append(r"\makescopedconstraintvalue{" + "{}".format(i) +
+                             "}{" + key + "}{$" + Constraint.pretty(value[0]) +
+                             "$}\n")
+            return curr_constraints
+
+        r.append(self.curr_scope_constraints(0, task.constraints))
+        acc_constraints = constraint_values_for_scope(0, task.constraints)
+
+        for i, s in enumerate([s2 for s2 in task.subtasks if not s2.sample]):
+            r.append(self.curr_scope_constraints(i + 1, s.constraints))
+            constraint_values_for_scope(i + 1, s.constraints)
+
+        return "".join(r)
+
     def latex_constraints(self, task):
         # Indexed access to constraints
         res = ""
@@ -184,11 +226,7 @@ class PlainTemplate(Template):
                     + str(nr) + r"\endcsname{" + s + "}\n"
                 nr += 1
 
-        res += self.make_scoped_constraints(0, task.constraints)
-        for i, s in enumerate([s2 for s2 in task.subtasks if not s2.sample]):
-            res += self.make_scoped_constraints(i + 1, s.constraints)
-
-        return res
+        return res + self.scoped_constraints(task)
 
     def initsubtaskinfo(self, task):
         def points(s):

@@ -28,6 +28,9 @@
 \def\subtask{\count1=\stcount \advance\count1 by 1 \st{\subtaskpoints{\the\count1}}}
 \def\currconstraint#1{\scopedconstraint{\the\stcount}{#1}}
 \def\currconstraints{\currconstraint{@ll}}
+\def\currconstraintupper#1{\scopedconstraintupper{\the\stcount}{#1}}
+\def\currconstraintlower#1{\scopedconstraintlower{\the\stcount}{#1}}
+\def\currconstraintvalue#1{\scopedconstraintvalue{\the\stcount}{#1}}
 
 \makeatletter
 \def\myc@ption#1#2#3{\noalign{\bfseries\large #3}}

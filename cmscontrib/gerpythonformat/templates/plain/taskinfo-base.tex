@@ -1,5 +1,10 @@
 \def\constraint#1{\expandafter\expandafter\csname conshelper#1\endcsname}
 \def\makescopedconstraint#1#2#3{\expandafter\xdef\csname constr@int__#1__#2__\endcsname{#3}}
+\def\makescopedconstraintupper#1#2#3{\expandafter\xdef\csname  constr@int__#1__#2__U\endcsname{#3}}
+\def\makescopedconstraintlower#1#2#3{\expandafter\xdef\csname  constr@int__#1__#2__L\endcsname{#3}}
+\def\makescopedconstraintvalue#1#2#3{\expandafter\xdef\csname  constr@int__#1__#2__V\endcsname{#3}}
 \def\scopedconstraint#1#2{\expandafter\csname constr@int__#1__#2__\endcsname}
-
+\def\scopedconstraintupper#1#2{\expandafter\csname constr@int__#1__#2__U\endcsname}
+\def\scopedconstraintlower#1#2{\expandafter\csname constr@int__#1__#2__L\endcsname}
+\def\scopedconstraintvalue#1#2{\expandafter\csname constr@int__#1__#2__V\endcsname}
 \def\subtaskpoints#1{\expandafter\csname stphelper__#1\endcsname}
