@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -171,18 +171,25 @@ class ConstraintList(object):
                 raise ValueError("Malformed constraint string.")
 
             min = tokens.pop()
+            max = None
+
             if min == ",":
                 min = None
             else:
-                if tokens.pop() != ",":
+                next = tokens.pop()
+            
+                if next == "]":
+                    max = min
+                elif next != ",":
                     raise ValueError("Malformed constraint string.")
 
-            max = tokens.pop()
-            if max == "]":
-                max = None
-            else:
-                if tokens.pop() != "]":
-                    raise ValueError("Malformed constraint string.")
+            if max is None:
+                max = tokens.pop()
+                if max == "]":
+                    max = None
+                else:
+                    if tokens.pop() != "]":
+                        raise ValueError("Malformed constraint string.")
 
             if min is None and max is None:
                 raise ValueError("You have to specify the minimum or the "
