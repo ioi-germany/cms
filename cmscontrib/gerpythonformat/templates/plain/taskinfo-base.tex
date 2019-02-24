@@ -1,0 +1,5 @@
+\def\constraint#1{\expandafter\expandafter\csname conshelper#1\endcsname}
+\def\makescopedconstraint#1#2#3{\expandafter\xdef\csname constr@int__#1__#2__\endcsname{#3}}
+\def\scopedconstraint#1#2{\expandafter\csname constr@int__#1__#2__\endcsname}
+
+\def\subtaskpoints#1{\expandafter\csname stphelper__#1\endcsname}

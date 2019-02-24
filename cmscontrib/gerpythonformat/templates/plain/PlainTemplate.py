@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -71,6 +71,10 @@ class PlainTemplate(Template):
         task.supplement_file("latex", "taskinfo.tex")
         shutil.copy(os.path.join(os.path.dirname(__file__), "header.tex"),
                     os.path.join(task.wdir, "header.tex"))
+        shutil.copy(os.path.join(os.path.dirname(__file__), 
+                                 "taskinfo-base.tex"),
+                    os.path.join(task.wdir, "taskinfo-base.tex"))
+        task.supply("latex", r"\input{taskinfo-base.tex}")
         task.supply("latex", def_latex("basicheader",
                                        input_latex("header.tex")))
         task.supply_latex("taskname", task.simple_query("name"))
@@ -146,8 +150,8 @@ class PlainTemplate(Template):
         for _c in l:
             # For simple user access we "hardcode" all possible
             # reorderings/subsets of the variables
-            # TODO: should we use intricate TeX macros (implementing their own
-            # argument parsing) instead?
+            # TODO: should we use LuaTeX's Lua facilities to implement argument
+            # parsing on the TeX side instead?
             for c in restrictions(_c):
                 v = ",".join(c.variables)
 
@@ -171,8 +175,7 @@ class PlainTemplate(Template):
 
     def latex_constraints(self, task):
         # Indexed access to constraints
-        res = r"\def\constraint#1{\expandafter\expandafter\csname " \
-            r"conshelper#1\endcsname}" + "\n"
+        res = ""
         nr = 1
         for c in self.find_constraints(task):
             if not c.silent:
@@ -180,12 +183,6 @@ class PlainTemplate(Template):
                 res += r"\expandafter\expandafter\def\csname conshelper" \
                     + str(nr) + r"\endcsname{" + s + "}\n"
                 nr += 1
-
-        # Constraints grouped per scope and variable
-        res += r"\def\makescopedconstraint#1#2#3{\expandafter\xdef\csname " \
-               r"constr@int__#1__#2__\endcsname{#3}}" + "\n" + \
-               r"\def\scopedconstraint#1#2{\expandafter\csname " \
-               r"constr@int__#1__#2__\endcsname}" + "\n"
 
         res += self.make_scoped_constraints(0, task.constraints)
         for i, s in enumerate([s2 for s2 in task.subtasks if not s2.sample]):
@@ -198,8 +195,7 @@ class PlainTemplate(Template):
             return "{}".format(sum(g.points for g in s.groups))
 
         def subtaskinfo():
-            r = r"\def\subtaskpoints#1{\expandafter\csname " \
-                r"stphelper__#1\endcsname}"
+            r = ""
             st = [s for s in task.subtasks if not s.sample]
 
             for i, s in enumerate(st):
