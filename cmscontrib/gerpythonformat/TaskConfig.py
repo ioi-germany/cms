@@ -657,8 +657,9 @@ class TaskConfig(CommonConfig, Scope):
         s += '#include <checkutil.h>\n'
         s += "void load_constraints() {\n"
         for var, ran in iteritems(constraints):
-            s += '\tput_constraint("{}", {}, {});\n'.format(var,
-                                                            ran[0], ran[1])
+            s += '\tput_integral_constraint("{}", "{}", "{}");\n'.format(var,
+                                                                         ran[0],
+                                                                         ran[1])
         s += "}\n"
         return s
 

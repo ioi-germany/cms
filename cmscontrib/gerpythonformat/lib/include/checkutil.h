@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -31,27 +31,68 @@
 #include <sstream>
 using namespace std;
 
-map<string, pair<long long, long long> > constraints_ll;
+/* We save constraints as strings, thereby allowing for numbers that do not fit
+ * one of the usual integer types
+ */
+map<string, pair<string, string>> _integral_constraints;
+
+bool unsigned_compare_string_representations(const string& lhs, const string& rhs) {
+    if(lhs.empty() or rhs.empty()) {
+        cerr << "trying to interprete the empty string as integer -- why?";
+        exit(1);
+    }
+
+    if(lhs.size() < rhs.size()) return true;
+    if(lhs.size() > rhs.size()) return false;
+    
+    for(size_t i = 0; i < lhs.size(); ++i) {
+        if(lhs[i] < rhs[i]) return true;
+        if(lhs[i] > rhs[i]) return false;
+    }
+    
+    return false;
+}
+
+bool compare_string_representations(string lhs, string rhs) {
+    if(lhs.empty() or rhs.empty()) {
+        cerr << "trying to interprete the empty string as integer -- why?";
+        exit(1);
+    }
+
+    if(lhs[0] == '-' and rhs[0] != '-') return true;
+    if(lhs[0] != '-' and rhs[0] == '-') return false;
+    
+    if(lhs[0] == '-' and rhs[0] == '-') {
+        lhs = lhs.substr(1); rhs = rhs.substr(1);
+        swap(lhs, rhs);
+    }
+    
+    return unsigned_compare_string_representations(lhs, rhs);
+}
 
 /* Queries for automatic constraints */
-template<typename T> pair<T, T> get_constraint(const string &name);
+template<typename T> pair<string, string> get_constraint(const string &name) {
+    auto iter = _integral_constraints.find(name);
 
-template<> pair<long long, long long> get_constraint(const string &name) {
-    if (constraints_ll.find(name) != constraints_ll.end())
-        return constraints_ll.find(name)->second;
+    if(iter != _integral_constraints.end()) {
+        pair<string, string> result = iter->second;
+
+        // Ensure that these strings represent elements of type T
+        (void) from_string_or_fail<T>(result.first);
+        (void) from_string_or_fail<T>(result.second);
+
+        return result;
+    }
+    
     else {
         cerr << "auto-check failed: name '" + name + "' not found" << endl;
         exit(42);
     }
 }
 
-template<> pair<int, int> get_constraint(const string &name) {
-    return (pair<int, int>)(get_constraint<long long> (name));
-}
-
 /* Register an automatic constraint */
-void put_constraint(const string &name, long long min, long long max) {
-    constraints_ll[name] = make_pair(min, max);
+void put_integral_constraint(const string &name, const string &min, const string &max) {
+    _integral_constraints[name] = make_pair(min, max);
 }
 
 /* Read constraints from a command line array, interpreting them as integers
@@ -59,8 +100,10 @@ void put_constraint(const string &name, long long min, long long max) {
  */
 void read_some_constraints(char **argv, int count, int start = 0) {
     for (int i = 0; i < count; ++i) {
-        string name = argv[start + 3 * i], min = argv[start + 3 * i + 1], max = argv[start + 3 * i + 2];
-        put_constraint(name, from_string_or_fail<long long> (min), from_string_or_fail<long long> (max));
+        string name = argv[start + 3 * i],
+                min = argv[start + 3 * i + 1],
+                max = argv[start + 3 * i + 2];
+        put_integral_constraint(name, min, max);
     }
 }
 
@@ -143,10 +186,23 @@ public:
         }
         return t;
     }
+    
+    template<typename T> T parse_and_check_str(const string &name, const string &min, const string &max, const string &expected_whitespace = "") {
+        string t = parse_and_check<string> (expected_whitespace);
+        if (compare_string_representations(t, min)) {
+            cerr << name << " = " << t << " < " << min << endl;
+            exit(1);
+        }
+        if (compare_string_representations(max, t)) {
+            cerr << name << " = " << t << " > " << max << endl;
+            exit(1);
+        }
+        return from_string_or_fail<T>(t);
+    }
 
     template<typename T> T parse_and_auto_check(const string &name, const string &expected_whitespace = "") {
-        pair<T, T> constraint = get_constraint<T> (name);
-        return parse_and_check(name, constraint.first, constraint.second, expected_whitespace);
+        pair<string, string> constraint = get_constraint<T> (name);
+        return parse_and_check_str<T>(name, constraint.first, constraint.second, expected_whitespace);
     }
 
 private:
