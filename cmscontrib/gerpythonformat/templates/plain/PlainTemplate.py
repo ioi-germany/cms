@@ -169,7 +169,7 @@ class PlainTemplate(Template):
         # input
         res += r"\makescopedconstraint{" + "{}".format(i) + "}{" + "@ll" + "}{"
         keys = OrderedDict.fromkeys(",".join(c.variables) for c in l)
-        res += ", ".join(d[v].latex() for v in keys)
+        res += PlainTemplate.constraint_join([d[v].latex() for v in keys])
         res += "}\n"
         return res
 
@@ -221,7 +221,7 @@ class PlainTemplate(Template):
         nr = 1
         for c in self.find_constraints(task):
             if not c.silent:
-                s = ", ".join(c.latex())
+                s = PlainTemplate.constraint_join(c.latex())
                 res += r"\expandafter\expandafter\def\csname conshelper" \
                     + str(nr) + r"\endcsname{" + s + "}\n"
                 nr += 1
@@ -279,3 +279,13 @@ class PlainTemplate(Template):
         formats
         """
         self.supply_case_table(task)
+
+    @staticmethod
+    def constraint_join(L):
+        if len(L) == 0:
+            return ""
+        if len(L) == 1:
+            return L[0]
+
+        return ", ".join(L[:-1]) + (r"\tAND/ " if len(L) == 2
+                                    else r"\tANDs/ ") + L[-1]
