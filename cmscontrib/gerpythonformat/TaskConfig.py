@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2016 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -55,6 +55,7 @@ class Scope(object):
         self.upscope = upscope
         self.checkers = []
         self.constraints = []
+        self.special_cases = []
         if upscope is None:
             self.task = self
         else:
@@ -71,6 +72,14 @@ class Scope(object):
         if self.upscope is not None:
             res += self.upscope._get_constraints()
         res += self.constraints
+        return res
+
+    def _get_special_cases(self):
+        res = []
+        
+        if self.upscope is not None:
+            res += self.upscope._get_special_cases()        
+        res += self.special_cases
         return res
 
     def add_checker(self, p):
@@ -95,6 +104,14 @@ class Scope(object):
                       or (isinstance(self, MySubtask) and self.sample))
 
         self.constraints.append(ConstraintList.parse(s, silent))
+
+    def add_special_case(self, descr):
+        """
+        Add a special case for this task, subtask or group.
+        This is just a string that will be passed to the checker
+        """
+
+        self.special_cases.append(descr)
 
 
 class MySubtask(Scope):
@@ -660,6 +677,8 @@ class TaskConfig(CommonConfig, Scope):
             s += '\tput_integral_constraint("{}", "{}", "{}");\n'.format(var,
                                                                          ran[0],
                                                                          ran[1])
+        for desc in self.current_group._get_special_cases():
+            s += '\tadd_special_case("{}");\n'.format(desc)
         s += "}\n"
         return s
 
@@ -1035,6 +1054,23 @@ class TaskConfig(CommonConfig, Scope):
             self.subtask_stack[-1].add_constraint(*args, **kwargs)
         else:
             self.add_constraint(*args, **kwargs)
+
+    @exported_function
+    def special_case(self, case):
+        """
+        Mark a current subtask or group as "special case"
+
+        See :py:meth:`.Scope.add_special_case`.
+
+        """
+        if len(self.group_stack) > 0:
+            self.group_stack[-1].add_special_case(case)
+        elif len(self.subtask_stack) > 0:
+            self.subtask_stack[-1].add_special_case(case)
+        else:
+            print_msg("You called special_case globally—this is a bit weird, "
+                      "so I hope you know what you're doing…", warning=True)
+            self.add_special_case(case)
 
     @exported_function
     def add_testcase(self, *args, **kwargs):

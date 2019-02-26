@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -55,6 +55,13 @@ int main(int argc, char **argv) {
 #ifdef __constraints
     load_constraints();
     cerr << "Constraints loaded." << endl;
+    
+    if(not _special_cases.empty())
+    {
+        cerr << "This case should satisfy the following additional condition(s):";
+        for(string s : _special_cases) cerr << " " << s;
+        cerr << endl;
+    }
 #endif
 
     t = token_stream(fin);

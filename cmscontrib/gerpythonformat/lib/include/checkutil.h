@@ -25,6 +25,7 @@
 
 #include <computil.h>
 #include <map>
+#include <set>
 #include <string>
 #include <cstdio>
 #include <iostream>
@@ -93,6 +94,17 @@ template<typename T> pair<string, string> get_constraint(const string &name) {
 /* Register an automatic constraint */
 void put_integral_constraint(const string &name, const string &min, const string &max) {
     _integral_constraints[name] = make_pair(min, max);
+}
+
+/* Facilities for special cases */
+set<string> _special_cases;
+
+void add_special_case(string s) {
+    _special_cases.insert(s);
+}
+
+bool is_special_case(string s) {
+    return _special_cases.find(s) != _special_cases.end();
 }
 
 /* Replaces all whitespace escapes by their respective codes
