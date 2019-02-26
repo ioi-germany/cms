@@ -95,22 +95,6 @@ void put_integral_constraint(const string &name, const string &min, const string
     _integral_constraints[name] = make_pair(min, max);
 }
 
-/* Read constraints from a command line array, interpreting them as integers
- * TODO: use templates and specialization?
- */
-void read_some_constraints(char **argv, int count, int start = 0) {
-    for (int i = 0; i < count; ++i) {
-        string name = argv[start + 3 * i],
-                min = argv[start + 3 * i + 1],
-                max = argv[start + 3 * i + 2];
-        put_integral_constraint(name, min, max);
-    }
-}
-
-void read_all_constraints(char **argv, int argc, int start = 0) {
-    read_some_constraints(argv, (argc - start) / 3, start);
-}
-
 /* Replaces all whitespace escapes by their respective codes
  */
 string nws(char c) {
