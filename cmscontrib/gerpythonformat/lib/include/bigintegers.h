@@ -103,6 +103,9 @@ class big_int {
     bool operator<=(const big_int &rhs) const { return not (rhs > *this); }
     bool operator>=(const big_int &rhs) const { return not (rhs < *this); }
     
+    bool operator==(const big_int &rhs) const { return data == rhs.data; }
+    bool operator!=(const big_int &rhs) const { return not (*this == rhs); }
+    
     string to_string() const { return data; }
     
     /* T should be an integral type for this to be meaningful */
