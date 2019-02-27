@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@
 #ifndef __computil_h
 #define __computil_h
 
+#include <bigintegers.h>
 #include <filereading.h>
 #include <tokenizing.h>
 #include <stringreading.h>

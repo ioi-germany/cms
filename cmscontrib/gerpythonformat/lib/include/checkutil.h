@@ -37,52 +37,15 @@ using namespace std;
  */
 map<string, pair<string, string>> _integral_constraints;
 
-bool unsigned_compare_string_representations(const string& lhs, const string& rhs) {
-    if(lhs.empty() or rhs.empty()) {
-        cerr << "trying to interprete the empty string as integer -- why?";
-        exit(1);
-    }
-
-    if(lhs.size() < rhs.size()) return true;
-    if(lhs.size() > rhs.size()) return false;
-    
-    for(size_t i = 0; i < lhs.size(); ++i) {
-        if(lhs[i] < rhs[i]) return true;
-        if(lhs[i] > rhs[i]) return false;
-    }
-    
-    return false;
-}
-
-bool compare_string_representations(string lhs, string rhs) {
-    if(lhs.empty() or rhs.empty()) {
-        cerr << "trying to interprete the empty string as integer -- why?";
-        exit(1);
-    }
-
-    if(lhs[0] == '-' and rhs[0] != '-') return true;
-    if(lhs[0] != '-' and rhs[0] == '-') return false;
-    
-    if(lhs[0] == '-' and rhs[0] == '-') {
-        lhs = lhs.substr(1); rhs = rhs.substr(1);
-        swap(lhs, rhs);
-    }
-    
-    return unsigned_compare_string_representations(lhs, rhs);
-}
-
 /* Queries for automatic constraints */
-template<typename T> pair<string, string> get_constraint(const string &name) {
+template<typename T> pair<T, T> get_constraint(const string &name) {
     auto iter = _integral_constraints.find(name);
 
     if(iter != _integral_constraints.end()) {
         pair<string, string> result = iter->second;
 
-        // Ensure that these strings represent elements of type T
-        (void) from_string_or_fail<T>(result.first);
-        (void) from_string_or_fail<T>(result.second);
-
-        return result;
+        return make_pair(from_string_or_fail<T>(result.first),
+                         from_string_or_fail<T>(result.second));
     }
     
     else {
@@ -182,23 +145,10 @@ public:
         }
         return t;
     }
-    
-    template<typename T> T parse_and_check_str(const string &name, const string &min, const string &max, const string &expected_whitespace = "") {
-        string t = parse_and_check<string> (expected_whitespace);
-        if (compare_string_representations(t, min)) {
-            cerr << name << " = " << t << " < " << min << endl;
-            exit(1);
-        }
-        if (compare_string_representations(max, t)) {
-            cerr << name << " = " << t << " > " << max << endl;
-            exit(1);
-        }
-        return from_string_or_fail<T>(t);
-    }
 
     template<typename T> T parse_and_auto_check(const string &name, const string &expected_whitespace = "") {
-        pair<string, string> constraint = get_constraint<T> (name);
-        return parse_and_check_str<T>(name, constraint.first, constraint.second, expected_whitespace);
+        pair<T, T> constraint = get_constraint<T> (name);
+        return parse_and_check<T>(name, constraint.first, constraint.second, expected_whitespace);
     }
 
 private:

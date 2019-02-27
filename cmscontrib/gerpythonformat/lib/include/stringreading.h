@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -32,67 +32,16 @@
 #include <typenaming.h>
 using namespace std;
 
-#ifdef __GNUG__
-
-// g++ provides an 128bit-integer type, but no stream reading/writing for it
-ostream & operator<<(ostream &out, __int128 y) {
-    unsigned __int128 x = static_cast<unsigned __int128>(y);
-
-    if(y < 0) {
-        out << "-";
-        
-        --x; x = ~x;
-    }
-    
-    string s;
-    
-    do {
-        s.push_back((x % 10) + '0');
-        x /= 10;
-    }
-    while(x);
-    
-    reverse(s.begin(), s.end());
-    out << s;
-
-    return out;
+// Helper function to print almost anything to a string
+template<typename T> string to_string(const T &t) {
+    ostringstream out;
+    out << t;
+    return out.str();
 }
-
-istream & operator>>(istream &in, __int128 &x) {
-    in >> ws;
-    x = 0;
-    
-    bool negative = false;
-    
-    if(in.peek() == '-') {
-        negative = true;
-        (void) in.get();
-    }
-    
-    bool read = false;
-    
-    while(not in.eof() and '0' <= in.peek() and in.peek() <= '9') {
-        char c; in >> c;
-        x = 10 * x + (negative ? -1 : 1) * (c - '0');
-        read = true;
-    }
-    
-    if((not in.eof() and not isspace(in.peek())) or not read)
-        in.setstate(ios_base::failbit);
-    
-    // Checking whether the digit string actually fits into an __int128 happens
-    // in from_string by calling string_representation_ok
-    
-    return in;
-}
-
-#endif
 
 // Prints t to a string and compares it to s
 template<typename T> bool string_representation_ok(const string &s, const T &t) {
-    ostringstream out;
-    out << t;
-    return out.str() == s;
+    return to_string(t) == s;
 }
 
 // For double, we are less strict as there are many ways to represent a double.
