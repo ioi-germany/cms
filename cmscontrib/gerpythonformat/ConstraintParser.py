@@ -54,7 +54,8 @@ class ConstraintParser(object):
         Read until something exciting happens
         """
         r = ""        
-        while self.peek(skip_whitespace=True) not in SPECIAL_CHARACTERS:
+        while self.peek(skip_whitespace=True) not in SPECIAL_CHARACTERS and \
+              not self.eof(skip_whitespace=True):
             r += self.next(skip_whitespace=(r == ""))
         return r
 
@@ -67,6 +68,7 @@ class ConstraintParser(object):
         r = ""
         while self.peek(skip_whitespace=False) != GROUP_CHARACTER:
             r += self.next(skip_whitespace=False)
+            assert not self.eof(skip_whitespace=False)
         
         assert self.next(skip_whitespace=False) == GROUP_CHARACTER
         
@@ -111,6 +113,11 @@ class ConstraintParser(object):
         return L
 
     def read_bounds(self):
+        if self.peek(skip_whitespace=True) != CONSTRAINT_BEGIN:
+            # Special syntax for constraints with lower == upper
+            val = self.read_single_entry()
+            return val, val
+
         assert self.next(skip_whitespace=True) == CONSTRAINT_BEGIN
 
         lower = None
@@ -289,12 +296,17 @@ class ConstraintList(object):
         parser = ConstraintParser(s)
 
         res = []
-        while not parser.eof():
+        while True:
             res.append(Constraint(parser.read_variables(),
                                   *parser.read_bounds()))
-            
-            if parser.peek(skip_whitespace=True) == SEPARATOR:
-                parser.next(skip_whitespace=True)
+
+            if parser.eof(skip_whitespace=True):
+                break
+
+            if parser.next(skip_whitespace=True) != SEPARATOR:
+                raise ValueError("legacy syntax in constraint string: "
+                                 "you need to separate your constraints by '" +
+                                 SEPARATOR + "'")
 
         return ConstraintList(res, silent)
 
