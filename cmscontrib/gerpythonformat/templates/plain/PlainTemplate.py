@@ -184,6 +184,12 @@ class PlainTemplate(Template):
         keys = OrderedDict.fromkeys(",".join(v.val for v in c.variables) for c in l)
         res += PlainTemplate.constraint_join([d[v].latex() for v in keys])
         res += "}\n"
+
+        # non-fancy version of this that only uses ',' as separator
+        res += r"\makescopedconstraint{" + "{}".format(i) + "}{" + "@ll*" + "}{"
+        keys = OrderedDict.fromkeys(",".join(v.val for v in c.variables) for c in l)
+        res += ", ".join([d[v].latex() for v in keys])
+        res += "}\n"
         return res
 
     def scoped_constraints(self, task):

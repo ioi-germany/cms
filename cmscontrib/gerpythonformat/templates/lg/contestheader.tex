@@ -21,18 +21,18 @@
 \rhead{\vbox to \headh{\vbox to 0pt{\vskip-2in\hbox to 0pt{\hskip\hsize\hskip-1.5in\includegraphics{\barpdf}}}\quad\null}}
 \lhead{}
 
+\makeatletter
 \def\sthelper#1#2{{\sffamily\bfseries \tSubtask\ #1 (#2 \ifnum#2=1\tPoint\else\tPoints\fi).\enspace}}
 \newcount\stcount
 \stcount=0
 \def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}
 \def\subtask{\count1=\stcount \advance\count1 by 1 \st{\subtaskpoints{\the\count1}}}
 \def\currconstraint#1{\scopedconstraint{\the\stcount}{#1}}
-\def\currconstraints{\currconstraint{@ll}}
+\def\currconstraints{\@ifstar{\currconstraint{@ll*}}{\currconstraint{@ll}}}
 \def\currconstraintupper#1{\scopedconstraintupper{\the\stcount}{#1}}
 \def\currconstraintlower#1{\scopedconstraintlower{\the\stcount}{#1}}
 \def\currconstraintvalue#1{\scopedconstraintvalue{\the\stcount}{#1}}
 
-\makeatletter
 \def\myc@ption#1#2#3{\noalign{\bfseries\large #3}}
 \def\showcases{\removelastskip\par\bigskip\begingroup%
 % This is evil: we hijack LT@makecaption to force longtable to place the heading
@@ -46,7 +46,6 @@
 \def\showlimits{\sheading{\tLimits}%
 \tTime: \timelimit\\
 \tMemory: \memlimit}
-\makeatother
 
 \def\feedbackheading{\sheading{\tFeedback}}
 \def\nofeedback{\feedbackheading \tNofeedback}
@@ -66,3 +65,4 @@
 \def\showfeedback{\csname\feedback feedback\endcsname}
 
 \def\standardpart{\showcases\showlimits\showfeedback}
+\makeatother
