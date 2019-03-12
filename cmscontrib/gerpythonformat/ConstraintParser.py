@@ -24,6 +24,142 @@ from __future__ import unicode_literals
 
 from six import iteritems
 
+import string
+
+class TypesetValue(object):
+    def __init__(self, val, typeset):
+        self.val = val
+        self.typeset = typeset
+
+GROUP_CHARACTER = "\""
+ANNOTATION_BEGIN = "("
+ANNOTATION_END = ")"
+CONSTRAINT_BEGIN = "["
+CONSTRAINT_END = "]"
+SEPARATOR = ","
+KEY_VALUE_SEP = ":"
+
+SPECIAL_CHARACTERS = [GROUP_CHARACTER, ANNOTATION_BEGIN, ANNOTATION_END,
+                      CONSTRAINT_BEGIN, CONSTRAINT_END, SEPARATOR,
+                      KEY_VALUE_SEP]
+
+
+class ConstraintParser(object):
+    def __init__(self, data):
+        self.data = data
+        self.idx = 0
+
+    def read_normal(self):
+        """
+        Read until something exciting happens
+        """
+        r = ""        
+        while self.peek(skip_whitespace=True) not in SPECIAL_CHARACTERS:
+            r += self.next(skip_whitespace=(r == ""))
+        return r
+
+    def read_group(self):
+        """
+        Read a group (i.e. something delimited by ")
+        """
+        assert self.next(skip_whitespace=True) == GROUP_CHARACTER
+        
+        r = ""
+        while self.peek(skip_whitespace=False) != GROUP_CHARACTER:
+            r += self.next(skip_whitespace=False)
+        
+        assert self.next(skip_whitespace=False) == GROUP_CHARACTER
+        
+        return r
+
+    def read_token(self):
+        if self.peek(skip_whitespace=True) == GROUP_CHARACTER:
+            return self.read_group()
+        else:
+            return self.read_normal()
+
+    def read_annotation(self):
+        assert self.next(skip_whitespace=True) == ANNOTATION_BEGIN
+        r = self.read_token()        
+        assert self.next(skip_whitespace=True) == ANNOTATION_END
+
+        return r
+
+    def read_single_entry(self):
+        a = self.read_token()
+        
+        if self.peek(skip_whitespace=True) == ANNOTATION_BEGIN:
+            b = self.read_annotation()
+        else:
+            b = None
+            
+        return TypesetValue(a, b)
+
+    def read_variables(self):
+        L = []
+        
+        while True:
+            L.append(self.read_single_entry())
+
+            if self.peek(skip_whitespace=True) == SEPARATOR:
+                self.next(skip_whitespace=True)
+            else:
+                break
+
+        assert self.next(skip_whitespace=True) == KEY_VALUE_SEP
+
+        return L
+
+    def read_bounds(self):
+        assert self.next(skip_whitespace=True) == CONSTRAINT_BEGIN
+
+        lower = None
+        upper = None
+
+        if self.peek(skip_whitespace=True) != SEPARATOR:
+            lower = self.read_single_entry()
+        
+        if self.peek(skip_whitespace=True) == CONSTRAINT_END:
+            upper = lower
+        else:
+            assert self.peek(skip_whitespace=True) == SEPARATOR
+            self.next(skip_whitespace=True)
+            
+            if self.peek(skip_whitespace=True) != CONSTRAINT_END:
+                upper = self.read_single_entry()
+
+        assert self.next(skip_whitespace=True) == CONSTRAINT_END
+
+        return lower, upper
+
+    def _peek_next(self):
+        try:
+            return self.data[self.idx]
+        except IndexError:
+            return '\0'
+
+    def skip_whitespace(self):
+        while self._peek_next() in string.whitespace:
+            self.idx += 1    
+
+    def next(self, skip_whitespace=False):
+        if skip_whitespace:
+            self.skip_whitespace()
+
+        result = self._peek_next()
+        self.idx += 1
+        return result
+
+    def peek(self, skip_whitespace=False):
+        old_idx = self.idx
+        result = self.next(skip_whitespace)
+        self.idx = old_idx
+        return result
+
+    def eof(self, skip_whitespace=False):
+        return self.peek(skip_whitespace) == "\0"
+
+
 class Constraint(object):
     def __init__(self, variables, min, max):
         self.variables = variables
@@ -31,8 +167,8 @@ class Constraint(object):
         self.max = max
 
     def uncompress(self):
-        return {v: [Constraint.eval(self.min),
-                    Constraint.eval(self.max)] for v in self.variables}
+        return {v: [Constraint.eval(self.min.val),
+                    Constraint.eval(self.max.val)] for v in self.variables}
 
     def merge(self, rhs):
         if rhs.min is not None:
@@ -41,25 +177,45 @@ class Constraint(object):
         if rhs.max is not None:
             self.max = rhs.max
 
+        typesetting = {}
+        for v in rhs.variables:
+            if v.typeset is not None:
+                typesetting[v.val] = v.typeset
+
+        for v in self.variables:
+            if v.val in typesetting:
+                v.typeset = typesetting[v.val]
+
     def latex(self):
         s = "$"
+        
+        typeset_variable_list = list(v.typeset or v.val
+                                     for v in self.variables)
+        
         if self.max is not None and self.max == self.min:
-            s += "=".join(self.variables)
+            s += "=".join(typeset_variable_list)
             s += r"= {}".format(Constraint.pretty(self.min))
 
         elif self.max is None:
-            s += ", ".join(self.variables)
+            s += ", ".join(typeset_variable_list)
             s += r"\ge {}".format(Constraint.pretty(self.min))
         else:
             if self.min is not None:
                 s += r"{}\le ".format(Constraint.pretty(self.min))
-            s += ", ".join(self.variables)
+            s += ", ".join(typeset_variable_list)
             s += r"\le {}".format(Constraint.pretty(self.max))
         s += "$"
         return s
 
     @staticmethod
-    def pretty(s):
+    def pretty(v):
+        if v.typeset is not None:
+            return v.typeset
+        else:
+            return Constraint.prettify(v.val)
+
+    @staticmethod
+    def prettify(s):
         """
         Try to apply digit grouping to numbers for TeX display
 
@@ -70,10 +226,8 @@ class Constraint(object):
         curr_token = ""
         num_mode = False
 
-        digits = {chr(ord('0') + i) for i in range(0, 10)}
-
         for c in s:
-            if (c in digits) != num_mode:
+            if (c in string.digits) != num_mode:
                 l.append(Constraint.grp(curr_token)
                          if num_mode else curr_token)
                 curr_token = ""
@@ -107,7 +261,8 @@ class Constraint(object):
 
         coding = {"^": "**",
                   "{": "(",
-                  "}": ")"}
+                  "}": ")",
+                  "\\cdot": "*"}
 
         for old, new in iteritems(coding):
             s = s.replace(old, new)
@@ -129,75 +284,20 @@ class ConstraintList(object):
     def latex(self):
         return [c.latex() for c in self.constraints]
 
-    @staticmethod
-    def tokenize(s):
-        tokens = []
-
-        token = ""
-        for c in s:
-            if c == " " or c == "\n":
-                continue
-            if c == "[" or c == "]" or c == "," or c == ":":
-                if len(token) > 0:
-                    tokens.append(token)
-                tokens.append(c)
-                token = ""
-            else:
-                token += c
-        if len(token) > 0:
-            tokens.append(c)
-
-        return tokens
-
     @classmethod
     def parse(cls, s, silent):
-        tokens = cls.tokenize(s)
-        # Reverse the token list and use it as a stack from now on.
-        tokens.reverse()
+        parser = ConstraintParser(s)
 
         res = []
-
-        while len(tokens) > 0:
-            char = ""
-            variables = []
-            while True:
-                variables.append(tokens.pop())
-                char = tokens.pop()
-                if char != ",":
-                    break
-            if char != ":":
-                raise ValueError("Malformed constraint string.")
-            if tokens.pop() != "[":
-                raise ValueError("Malformed constraint string.")
-
-            min = tokens.pop()
-            max = None
-
-            if min == ",":
-                min = None
-            else:
-                next = tokens.pop()
+        while not parser.eof():
+            res.append(Constraint(parser.read_variables(),
+                                  *parser.read_bounds()))
             
-                if next == "]":
-                    max = min
-                elif next != ",":
-                    raise ValueError("Malformed constraint string.")
-
-            if max is None:
-                max = tokens.pop()
-                if max == "]":
-                    max = None
-                else:
-                    if tokens.pop() != "]":
-                        raise ValueError("Malformed constraint string.")
-
-            if min is None and max is None:
-                raise ValueError("You have to specify the minimum or the "
-                                 "maximum value.")
-
-            res.append(Constraint(variables, min, max))
+            if parser.peek(skip_whitespace=True) == SEPARATOR:
+                parser.next(skip_whitespace=True)
 
         return ConstraintList(res, silent)
+
 
 #For two constraining intervals, return their intersection, where there
 #shall be no boundary that is explicitly specified less strict in the second
@@ -230,7 +330,6 @@ def merge(c1, c2, var):
 #For two unpacked constraint lists, return their logical and, where there
 #shall be no inequality that is explicitly specified less strict in the second
 #than in the first (e.g., (_,100) in the first and (_,1000) in the second).
-
 def merge_constraints(cl1, cl2):
     res = dict(cl1)
     for var, ran in iteritems(cl2):
@@ -239,3 +338,4 @@ def merge_constraints(cl1, cl2):
         else:
             res[var] = ran
     return res
+

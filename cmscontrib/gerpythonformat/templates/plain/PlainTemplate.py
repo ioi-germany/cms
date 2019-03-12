@@ -34,6 +34,7 @@ from collections import OrderedDict
 import functools
 import os
 import shutil
+import copy
 
 from six import iteritems
 
@@ -123,9 +124,14 @@ class PlainTemplate(Template):
                 res += g.constraints
         return res
 
-    def curr_scope_constraints(self, i, constraint_lists):
+    def curr_scope_constraints(self, i, constraint_lists, typesetting):
         l = []
         for cl in constraint_lists:
+            for c in cl.constraints:
+                for v in c.variables:
+                    if v.typeset is not None:
+                        typesetting[v.val] = v.typeset
+
             if not cl.silent:
                 l += cl.constraints
 
@@ -145,6 +151,13 @@ class PlainTemplate(Template):
         def restrictions(c):
             for v in inj(c.variables):
                 if v:
+                    for var in v:
+                        if var.typeset is None:
+                            try:
+                                var.typeset = typesetting[var.val]
+                            except KeyError:
+                                pass
+
                     yield Constraint(v, c.min, c.max)
 
         for _c in l:
@@ -153,7 +166,7 @@ class PlainTemplate(Template):
             # TODO: should we use LuaTeX's Lua facilities to implement argument
             # parsing on the TeX side instead?
             for c in restrictions(_c):
-                v = ",".join(c.variables)
+                v = ",".join(v.val for v in c.variables)
 
                 if v in d:
                     d[v].merge(c)
@@ -168,7 +181,7 @@ class PlainTemplate(Template):
         # Collection of all constraints in this scope, as appearing in the
         # input
         res += r"\makescopedconstraint{" + "{}".format(i) + "}{" + "@ll" + "}{"
-        keys = OrderedDict.fromkeys(",".join(c.variables) for c in l)
+        keys = OrderedDict.fromkeys(",".join(v.val for v in c.variables) for c in l)
         res += PlainTemplate.constraint_join([d[v].latex() for v in keys])
         res += "}\n"
         return res
@@ -188,8 +201,8 @@ class PlainTemplate(Template):
                         except KeyError:
                             curr = (None, None)
 
-                        curr_constraints[var] = (c.min or curr[0],
-                                                 c.max or curr[1])
+                        curr_constraints[var.val] = (c.min or curr[0],
+                                                     c.max or curr[1])
 
             for key, value in curr_constraints.items():
                 if value[0] is not None:
@@ -206,11 +219,14 @@ class PlainTemplate(Template):
                              "$}\n")
             return curr_constraints
 
-        r.append(self.curr_scope_constraints(0, task.constraints))
+        typesetting = {}
+
+        r.append(self.curr_scope_constraints(0, task.constraints, typesetting))
         acc_constraints = constraint_values_for_scope(0, task.constraints)
 
         for i, s in enumerate([s2 for s2 in task.subtasks if not s2.sample]):
-            r.append(self.curr_scope_constraints(i + 1, s.constraints))
+            r.append(self.curr_scope_constraints(i + 1, s.constraints,
+                     copy.copy(typesetting)))
             constraint_values_for_scope(i + 1, s.constraints)
 
         return "".join(r)
