@@ -667,6 +667,12 @@ class TaskConfig(CommonConfig, Scope):
     # Supplement helpers
 
     def cpp_constraints(self):
+        def cppify(x):
+            if x is None:
+                return "none";
+            else:
+                return "(string)\"{}\"".format(x)
+
         if self.current_group is None:
             return ""
         constraints = self.current_group._collect_constraints()
@@ -674,9 +680,8 @@ class TaskConfig(CommonConfig, Scope):
         s += '#include <checkutil.h>\n'
         s += "void load_constraints() {\n"
         for var, ran in iteritems(constraints):
-            s += '\tput_integral_constraint("{}", "{}", "{}");\n'.format(var,
-                                                                         ran[0],
-                                                                         ran[1])
+            s += '\tput_integral_constraint("{}", {}, {});\n'.\
+                     format(var.val, cppify(ran[0]), cppify(ran[1]))
         for desc in self.current_group._get_special_cases():
             s += '\tadd_special_case("{}");\n'.format(desc)
         s += "}\n"
