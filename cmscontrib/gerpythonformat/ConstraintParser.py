@@ -108,7 +108,10 @@ class ConstraintParser(object):
             else:
                 break
 
-        assert self.next(skip_whitespace=True) == KEY_VALUE_SEP
+        if self.next(skip_whitespace=True) != KEY_VALUE_SEP:
+            raise ValueError("malformed constraint string: you have to use '" +
+                             KEY_VALUE_SEP + "' to separate variable names "
+                             "from constraint bounds")
 
         return L
 
@@ -135,7 +138,9 @@ class ConstraintParser(object):
             if self.peek(skip_whitespace=True) != CONSTRAINT_END:
                 upper = self.read_single_entry()
 
-        assert self.next(skip_whitespace=True) == CONSTRAINT_END
+        if self.next(skip_whitespace=True) != CONSTRAINT_END:
+            raise ValueError("malformed constraint string: constraint bounds "
+                             "have to end with '" + CONSTRAINT_END + "'")
 
         return lower, upper
 
@@ -297,6 +302,11 @@ class ConstraintList(object):
 
         res = []
         while True:
+            if parser.eof(skip_whitespace=True):
+                raise ValueError("malformed constraint string: unexpected eof"
+                                 "\nprobably this means that your constraint "
+                                 "string is either empty or ends with ','")
+
             res.append(Constraint(parser.read_variables(),
                                   *parser.read_bounds()))
 
