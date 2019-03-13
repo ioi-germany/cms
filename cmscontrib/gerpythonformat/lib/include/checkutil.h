@@ -90,6 +90,10 @@ bool is_special_case(string s) {
     return _special_cases.find(s) != _special_cases.end();
 }
 
+bool ought_to_be(string s) {
+    return is_special_case(s);
+}
+
 /* Replaces all whitespace escapes by their respective codes
  */
 string nws(char c) {
