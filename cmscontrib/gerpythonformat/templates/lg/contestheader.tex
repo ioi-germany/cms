@@ -66,3 +66,7 @@
 
 \def\standardpart{\showcases\showlimits\showfeedback}
 \makeatother
+
+\def\flushsubtasks{\global\stcount=\numsubtasks}
+
+\AtEndDocument{\ifnum\stcount=\numsubtasks\else\PackageError{lg-template}{Not all subtasks are contained in the task statement!\MessageBreak You should call \protect\subtask\space (or \protect\st) precisely as often as there are subtasks, not counting the public one. If for some reason you do not want to do this, you can call \protect\flushsubtasks\space after all calls to \protect\subtask\space and \protect\st}{You should call \protect\subtask\space (or \protect\st) precisely as often as there are subtasks, not counting the public one. If for some reason you do not want to do this, you can call \protect\flushsubtasks\space after all calls to \protect\subtask\space and \protect\st}\fi}
