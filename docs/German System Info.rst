@@ -136,13 +136,13 @@ Die möglichen Flags, die das Parsen des Eingabegraphens beeinflussen, sind wie 
 * Möchte man Annotations verwenden, so ist dies mit dem Flag ``annotated`` anzukündigen.
 * Standardmäßig werden keine Markierungen verwendet; möchte man hingegen *k* verschiedene Markierungen, so ist der Parameter ``markings`` auf den entsprechenden Wert zu setzen, also z.B. ``markings=4`` für vier Markierungen
 * Im Falle eines Baumes ist es nicht nötig, dass die Eingabedatei die Anzahl der Kanten enthält; in diesem Fall muss man aber das Flag ``tree`` hinzufügen.
-* Normalerweise beginnt das System direkt am Anfang der Datei mit dem Parsen. Möchte man hingegen die ersten *k* Zahlen in der Eingabe ignorieren, so ist ``skip`` auf den entsprechenden Wert zu setzen, also z.B. ``skip=1``, um die erste Zahl in der Eingabe zu überspringen
-* Möchte man nach der Knoten- und (optional) Kantenanzahl *k* Zahlen überspringen, so ist ``skip_after`` entsprechend zu setzen. Ein klassisches Beispiel wäre eine Kürzeste-Wege-Aufgabe, bei der so Start und Ziel spezifiziert werden; hier würde man also ``skip_after=2`` übergeben.
+* Normalerweise beginnt das System direkt am Anfang der Datei mit dem Parsen. Möchte man hingegen die ersten *k* Zahlen in der Eingabe ignorieren, so ist ``skip_before`` auf den entsprechenden Wert zu setzen, also z.B. ``skip_before=1``, um die erste Zahl in der Eingabe zu überspringen
+* Möchte man nach der Knoten- und (optional) Kantenanzahl *k* Zahlen überspringen, so ist ``skip`` entsprechend zu setzen. Ein klassisches Beispiel wäre eine Kürzeste-Wege-Aufgabe, bei der so Start und Ziel spezifiziert werden; hier würde man also ``skip=2`` übergeben.
 
 Darüber hinaus gibt es noch weitere Parameter, welche die Darstellung des Graphens beeinflussen:
 
 * Üblicherweise werden alle Kantenlabel horizontal platziert. Möchte man das ändern, so kann man ``follow_edges`` spezifizieren, was dazu führt, dass die Labels parallel zur Kante verlaufen. Dies ist im Grunde nur bei sehr langen Labels notwendig.
-* Der Parameter ``node_distance`` kann spezifiziert werden, um den Abstand der einzelnen Knoten zu verändern. Der Effekt ist allerdings nur indirekt, denn er bestimmt den *Gleichgewichtszustand* einer isolierten Kante innerhalb des Graphdrawing-Algorithmus. Mit diesem Parameter sollte man spielen, wenn Knoten kollidieren (in diesem Fall sollte man ihn vergrößern), oder das Graphenbild unerwartet groß ist (dann sollte man ihn verkleinern). TikZ setzt diesen Parameter standardmäßig auf ca.~28,4 (1cm).
+* Der Parameter ``node_distance`` kann spezifiziert werden, um den Abstand der einzelnen Knoten zu verändern. Der Effekt ist allerdings nur indirekt, denn er bestimmt den *Gleichgewichtszustand* einer isolierten Kante innerhalb des Graphdrawing-Algorithmus. Mit diesem Parameter sollte man spielen, wenn Knoten kollidieren (in diesem Fall sollte man ihn vergrößern), oder das Graphenbild unerwartet groß ist (dann sollte man ihn verkleinern). TikZ setzt diesen Parameter standardmäßig auf ca. 28,4 (1cm).
 * Wenn der erzeugte Graph unschön ist, kann man versuchen, den Parameter ``random_seed`` auf einen, nun ja, zufälligen Wert zu setzen. Dieser bestimmt die Anfangsposition der Knoten im Graphdrawing-Algorithmus; TikZ setzt ihn standardmäßig auf 42.
 
 
@@ -194,7 +194,7 @@ Beispiele
         1 3 1337
         1 4 4711
 
-6. Spezifiziert man stattdessen ``weighted`` und ``skip_after=4`` würde diese Datei genauso interpretiert werden wie in Beispiel 4; hierbei würden die Zeilen 2 bis 5 als ``[Ignorierter Teil]`` anstatt als Annotations interpretiert werden.
+6. Spezifiziert man stattdessen ``weighted`` und ``skip=4`` würde diese Datei genauso interpretiert werden wie in Beispiel 4; hierbei würden die Zeilen 2 bis 5 als ``[Ignorierter Teil]`` anstatt als Annotations geparst werden.
 
 7. Hier ist ein Beispiel mit zwei Arten von Knotenmarkierungen, wofür ``markings=2`` anzugeben ist. Knoten 1 und 2 tragen die erste Markierung, Knoten 1, 3 und 4 die zweite:
 
