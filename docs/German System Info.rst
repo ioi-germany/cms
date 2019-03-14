@@ -81,6 +81,235 @@ The following is the bot's self-specification containing a list of commands avai
     the corresponding message
 
 
+Constraints
+===========
+Die Limits für die einzelnen Teilaufgaben sowie die globalen Limits sollte man *nicht* in Aufgabenstellung und Checker einzeln hardcoden sondern einzig und allein in die ``config.py``-Datei schreiben. Dazu steht der Befehl ``constraint`` zur Verfügung, dessen Syntax unten erläutert wird. Die Semantik ist hingegen die folgende: ein Constraint legt für eine *Variable* optional obere und untere Schranken fest. Diese Schranken sind (beliebig große) ganze Zahlen. Constraints sind kumulativ, was auch oft genutzt wird: hat man z.B. eine Aufgabe, bei der in allen Testfällen 1 ≤ N ≤ 1000 garantiert ist und in einer Teilaufgabe N ≤ 100, so würde man den ersten Constraint global festlegen und den zweiten in der entsprechenden Teilaufgabe. Während im Aufgabenstatement für die entsprechende Teilaufgabe tatsächlich nur N ≤ 100 abgedruckt würde, würde der Checker trotzdem auch 1 ≤ N überprüfen. Beachte allerdings, dass die Bedingung N ≤ 100 *nur für die entsprechende Teilaufgabe* gilt, nicht für die nächste – aber das ist ja auch das, was man haben möchte.
+
+Zur Syntax: Constraints werden mit dem Befehl ``constraint`` erzeugt. Dieser kann global (d.h. außerhalb aller ``with subtask``-Blocks von ``config.py``) oder für eine Teilaufgabe (dementsprechend in ihrem entsprechenden ``with subtask``-Block) hinzugefügt werden. Manchmal möchte man einen Constraint *stumm* stellen. Dieser taucht dann nicht automatisch im Statement auf, sondern nur wenn man ihn explizit abfragt. Das kann man erreichen, indem man den Schlüsselwortparameter ``silent`` auf ``True`` setzt. Dieser Mechanismus ist besonders hilfreich, um irgendwelche aufgabenspezifischen Konstanten zu spezifizieren.
+
+Der Befehl ``constraint`` erwartet als Argument einen String, der eine durch Kommata getrennte Liste von *Constraints* enthält, wobei ein Constraint wiederum die folgende Syntax benutzt:
+
+.. sourcecode:: plain
+
+    [Durch Kommata getrennte Liste von Variablen]: [Beschreibung der zulässigen Werte]
+
+Eine *Variable* wird dabei wie folgt beschrieben: zunächst der Name der Variable, dann *optional* in Klammern eingeschlossen TeX-Code, der angibt, wie diese Variable in der Aufgabenstellung gesetzt werden soll (ansonsten wird hierfür der Name selbst als TeX-Code interpretiert). Setzt man den TeX-Code global, wird derselbe Code auch für die entsprechenden Teilaufgaben verwendet, sofern man dort selbst nicht anderen Code dafür spezifiziert. Das ist auch der Grund, warum dieses Feature überhaupt hilfreich sein kann: ist der TeX-Code aufwendig, muss man ihn trotzdem nur einmal spezifizieren (außerdem müsste man bei Layout-Änderungen diese nur an einer Stelle vornehmen). Leerraum um Variablennamen oder TeX-Code wird standardmäßig ignoriert; möchte man ihn aus irgendwelchen Gründen trotzdem verwenden, kann man wieder die Variante mit Anführungszeichen verwenden.
+
+Beachte, dass weder Name noch TeX-Code aus technischen weder Gründen öffnende oder schließende runde oder eckige Klammern enthalten dürfen noch Kommata, einen Doppelpunkt oder normale Anführungszeichen ``"``. Möchte man irgendwelche dieser Zeichen außer dem Anführungszeichen verwenden, kann man den entsprechenden Teil in Anführungszeichen einschließen. Hier sind ein paar Beispiele für gültige Variablendefitionen:
+
+.. sourcecode:: plain
+
+    dij("d_{i,j}")
+    "d_{i,j}"
+    sum l_i(\ell_1+\cdots+\ell_k)
+    \ell_1+\cdots+\ell_k
+
+Die ersten beiden Beispiele und die letzten beiden werden im Statement jeweils gleich gesetzt. Ich würde im ersten Fall vermutlich die erste Notation verwenden und im zweiten die zweite.
+
+Die folgenden Beispiele wären hingegen *nicht* zulässig:
+
+.. sourcecode:: plain
+
+    d_{i,j}
+    (x_1-y_1)(x_2-y_2)
+    diffprod((x_1-y_2)(x_2-y_2))
+
+Im ersten Beispiel würde dies als zwei getrennte Variablen ``d_{i`` und ``j}`` interpretiert; der Constraint-Parser selbst würde sich dementsprechend auch gar nicht beschweren, aber es würde evtl. ungültiger-TeX-Code erzeugt. Im zweiten und dritten Beispiel würden die Klammern jeweils als Zeichen, dass eine Spezifikation von TeX-Code folgt, interpretiert werden und der Parser würde sich beschweren.
+
+Die oberen Schranken werden in der Form ``[untere Schranke, obere Schranke]`` spezifiziert. Hierbei gilt für ``untere Schranke`` und ``obere Schranke`` dieselbe Syntax wie für Variablennamen: man spezifiziert den Wert (üblicherweise als Ziffernfolge) und optional in Klammern TeX-Code, wie die entsprechende Schranke gesetzt werden soll. Hierbei gelten auch wieder die Einschränkungen zu besonderen Zeichen und man kann wieder auf ``"`` zurückgreifen, um diese zu umgehen. Wird kein TeX-Code spezifiziert, wird die entsprechende untere Schranke automatisch schön gesetzt: lange Zahlen werden in Ziffernblöcke mit kleinem Leerraum dazwischen aufgeteilt.
+
+Möchte man nur untere oder nur obere Schranke verwenden, kann man die entsprechende andere Grenze einfach weglassen. Die folgenden Beispiele wären also alle zulässig:
+
+.. sourcecode:: plain
+
+    N: [,100000]
+    N: [3,]
+    N: [3,100000]
+
+Im Fall, dass obere und untere Schranke übereinstimmen, kann man das Komma (und auch die eckigen Klammern nach Wunsch) einfach weglassen:
+
+.. sourcecode:: plain
+
+    N: [42,42]
+    N: [42]
+    N: 42
+
+wären alle zulässig und haben denselben Effekt. Natürlich sind die beiden unteren Notation zu empfehlen (besonders, wenn der entsprechende Wert komplizierter ist oder man TeX-Code spezifizieren möchte...).
+
+Oft hilfreich in der Praxis: in einem begrenzten Umfang ist auch für den Wert selbst TeX-Code zulässig. Dieser wird dann automatisch (wenn auch etwas heuristisch) in Python-Code umgewandelt, der dann wiederum ausgewertet wird, um eine Zahl zu erhalten. Damit ist einfache Arithmetik möglich. Zulässig und korrekt interpretiert würden z.B.
+
+.. sourcecode:: plain
+
+    10^{15}
+    5\cdot 10^8
+    1+2+3+4
+    4/2
+
+Nicht erlaubt wären hingegen z.B.
+
+.. sourcecode:: plain
+
+    1/2
+    \frac{4}{2}
+    {4\over2}
+    {5\choose 2}
+
+Im ersten Fall haben wir das Problem, dass 1/2 keine ganze Zahl ist, in den anderen schlägt schon das Parsen fehl. In diesen (sehr exotischen) letzten drei Fällen würde es sich empfehlen, den entsprechenden Wert in config.py auszurechnen und die Formel als TeX-Code zu spezifizieren.
+
+Damit ist die Beschreibung des Formats abgeschlossen und die Interpretation als abstrakter Constraint (für den Checker) sollte hinreichend klar sein. Die folgenden Beispiele zeigen noch, wie die Darstellung in TeX aussehen würde:
+
+* ``constraint("N: [,1000]")`` erzeugt den TeX-Code ``$N\le 1000$``
+* ``constraint("M,N: [1,4]")`` erzeugt den TeX-Code ``$1\le M,N\le 4$``
+* ``constraint("M: [1,4], N: [1,4]")`` erzeugt den TeX-Code ``$1\le M\le 4,1\le N\le 4$``
+* ``constraint("A,B: 1")`` erzeugt den TeX-Code ``$A=B=1$``
+* ``constraint("A: 1, N: [,1000]")`` erzeugt den TeX-Code ``$A=1, N\le 1000$``
+* ``constraint("X: 3000", silent=True)`` erzeugt gar keinen TeX-Code (s.o.)
+
+Natürlich muss man die spezifizieren Constraints auch in Statement und Checker wieder abfragen. Das wird jetzt erklärt:
+
+Constraints im Checker verwenden
+--------------------------------
+
+Möchte man die Constraints für seinen Checker verwenden (und das sollte man!), muss man *vor* ``#include<checkframework.h>`` noch ``#include"constraints.h"`` hinzufügen. (Führt man den Checker aus, wird man dann mit einem ``Constraints loaded`` begrüßt.)
+
+In den meisten Fällen benutzt man die Constraints automatisch mit den Methoden des globalen ``token_stream``-Objekts ``t``, das man zum Parsen der Eingabedatei verwendet. Genauer verwendet man fast immer die Methode ``parse_and_auto_check<Typ>(Name, nächster Whitespace)``: ist ``Name`` der Name einer Variable, die mit dem Constraint-System definiert wurde, prüft das automatisch ob:
+
+* obere und untere Schranke (sofern vorhanden) sowie das tatsächliche Eingabetoken im Datentyp ``Typ`` gespeichert werden können (``Typ`` sollte irgendein ganzzahliger Typ sein)
+* ob die Zahl in der Eingabe die spezifizierten Beschränkungen erfüllt
+
+Neben den Standardtypen ist dabei auch ``big_int`` (für beliebig lange ganze Zahlen) als Wert für ``Typ`` zulässig.
+
+Es gibt alternativ auch die Möglichkeit, irgendeine Zahl (z.B. eine die sich per Rechnung aus der Eingabe ergibt), anhand der Constraints zu überprüfen. Dazu verwendet man ``auto_check_bounds<Typ>(Name, zu prüfender Wert)``. Schließlich besteht die Möglichkeit, die Schranken eines Constraints selbst abzufragen. Die grundlegende Funktion dazu ist ``get_constraint<Typ>(Name)``, welche ein Paar von ``my_optional<Typ>`` zurückgibt, wobei ``my_optional`` eine sehr primitive Implementierung von C++17-``optional`` ist. Das prüft auch direkt, ob die Schranken in den Typ ``Typ`` passen. Möchte man nur eine der beiden Schranken, kann man ``get_constraint_lower<Typ>(Name)`` bzw. ``get_constraint_upper<Typ>(Name)`` verwenden. Diese geben einfach ein Element vom Typ ``Typ`` zurück und prüfen auch gleich, ob die entsprechende Schranke nicht doch leer ist. Sind obere und untere Schranke auch noch identisch, steht schließlich der Befehl ``get_constraint_value<Typ>(Name)`` zur Verfügung.
+
+
+Constraints im Statement
+------------------------
+Wie man Constraints im Statement verwendet, ist unten im Kapitel *Automatische Teile des Statements* erklärt.
+
+
+Teilaufgaben mit Spezialfällen
+------------------------------
+Oft gibt es auch Teilaufgaben, in denen zwar die Limits genauso groß sind wie im Rest der Aufgabe, dafür aber die Eingabe auf irgendwelche Spezialfälle eingeschränkt werden; z.B. könnte es in einer Graphenaufgabe eine Teilaufgabe geben, in der die Eingabe ein Baum ist.
+
+Um dies auf einfache und durchsichtige Weise zu bewerkstelligen, steht der Befehl ``special_case`` zur Verfügung, den man üblicherweise einem ``with subtask``-Block aufruft. Dieser erwartet einfach nur einen String als Parameter und hat die Semantik *dieser Subtask gehört zu diesem Spezialfall*. Im obigen Beispiel würde man etwa ``special_case("tree")`` schreiben.
+
+Die Überprüfung, ob dieser Spezialfall dann auch gilt, ist Aufgabe des Checkers. In jedem Checker, der wie oben beschrieben das Constraint-System lädt, steht der Befehl ``is_special_case`` zur Verfügung. Dieser erwartet wiederum nur einen String ``Fall`` als Parameter und gibt einen Boolean zurück: ob der entsprechende Testfall in einer Teilaufgabe verwendet wird, für die in ``config.py`` der Befehl ``special_case(Fall)`` ausgeführt wurde.
+
+Als Alias für ``is_special_case`` steht auch ``ought_to_be`` zur Verfügung. Das typische Idiom wäre dann
+
+.. sourcecode:: C++
+
+    if(ought_to_be("tree"))
+    {
+        // prüfe, ob die Eingabe einen Baum spezifiziert
+    }
+
+Ich möchte ausdrücklich und wiederholt davon abraten, das alte Idiom eines Checkers ``chk``, der einen oder mehrere Integer auf der Kommandozeile erwartet und dann in jeder Teilaufgabe neu gesetzt wird (``checker(chk.p(1))`` o.ä.), zu verwenden!
+
+Aktuell hat ``special_case`` keinerlei Auswirkung auf das TeX-Statement, da mir keine Lösung einfällt, die das sinnvoll mit der Möglichkeit verschiedener Sprachen (z.B. bei Olympiaden) in Einklang bringt.
+
+
+Automatische Teile des Statements
+=================================
+
+Viele Teile der Struktur einer Aufgabe, die in der ``config.py``-Datei spezifiziert werden, möchte man auch im Statement wiederholen. Dazu gehören insbesondere die Limits für Zeit und Speicher oder die Beschränkungen für die Eingabe. Wenn man an irgendetwas rumschraubt (z.B. weil der Server langsamer ist als der eigene Rechner), möchte man diese natürlich nicht an allen möglichen Stellen ändern, sondern am besten nur an einer: der ``config.py``-Datei selbst. Unser Aufgabensystem hat mehrere Features, die dabei helfen, solche Redudanzen zu vermeiden, und die man *unbedingt* nutzen sollte. Ein Beispiel dafür ist das ``constraint``-System, das wegen seiner eigenen Syntax oben bereits diskutiert wurde und auf das wir unten noch einmal zu sprechen kommen.
+
+
+Teilaufgaben
+------------
+Quasi alle Aufgaben bestehen aus mehreren Teilaufgaben. Dazu erstellt man üblicherweise einen Abschnitt *Beschränkungen*, in dem zunächst die globalen Constraints geschildert werden ("Stets gilt 1 ≤ N ≤ 1000", mehr dazu gleich) und dann die einzelnen Teilaufgaben gelistet werden. Für jede dieser Teilaufgaben ruft man das Makro ``\subtask`` auf. Dieses zählt automatisch einen Zähler, um die wievielte Teilaufgabe es sich handelt hoch, und fügt die Zwischenüberschrift ``Teilaufgabe <Nummer> (<Punkte> Punkte).`` hinzu; die Punktzahl für die Teilaufgabe wird dabei automatisch aus der ``config.py`` übernommen. Danach kann man im Freitext die Beschränkungen dieser Teilaufgabe beschreiben, also z.B.
+
+.. sourcecode:: TeX
+
+    \section*{Beschränkungen}
+    Stets gilt $M,N\le 100\,000$. % Das sollte man eigentlich nicht ins Statement hardcoden, s.u.
+
+    \subtask Zwei Knoten $i,j$ sind genau dann direkt verbunden, wenn $|i-j|=1$.
+    \subtask $M=N-1$
+    \subtask Keine weiteren Beschränkungen.
+
+Es gibt eine Fehlermeldung, wenn ``\subtask`` nicht genauso oft aufgerufen wird, wie es (nicht-öffentliche) Subtasks gibt. Möchte man aus irgendeinem Grund ``\subtask`` weniger oft aufrufen, muss man irgendwann nach dem letzten Aufruf von ``\subtask`` den Befehl ``\flushsubtasks`` einfügen.
+
+Der alte Befehl ``\st``, dem man als Parameter die Punktzahl für die entsprechende Teilaufgabe übergeben muss, ist als *deprecated* anzusehen. Er wird also nicht empfohlen und eventuell bald entfernt.
+
+Constraints
+-----------
+Wie bereits erwähnt, besteht die Möglichkeit, vom Statement aus auf die Constraints zuzugreifen, und man sollte dringend davon Gebrauch machen.
+
+Die Makros, welche üblicherweise die Ausgabe der Constraints übernehmen, lauten ``\currconstraint#1``, ``\currconstraints`` und ``\currconstraints*`` (das ``curr`` steht für *current*). Ihre Semantik hängt dabei jeweils davon ab, wo im Programm sie aufgerufen werden:
+
+* Benutzt man den entsprechenden Befehl vor irgendeinem Aufruf von ``\subtask``, bezieht sich der Befehl auf die globalen Constraints.
+* Benutzt man den Befehl nach insgesamt *k* Aufrufen von ``\subtask`` bezieht sich der Befehl auf die Constraints in Teilaufgabe *k*.
+
+Sowohl ``\currconstraints`` als auch ``\currconstraints*`` erwarten keine Parameter und geben alle Constraints des jeweiligen Subtasks (bzw. alle globalen Constraints) aus. Hierbei trennt ``\currconstraints`` diese einfach nur durch Kommata, während ``\currconstraint`` stattdessen den letzten Eintrag mit *und* abtrennt (bei einer englischsprachigen Aufgabenstellung wird dementsprechend *and* verwendet; das Oxford-Komma wird gesetzt). In einer idealen Welt sieht der Beschränkungen-Abschnitt also einfach nur so aus:
+
+.. sourcecode:: TeX
+
+    \section*{Beschränkungen}
+    Stets gilt \currconstraints. % In Fließtext möchte man den üblichen Konventionen für Aufzählungen folgen
+
+    \subtask \currconstraints*   % Wenn nur die Ungleichungen aufgelistet werden, sind Kommata schöner
+    \subtask \currconstraints*
+    \subtask Keine weiteren Beschränkungen.
+
+In manchen Fällen möchte man nicht alle Constraints, sondern nur einen einzigen ausgeben. Dazu steht der Befehl ``\currconstraint`` zur Verfügung. Dieser erwartet als Parameter eine durch Kommata getrennte Liste von Variablennamen; *Leerzeichen vor oder nach den Kommata sind nicht erlaubt* (wohl aber als Teil von Variablennamen). Wichtig ist, dass es sich hierbei um einen einzigen Constraint handeln muss; nach
+
+.. sourcecode:: Python
+
+    constraint("N,M: [,10000]")
+    constraint("A, [,10000], B: [,10000]")
+
+wären die folgenden Aufrufe erlaubt:
+
+.. sourcecode:: TeX
+
+    \currconstraint{N}    % Ausgabe ist $N\le 10\,000$
+    \currconstraint{M}    % Ausgabe ist $M\le 10\,000$
+    \currconstraint{N,M}  % Ausgabe ist $N,M\le 10\,000$
+    \currconstraint{M,N}  % Ausgabe ist $M,N\le 10\,000$
+    \currconstraint{A}    % Ausgabe ist $A\le 10\,000$
+    \currconstraint{B}    % Ausgabe ist $B\le 10\,000$
+
+Nicht erlaubt wären hingegen:
+
+.. sourcecode:: TeX
+
+    \currconstraint{N, M} % Leerzeichen!
+    \currconstraint{A,B}  % A und B zählen als unterschiedliche Constraints
+
+Die Leerzeicheneinschränkung könnte später fallengelassen werden (dazu müsste man echtes Argumentparsing auf der TeX-Seite implementieren), die Einschränkung in Bezug auf Constraints ist Teil des Designs.
+
+Schließlich gibt es auch noch die Möglichkeit, auf die Schranken eines Constraints einzeln zuzugreifen; die entsprechenden Makros lauten ``\currconstraintupper``, ``\currconstraintlower``  und ``\currconstraintvalue``. Wie bei ``\currconstraint`` erwarten diese als Parameter den entsprechenden Variablennamen; dabei darf es sich aber nur um eine einzige Variable und nicht um eine Liste handeln; alles andere ergäbe aber auch keinen Sinn. Diese Makros prüfen nicht extra, ob die entsprechenden Grenzen definiert sind (und im Falle von ``\currconstraintvalue`` übereinstimmen), sondern sind andernfalls einfach nicht definiert. Die typische Verwendung sind *stumme Constraints* (s.o.), um z.B. eine aufgabenweite Konstante zu definieren, ein Beispiel wäre folgender Python-Code
+
+.. sourcecode:: Python
+
+    constraint("max_n: [,30000]", silent=True)
+    constraint("M: [1, 3000]")
+
+und dem folgenden TeX-Code
+
+.. sourcecode:: TeX
+
+    Deine Lösung darf aus höchstens \currconstraintupper{max_n} Knoten bestehen.
+    % Ausgabe: Deine Lösung darf aus höchstens $30\,000$ Knoten bestehen.
+    
+    % ...
+    \section*{Beschränkungen}
+    Stets gilt \currconstraints. % Ausgabe: Stets gilt $M\le 3\,000$.
+
+Aus historischen Gründen gibt es noch das Makro ``\constraint``, das als Parameter den "Index" des Constraints erwartet; ``\constraint1`` würde also z.B. den ersten Constraint aus der ``config.py`` ausgeben. *Dieses Makro sollte man vermeiden, da das Hinzufügen neuer Constraints natürlich die ganze Nummerierung durcheinanderwerfen kann* und es gilt aus diesem Grund auch als *deprecated*.
+
+Der Standardteil
+----------------
+Fast alle Aufgabenstellungen enden auf die gleiche Weise:
+
+* Zunächst gibt es einen Abschnitt mit den Beispieltestfällen. Dazu kann man den Befehl ``\showcases`` verwenden, der überprüft, ob es mehr als einen öffentlichen Testfall gibt, dementsprechend die passende Überschrift für den Abschnitt wählt, und dann eine ``\longtable`` der Testfälle ausgibt. *Dieser Befehl ist nicht für interaktive Aufgaben geeignet, bei denen es wohl keine sinnvolle Alternative dazu gibt, die Kommunikation von Hand zu erstellen!*
+* Daraufhin werden Speicher- und Zeitlimit ausgegeben. Dies kann einfach mit ``\showlimits`` geschehen.
+* Ganz zum Schluss wird auf das Feedback hingewiesen (beachte, dass dies zum Zeitpunkt, an dem man die Aufgabe schreibt, eigentlich noch gar nicht feststeht, da er von der Verwendung der Aufgabe in ``contest-config.py`` abhängt!); dies geschieht mit ``\showfeedback``.
+
+Da diese Befehle fast immer so aufgerufen werden, kann man stattdessen einfach ``\standardpart`` schreiben. Beachte aber, dass man die Makros einzeln aufrufen muss, wenn man z.B. erläuternde Worte zu einem der Beispieltestfälle hinzufügen möchte.
+
+
 Graphdrawing
 ============
 Unser System ist in der Lage, halbautomatisch Graphenbilder aus den meisten Eingabedateien zu erstellen. Dazu greift es auf TikZ' Fähigkeiten zurück, bietet aber ein für unsere Anwendungen optimiertes Interface und (hoffentlich) einige Layoutverbesserungen.
