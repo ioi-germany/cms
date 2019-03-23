@@ -27,4 +27,9 @@
     \let\pgfsyssoftpath@closepath=\lua@closepath
     \csname#1\endcsname
 \endgroup}
+\def\passcurrentpathtolua{%
+\begingroup%
+    \pgfsyssoftpath@getcurrentpath\currp@th
+    \passpathtolua{currp@th}
+\endgroup}
 \makeatother

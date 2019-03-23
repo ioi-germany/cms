@@ -265,6 +265,16 @@ function Graph:basic_layout()
 
     local isolated_nodes = {}
     
+    for i, n in pairs(self.nodes) do
+        local markings = ""
+        
+        for _, m in ipairs(n.markings) do
+            markings = markings .. ", marking " .. tostring(m)
+        end
+        
+        n.node_style = node_style .. markings
+    end
+    
     -- TikZ' graphdrawing behaves non-deterministically when we declare all
     -- nodes first! Hopefully, this workaround is deterministic even in the 
     -- presence of isolated nodes...
@@ -286,9 +296,9 @@ function Graph:basic_layout()
                         e.fixed_normal = true
                     end
                         
-                    tex.print(tostring(u) .. "[as=]" ..
+                    tex.print(tostring(u) .. "[as=, " .. self.nodes[u].node_style .. "]" ..
                               "--[draw=none," .. bending ..  " ]" .. " " ..
-                              tostring(v) .. "[as=];")
+                              tostring(v) .. "[as=, " .. self.nodes[v].node_style .. "];")
                 end
             end
         else
@@ -310,13 +320,7 @@ function Graph:basic_layout()
                     a.text .. "}"
         end
         
-        local markings = ""
-        
-        for _, m in ipairs(n.markings) do
-            markings = markings .. ", marking " .. tostring(m)
-        end
-        
-        tex.print("\\node[" .. node_style .. label .. markings .. "] " ..
+        tex.print("\\node[" .. n.node_style .. label .. "] " ..
                   "(v" .. tostring(i) .. ") at (" .. tostring(i) .. ")" ..
                   "{" .. n.text .. "};")
     end
