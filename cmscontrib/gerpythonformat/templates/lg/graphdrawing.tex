@@ -33,9 +33,12 @@
 }
 
 \makeatletter
-\newcommand\dg@load[2][]{\directlua{Graph:new("#1", "#2")}}
-\newcommand\dg@marknode[3][]{%
-\directlua{Graph:select_instance(#1):mark_node("#2", "#3")}}
+\newif\ifgr@phloaded
+\gr@phloadedfalse
+\newcommand\dg@load[2][]{\ifgr@phloaded\PackageError{graphdrawing}{You must not call \protect\load\space after using the loader environment (or a previous call of \protect\load )}{Exactly what it says above}\fi%
+\gr@phloadedtrue%
+\directlua{Graph:new("#1", "#2")}}
+\newcommand\dg@marknode[3][]{\directlua{Graph:select_instance(#1):mark_node("#2", "#3")}}
 % As TeX code printed inside directlua only comes into effect once returning to
 % the TeX level, we have to split these function calls into different directlua
 % instances... 
@@ -43,9 +46,41 @@
 \directlua{Graph:select_instance(#1):draw_edges()}%
 \directlua{Graph:select_instance(#1):place_labels()}}
 
+\newcommand\gl@marknode[2]{\directlua{g:mark_node("#1", "#2")}}
+\newcommand\gl@init[1][]{\directlua{g:update_args("#1") g:init()}}
+\newcommand\gl@skip[1][1]{\directlua{g:skip(_f, #1)}}
+\newcommand\gl@readnumnodes[1][]{\directlua{g:_read_num_nodes(_f, "#1")}}
+\def\gl@readnumedges{\directlua{g:read_num_edges(_f)}}
+\def\gl@createnodes{\directlua{g:create_nodes}}
+\newcommand\gl@readmarkings[1][]{\directlua{g:_read_markings(_f, "#1")}}
+\newcommand\gl@readmarking[1][]{\directlua{g:_read_marking(_f, "#1")}}
+\def\gl@readannotations{\directlua{g:read_annotations(_f)}}
+\def\gl@readedges{\directlua{g:read_edges(_f)}}
+\def\gl@readint{\directlua{tex.print(_f:read("*number"))}}
+
+\def\beginloadgr@ph#1#2{\ifgr@phloaded\PackageError{graphdrawing}{You must not use a loader environment after a call to \protect\load\space (or another loader environment)}{Exactly what it says above}\fi%
+\directlua{g = Graph:minimal_new("#1")}%
+\directlua{_f = io.open("#2")}%
+\begingroup%
+\let\init=\gl@init%
+\let\skip=\gl@skip%
+\let\readnumnodes=\gl@readnumnodes%
+\let\readnumedges=\gl@readnumedges%
+\let\createnodes=\gl@createnodes%
+\let\readmarkings=\gl@readmarkings%
+\let\readmarking=\gl@readmarking%
+\let\readannotations=\gl@readannotations%
+\let\readedges=\gl@readedges%
+\let\readint=\gl@readint%
+\let\marknode=\gl@marknode%
+}
+\def\endloadgr@ph{\directlua{g:finish()}\endgroup\global\gr@phloadedtrue}
+
 \newenvironment{graphpicture}[1][]{\begindrawgraph{#1}}{\enddrawgraph}
 \def\begindrawgraph#1{%
 \begingroup%
+\global\gr@phloadedfalse%
+\newenvironment{loader}[2][]{\beginloadgr@ph{##1}{##2}}{\endloadgr@ph}%
 \let\load=\dg@load%
 \let\marknode=\dg@marknode%
 \let\drawit=\dg@draw%

@@ -88,7 +88,142 @@ Graph = {}
 Graph.__index = Graph
 Graph.instances = {}
 
-function Graph:new(param_string, file_name)
+function Graph:init()        
+    self.first_node_id = 1
+    self.first_edge_id = 1
+    
+    if self.args.zero_based then
+        self.first_node_id = 0
+        self.first_edge_id = 0
+    end
+
+    self.markings = {}
+end
+
+function Graph:skip(f, to_skip)
+    for i = 1, (to_skip or 1) do
+        f:read("*number")
+    end
+end
+
+function Graph:create_nodes()
+    self.nodes = {}
+
+    for i = self.first_node_id, self.first_node_id + self.N - 1 do
+        self.nodes[i] = Node:new("$" .. tostring(i) .. "$")
+    end
+end
+
+function Graph:read_num_nodes(f, do_not_create_nodes_yet)
+    self.N = f:read("*number")
+    
+    if self.args.tree then
+        self.M = self.M or self.N - 1
+    end
+    
+    if not do_not_create_nodes_yet then
+        self:create_nodes()
+    end
+end
+
+function Graph:_read_num_nodes(f, arg_string)
+    local args = parse_args(arg_string)
+    self:read_num_nodes(f, args.do_not_create_nodes_yet)
+end
+
+function Graph:read_num_edges(f)
+    self.M = f:read("*number")
+end
+
+function Graph:read_marking(f, marking_style, num_markings)
+    num_markings = num_markings or f:read("*number")
+    marking_style = marking_style or (1 + #self.markings)
+
+    self.markings[marking_style] = {}
+    
+    for _ = 1, num_markings do
+        local v = f:read("*number")
+        table.insert(self.nodes[v].markings, marking_style)
+        table.insert(self.markings[marking_style], v)
+    end
+end
+
+function Graph:_read_marking(f, arg_string)
+    local args = parse_args(arg_string)
+    self:read_marking(f, args.style, args.num_marked)
+end
+
+function Graph:read_markings(f, num_marking_styles, num_markings, read_markings_live)
+    if num_marking_styles == nil then
+        num_marking_styles = self.args.markings
+        self.args.markings = 0
+    end
+
+    if num_markings == nil then
+        num_markings = {}    
+
+        if not read_markings_live then
+            for i = 1, num_marking_styles do
+                table.insert(num_markings, f:read("*number"))
+            end
+        end
+    end
+        
+    for i = 1, num_marking_styles do
+        self:read_marking(f, nil, num_markings[i])
+    end
+end
+
+function Graph:_read_markings(f, arg_string)
+    local args = parse_args(arg_string)
+    self:read_markings(f, args.num_markings, nil, args.num_marked_in_between)
+end
+
+function Graph:read_annotations(f)
+    for i = self.first_node_id, self.first_node_id + self.N - 1 do
+        self.nodes[i]:annotate("$" .. tostring(f:read("*number")) .. "$")
+    end
+end
+
+function Graph:read_edges(f)
+    self.edge_table = {}
+    self.edge_list = {}
+    
+    for i = self.first_edge_id, self.first_edge_id + self.M - 1 do
+        local u, v = f:read("*number", "*number")
+        
+        local weight = ""
+        
+        if self.args.weighted then
+            weight = "$\\scriptstyle " .. tostring(f:read("*number")) .. "$"
+        end
+        
+        local e = Edge:new(u, v, self.args.directed, weight)
+        
+        self.edge_table[u] = self.edge_table[u] or {}
+        self.edge_table[u][v] = self.edge_table[u][v] or {}
+        
+        self.edge_list[i] = e
+        table.insert(self.edge_table[u][v], i)
+    end
+end
+
+function Graph:finish()
+    self.directed = self.args.directed
+    
+    table.insert(Graph.instances, self)
+    self.id = #Graph.instances
+    Graph.curr_instance = self.id
+end
+
+function Graph:update_args(param_string)
+    for key, value in pairs(parse_args(param_string)) do
+            self.args[key] = value
+    end
+end
+
+function Graph:minimal_new(param_string)
+    -- The bare-bones version of a graph instance
     local g = {}
     setmetatable(g, Graph)
     
@@ -110,88 +245,31 @@ function Graph:new(param_string, file_name)
               node_distance = nil,
               random_seed = 42}
     
-    for key, value in pairs(parse_args(param_string)) do
-        g.args[key] = value
-    end
-    
+    g:update_args(param_string)    
+    g:init()
+    return g
+end
+
+function Graph:new(param_string, file_name)
+    local g = Graph:minimal_new(param_string)    
     local f = io.open(file_name)
     
-    -- skip entries if necessary
-    for i = 1, g.args.skip_before do f:read("*number") end
-    
-    g.N = f:read("*number")
-    g.M = g.N - 1
+    g:skip(f, g.args.skip_before)    
+    g:read_num_nodes(f)
     
     if not g.args.tree then
-        g.M = f:read("*number")
-    end
-    
-    -- skip entries if necessary
-    for i = 1, g.args.skip do f:read("*number") end
-    
-    -- create nodes
-    g.nodes = {}
-        
-    g.first_node_id = 1
-    g.first_edge_id = 1
-    
-    if g.args.zero_based then
-        g.first_node_id = 0
-        g.first_edge_id = 0
-    end
-    
-    for i = g.first_node_id, g.first_node_id + g.N - 1 do
-        g.nodes[i] = Node:new("$" .. tostring(i) .. "$")
-    end
-    
-    -- read markings if necessary
-    local num_markings = {}
-    
-    for i = 1, g.args.markings do
-        table.insert(num_markings, f:read("*number"))
-    end
-        
-    for i = 1, g.args.markings do
-        for _ = 1, num_markings[i] do
-            table.insert(g.nodes[f:read("*number")].markings, i)
-        end
+        g:read_num_edges(f)
     end
 
-    
-    -- read annotations if necessary
+    g:skip(f, g.args.skip)    
+    g:read_markings(f)
+
     if g.args.annotated then
-        for i = g.first_node_id, g.first_node_id + g.N - 1 do
-            g.nodes[i]:annotate("$" .. tostring(f:read("*number")) .. "$")
-        end
+        g:read_annotations(f)
     end
     
-    -- read edges (including weights, if necessary)
-    g.edge_table = {}
-    g.edge_list = {}
-    
-    for i = g.first_edge_id, g.first_edge_id + g.M - 1 do
-        local u, v = f:read("*number", "*number")
-        
-        local weight = ""
-        
-        if g.args.weighted then
-            weight = "$\\scriptstyle " .. tostring(f:read("*number")) .. "$"
-        end
-        
-        local e = Edge:new(u, v, g.args.directed, weight)
-        
-        g.edge_table[u] = g.edge_table[u] or {}
-        g.edge_table[u][v] = g.edge_table[u][v] or {}
-        
-        g.edge_list[i] = e
-        table.insert(g.edge_table[u][v], i)
-    end
-    
-    g.directed = g.args.directed
-    
-    table.insert(Graph.instances, g)
-    g.id = #Graph.instances
-    Graph.curr_instance = g.id
+    g:read_edges(f)
+    g:finish()
     
     return g
 end
