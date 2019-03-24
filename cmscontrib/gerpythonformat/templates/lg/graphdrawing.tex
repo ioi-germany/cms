@@ -39,6 +39,7 @@
 \gr@phloadedtrue%
 \directlua{Graph:new("#1", "#2")}}
 \newcommand\dg@marknode[3][]{\directlua{Graph:select_instance(#1):mark_node("#2", "#3")}}
+\newcommand\dg@annotate[3][]{\directlua{Graph:select_instance(#1):annotate_node("#2", "$#3$")}}
 % As TeX code printed inside directlua only comes into effect once returning to
 % the TeX level, we have to split these function calls into different directlua
 % instances... 
@@ -57,6 +58,7 @@
 \def\gl@readannotations{\directlua{g:read_annotations(_f)}}
 \def\gl@readedges{\directlua{g:read_edges(_f)}}
 \def\gl@readint{\directlua{tex.print(_f:read("*number"))}}
+\def\gl@annotate#1#2{\directlua{g:annotate_node("#1", "$#2$")}}
 
 \def\beginloadgr@ph#1#2{\ifgr@phloaded\PackageError{graphdrawing}{You must not use a loader environment after a call to \protect\load\space (or another loader environment)}{Exactly what it says above}\fi%
 \directlua{g = Graph:minimal_new("#1")}%
@@ -73,6 +75,7 @@
 \let\readedges=\gl@readedges%
 \let\readint=\gl@readint%
 \let\marknode=\gl@marknode%
+\let\annotate=\gl@annotate%
 }
 \def\endloadgr@ph{\directlua{g:finish()}\endgroup\global\gr@phloadedtrue}
 

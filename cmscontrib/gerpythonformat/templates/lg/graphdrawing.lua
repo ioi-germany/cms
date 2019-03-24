@@ -289,6 +289,10 @@ function Graph:mark_node(idx, m)
     table.insert(self.nodes[self:ctx_eval(idx)].markings, self:ctx_eval(m))
 end
 
+function Graph:annotate_node(idx, a)
+    self.nodes[self:ctx_eval(idx)]:annotate(a)
+end
+
 function store_tikz_point_deferred(pointname, varname)
     tex.print("\\begin{scope}")
     tex.print("\\tikzmath{coordinate \\p; \\p = (" .. pointname .. ");};")
@@ -390,12 +394,14 @@ function Graph:basic_layout()
     
     tex.print("};")
     
+    local DIR = {"above right", "below right", "below left", "above left"}
+    
     for i, n in pairs(self.nodes) do
         local label = ""
         
-        for _, a in ipairs(n.annotations) do
-            label = ", label={[name=a" .. i ..  ",annotation] above right: " ..
-                    a.text .. "}"
+        for j, a in ipairs(n.annotations) do
+            label = label .. ", label={[name=a" .. i ..  ",annotation] " ..
+                    DIR[j] .. ": " .. a.text .. "}"
         end
         
         tex.print("\\node[" .. n.node_style .. label .. "] " ..
