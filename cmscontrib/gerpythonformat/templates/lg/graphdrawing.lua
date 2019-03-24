@@ -79,8 +79,15 @@ function Edge:new(from, to, directed, label)
     e.to = to
     e.directed = directed
     e.label = label
-    
+    e.pre_style = ""
+    e.post_style = ""
+
     return e
+end
+
+function Edge:mark(idx)
+    self.pre_style = self.pre_style .. ", edge marking pre " .. tostring(idx)
+    self.post_style = self.post_style .. ", edge marking post " .. tostring(idx)
 end
 
 
@@ -293,6 +300,10 @@ function Graph:annotate_node(idx, a)
     self.nodes[self:ctx_eval(idx)]:annotate(a)
 end
 
+function Graph:mark_edge(edge, marking)
+    self.edge_list[self:ctx_eval(edge)]:mark(marking)
+end
+
 function store_tikz_point_deferred(pointname, varname)
     tex.print("\\begin{scope}")
     tex.print("\\tikzmath{coordinate \\p; \\p = (" .. pointname .. ");};")
@@ -351,7 +362,7 @@ function Graph:basic_layout()
         local markings = ""
         
         for _, m in ipairs(n.markings) do
-            markings = markings .. ", marking " .. tostring(m)
+            markings = markings .. ", node marking " .. tostring(m)
         end
         
         n.node_style = node_style .. markings
@@ -378,9 +389,11 @@ function Graph:basic_layout()
                         e.fixed_normal = true
                     end
                         
-                    tex.print(tostring(u) .. "[as=, " .. self.nodes[u].node_style .. "]" ..
-                              "--[draw=none," .. bending ..  " ]" .. " " ..
-                              tostring(v) .. "[as=, " .. self.nodes[v].node_style .. "];")
+                    tex.print(tostring(u) .. "[as=, " ..
+                              self.nodes[u].node_style .. "]" ..
+                              "--[draw=none," .. bending .. e.pre_style ..
+                              " ]" .. " " .. tostring(v) .. "[as=, " ..
+                              self.nodes[v].node_style .. "];")
                 end
             end
         else
@@ -547,7 +560,7 @@ function Graph:draw_edges()
     end
     
     for i, e in pairs(self.edge_list) do
-        e.gapped_path:draw(arrow_tip)
+        e.gapped_path:draw(arrow_tip .. e.post_style)
     end
 end
 
