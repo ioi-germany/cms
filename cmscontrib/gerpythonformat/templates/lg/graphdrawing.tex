@@ -10,10 +10,71 @@
 
 \let\oldedgecallback=\pgfgdtikzedgecallback
 \def\saveedgepath#1#2{} % this macro will be defined dynamically using Lua
+
+% ------------------------------------------------------------------------------
+% The following code is necessary to be compatible with two different TeXlive
+% (or rather, TikZ) versions in which \pgfgdtikzedgecallback expects different
+% numbers of parameters. It should be removed in the future (and be replaced by
+% the "true" path of the \iflongparamlist check
+%
+% Also, this solution is evil
+\usepackage{luacode}
+
+\begin{luacode}
+function _get_num_params(macro_meaning)
+    local prefix = "macro:"
+
+    if macro_meaning:sub(1, prefix:len()) ~= prefix then
+        error("I can't parse the macro meaning")
+    end
+    
+    local cursor = prefix:len() + 1
+    
+    for i = 1, 9 do
+        if cursor >= macro_meaning:len() or 
+           macro_meaning:sub(cursor, cursor + 1) ~= "#" .. tostring(i) then
+            return i - 1
+        end
+        
+        cursor = cursor + 2
+    end
+    
+    return 9 -- a macro can have at most 9 parameters by design
+end
+
+function _init_ilpl(macro_meaning)
+    x = _get_num_params(macro_meaning)
+
+    print("number of parameters: " .. tostring(x))
+
+    if x > 8 then
+        error("too many parameters for \\pgfgdtikzedgecallback!")
+    elseif x < 7 then
+        error("too few parameters for \\pgfgdtikzedgecallback!")
+    elseif x == 8 then
+        tex.print("\\longparamlisttrue")
+    else
+        tex.print("\\longparamlistfalse")
+    end
+end
+\end{luacode}
+
+\newif\iflongparamlist
+\directlua{_init_ilpl("\luatexluaescapestring{\meaning\pgfgdtikzedgecallback}")}
+
+\iflongparamlist
+\def\myedgecallback#1#2#3#4#5#6#7#8{%
+\oldedgecallback{#1}{#2}{#3}{#4, save path=\currpath}{#5}{#6}{#7}{#8}%
+\passpathtolua{currpath}%
+\saveedgepath{#1}{#2}}
+\else
 \def\myedgecallback#1#2#3#4#5#6#7{%
 \oldedgecallback{#1}{#2}{#3}{#4, save path=\currpath}{#5}{#6}{#7}%
 \passpathtolua{currpath}%
 \saveedgepath{#1}{#2}}
+\fi
+% ------------------------------------------------------------------------------
+
 \let\pgfgdtikzedgecallback=\myedgecallback
 
 \newenvironment{mytikzgraphenvironment}[1][]{%
