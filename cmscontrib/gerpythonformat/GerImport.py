@@ -40,6 +40,7 @@ from cms.io import Service
 from cmscontrib.importing import update_contest, update_task, update_user, update_team, update_participation, _update_list_with_key, _copy, _to_delete
 
 from six import iteritems
+from psutil import virtual_memory
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +63,8 @@ class GerImport(Service):
 
     def make_helper(self):
         # Unset stack size limit
-        resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,
-                                                   resource.RLIM_INFINITY))
+        INFTY = int(.75 * virtual_memory().total)
+        resource.setrlimit(resource.RLIMIT_STACK, (INFTY, INFTY))
 
         if not os.path.exists(os.path.join(self.odir, "contest-config.py")):
             raise Exception("Directory doesn't contain contest-config.py")

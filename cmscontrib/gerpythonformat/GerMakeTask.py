@@ -33,6 +33,8 @@ import os
 import resource
 import shutil
 
+from psutil import virtual_memory
+
 
 class GerMakeTask:
     def __init__(self, odir, task, minimal, no_test,
@@ -48,8 +50,8 @@ class GerMakeTask:
 
     def prepare(self):
         # Unset stack size limit
-        resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,
-                                                   resource.RLIM_INFINITY))
+        INFTY = int(.75 * virtual_memory().total)
+        resource.setrlimit(resource.RLIMIT_STACK, (INFTY, INFTY))
 
         self.wdir = os.path.join(self.odir, self.task, "build")
 

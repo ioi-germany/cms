@@ -32,6 +32,7 @@ import os
 import resource
 import shutil
 
+from psutil import virtual_memory
 
 class GerMake:
     def __init__(self, odir, task, no_test, submission, no_latex, clean):
@@ -45,8 +46,8 @@ class GerMake:
 
     def make(self):
         # Unset stack size limit
-        resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,
-                                                   resource.RLIM_INFINITY))
+        INFTY = int(.75 * virtual_memory().total)
+        resource.setrlimit(resource.RLIMIT_STACK, (INFTY, INFTY))
 
         if not os.path.exists(os.path.join(self.odir, "contest-config.py")):
             raise Exception("Directory doesn't contain contest-config.py")
