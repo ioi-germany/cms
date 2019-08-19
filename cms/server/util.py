@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -27,16 +26,9 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 from functools import wraps
-from future.moves.urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode
 
 from tornado.web import RequestHandler
 
@@ -109,7 +101,7 @@ def get_url_root(request_path):
         return "."
 
 
-class Url(object):
+class Url:
     """An object that helps in building a URL piece by piece.
 
     """
@@ -173,7 +165,7 @@ class CommonRequestHandler(RequestHandler):
     refresh_cookie = True
 
     def __init__(self, *args, **kwargs):
-        super(CommonRequestHandler, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.timestamp = make_datetime()
         self.sql_session = Session()
         self.r_params = None
@@ -184,7 +176,7 @@ class CommonRequestHandler(RequestHandler):
         """This method is executed at the beginning of each request.
 
         """
-        super(CommonRequestHandler, self).prepare()
+        super().prepare()
         self.url = Url(get_url_root(self.request.path))
         self.set_header("Cache-Control", "no-cache, must-revalidate")
 
@@ -204,10 +196,10 @@ class CommonRequestHandler(RequestHandler):
             except Exception as error:
                 logger.warning("Couldn't close SQL connection: %r", error)
         try:
-            super(CommonRequestHandler, self).finish(*args, **kwargs)
-        except IOError:
+            super().finish(*args, **kwargs)
+        except OSError:
             # When the client closes the connection before we reply,
-            # Tornado raises an IOError exception, that would pollute
+            # Tornado raises an OSError exception, that would pollute
             # our log with unnecessarily critical messages
             logger.debug("Connection closed before our reply.")
 

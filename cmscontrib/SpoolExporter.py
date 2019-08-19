@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -26,21 +25,12 @@ Italian IOI repository for storing the results of a contest.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, iteritems
-
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
 import gevent.monkey
 gevent.monkey.patch_all()  # noqa
 
 import argparse
-import io
 import logging
 import os
 import sys
@@ -60,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 
 # TODO: review this file to avoid print.
-class SpoolExporter(object):
+class SpoolExporter:
     """This service creates a tree structure "similar" to the one used
     in Italian IOI repository for storing the results of a contest.
 
@@ -125,63 +115,65 @@ class SpoolExporter(object):
         """
         logger.info("Exporting submissions.")
 
-        queue_file = io.open(os.path.join(self.spool_dir, "queue"), "w",
-                             encoding="utf-8")
-        for submission in sorted(self.submissions, key=lambda x: x.timestamp):
-            logger.info("Exporting submission %s.", submission.id)
-            username = submission.participation.user.username
-            task = submission.task.name
-            timestamp = time.mktime(submission.timestamp.timetuple())
+        with open(os.path.join(self.spool_dir, "queue"),
+                  "wt", encoding="utf-8") as queue_file:
+            for submission in sorted(self.submissions,
+                                     key=lambda x: x.timestamp):
+                logger.info("Exporting submission %s.", submission.id)
+                username = submission.participation.user.username
+                task = submission.task.name
+                timestamp = time.mktime(submission.timestamp.timetuple())
 
-            # Get source files to the spool directory.
-            ext = languagemanager.get_language(submission.language)\
-                .source_extension
-            submission_dir = os.path.join(
-                self.upload_dir, username, "%s.%d.%s" % (task, timestamp, ext))
-            os.mkdir(submission_dir)
-            for filename, file_ in iteritems(submission.files):
-                self.file_cacher.get_file_to_path(
-                    file_.digest,
-                    os.path.join(submission_dir, filename.replace(".%l", ext)))
-            last_submission_dir = os.path.join(
-                self.upload_dir, username, "%s.%s" % (task, ext))
-            try:
-                os.unlink(last_submission_dir)
-            except OSError:
-                pass
-            os.symlink(os.path.basename(submission_dir), last_submission_dir)
-            print("./upload/%s/%s.%d.%s" % (username, task, timestamp, ext),
-                  file=queue_file)
+                # Get source files to the spool directory.
+                ext = languagemanager.get_language(submission.language)\
+                    .source_extension
+                submission_dir = os.path.join(
+                    self.upload_dir, username,
+                    "%s.%d.%s" % (task, timestamp, ext))
+                os.mkdir(submission_dir)
+                for filename, file_ in submission.files.items():
+                    self.file_cacher.get_file_to_path(
+                        file_.digest,
+                        os.path.join(submission_dir,
+                                     filename.replace(".%l", ext)))
+                last_submission_dir = os.path.join(
+                    self.upload_dir, username, "%s.%s" % (task, ext))
+                try:
+                    os.unlink(last_submission_dir)
+                except OSError:
+                    pass
+                os.symlink(os.path.basename(submission_dir),
+                           last_submission_dir)
+                print("./upload/%s/%s.%d.%s" % (username, task, timestamp, ext),
+                      file=queue_file)
 
-            # Write results file for the submission.
-            active_dataset = submission.task.active_dataset
-            result = submission.get_result(active_dataset)
-            if result.evaluated():
-                res_file = io.open(os.path.join(
-                    self.spool_dir,
-                    "%d.%s.%s.%s.res" % (timestamp, username, task, ext)),
-                    "w", encoding="utf-8")
-                res2_file = io.open(
-                    os.path.join(self.spool_dir,
-                                 "%s.%s.%s.res" % (username, task, ext)),
-                    "w", encoding="utf-8")
-                total = 0.0
-                for evaluation in result.evaluations:
-                    outcome = float(evaluation.outcome)
-                    total += outcome
-                    line = "Executing on file with codename '%s' %s (%.4f)" % \
-                        (evaluation.testcase.codename,
-                         evaluation.text, outcome)
-                    print(line, file=res_file)
-                    print(line, file=res2_file)
-                line = "Score: %.6f" % total
-                print(line, file=res_file)
-                print(line, file=res2_file)
-                res_file.close()
-                res2_file.close()
+                # Write results file for the submission.
+                active_dataset = submission.task.active_dataset
+                result = submission.get_result(active_dataset)
+                if result.evaluated():
+                    with open(os.path.join(self.spool_dir,
+                                           "%d.%s.%s.%s.res"
+                                           % (timestamp, username, task, ext)),
+                              "wt", encoding="utf-8") as res_file, \
+                            open(os.path.join(self.spool_dir,
+                                              "%s.%s.%s.res"
+                                              % (username, task, ext)),
+                                 "wt", encoding="utf-8") as res2_file:
+                        total = 0.0
+                        for evaluation in result.evaluations:
+                            outcome = float(evaluation.outcome)
+                            total += outcome
+                            line = (
+                                "Executing on file with codename '%s' %s (%.4f)"
+                                % (evaluation.testcase.codename,
+                                   evaluation.text, outcome))
+                            print(line, file=res_file)
+                            print(line, file=res2_file)
+                        line = "Score: %.6f" % total
+                        print(line, file=res_file)
+                        print(line, file=res2_file)
 
-        print("", file=queue_file)
-        queue_file.close()
+            print("", file=queue_file)
 
     def export_ranking(self):
         """Exports the ranking in csv and txt (human-readable) form.
@@ -211,48 +203,43 @@ class SpoolExporter(object):
         if is_partial:
             logger.warning("Some of the scores are not definitive.")
 
-        sorted_usernames = sorted(iterkeys(scores),
+        sorted_usernames = sorted(scores.keys(),
                                   key=lambda username: (scores[username],
                                                         username),
                                   reverse=True)
         sorted_tasks = sorted(self.contest.tasks,
                               key=lambda task: task.num)
 
-        ranking_file = io.open(
-            os.path.join(self.spool_dir, "ranking.txt"),
-            "w", encoding="utf-8")
-        ranking_csv = io.open(
-            os.path.join(self.spool_dir, "ranking.csv"),
-            "w", encoding="utf-8")
+        with open(os.path.join(self.spool_dir, "ranking.txt"),
+                  "wt", encoding="utf-8") as ranking_file, \
+                open(os.path.join(self.spool_dir, "ranking.csv"),
+                     "wt", encoding="utf-8") as ranking_csv:
 
-        # Write rankings' header.
-        n_tasks = len(sorted_tasks)
-        print("Final Ranking of Contest `%s'" %
-              self.contest.description, file=ranking_file)
-        points_line = " %10s" * n_tasks
-        csv_points_line = ",%s" * n_tasks
-        print(("%20s %10s" % ("User", "Total")) +
-              (points_line % tuple([t.name for t in sorted_tasks])),
-              file=ranking_file)
-        print(("%s,%s" % ("user", "total")) +
-              (csv_points_line % tuple([t.name for t in sorted_tasks])),
-              file=ranking_csv)
-
-        # Write rankings' content.
-        points_line = " %10.3f" * n_tasks
-        csv_points_line = ",%.6f" * n_tasks
-        for username in sorted_usernames:
-            user_scores = [task_scores[task.id][username]
-                           for task in sorted_tasks]
-            print(("%20s %10.3f" % (username, scores[username])) +
-                  (points_line % tuple(user_scores)),
+            # Write rankings' header.
+            n_tasks = len(sorted_tasks)
+            print("Final Ranking of Contest `%s'" %
+                  self.contest.description, file=ranking_file)
+            points_line = " %10s" * n_tasks
+            csv_points_line = ",%s" * n_tasks
+            print(("%20s %10s" % ("User", "Total")) +
+                  (points_line % tuple([t.name for t in sorted_tasks])),
                   file=ranking_file)
-            print(("%s,%.6f" % (username, scores[username])) +
-                  (csv_points_line % tuple(user_scores)),
+            print(("%s,%s" % ("user", "total")) +
+                  (csv_points_line % tuple([t.name for t in sorted_tasks])),
                   file=ranking_csv)
 
-        ranking_file.close()
-        ranking_csv.close()
+            # Write rankings' content.
+            points_line = " %10.3f" * n_tasks
+            csv_points_line = ",%.6f" * n_tasks
+            for username in sorted_usernames:
+                user_scores = [task_scores[task.id][username]
+                               for task in sorted_tasks]
+                print(("%20s %10.3f" % (username, scores[username])) +
+                      (points_line % tuple(user_scores)),
+                      file=ranking_file)
+                print(("%s,%.6f" % (username, scores[username])) +
+                      (csv_points_line % tuple(user_scores)),
+                      file=ranking_csv)
 
 
 def main():

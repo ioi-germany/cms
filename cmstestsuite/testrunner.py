@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2015-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -20,32 +19,24 @@
 
 """Utility class to run functional-like tests."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import datetime
-import io
 import logging
 import os
 import subprocess
 
 from cms import TOKEN_MODE_FINITE
+from cmscommon.datetime import get_system_timezone
 from cmstestsuite import CONFIG
-from cmstestsuite.functionaltestframework import FunctionalTestFramework
 from cmstestsuite.Test import TestFailure
 from cmstestsuite.Tests import ALL_LANGUAGES
+from cmstestsuite.functionaltestframework import FunctionalTestFramework
 from cmstestsuite.programstarter import ProgramStarter
-from cmscommon.datetime import get_system_timezone
 
 
 logger = logging.getLogger(__name__)
 
 
-class TestRunner(object):
+class TestRunner:
     def __init__(self, test_list, contest_id=None, workers=1, cpu_limits=None):
         self.start_time = datetime.datetime.now()
         self.last_end_time = self.start_time
@@ -94,7 +85,7 @@ class TestRunner(object):
         try:
             git_root = subprocess.check_output(
                 "git rev-parse --show-toplevel", shell=True,
-                stderr=io.open(os.devnull, "wb")).decode('utf-8').strip()
+                stderr=subprocess.DEVNULL).decode('utf-8').strip()
         except subprocess.CalledProcessError:
             git_root = None
         CONFIG["TEST_DIR"] = git_root

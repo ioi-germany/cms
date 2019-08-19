@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,13 +18,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
 
 import atexit
 import logging
@@ -64,16 +56,16 @@ assume:     if it's y, answer yes to every question
 def mem_human(mem):
     if mem is None:
         return 'None'
-    if mem > 2 ** 30:
-        return "%4.3gG" % (mem / (2 ** 30))
-    if mem > 2 ** 20:
-        return "%4.3gM" % (mem / (2 ** 20))
-    if mem > 2 ** 10:
-        return "%4.3gK" % (mem / (2 ** 10))
+    if mem > 1024 * 1024 * 1024:
+        return "%4.3gG" % (mem / (1024 * 1024 * 1024))
+    if mem > 1024 * 1024:
+        return "%4.3gM" % (mem / (1024 * 1024))
+    if mem > 1024:
+        return "%4.3gK" % (mem / 1024)
     return "%4d" % mem
 
 
-class NullLogger(object):
+class NullLogger:
     def __init__(self):
         def p(*args):
             pass
@@ -126,7 +118,7 @@ def test_testcases(base_dir, solution, language, assume=None):
             ESOperation.EVALUATION,
             None,
             dataset.id,
-            dataset.testcases[t].codename).to_dict(),
+            dataset.testcases[t].codename),
         language=language.name,
         task_type=dataset.task_type,
         task_type_parameters=dataset.task_type_parameters,

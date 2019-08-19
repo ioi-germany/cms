@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2015 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -21,22 +20,15 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
 import gevent.monkey
 gevent.monkey.patch_all()  # noqa
 
 import unittest
+from unittest.mock import patch, PropertyMock
 
 import gevent
-from mock import patch, PropertyMock
 
 # Needs to be first to allow for monkey patching the DB connection string.
 from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
@@ -48,7 +40,7 @@ from cmscommon.constants import SCORE_MODE_MAX
 class TestProxyService(DatabaseMixin, unittest.TestCase):
 
     def setUp(self):
-        super(TestProxyService, self).setUp()
+        super().setUp()
 
         patcher = patch("cms.db.Dataset.score_type_object",
                         new_callable=PropertyMock)

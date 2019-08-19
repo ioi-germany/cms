@@ -34,7 +34,7 @@ from cms import FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
 from cms.db import Task, Statement, Testcase, Dataset, \
     Attachment, Spoiler, Manager, Submission, File, \
     SubmissionResult
-from cms.grading.tasktypes import get_task_type
+from cms.grading.tasktypes import get_task_type, Communication
 from cms.grading.languagemanager import filename_to_language
 from cms.grading.Job import CompilationJob, EvaluationJob
 from cms.rules.Rule import JobRule, ZipRule
@@ -874,10 +874,7 @@ class TaskConfig(CommonConfig, Scope):
                 self.managers["%slib.pas" % self.name] = \
                     os.path.join(self.wdir, "lib.pas")
         self.managers["manager"] = manager.get_path()
-        compilation_param = "alone"
-        if stub:
-            compilation_param = "grader"
-        self.tasktypeparameters = ([compilation_param, 1])
+        self.tasktypeparameters = ([1, "stub" if stub else "alone", "fifo_io"])
 
     @exported_function
     def output_generator(self, s):
@@ -1434,7 +1431,7 @@ class TaskConfig(CommonConfig, Scope):
                       score_type="SubtaskGroup",
                       score_type_parameters=score_type_parameters)
         ddb.time_limit = float(self._timelimit)
-        ddb.memory_limit = self._memorylimit
+        ddb.memory_limit = self._memorylimit * 1024 * 1024
 
         # Add test cases
         for c in self.cases:
@@ -1471,7 +1468,7 @@ class TaskConfig(CommonConfig, Scope):
         for s in self.testsubmissions:  # submissions are saved because they
                                         # are referenced through the user
                                         # object
-            sdb = self._makesubmission(s, pdb, tdb)
+            sdb = self._makesubmission(s, pdb, tdb, official=False)
             # dummy id, the correct value is inserted by GerImporter.py
             sdb.task_id = 0
             sdb.task = tdb
@@ -1510,7 +1507,7 @@ class TaskConfig(CommonConfig, Scope):
 
         return sdbs
 
-    def _makesubmission(self, submission, participation, tdb):
+    def _makesubmission(self, submission, participation, tdb, official=True):
         """
         Create and return a test submission database object.
 
@@ -1520,6 +1517,9 @@ class TaskConfig(CommonConfig, Scope):
                                        participation
 
         tdb (Task): database object for the task
+
+        official (boolean): whether this submission is official (i.e. counts
+                            towards the score)
 
         return (Submission): database object for the submission
 
@@ -1576,7 +1576,8 @@ class TaskConfig(CommonConfig, Scope):
             timestamp=datetime.utcnow(),
             language=submission_lang,
             participation=participation,
-            comment="%s" % (", ".join(os.path.basename(f) for f in files)))
+            comment="%s" % (", ".join(os.path.basename(f) for f in files)),
+            official=official)
         sdb.task = tdb
         sdb.timestamp = datetime.utcnow()
         sdb.language = submission_lang
@@ -1594,7 +1595,7 @@ class TaskConfig(CommonConfig, Scope):
 
         # Unit tests
         def m_abs(rel):
-            return max(int(rel * self._memorylimit), 1)
+            return max(int(rel * self._memorylimit * 1024 * 1024), 1)
 
         def t_abs(rel):
             return float(rel * self._timelimit)

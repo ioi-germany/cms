@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -9,7 +8,7 @@
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2015-2016 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2015-2018 William Di Luigi <williamdiluigi@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -28,32 +27,26 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import ipaddress
 import json
 import logging
+import re
 
 import tornado.web
+from sqlalchemy.orm.exc import NoResultFound
 
 from cms import config
-from cms.db import PrintJob
+from cms.db import PrintJob, User, Participation, Team
 from cms.grading.steps import COMPILATION_MESSAGES, EVALUATION_MESSAGES
 from cms.server import multi_contest
 from cms.server.contest.authentication import validate_login
 from cms.server.contest.communication import get_communications
 from cms.server.contest.printing import accept_print_job, PrintingDisabled, \
     UnacceptablePrintJob
+from cmscommon.crypto import hash_password
 from cmscommon.datetime import make_datetime, make_timestamp
-
-from ..phase_management import actual_phase_required
-
 from .contest import ContestHandler
+from ..phase_management import actual_phase_required
 
 
 logger = logging.getLogger(__name__)
@@ -71,6 +64,91 @@ class MainHandler(ContestHandler):
     @multi_contest
     def get(self):
         self.render("overview.html", **self.r_params)
+
+
+class RegistrationHandler(ContestHandler):
+    """Registration handler.
+
+    Used to create a user account (and participation) when this is allowed.
+
+    """
+
+    MAX_INPUT_LENGTH = 50
+    MIN_PASSWORD_LENGTH = 6
+
+    @multi_contest
+    def post(self):
+        if not self.contest.allow_registration:
+            raise tornado.web.HTTPError(404)
+
+        try:
+            first_name = self.get_argument("first_name")
+            last_name = self.get_argument("last_name")
+            username = self.get_argument("username")
+            password = self.get_argument("password")
+            email = self.get_argument("email")
+            if len(email) == 0:
+                email = None
+
+            if not 1 <= len(first_name) <= self.MAX_INPUT_LENGTH:
+                raise ValueError()
+            if not 1 <= len(last_name) <= self.MAX_INPUT_LENGTH:
+                raise ValueError()
+            if not 1 <= len(username) <= self.MAX_INPUT_LENGTH:
+                raise ValueError()
+            if not re.match(r"^[A-Za-z0-9_-]+$", username):
+                raise ValueError()
+            if not self.MIN_PASSWORD_LENGTH <= len(password) \
+                    <= self.MAX_INPUT_LENGTH:
+                raise ValueError()
+        except (tornado.web.MissingArgumentError, ValueError):
+            raise tornado.web.HTTPError(400)
+
+        # Override password with its hash
+        password = hash_password(password)
+
+        # If we have teams, we assume that the 'team' field is mandatory
+        if self.sql_session.query(Team).count() > 0:
+            try:
+                team_code = self.get_argument("team")
+                team = self.sql_session.query(Team)\
+                           .filter(Team.code == team_code)\
+                           .one()
+            except (tornado.web.MissingArgumentError, NoResultFound):
+                raise tornado.web.HTTPError(400)
+        else:
+            team = None
+
+        # Check if the username is available
+        tot_users = self.sql_session.query(User)\
+                        .filter(User.username == username).count()
+        if tot_users != 0:
+            # HTTP 409: Conflict
+            raise tornado.web.HTTPError(409)
+
+        # Store new user and participation
+        user = User(first_name, last_name, username, password, email=email)
+        self.sql_session.add(user)
+
+        participation = Participation(user=user, contest=self.contest,
+                                      team=team)
+        self.sql_session.add(participation)
+
+        self.sql_session.commit()
+
+        self.finish(username)
+
+    @multi_contest
+    def get(self):
+        if not self.contest.allow_registration:
+            raise tornado.web.HTTPError(404)
+
+        self.r_params["MAX_INPUT_LENGTH"] = self.MAX_INPUT_LENGTH
+        self.r_params["MIN_PASSWORD_LENGTH"] = self.MIN_PASSWORD_LENGTH
+        self.r_params["teams"] = self.sql_session.query(Team)\
+                                     .order_by(Team.name).all()
+
+        self.render("register.html", **self.r_params)
 
 
 class LoginHandler(ContestHandler):
@@ -220,7 +298,7 @@ class PrintingHandler(ContestHandler):
         except PrintingDisabled:
             raise tornado.web.HTTPError(404)
         except UnacceptablePrintJob as e:
-            self.notify_error(e.subject, e.text)
+            self.notify_error(e.subject, e.text, e.text_params)
         else:
             self.service.printing_service.new_printjob(printjob_id=printjob.id)
             self.notify_success(N_("Print job received"),

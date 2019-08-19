@@ -1,8 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2018 Edoardo Morassutto <edoardo.morassutto@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,18 +21,14 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import os.path
 import unittest
 from datetime import datetime, timedelta
+from io import BytesIO
 
 import babel.dates
+from babel.messages import Catalog
+from babel.messages.mofile import write_mo
 
 from cms.locale import Translation, DEFAULT_TRANSLATION, filter_language_codes, \
     choose_language_code
@@ -41,9 +37,18 @@ from cms.locale import Translation, DEFAULT_TRANSLATION, filter_language_codes, 
 UTC = babel.dates.UTC
 ROME = babel.dates.get_timezone("Europe/Rome")
 
+FRENCH_CATALOG = Catalog(locale="fr")
+FRENCH_CATALOG.add("%s KiB", "%s Kio")
+FRENCH_CATALOG.add("%s MiB", "%s Mio")
+FRENCH_CATALOG.add("%s GiB", "%s Gio")
+FRENCH_CATALOG.add("%s TiB", "%s Tio")
+FRENCH_CATALOG_BUF = BytesIO()
+write_mo(FRENCH_CATALOG_BUF, FRENCH_CATALOG)
+FRENCH_CATALOG_BUF.seek(0)
+
 ENGLISH = DEFAULT_TRANSLATION
 BRITISH_ENGLISH = Translation("en_GB")
-FRENCH = Translation("fr")
+FRENCH = Translation("fr", mofile=FRENCH_CATALOG_BUF)
 HINDI = Translation("hi")
 ITALIAN = Translation("it")
 NORWEGIAN = Translation("no")
@@ -375,29 +380,29 @@ class TestFormatDuration(unittest.TestCase):
         # At most three fractional digits are shown if needed to get to
         # four significant digits.
         # Large values are *not* cast to minutes (or higher).
-        self.assertEqual(ENGLISH.format_duration(0.123456789),
+        self.assertEqual(ENGLISH.format_duration(0.123_456_789),
                          "0.123 sec")
-        self.assertEqual(ENGLISH.format_duration(0.123456789, length="long"),
+        self.assertEqual(ENGLISH.format_duration(0.123_456_789, length="long"),
                          "0.123 seconds")
-        self.assertEqual(ENGLISH.format_duration(1.23456789),
+        self.assertEqual(ENGLISH.format_duration(1.234_567_89),
                          "1.235 sec")
-        self.assertEqual(ENGLISH.format_duration(1.23456789, length="long"),
+        self.assertEqual(ENGLISH.format_duration(1.234_567_89, length="long"),
                          "1.235 seconds")
-        self.assertEqual(ENGLISH.format_duration(12.3456789),
+        self.assertEqual(ENGLISH.format_duration(12.345_678_9),
                          "12.346 sec")
-        self.assertEqual(ENGLISH.format_duration(12.3456789, length="long"),
+        self.assertEqual(ENGLISH.format_duration(12.345_678_9, length="long"),
                          "12.346 seconds")
-        self.assertEqual(ENGLISH.format_duration(123.456789),
+        self.assertEqual(ENGLISH.format_duration(123.456_789),
                          "123.457 sec")
-        self.assertEqual(ENGLISH.format_duration(123.456789, length="long"),
+        self.assertEqual(ENGLISH.format_duration(123.456_789, length="long"),
                          "123.457 seconds")
-        self.assertEqual(ENGLISH.format_duration(1234.56789),
+        self.assertEqual(ENGLISH.format_duration(1234.567_89),
                          "1,234.568 sec")
-        self.assertEqual(ENGLISH.format_duration(1234.56789, length="long"),
+        self.assertEqual(ENGLISH.format_duration(1234.567_89, length="long"),
                          "1,234.568 seconds")
-        self.assertEqual(ENGLISH.format_duration(12345.6789),
+        self.assertEqual(ENGLISH.format_duration(12_345.678_9),
                          "12,345.679 sec")
-        self.assertEqual(ENGLISH.format_duration(12345.6789, length="long"),
+        self.assertEqual(ENGLISH.format_duration(12_345.678_9, length="long"),
                          "12,345.679 seconds")
 
     # As above, localized.
@@ -419,29 +424,29 @@ class TestFormatDuration(unittest.TestCase):
                          "2,000 secondi")
 
     def test_localized_increasing_magnitude(self):
-        self.assertEqual(ITALIAN.format_duration(0.123456789),
+        self.assertEqual(ITALIAN.format_duration(0.123_456_789),
                          "0,123 s")
-        self.assertEqual(ITALIAN.format_duration(0.123456789, length="long"),
+        self.assertEqual(ITALIAN.format_duration(0.123_456_789, length="long"),
                          "0,123 secondi")
-        self.assertEqual(ITALIAN.format_duration(1.23456789),
+        self.assertEqual(ITALIAN.format_duration(1.234_567_89),
                          "1,235 s")
-        self.assertEqual(ITALIAN.format_duration(1.23456789, length="long"),
+        self.assertEqual(ITALIAN.format_duration(1.234_567_89, length="long"),
                          "1,235 secondi")
-        self.assertEqual(ITALIAN.format_duration(12.3456789),
+        self.assertEqual(ITALIAN.format_duration(12.345_678_9),
                          "12,346 s")
-        self.assertEqual(ITALIAN.format_duration(12.3456789, length="long"),
+        self.assertEqual(ITALIAN.format_duration(12.345_678_9, length="long"),
                          "12,346 secondi")
-        self.assertEqual(ITALIAN.format_duration(123.456789),
+        self.assertEqual(ITALIAN.format_duration(123.456_789),
                          "123,457 s")
-        self.assertEqual(ITALIAN.format_duration(123.456789, length="long"),
+        self.assertEqual(ITALIAN.format_duration(123.456_789, length="long"),
                          "123,457 secondi")
-        self.assertEqual(ITALIAN.format_duration(1234.56789),
+        self.assertEqual(ITALIAN.format_duration(1234.567_89),
                          "1.234,568 s")
-        self.assertEqual(ITALIAN.format_duration(1234.56789, length="long"),
+        self.assertEqual(ITALIAN.format_duration(1234.567_89, length="long"),
                          "1.234,568 secondi")
-        self.assertEqual(ITALIAN.format_duration(12345.6789),
+        self.assertEqual(ITALIAN.format_duration(12_345.678_9),
                          "12.345,679 s")
-        self.assertEqual(ITALIAN.format_duration(12345.6789, length="long"),
+        self.assertEqual(ITALIAN.format_duration(12_345.678_9, length="long"),
                          "12.345,679 secondi")
 
 
@@ -450,36 +455,54 @@ class TestFormatSize(unittest.TestCase):
     def test_zero(self):
         # Corner case.
         self.assertEqual(ENGLISH.format_size(0),
-                         "0 byte")
+                         "0 bytes")
 
     def test_small_values(self):
         # Note that there is no singular/plural.
         self.assertEqual(ENGLISH.format_size(1),
                          "1 byte")
         self.assertEqual(ENGLISH.format_size(2),
-                         "2 byte")
+                         "2 bytes")
 
-    def test_cutoff(self):
-        # Cutoff is at 1000, not 1024, as we use kilo, mega, ... rather
-        # than kibi, mebi, ...
+    def test_cutoff_kib(self):
         self.assertEqual(ENGLISH.format_size(999),
-                         "999 byte")
+                         "999 bytes")
         self.assertEqual(ENGLISH.format_size(1000),
-                         "1.00 kB")
+                         "1,000 bytes")
+        self.assertEqual(ENGLISH.format_size(1001),
+                         "1,001 bytes")
+        self.assertEqual(ENGLISH.format_size(1023),
+                         "1,023 bytes")
         self.assertEqual(ENGLISH.format_size(1024),
-                         "1.02 kB")
+                         "1.00 KiB")
+        self.assertEqual(ENGLISH.format_size(1025),
+                         "1.00 KiB")
+
+    def test_cutoff_mib(self):
+        self.assertEqual(ENGLISH.format_size(999 * 1024),
+                         "999 KiB")
+        self.assertEqual(ENGLISH.format_size(1000 * 1024),
+                         "1,000 KiB")
+        self.assertEqual(ENGLISH.format_size(1001 * 1024),
+                         "1,001 KiB")
+        self.assertEqual(ENGLISH.format_size(1023 * 1024),
+                         "1,023 KiB")
+        self.assertEqual(ENGLISH.format_size(1024 * 1024),
+                         "1.00 MiB")
+        self.assertEqual(ENGLISH.format_size(1025 * 1024),
+                         "1.00 MiB")
 
     def test_large(self):
         # Ensure larger units are used for larger values, with rounding
         # to three significant digits, up to terabytes.
-        self.assertEqual(ENGLISH.format_size(2.345 * 1000000),
-                         "2.34 MB")
-        self.assertEqual(ENGLISH.format_size(34.567 * 1000000000),
-                         "34.6 GB")
-        self.assertEqual(ENGLISH.format_size(456.789 * 1000000000000),
-                         "457 TB")
-        self.assertEqual(ENGLISH.format_size(5678.9 * 1000000000000),
-                         "5,679 TB")
+        self.assertEqual(ENGLISH.format_size(2_345_000),
+                         "2.24 MiB")
+        self.assertEqual(ENGLISH.format_size(34_567_000_000),
+                         "32.2 GiB")
+        self.assertEqual(ENGLISH.format_size(456_789_000_000_000),
+                         "415 TiB")
+        self.assertEqual(ENGLISH.format_size(5_678_900_000_000_000),
+                         "5,165 TiB")
 
     # As above, localized (use French as it's sensibly different).
 
@@ -491,25 +514,46 @@ class TestFormatSize(unittest.TestCase):
         self.assertEqual(FRENCH.format_size(1),
                          "1 octet")
         self.assertEqual(FRENCH.format_size(2),
-                         "2 octet")
+                         "2 octets")
 
-    def test_localized_cutoff(self):
+    def test_localized_cutoff_kib(self):
         self.assertEqual(FRENCH.format_size(999),
-                         "999 octet")
+                         "999 octets")
         self.assertEqual(FRENCH.format_size(1000),
-                         "1,00 ko")
+                         "1\N{NO-BREAK SPACE}000 octets")
+        self.assertEqual(FRENCH.format_size(1001),
+                         "1\N{NO-BREAK SPACE}001 octets")
+        self.assertEqual(FRENCH.format_size(1023),
+                         "1\N{NO-BREAK SPACE}023 octets")
         self.assertEqual(FRENCH.format_size(1024),
-                         "1,02 ko")
+                         "1,00 Kio")
+        self.assertEqual(FRENCH.format_size(1025),
+                         "1,00 Kio")
+
+    def test_localized_cutoff_mib(self):
+        self.assertEqual(FRENCH.format_size(999 * 1024),
+                         "999 Kio")
+        self.assertEqual(FRENCH.format_size(1000 * 1024),
+                         "1\N{NO-BREAK SPACE}000 Kio")
+        self.assertEqual(FRENCH.format_size(1001 * 1024),
+                         "1\N{NO-BREAK SPACE}001 Kio")
+        self.assertEqual(FRENCH.format_size(1023 * 1024),
+                         "1\N{NO-BREAK SPACE}023 Kio")
+        self.assertEqual(FRENCH.format_size(1024 * 1024),
+                         "1,00 Mio")
+        self.assertEqual(FRENCH.format_size(1025 * 1024),
+                         "1,00 Mio")
+
 
     def test_localized_large(self):
-        self.assertEqual(FRENCH.format_size(2.345 * 1000000),
-                         "2,34 Mo")
-        self.assertEqual(FRENCH.format_size(34.567 * 1000000000),
-                         "34,6 Go")
-        self.assertEqual(FRENCH.format_size(456.789 * 1000000000000),
-                         "457 To")
-        self.assertEqual(FRENCH.format_size(5678.9123 * 1000000000000),
-                         "5\N{NO-BREAK SPACE}679 To")
+        self.assertEqual(FRENCH.format_size(2_345_000),
+                         "2,24 Mio")
+        self.assertEqual(FRENCH.format_size(34_567_000_000),
+                         "32,2 Gio")
+        self.assertEqual(FRENCH.format_size(456_789_000_000_000),
+                         "415 Tio")
+        self.assertEqual(FRENCH.format_size(5_678_912_300_000_000),
+                         "5\N{NO-BREAK SPACE}165 Tio")
 
 
 class TestFormatDecimal(unittest.TestCase):
@@ -527,22 +571,22 @@ class TestFormatDecimal(unittest.TestCase):
         # Large integers get thousands separators.
         self.assertEqual(ENGLISH.format_decimal(1234),
                          "1,234")
-        self.assertEqual(ENGLISH.format_decimal(1234567890),
+        self.assertEqual(ENGLISH.format_decimal(1_234_567_890),
                          "1,234,567,890")
 
     def test_fractional_digits_and_rounding(self):
         # Fractional digits are preserved and rounded.
-        self.assertEqual(ENGLISH.format_decimal(1.23456789),
+        self.assertEqual(ENGLISH.format_decimal(1.234_567_89),
                          "1.235")
 
     def test_localized_decimal_and_thousands_separators(self):
         # Ensure correct decimal and thousands separators are used.
-        self.assertEqual(ITALIAN.format_decimal(1234567890),
+        self.assertEqual(ITALIAN.format_decimal(1_234_567_890),
                          "1.234.567.890")
-        self.assertEqual(ITALIAN.format_decimal(1.23456789),
+        self.assertEqual(ITALIAN.format_decimal(1.234_567_89),
                          "1,235")
         # Use Hindi as they have a peculiar separator rule.
-        self.assertEqual(HINDI.format_decimal(1234567890),
+        self.assertEqual(HINDI.format_decimal(1_234_567_890),
                          "1,23,45,67,890")
 
 

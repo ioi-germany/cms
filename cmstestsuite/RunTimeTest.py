@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2015-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -18,33 +17,25 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import argparse
 import logging
 import os
 import sys
 
 import cmstestsuite.tasks.batch_50 as batch_50
-
 from cmstestsuite import CONFIG
+from cmstestsuite.Test import Test
+from cmstestsuite.Tests import LANG_C
 from cmstestsuite.functionaltestframework import FunctionalTestFramework
 from cmstestsuite.profiling import \
     PROFILER_KERNPROF, PROFILER_NONE, PROFILER_YAPPI
 from cmstestsuite.testrunner import TestRunner
-from cmstestsuite.Test import Test
-from cmstestsuite.Tests import LANG_C
 
 
 logger = logging.getLogger(__name__)
 
 
-class TimeTest(object):
+class TimeTest:
     def __init__(self, name, task, filename, languages, repetitions):
         self.framework = FunctionalTestFramework()
 

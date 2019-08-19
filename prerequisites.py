@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -27,22 +26,6 @@
 configuration, and so on).
 
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-# Do not use imports from the future module here as this script is
-# called as root and thus may get a different environment than the one
-# the user will be using and in which the requirements were installed
-# (e.g. the site installation rather than a venv).
-
-# Alias raw_input as input on py2 only.
-try:
-    input = raw_input
-    del raw_input
-except NameError:
-    pass
 
 import argparse
 import grp
@@ -212,11 +195,9 @@ def build_isolate():
     assert_not_root()
 
     print("===== Compiling isolate")
-    os.chdir("isolate")
     # We make only the executable isolate, otherwise the tool a2x
     # is needed and we have to add more compilation dependencies.
-    subprocess.call(["make", "isolate"])
-    os.chdir("..")
+    subprocess.check_call(["make", "-C", "isolate", "isolate"])
 
 
 def install_isolate():
@@ -322,9 +303,8 @@ def install():
         build()
     else:
         # Run build() command as not root
-        if subprocess.call(["sudo", "-E", "-u", real_user,
-                            sys.executable, sys.argv[0], "build"]):
-            exit(1)
+        subprocess.check_call(["sudo", "-E", "-u", real_user,
+                               sys.executable, sys.argv[0], "build"])
 
     install_isolate()
 
@@ -361,7 +341,7 @@ def install():
         print("===== Adding yourself to the %s group" % CMSUSER)
         if ask("Type Y if you want me to automatically add "
                "\"%s\" to the %s group: " % (real_user, CMSUSER)):
-            subprocess.call(["usermod", "-a", "-G", CMSUSER, real_user])
+            subprocess.check_call(["usermod", "-a", "-G", CMSUSER, real_user])
             print("""
 ###########################################################################
 ###                                                                     ###

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -30,20 +29,11 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
-import io
 import os.path
 import pickle
 
 from cms import config
 from cms.db import Submission, UserTest
-
 from .check import get_latest_submission
 
 
@@ -142,8 +132,8 @@ def store_local_copy(path, participation, task, timestamp, files):
                             participation.user.username)
         if not os.path.exists(path):
             os.makedirs(path)
-        with io.open(os.path.join(path, "%s" % timestamp), "wb") as f:
+        with open(os.path.join(path, "%s" % timestamp), "wb") as f:
             pickle.dump((participation.contest.id, participation.user.id,
                          task.id, files), f)
-    except EnvironmentError as e:
+    except OSError as e:
         raise StorageFailed("Failed to store local copy of submission: %s", e)

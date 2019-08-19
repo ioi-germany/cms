@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
@@ -21,17 +20,10 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
+from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import Integer, String, DateTime, Boolean
-from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import ARRAY
 
 from . import Filename, Digest, Base, Participation
 

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -24,24 +23,15 @@ useful specifically to the use that CWS makes of it.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
-
 from jinja2 import contextfilter, PackageLoader
 
 from cms.server.jinja2_toolbox import GLOBAL_ENVIRONMENT
-
 from .formatting import format_token_rules, get_score_class
 
 
 def extract_token_params(o):
     return {k[6:]: v
-            for k, v in iteritems(o.__dict__) if k.startswith("token_")}
+            for k, v in o.__dict__.items() if k.startswith("token_")}
 
 
 def instrument_cms_toolbox(env):

@@ -1,9 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2012-2013 Bernard Blackham <bernard@largestprime.net>
-# Copyright © 2014-2015 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2014-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,15 +17,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 task_info = {
-    "name": "communication",
+    "name": "communication_fifoio_stubbed",
     "title": "Test Communication Task",
     "official_language": "",
     "submission_format_choice": "other",
@@ -35,6 +27,8 @@ task_info = {
     "memory_limit_{{dataset_id}}": "128",
     "task_type_{{dataset_id}}": "Communication",
     "TaskTypeOptions_{{dataset_id}}_Communication_num_processes": "1",
+    "TaskTypeOptions_{{dataset_id}}_Communication_compilation": "stub",
+    "TaskTypeOptions_{{dataset_id}}_Communication_user_io": "fifo_io",
     "score_type_{{dataset_id}}": "Sum",
     "score_type_parameters_{{dataset_id}}": "50",
 }
@@ -43,6 +37,7 @@ managers = [
     "stub.c",
     "stub.cpp",
     "stub.pas",
+    "stub.py",
     "stub.java",
     "manager",
 ]

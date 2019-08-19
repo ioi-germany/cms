@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -26,13 +25,6 @@ entity that has been deleted in the DB without any downtime.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
 import gevent.monkey
@@ -41,8 +33,7 @@ gevent.monkey.patch_all()  # noqa
 import argparse
 import logging
 import sys
-
-from future.moves.urllib.parse import quote, urljoin, urlsplit
+from urllib.parse import quote, urljoin, urlsplit
 
 from requests import Session, Request
 from requests.exceptions import RequestException

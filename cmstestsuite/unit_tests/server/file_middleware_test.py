@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -17,18 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import io
 import random
 import unittest
+from unittest.mock import Mock
 
-from mock import Mock
 from werkzeug.http import quote_header_value
 from werkzeug.test import Client, EnvironBuilder
 from werkzeug.wrappers import Response
@@ -42,11 +34,9 @@ from cmscommon.digest import bytes_digest
 class TestFileByDigestMiddleware(unittest.TestCase):
 
     def setUp(self):
-        # We need to wrap the generator in a list because of a
-        # shortcoming of future's bytes implementation.
         # Choose a size that is larger than FileCacher.CHUNK_SIZE.
         self.content = \
-            bytes([random.getrandbits(8) for _ in range(2 ** 14 + 1024)])
+            bytes(random.getrandbits(8) for _ in range(17 * 1024))
         self.digest = bytes_digest(self.content)
 
         self.filename = "foobar.pdf"

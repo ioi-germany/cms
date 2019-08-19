@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -25,14 +24,6 @@ This updater changes the in-database column type for some columns.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
-
 import json
 import logging
 
@@ -40,14 +31,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Updater(object):
+class Updater:
 
     def __init__(self, data):
         assert data["_version"] == 29
         self.objs = data
 
     def run(self):
-        for k, v in iteritems(self.objs):
+        for k, v in self.objs.items():
             if k.startswith("_"):
                 continue
 

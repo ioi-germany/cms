@@ -32,8 +32,8 @@ var utils = new CMS.CWSUtils("{{ url() }}", "{{ contest_url() }}", "{{ contest.n
                              {{ actual_phase }});
 $(document).ready(function () {
     utils.update_time({% if participation.group.per_user_time is not none %}true{% else %}false{% endif %});
-    setInterval(function() {
-        utils.update_time({% if participation.group.per_user_time is not none %}true{% else %}false{% endif %});
+    var timer = setInterval(function() {
+        utils.update_time({% if participation.group.per_user_time is not none %}true{% else %}false{% endif %}, timer);
     }, 1000);
     utils.update_unread_count(0{% if page == "communication" %}, 0{% endif %});
     utils.update_notifications(true);
@@ -117,6 +117,11 @@ $(document).ready(function () {
                         </div>
                     </fieldset>
                 </form>
+                {% if contest.allow_registration %}
+                <p style="margin: 9px 0 0;">
+                    {% trans %}Don't have an account?{% endtrans %} <a href="{{ contest_url('register') }}">{% trans %}Register{% endtrans %}</a>
+                </p>
+                {% endif %}
             </div>
         </div>
 {% else %}
@@ -204,10 +209,9 @@ $(document).ready(function () {
                         </ul>
                     </div>
                     <span class="license_notice">
-                    <a href="http://github.com/cms-dev/cms/" rel="author noreferrer" target="_blank">{% trans %}Contest Management System{% endtrans %}</a>
+                    <a href="https://github.com/cms-dev/cms" rel="author noreferrer" target="_blank">{% trans %}Contest Management System{% endtrans %}</a>
                     {% trans %}is released under the{% endtrans %}
-                    <a href="http://www.gnu.org/licenses/agpl" rel="license noreferrer" target="_blank">{% trans %}GNU Affero General Public License{% endtrans %}</a>
-                    .
+                    <a href="https://www.gnu.org/licenses/agpl" rel="license noreferrer" target="_blank">{% trans %}GNU Affero General Public License{% endtrans %}</a>.
                     </span>
                 </div>
     {% block core %}{% endblock core %}

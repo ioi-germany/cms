@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2012 Bernard Blackham <bernard@largestprime.net>
@@ -20,15 +19,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import argparse
-import io
 import logging
 import os
 import re
@@ -36,12 +27,12 @@ import sys
 
 from cms import utf8_decoder
 from cmstestsuite import CONFIG
+from cmstestsuite.Tests import ALL_TESTS
 from cmstestsuite.coverage import clear_coverage, combine_coverage, \
     send_coverage_to_codecov
 from cmstestsuite.profiling import \
     PROFILER_KERNPROF, PROFILER_NONE, PROFILER_YAPPI
 from cmstestsuite.testrunner import TestRunner
-from cmstestsuite.Tests import ALL_TESTS
 
 
 logger = logging.getLogger(__name__)
@@ -60,9 +51,9 @@ def load_test_list_from_file(filename):
     if not os.path.exists(filename):
         return []
     try:
-        with io.open(filename, "rt", encoding="utf-8") as f:
+        with open(filename, "rt", encoding="utf-8") as f:
             lines = f.readlines()
-    except (IOError, OSError) as e:
+    except OSError as e:
         print("Failed to read test list. %s." % (e))
         return None
 
@@ -150,7 +141,7 @@ def filter_tests(orig_test_list, regexes, languages):
 
 
 def write_test_case_list(test_list, filename):
-    with io.open(filename, 'wt', encoding="utf-8") as f:
+    with open(filename, 'wt', encoding="utf-8") as f:
         for test, lang in test_list:
             f.write('%s %s\n' % (test.name, lang))
 

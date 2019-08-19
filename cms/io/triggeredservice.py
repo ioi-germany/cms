@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2014-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -22,15 +21,9 @@ on notifications and sweeper loops.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 import time
+from abc import ABCMeta, abstractmethod
 
 import gevent
 from gevent.event import Event
@@ -42,7 +35,7 @@ from cmscommon.datetime import monotonic_time
 logger = logging.getLogger(__name__)
 
 
-class Executor(object):  # pylint: disable=R0921
+class Executor(metaclass=ABCMeta):
 
     """A class taking care of executing operations.
 
@@ -63,7 +56,7 @@ class Executor(object):  # pylint: disable=R0921
             at a time.
 
         """
-        super(Executor, self).__init__()
+        super().__init__()
 
         self._batch_executions = batch_executions
         self._operation_queue = PriorityQueue()
@@ -170,6 +163,7 @@ class Executor(object):  # pylint: disable=R0921
         """
         return 0
 
+    @abstractmethod
     def execute(self, entry):
         """Perform a single operation.
 
@@ -183,7 +177,7 @@ class Executor(object):  # pylint: disable=R0921
             re-enqueue the item.
 
         """
-        raise NotImplementedError("Please use a subclass.")
+        pass
 
 
 class TriggeredService(Service):

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2015 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -26,20 +25,12 @@
 
 """High level functions to perform standardized compilations."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
-
-from .messages import HumanMessage, MessageCollection
-from .utils import generic_step
 
 from cms import config
 from cms.grading.Sandbox import Sandbox
+from .messages import HumanMessage, MessageCollection
+from .utils import generic_step
 
 
 logger = logging.getLogger(__name__)
@@ -109,7 +100,7 @@ def compilation_step(sandbox, commands):
     sandbox.max_processes = config.compilation_sandbox_max_processes
     sandbox.timeout = config.compilation_sandbox_max_time_s
     sandbox.wallclock_timeout = 2 * sandbox.timeout + 1
-    sandbox.address_space = config.compilation_sandbox_max_memory_kib
+    sandbox.address_space = config.compilation_sandbox_max_memory_kib * 1024
 
     # Run the compilation commands, copying stdout and stderr to stats.
     stats = generic_step(sandbox, commands, "compilation", collect_output=True)

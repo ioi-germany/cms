@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,23 +18,14 @@
 
 """Tests for the ImportContest script"""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-import six
-
 import unittest
 
 # Needs to be first to allow for monkey patching the DB connection string.
 from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
 
 from cms.db import Contest, SessionGen, Submission, User
-
-from cmscontrib.loaders.base_loader import ContestLoader, TaskLoader
 from cmscontrib.ImportContest import ContestImporter
+from cmscontrib.loaders.base_loader import ContestLoader, TaskLoader
 
 
 def fake_loader_factory(contest, contest_has_changed=False,
@@ -91,7 +81,7 @@ def fake_loader_factory(contest, contest_has_changed=False,
 class TestImportContest(DatabaseMixin, unittest.TestCase):
 
     def setUp(self):
-        super(TestImportContest, self).setUp()
+        super().setUp()
 
         # DB already contains a contest in a contest with a submission.
         self.contest = self.add_contest()
@@ -116,7 +106,7 @@ class TestImportContest(DatabaseMixin, unittest.TestCase):
 
     def tearDown(self):
         self.delete_data()
-        super(TestImportContest, self).tearDown()
+        super().tearDown()
 
     @staticmethod
     def do_import(contest, tasks, participations,
@@ -147,11 +137,11 @@ class TestImportContest(DatabaseMixin, unittest.TestCase):
             c = db_contests[0]
             self.assertEqual(c.name, name)
             self.assertEqual(c.description, description)
-            six.assertCountEqual(self, [(t.name, t.title) for t in c.tasks],
-                                 task_names_and_titles)
-            six.assertCountEqual(self, [(u.user.username, u.user.last_name)
-                                        for u in c.participations],
-                                 usernames_and_last_names)
+            self.assertCountEqual([(t.name, t.title) for t in c.tasks],
+                                  task_names_and_titles)
+            self.assertCountEqual([(u.user.username, u.user.last_name)
+                                   for u in c.participations],
+                                  usernames_and_last_names)
 
     def assertSubmissionCount(self, count):
         """Assert that we have that many submissions in the DB"""

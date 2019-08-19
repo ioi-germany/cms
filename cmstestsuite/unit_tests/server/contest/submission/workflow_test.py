@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -17,20 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, itervalues
-import six
-
 import unittest
 from collections import namedtuple
 from datetime import timedelta
-
-from mock import MagicMock, PropertyMock, patch, sentinel
+from unittest.mock import MagicMock, PropertyMock, patch, sentinel
 
 # Needs to be first to allow for monkey patching the DB connection string.
 from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
@@ -69,7 +58,7 @@ INPUT_CONTENT = b"this is the content of an input file"
 class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
 
     def setUp(self):
-        super(TestAcceptSubmission, self).setUp()
+        super().setUp()
 
         # Set up patches and mocks for a successful run. These are all
         # controlled by the following values, which can be changed to
@@ -179,10 +168,9 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
         # And that it has the expected fields.
         self.assertEqual(submission.timestamp, timestamp)
         self.assertEqual(submission.language, language)
-        six.assertCountEqual(self, iterkeys(submission.files), iterkeys(files))
-        six.assertCountEqual(self,
-                             (f.digest for f in itervalues(submission.files)),
-                             (bytes_digest(b) for b in itervalues(files)))
+        self.assertCountEqual(submission.files.keys(), files.keys())
+        self.assertCountEqual((f.digest for f in submission.files.values()),
+                              (bytes_digest(b) for b in files.values()))
         self.assertIs(submission.official, official)
 
     def test_success(self):
@@ -229,8 +217,7 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
         self.check_max_number.side_effect = \
             lambda *args, **kwargs: "contest" not in kwargs
 
-        with six.assertRaisesRegex(self, UnacceptableSubmission,
-                                   "%d" % max_number):
+        with self.assertRaisesRegex(UnacceptableSubmission, "%d" % max_number):
             self.call()
 
         self.check_max_number.assert_called_with(
@@ -243,8 +230,7 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
         self.check_max_number.side_effect = \
             lambda *args, **kwargs: "task" not in kwargs
 
-        with six.assertRaisesRegex(self, UnacceptableSubmission,
-                                   "%d" % max_number):
+        with self.assertRaisesRegex(UnacceptableSubmission, "%d" % max_number):
             self.call()
 
         self.check_max_number.assert_called_with(
@@ -257,8 +243,8 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
         self.check_min_interval.side_effect = \
             lambda *args, **kwargs: "contest" not in kwargs
 
-        with six.assertRaisesRegex(self, UnacceptableSubmission,
-                                   "%d" % min_interval.total_seconds()):
+        with self.assertRaisesRegex(UnacceptableSubmission,
+                                    "%d" % min_interval.total_seconds()):
             self.call()
 
         self.check_min_interval.assert_called_with(
@@ -272,8 +258,8 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
         self.check_min_interval.side_effect = \
             lambda *args, **kwargs: "task" not in kwargs
 
-        with six.assertRaisesRegex(self, UnacceptableSubmission,
-                                   "%d" % min_interval.total_seconds()):
+        with self.assertRaisesRegex(UnacceptableSubmission,
+                                    "%d" % min_interval.total_seconds()):
             self.call()
 
         self.check_min_interval.assert_called_with(
@@ -283,7 +269,7 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
     def test_failure_due_to_extract_files_from_tornado(self):
         self.extract_files_from_tornado.side_effect = InvalidArchive
 
-        with six.assertRaisesRegex(self, UnacceptableSubmission, "archive"):
+        with self.assertRaisesRegex(UnacceptableSubmission, "archive"):
             self.call()
 
         self.extract_files_from_tornado.assert_called_with(self.tornado_files)
@@ -291,7 +277,7 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
     def test_failure_due_to_match_files_and_language(self):
         self.match_files_and_language.side_effect = InvalidFilesOrLanguage
 
-        with six.assertRaisesRegex(self, UnacceptableSubmission, "file"):
+        with self.assertRaisesRegex(UnacceptableSubmission, "file"):
             self.call()
 
         self.match_files_and_language.assert_called_with(
@@ -302,7 +288,7 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
     def test_failure_due_to_missing_files(self):
         self.task_type.ALLOW_PARTIAL_SUBMISSION = False
 
-        with six.assertRaisesRegex(self, UnacceptableSubmission, "file"):
+        with self.assertRaisesRegex(UnacceptableSubmission, "file"):
             self.call()
 
         self.fetch_file_digests_from_previous_submission.assert_not_called()
@@ -326,8 +312,8 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
         max_size = len(FOO_CONTENT) * 100 - 1
 
         with patch.object(config, "max_submission_length", max_size):
-            with six.assertRaisesRegex(self, UnacceptableSubmission,
-                                       "%d" % max_size):
+            with self.assertRaisesRegex(UnacceptableSubmission,
+                                        "%d" % max_size):
                 self.call()
 
     def test_success_without_store_local_copy(self):
@@ -354,7 +340,7 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
     def test_failure_due_to_file_cacher(self):
         self.file_cacher.put_file_content.side_effect = Exception
 
-        with six.assertRaisesRegex(self, UnacceptableSubmission, "storage"):
+        with self.assertRaisesRegex(UnacceptableSubmission, "storage"):
             self.call()
 
         args, kwargs = self.file_cacher.put_file_content.call_args
@@ -369,7 +355,7 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
 class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
 
     def setUp(self):
-        super(TestAcceptUserTest, self).setUp()
+        super().setUp()
 
         # Set up patches and mocks for a successful run. These are all
         # controlled by the following values, which can be changed to
@@ -485,15 +471,12 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
         # And that it has the expected fields.
         self.assertEqual(user_test.timestamp, timestamp)
         self.assertEqual(user_test.language, language)
-        six.assertCountEqual(self, iterkeys(user_test.files), iterkeys(files))
-        six.assertCountEqual(self,
-                             (f.digest for f in itervalues(user_test.files)),
-                             (bytes_digest(b) for b in itervalues(files)))
-        six.assertCountEqual(self, iterkeys(user_test.managers),
-                             iterkeys(managers))
-        six.assertCountEqual(self,
-                             (f.digest for f in itervalues(user_test.managers)),
-                             (bytes_digest(b) for b in itervalues(managers)))
+        self.assertCountEqual(user_test.files.keys(), files.keys())
+        self.assertCountEqual((f.digest for f in user_test.files.values()),
+                              (bytes_digest(b) for b in files.values()))
+        self.assertCountEqual(user_test.managers.keys(), managers.keys())
+        self.assertCountEqual((f.digest for f in user_test.managers.values()),
+                              (bytes_digest(b) for b in managers.values()))
         self.assertEqual(user_test.input,
                          bytes_digest(input_) if input_ is not None else None)
 
@@ -549,7 +532,7 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
     def test_input_not_provided(self):
         del self.files["input"]
 
-        with six.assertRaisesRegex(self, UnacceptableUserTest, "file"):
+        with self.assertRaisesRegex(UnacceptableUserTest, "file"):
             self.call()
 
     def test_non_testable(self):
@@ -565,8 +548,7 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
         self.check_max_number.side_effect = \
             lambda *args, **kwargs: "contest" not in kwargs
 
-        with six.assertRaisesRegex(self, UnacceptableUserTest,
-                                   "%d" % max_number):
+        with self.assertRaisesRegex(UnacceptableUserTest, "%d" % max_number):
             self.call()
 
         self.check_max_number.assert_called_with(
@@ -580,8 +562,7 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
         self.check_max_number.side_effect = \
             lambda *args, **kwargs: "task" not in kwargs
 
-        with six.assertRaisesRegex(self, UnacceptableUserTest,
-                                   "%d" % max_number):
+        with self.assertRaisesRegex(UnacceptableUserTest, "%d" % max_number):
             self.call()
 
         self.check_max_number.assert_called_with(
@@ -595,8 +576,8 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
         self.check_min_interval.side_effect = \
             lambda *args, **kwargs: "contest" not in kwargs
 
-        with six.assertRaisesRegex(self, UnacceptableUserTest,
-                                   "%d" % min_interval.total_seconds()):
+        with self.assertRaisesRegex(UnacceptableUserTest,
+                                    "%d" % min_interval.total_seconds()):
             self.call()
 
         self.check_min_interval.assert_called_with(
@@ -610,8 +591,8 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
         self.check_min_interval.side_effect = \
             lambda *args, **kwargs: "task" not in kwargs
 
-        with six.assertRaisesRegex(self, UnacceptableUserTest,
-                                   "%d" % min_interval.total_seconds()):
+        with self.assertRaisesRegex(UnacceptableUserTest,
+                                    "%d" % min_interval.total_seconds()):
             self.call()
 
         self.check_min_interval.assert_called_with(
@@ -621,7 +602,7 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
     def test_failure_due_to_extract_files_from_tornado(self):
         self.extract_files_from_tornado.side_effect = InvalidArchive
 
-        with six.assertRaisesRegex(self, UnacceptableUserTest, "archive"):
+        with self.assertRaisesRegex(UnacceptableUserTest, "archive"):
             self.call()
 
         self.extract_files_from_tornado.assert_called_with(self.tornado_files)
@@ -629,7 +610,7 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
     def test_failure_due_to_match_files_and_language(self):
         self.match_files_and_language.side_effect = InvalidFilesOrLanguage
 
-        with six.assertRaisesRegex(self, UnacceptableUserTest, "file"):
+        with self.assertRaisesRegex(UnacceptableUserTest, "file"):
             self.call()
 
         self.match_files_and_language.assert_called_with(
@@ -660,7 +641,7 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
     def test_failure_due_to_missing_files(self):
         self.task_type.ALLOW_PARTIAL_SUBMISSION = False
 
-        with six.assertRaisesRegex(self, UnacceptableUserTest, "file"):
+        with self.assertRaisesRegex(UnacceptableUserTest, "file"):
             self.call()
 
         self.fetch_file_digests_from_previous_submission.assert_not_called()
@@ -670,8 +651,7 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
         max_size = len(FOO_CONTENT) * 100 - 1
 
         with patch.object(config, "max_submission_length", max_size):
-            with six.assertRaisesRegex(self, UnacceptableUserTest,
-                                       "%d" % max_size):
+            with self.assertRaisesRegex(UnacceptableUserTest, "%d" % max_size):
                 self.call()
 
     def test_failure_due_to_managers_too_large(self):
@@ -679,8 +659,7 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
         max_size = len(SPAM_CONTENT) * 100 - 1
 
         with patch.object(config, "max_submission_length", max_size):
-            with six.assertRaisesRegex(self, UnacceptableUserTest,
-                                       "%d" % max_size):
+            with self.assertRaisesRegex(UnacceptableUserTest, "%d" % max_size):
                 self.call()
 
     def test_failure_due_to_input_too_large(self):
@@ -688,8 +667,7 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
         max_size = len(INPUT_CONTENT) * 100 - 1
 
         with patch.object(config, "max_input_length", max_size):
-            with six.assertRaisesRegex(self, UnacceptableUserTest,
-                                       "%d" % max_size):
+            with self.assertRaisesRegex(UnacceptableUserTest, "%d" % max_size):
                 self.call()
 
     def test_success_without_store_local_copy(self):
@@ -720,7 +698,7 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
     def test_failure_due_to_file_cacher(self):
         self.file_cacher.put_file_content.side_effect = Exception
 
-        with six.assertRaisesRegex(self, UnacceptableUserTest, "storage"):
+        with self.assertRaisesRegex(UnacceptableUserTest, "storage"):
             self.call()
 
         args, kwargs = self.file_cacher.put_file_content.call_args
@@ -728,7 +706,7 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
         self.assertEqual(len(args), 2)
         content, description = args
         self.assertIn(content, {FOO_CONTENT, SPAM_CONTENT, INPUT_CONTENT})
-        six.assertRegex(self, description, "foo.%l|spammock.1|input")
+        self.assertRegex(description, "foo.%l|spammock.1|input")
         self.assertIn(self.participation.user.username, description)
 
 

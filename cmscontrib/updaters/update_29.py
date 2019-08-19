@@ -1,8 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2019 Stefano Maggiolo <s.maggiolo@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,14 +25,6 @@ This updater changes the in-database column type for some columns.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
-
 import json
 import logging
 
@@ -52,14 +44,14 @@ def fix_text(t):
     return [str(x) for x in t]
 
 
-class Updater(object):
+class Updater:
 
     def __init__(self, data):
         assert data["_version"] == 28
         self.objs = data
 
     def run(self):
-        for k, v in iteritems(self.objs):
+        for k, v in self.objs.items():
             if k.startswith("_"):
                 continue
 
@@ -91,7 +83,9 @@ class Updater(object):
                 v["evaluation_text"] = fix_text(v["evaluation_text"])
 
             if v["_class"] == "User":
-                v["preferred_languages"] = json.loads(v["preferred_languages"])
+                v["preferred_languages"] = \
+                    json.loads(v["preferred_languages"]) \
+                    if "preferred_languages" in v else []
 
             if v["_class"] == "Task":
                 v["primary_statements"] = json.loads(v["primary_statements"])

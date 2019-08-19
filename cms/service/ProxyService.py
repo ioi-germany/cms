@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -28,17 +27,10 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import json
 import logging
 import string
-from future.moves.urllib.parse import urljoin, urlsplit
+from urllib.parse import urljoin, urlsplit
 
 import gevent
 import gevent.queue
@@ -47,9 +39,9 @@ import requests.exceptions
 from sqlalchemy import not_
 
 from cms import config
-from cms.io import Executor, QueueItem, TriggeredService, rpc_method
 from cms.db import SessionGen, Contest, Participation, Task, Submission, \
     get_submissions
+from cms.io import Executor, QueueItem, TriggeredService, rpc_method
 from cmscommon.datetime import make_timestamp
 
 
@@ -170,7 +162,7 @@ class ProxyExecutor(Executor):
             supposed to listen.
 
         """
-        super(ProxyExecutor, self).__init__(batch_executions=True)
+        super().__init__(batch_executions=True)
 
         self._ranking = ranking
 
@@ -254,7 +246,7 @@ class ProxyService(TriggeredService):
         contest_id (int): the ID of the contest to manage.
 
         """
-        super(ProxyService, self).__init__(shard)
+        super().__init__(shard)
 
         self.contest_id = contest_id
 

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -26,34 +25,45 @@ trailing ".%l", if any.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
-
 import logging
 
 
 logger = logging.getLogger(__name__)
 
 # Fields that contain filenames.
-FILENAME_FIELDS = {"Executable": "filename",
-                   "UserTestManager": "filename",
-                   "UserTestExecutable": "filename",
-                   "PrintJob": "filename",
-                   "Attachment": "filename",
-                   "Manager": "filename"}
+FILENAME_FIELDS = {
+    "Executable": "filename",
+    "UserTestManager": "filename",
+    "UserTestExecutable": "filename",
+    "PrintJob": "filename",
+    "Attachment": "filename",
+    "Manager": "filename",
+}
+# Fields that contain a dictionary keyed by filename.
+FILENAME_DICT_FIELDS = {
+    "SubmissionResult": "executables",
+    "UserTest": "managers",
+    "UserTestResult": "executables",
+    "Task": "attachments",
+    "Dataset": "managers",
+}
 # Fields that contain filename schemas.
-FILENAME_SCHEMA_FIELDS = {"File": "filename",
-                          "UserTestFile": "filename"}
+FILENAME_SCHEMA_FIELDS = {
+    "File": "filename",
+    "UserTestFile": "filename",
+}
+# Fields that contain a dictionary keyed by filename schema.
+FILENAME_SCHEMA_DICT_FIELDS = {
+    "Submission": "files",
+    "UserTest": "files",
+}
 # Fields that contain arrays of filename schemas.
-FILENAME_SCHEMA_ARRAY_FIELDS = {"Task": "submission_format"}
+FILENAME_SCHEMA_ARRAY_FIELDS = {
+    "Task": "submission_format",
+}
 
 
-class Updater(object):
+class Updater:
 
     def __init__(self, data):
         assert data["_version"] == 35
@@ -78,19 +88,27 @@ class Updater(object):
         return schema
 
     def run(self):
-        for k, v in iteritems(self.objs):
+        for k, v in self.objs.items():
             if k.startswith("_"):
                 continue
             if v["_class"] in FILENAME_FIELDS:
                 attr = FILENAME_FIELDS[v["_class"]]
                 v[attr] = self.check_filename(v[attr])
+            if v["_class"] in FILENAME_DICT_FIELDS:
+                attr = FILENAME_DICT_FIELDS[v["_class"]]
+                v[attr] = {self.check_filename(k): v
+                           for k, v in v[attr].items()}
             if v["_class"] in FILENAME_SCHEMA_FIELDS:
                 attr = FILENAME_SCHEMA_FIELDS[v["_class"]]
                 v[attr] = self.check_filename_schema(v[attr])
+            if v["_class"] in FILENAME_SCHEMA_DICT_FIELDS:
+                attr = FILENAME_SCHEMA_DICT_FIELDS[v["_class"]]
+                v[attr] = {self.check_filename_schema(k): v
+                           for k, v in v[attr].items()}
             if v["_class"] in FILENAME_SCHEMA_ARRAY_FIELDS:
                 attr = FILENAME_SCHEMA_ARRAY_FIELDS[v["_class"]]
-                v[attr] = list(self.check_filename_schema(schema)
-                               for schema in v[attr])
+                v[attr] = [self.check_filename_schema(schema)
+                           for schema in v[attr]]
 
         if self.warn:
             logger.warning("Some files contained '%' (the percent sign) in "

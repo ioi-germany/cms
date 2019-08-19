@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2014 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,24 +18,16 @@
 
 """Tests for general utility functions."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import netifaces
 import unittest
-
-from mock import Mock
+from unittest.mock import Mock
 
 import cms.util
 from cms import Address, ServiceCoord, \
     get_safe_shard, get_service_address, get_service_shards
 
 
-class FakeAsyncConfig(object):
+class FakeAsyncConfig:
     """Fake class for the configuration of service addresses."""
     core_services = {
         ServiceCoord("Service", 0): Address("0.0.0.0", 0),

@@ -411,6 +411,37 @@ td.token_rules p:last-child {
     clear: both;
 }
 
+/*** Task score */
+
+.task_score_container {
+    display: flex;
+    justify-content: space-evenly;
+    font-weight: bold;
+}
+
+.task_score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 0;
+}
+
+.task_score .score img {
+    margin-left: 5px;
+}
+
+.task_score.score_0 {
+    background-color: hsla(0, 100%, 50%, 0.4);
+}
+
+.task_score.score_0_100 {
+    background-color: hsla(60, 100%, 50%, 0.4);
+}
+
+.task_score.score_100 {
+    background-color: hsla(120, 100%, 50%, 0.4);
+}
+
 /*** Submit a solution */
 
 #submit_solution {
@@ -447,113 +478,122 @@ td.token_rules p:last-child {
 
 /*** Submissions table */
 
-#submission_list colgroup col.time,
-#submission_list colgroup col.datetime,
-#unit_test_list colgroup col.time,
-#unit_test_list colgroup col.datetime {
+.submission_list colgroup col.time,
+.submission_list colgroup col.datetime {
     width: 1%;
 }
 
-#submission_list colgroup col.status,
-#unit_test_list colgroup col.status {
+.submission_list colgroup col.status,
     width: 20%;
 }
 
-#submission_list colgroup col.public_score,
-#unit_test_list colgroup col.public_score {
+.submission_list colgroup col.public_score {
     width: 20%;
 }
 
-#submission_list colgroup col.total_score,
-#unit_test_list colgroup col.total_score {
+.submission_list colgroup col.total_score {
     width: 20%;
 }
 
-#submission_list colgroup col.files {
+.submission_list colgroup col.files {
     width: 10%;
 }
 
-#submission_list colgroup col.token {
+.submission_list colgroup col.token {
     width: 10%;
 }
 
-#submission_list tbody tr td.no_submissions {
+.submission_list tbody tr td.no_submissions {
     font-style: italic;
     text-align: center !important;
 }
 
-#submission_list tbody tr td.time,
-#submission_list tbody tr td.datetime,
-#unit_test_list tbody tr td.time,
-#unit_test_list tbody tr td.datetime,
-#unit_test_list tbody tr td.verdict {
+.submission_list tbody tr td.time,
+.submission_list tbody tr td.datetime,
+.unit_test_list tbody tr td.verdict {
     white-space: nowrap;
 }
 
-#submission_list tbody tr td.status .details,
-#unit_test_list tbody tr td.status .details {
+.submission_list tbody tr td.status .details {
     float: right;
     cursor: pointer;
 }
 
-#submission_list tbody tr td.files,
-#submission_list tbody tr td.token {
+.submission_list tbody tr td.files,
+.submission_list tbody tr td.token {
     padding: 3px;
 }
 
-#submission_list tbody tr td.files .btn,
-#submission_list tbody tr td.token .btn {
+.submission_list tbody tr td.files .btn,
+.submission_list tbody tr td.token .btn {
     -moz-box-sizing: border-box;
     box-sizing: border-box;
     width: 100%;
     white-space: nowrap;
 }
 
-#submission_list tbody tr td.token form,
-#unit_test_list tbody tr td.token form  {
+.submission_list tbody tr td.token form {
     display: inline;
 }
 
-#submission_list td.public_score.undefined,
-#unit_test_list td.public_score.undefined {
+.submission_list td.public_score.undefined,
+.unit_test_list tr.unit_test_undefined > td.verdict {
     color: #AAA;
 }
 
-#submission_list td.public_score.score_0,
-#unit_test_list tr.score_0 > td,
+.submission_list td.public_score.score_0 {
+    background-color: hsla(0, 100%, 50%, 0.4);
+}
+
+tr.unit_test_failed > td,
 td.unit_test_failed {
     background-color: hsla(0, 100%, 50%, 0.4) !important;
 }
 
-#submission_list tr:hover td.public_score.score_0,
-#unit_test_list tr:hover.score_0 > td
-tr:hover > td.unit_test_failed {
+.submission_list tr:hover td.public_score.score_0 {
+    background-color: hsla(0, 100%, 50%, 0.5);
+}
+
+tr.unit_test_failed:hover > td,
+tr:hover td.unit_test_failed {
     background-color: hsla(0, 100%, 50%, 0.5) !important;
 }
 
-#submission_list td.public_score.score_0_100 {
+tr.unit_test_failed > td.verdict {
+    background-color: hsla(0, 100%, 50%, 0.7) !important;
+}
+
+.submission_list td.public_score.score_0_100 {
     background-color: hsla(60, 100%, 50%, 0.4);
 }
 
-#submission_list tr:hover td.public_score.score_0_100 {
+.submission_list tr:hover td.public_score.score_0_100 {
     background-color: hsla(60, 100%, 50%, 0.5);
 }
 
-#submission_list td.public_score.score_100,
-#unit_test_list tr.score_100 > td,
+.submission_list td.public_score.score_100 {
+    background-color: hsla(120, 100%, 50%, 0.4);
+}
+
+.unit_test_list tr.unit_test_ok > td,
 td.unit_test_ok {
     background-color: hsla(120, 100%, 50%, 0.4) !important;
 }
 
-#submission_list tr:hover td.public_score.score_100,
-#unit_test_list tr:hover.score_100 td,
-tr:hover td.unit_test_ok {
+.submission_list tr:hover td.public_score.score_100 {
+    background-color: hsla(120, 100%, 50%, 0.5);
+}
+
+.unit_test_list tr.unit_test_ok:hover > td,
+tr:hover > td.unit_test_ok {
     background-color: hsla(120, 100%, 50%, 0.5) !important;
 }
 
-#submission_list td.unit_test.undefined,
-#submission_list td.total_score.undefined,
-#unit_test_list td.total_score.undefined,
+.unit_test_list tr.unit_test_ok > td.verdict {
+    background-color: hsla(120, 100%, 50%, 0.7) !important;
+}
+
+.submission_list td.total_score.undefined,
 td.no_expectations {
     color: #AAA;
 }
@@ -568,33 +608,33 @@ th.short {
     text-align:center;
 }
 
-#submission_list td.unit_test.score_0,
-#submission_list td.total_score.score_0 {
+.submission_list td.total_score.score_0,
+.submission_list td.unit_test.score_0 {
     background-color: hsla(0, 100%, 50%, 0.7);
 }
 
-#submission_list tr:hover td.unit_test.score_0,
-#submission_list tr:hover td.total_score.score_0 {
+.submission_list tr:hover td.total_score.score_0,
+.submission_list tr:hover td.unit_test.score_0 {
     background-color: hsla(0, 100%, 50%, 0.8);
 }
 
-#submission_list td.unit_test.score_0_100,
-#submission_list td.total_score.score_0_100 {
+.submission_list td.total_score.score_0_100,
+.submission_list td.unit_test.score_0_100 {
     background-color: hsla(60, 100%, 50%, 0.7);
 }
 
-#submission_list tr:hover td.unit_test.score_0_100,
-#submission_list tr:hover td.total_score.score_0_100 {
+.submission_list tr:hover td.total_score.score_0_100,
+.submission_List tr:hover td.unit_test.score_0_100 {
     background-color: hsla(60, 100%, 50%, 0.8);
 }
 
-#submission_list td.unit_test.score_100,
-#submission_list td.total_score.score_100 {
+.submission_list td.total_score.score_100,
+.submission_list td.unit_test.score_100 {
     background-color: hsla(120, 100%, 50%, 0.7);
 }
 
-#submission_list tr:hover td.unit_test.score_100,
-#submission_list tr:hover td.total_score.score_100 {
+.submission_list tr:hover td.total_score.score_100,
+.submission_list tr:hover td.unit_test.score_100 {
     background-color: hsla(120, 100%, 50%, 0.8);
 }
 
@@ -1005,6 +1045,13 @@ th.short {
 
 #lang {
     width: 100px;
+}
+
+/** Printing interface */
+
+#printjob_list tbody tr td.no_printjobs {
+    font-style: italic;
+    text-align: center !important;
 }
 
 /* Contest selection page */

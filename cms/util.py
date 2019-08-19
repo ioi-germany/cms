@@ -1,9 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2014 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013-2016 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2016 William Di Luigi <williamdiluigi@gmail.com>
@@ -21,22 +20,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import argparse
-import chardet
-import errno
+import grp
+import itertools
 import logging
 import netifaces
 import os
 import sys
-import grp
 
+import chardet
 import gevent
 import gevent.socket
 
@@ -55,17 +47,20 @@ def mkdir(path):
     """
     try:
         os.mkdir(path)
+    except FileExistsError:
+        return True
+    except OSError:
+        return False
+    else:
         try:
             os.chmod(path, 0o770)
             cmsuser_gid = grp.getgrnam(config.cmsuser).gr_gid
             os.chown(path, -1, cmsuser_gid)
-        except OSError as error:
+        except OSError:
             os.rmdir(path)
             return False
-    except OSError as error:
-        if error.errno != errno.EEXIST:
-            return False
-    return True
+        else:
+            return True
 
 
 # This function is vulnerable to a symlink attack, see:
@@ -183,13 +178,11 @@ def get_service_shards(service):
     returns (int): the number of shards defined in the configuration.
 
     """
-    i = 0
-    while True:
+    for i in itertools.count():
         try:
             get_service_address(ServiceCoord(service, i))
         except KeyError:
             return i
-        i += 1
 
 
 def default_argument_parser(description, cls, ask_contest=None):
@@ -303,7 +296,6 @@ def _get_shard_from_addresses(service, addrs):
         exist.
 
     """
-    i = 0
     ipv4_addrs = set()
     ipv6_addrs = set()
     for proto, addr in addrs:
@@ -311,33 +303,34 @@ def _get_shard_from_addresses(service, addrs):
             ipv4_addrs.add(addr)
         elif proto == gevent.socket.AF_INET6:
             ipv6_addrs.add(addr)
-    while True:
+
+    for shard in itertools.count():
         try:
-            host, port = get_service_address(ServiceCoord(service, i))
-            res_ipv4_addrs = set()
-            res_ipv6_addrs = set()
-            # For magic numbers, see getaddrinfo() documentation
-            try:
-                res_ipv4_addrs = set([x[4][0] for x in
-                                      gevent.socket.getaddrinfo(
-                                          host, port,
-                                          gevent.socket.AF_INET,
-                                          gevent.socket.SOCK_STREAM)])
-            except (gevent.socket.gaierror, gevent.socket.error):
-                res_ipv4_addrs = set()
-
-            try:
-                res_ipv6_addrs = set([x[4][0] for x in
-                                      gevent.socket.getaddrinfo(
-                                          host, port,
-                                          gevent.socket.AF_INET6,
-                                          gevent.socket.SOCK_STREAM)])
-            except (gevent.socket.gaierror, gevent.socket.error):
-                res_ipv6_addrs = set()
-
-            if not ipv4_addrs.isdisjoint(res_ipv4_addrs) or \
-                    not ipv6_addrs.isdisjoint(res_ipv6_addrs):
-                return i
+            host, port = get_service_address(ServiceCoord(service, shard))
         except KeyError:
+            # No more shards to test.
             return None
-        i += 1
+
+        try:
+            res_ipv4_addrs = set([x[4][0] for x in
+                                  gevent.socket.getaddrinfo(
+                                      host, port,
+                                      gevent.socket.AF_INET,
+                                      gevent.socket.SOCK_STREAM)])
+        except OSError:
+            pass
+        else:
+            if not ipv4_addrs.isdisjoint(res_ipv4_addrs):
+                return shard
+
+        try:
+            res_ipv6_addrs = set([x[4][0] for x in
+                                  gevent.socket.getaddrinfo(
+                                      host, port,
+                                      gevent.socket.AF_INET6,
+                                      gevent.socket.SOCK_STREAM)])
+        except OSError:
+            pass
+        else:
+            if not ipv6_addrs.isdisjoint(res_ipv6_addrs):
+                return shard

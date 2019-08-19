@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -33,14 +32,6 @@ care of the processing necessary to transform them into CWS's own
 format.
 
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
 
 import os.path
 from collections import namedtuple
@@ -96,8 +87,7 @@ def extract_files_from_archive(data):
                 result.append(
                     ReceivedFile(None, os.path.basename(name), f.read()))
 
-    # When dropping py2, replace EnvironmentError by OSError.
-    except (PatoolError, EnvironmentError):
+    except (PatoolError, OSError):
         raise InvalidArchive()
 
     finally:
@@ -128,7 +118,7 @@ def extract_files_from_tornado(tornado_files):
         return extract_files_from_archive(tornado_files["submission"][0].body)
 
     result = list()
-    for codename, files in iteritems(tornado_files):
+    for codename, files in tornado_files.items():
         for f in files:
             result.append(ReceivedFile(codename, f.filename, f.body))
     return result

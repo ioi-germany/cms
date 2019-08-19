@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2016 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,16 +18,9 @@
 
 """Tests for the flushing dict module."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-import six
+import unittest
 
 import gevent
-import unittest
 
 from cms.service.flushingdict import FlushingDict
 
@@ -39,7 +31,7 @@ class TestFlushingDict(unittest.TestCase):
     FLUSH_LATENCY_SECONDS = 0.2
 
     def setUp(self):
-        super(TestFlushingDict, self).setUp()
+        super().setUp()
         self.received_data = []
         self.d = FlushingDict(
             TestFlushingDict.SIZE, TestFlushingDict.FLUSH_LATENCY_SECONDS,
@@ -49,7 +41,7 @@ class TestFlushingDict(unittest.TestCase):
         self.d.add(0, 0)
         gevent.sleep(2 * TestFlushingDict.FLUSH_LATENCY_SECONDS)
         self.assertEqual(1, len(self.received_data))
-        six.assertCountEqual(self, [(0, 0)], self.received_data[0])
+        self.assertCountEqual([(0, 0)], self.received_data[0])
 
     def test_success_size(self):
         expected_data = []
@@ -58,7 +50,7 @@ class TestFlushingDict(unittest.TestCase):
             expected_data.append((i, i))
         gevent.sleep(0)
         self.assertEqual(1, len(self.received_data))
-        six.assertCountEqual(self, expected_data, self.received_data[0])
+        self.assertCountEqual(expected_data, self.received_data[0])
 
     def test_success_size_latency(self):
         expected_data = []
@@ -67,12 +59,11 @@ class TestFlushingDict(unittest.TestCase):
             expected_data.append((i, i))
         gevent.sleep(0)
         self.assertEqual(1, len(self.received_data))
-        six.assertCountEqual(self, expected_data, self.received_data[0])
+        self.assertCountEqual(expected_data, self.received_data[0])
         self.d.add(TestFlushingDict.SIZE, TestFlushingDict.SIZE)
         gevent.sleep(TestFlushingDict.FLUSH_LATENCY_SECONDS + 0.1)
         self.assertEqual(2, len(self.received_data))
-        six.assertCountEqual(
-            self,
+        self.assertCountEqual(
             [(TestFlushingDict.SIZE, TestFlushingDict.SIZE)],
             self.received_data[1])
 
@@ -102,7 +93,7 @@ class TestFlushingDict(unittest.TestCase):
             self.d.add(i, i)
             expected_data.append((i, i))
         gevent.sleep(TestFlushingDict.FLUSH_LATENCY_SECONDS + 0.1)
-        six.assertCountEqual(self, expected_data, sum(self.received_data, []))
+        self.assertCountEqual(expected_data, sum(self.received_data, []))
 
     def callback(self, data):
         self.received_data.append(data)

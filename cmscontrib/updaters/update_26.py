@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2017 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -25,14 +24,6 @@ This updater encodes codenames using a more restricted alphabet.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
-
 import ipaddress
 import logging
 import re
@@ -49,7 +40,8 @@ CODENAMES = [
     ("Task", "name"),
     ("Testcase", "codename"),
     ("User", "username"),
-    ("Team", "code")]
+    ("Team", "code"),
+]
 
 
 FILENAMES = [
@@ -61,7 +53,19 @@ FILENAMES = [
     ("Manager", "filename"),
     ("UserTestFile", "filename"),
     ("UserTestManager", "filename"),
-    ("UserTestExecutable", "filename")]
+    ("UserTestExecutable", "filename"),
+]
+
+
+FILENAME_DICTS = [
+    ("Submission", "files"),
+    ("SubmissionResult", "executables"),
+    ("Task", "attachments"),
+    ("Dataset", "managers"),
+    ("UserTest", "files"),
+    ("UserTest", "managers"),
+    ("UserTestResult", "executables"),
+]
 
 
 DIGESTS = [
@@ -77,11 +81,13 @@ DIGESTS = [
     ("UserTestFile", "digest"),
     ("UserTestManager", "digest"),
     ("UserTestResult", "output"),
-    ("UserTestExecutable", "digest")]
+    ("UserTestExecutable", "digest"),
+]
 
 
 IP_ADDRESSES = [
-    ("Participation", "ip")]
+    ("Participation", "ip"),
+]
 
 
 # Encodes any unicode string using only "A-Za-z0-9_-". The encoding is
@@ -96,14 +102,14 @@ def encode_codename(s, extra=""):
     return encoded_s
 
 
-class Updater(object):
+class Updater:
 
     def __init__(self, data):
         assert data["_version"] == 25
         self.objs = data
 
     def run(self):
-        for k, v in iteritems(self.objs):
+        for k, v in self.objs.items():
             if k.startswith("_"):
                 continue
 
@@ -126,6 +132,18 @@ class Updater(object):
                             "field contains an invalid filename: `%s'.",
                             cls, col, v[col])
                         sys.exit(1)
+
+            for cls, col in FILENAME_DICTS:
+                if v["_class"] == cls and v[col] is not None:
+                    v[col] = {encode_codename(k, extra="%."): v
+                              for k, v in v[col].items()}
+                    for k in v[col]:
+                        if k in {"", ".", ".."}:
+                            logger.critical(
+                                "The dump contains an instance of %s whose %s "
+                                "field contains an invalid filename: `%s'.",
+                                cls, col, v[col])
+                            sys.exit(1)
 
             for cls, col in DIGESTS:
                 if v["_class"] == cls and v[col] is not None:

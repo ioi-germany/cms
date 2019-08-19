@@ -1,9 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2015 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013-2017 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
@@ -20,14 +19,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, itervalues
-
 import functools
 import json
 import logging
@@ -37,9 +28,9 @@ import uuid
 from weakref import WeakSet
 
 import gevent
+import gevent.event
 import gevent.lock
 import gevent.socket
-import gevent.event
 
 from cms import Address, get_service_address
 
@@ -65,7 +56,7 @@ def rpc_method(func):
     return func
 
 
-class RemoteServiceBase(object):
+class RemoteServiceBase:
     """Base class for both ends of a RPC connection.
 
     Just provides some basic helpers for I/O. It alternates between two
@@ -93,8 +84,9 @@ class RemoteServiceBase(object):
             connection (origin or target, depending on its direction).
 
         """
+        self._local_address = None
         self.remote_address = remote_address
-        self.connected = False
+        self._connection_event = gevent.event.Event()
 
         self._on_connect_handlers = list()
         self._on_disconnect_handlers = list()
@@ -105,6 +97,15 @@ class RemoteServiceBase(object):
 
         self._read_lock = gevent.lock.RLock()
         self._write_lock = gevent.lock.RLock()
+
+    @property
+    def connected(self):
+        """Return whether we're connected to the other endpoint.
+
+        return (bool): the status of the connection.
+
+        """
+        return self._connection_event.is_set()
 
     def add_on_connect_handler(self, handler):
         """Register a callback for connection establishment.
@@ -150,9 +151,14 @@ class RemoteServiceBase(object):
         self._socket = sock
         self._reader = self._socket.makefile('rb')
         self._writer = self._socket.makefile('wb')
-        self.connected = True
+        self._connection_event.set()
+        # IPv4 addresses have two elements (host and port), IPv6 ones
+        # have 4 elements (host, port, flowinfo and scopeid). We will
+        # discard the last two ones, losing information, to simplify.
+        self._local_address = "%s:%d" % self._socket.getsockname()[:2]
 
-        logger.info("Established connection with %s.", self._repr_remote())
+        logger.info("Established connection with %s (local address: %s).",
+                    self._repr_remote(), self._local_address)
 
         for handler in self._on_connect_handlers:
             gevent.spawn(handler, plus)
@@ -170,18 +176,21 @@ class RemoteServiceBase(object):
         if not self.connected:
             return
 
+        local_address = self._local_address
+
         self._socket = None
         self._reader = None
         self._writer = None
-        self.connected = False
+        self._local_address = None
+        self._connection_event.clear()
 
-        logger.info("Terminated connection with %s: %s", self._repr_remote(),
-                    reason)
+        logger.info("Terminated connection with %s (local address: %s): %s",
+                    self._repr_remote(), local_address, reason)
 
         for handler in self._on_disconnect_handlers:
             gevent.spawn(handler)
 
-    def disconnect(self):
+    def disconnect(self, reason="Disconnection requested."):
         """Gracefully close the connection.
 
         return (bool): True if the service was connected.
@@ -193,11 +202,11 @@ class RemoteServiceBase(object):
         try:
             self._socket.shutdown(socket.SHUT_RDWR)
             self._socket.close()
-        except socket.error as error:
+        except OSError as error:
             logger.warning("Couldn't disconnect from %s: %s.",
                            self._repr_remote(), error)
         finally:
-            self.finalize("Disconnection requested.")
+            self.finalize(reason=reason)
         return True
 
     def _read(self):
@@ -208,16 +217,16 @@ class RemoteServiceBase(object):
 
         return (bytes): the retrieved message.
 
-        raise (IOError): if reading fails.
+        raise (OSError): if reading fails.
 
         """
         if not self.connected:
-            raise IOError("Not connected.")
+            raise OSError("Not connected.")
 
         try:
             with self._read_lock:
                 if not self.connected:
-                    raise IOError("Not connected.")
+                    raise OSError("Not connected.")
                 data = self._reader.readline(self.MAX_MESSAGE_SIZE)
                 # If there weren't a "\r\n" between the last message
                 # and the EOF we would have a false positive here.
@@ -228,11 +237,16 @@ class RemoteServiceBase(object):
                         "is MAX_MESSAGE_SIZE). Consider raising that value if "
                         "the message seemed legit.", self.MAX_MESSAGE_SIZE)
                     self.finalize("Client misbehaving.")
-                    raise IOError("Message too long.")
-        except socket.error as error:
-            logger.warning("Failed reading from socket: %s.", error)
-            self.finalize("Read failed.")
-            raise error
+                    raise OSError("Message too long.")
+        except OSError as error:
+            if self.connected:
+                logger.warning("Failed reading from socket: %s.", error)
+                self.finalize("Read failed.")
+                raise error
+            else:
+                # The client was terminated willingly; its correct termination
+                # is handled in disconnect(), so here we can just return.
+                return b""
 
         return data
 
@@ -243,11 +257,11 @@ class RemoteServiceBase(object):
 
         data (bytes): the message to transmit.
 
-        raise (IOError): if writing fails.
+        raise (OSError): if writing fails.
 
         """
         if not self.connected:
-            raise IOError("Not connected.")
+            raise OSError("Not connected.")
 
         if len(data + b'\r\n') > self.MAX_MESSAGE_SIZE:
             logger.error(
@@ -256,16 +270,16 @@ class RemoteServiceBase(object):
                 "value if the message seemed legit.", self._repr_remote(),
                 self.MAX_MESSAGE_SIZE)
             # No need to call finalize.
-            raise IOError("Message too long.")
+            raise OSError("Message too long.")
 
         try:
             with self._write_lock:
                 if not self.connected:
-                    raise IOError("Not connected.")
+                    raise OSError("Not connected.")
                 # Does the same as self._socket.sendall.
                 self._writer.write(data + b'\r\n')
                 self._writer.flush()
-        except socket.error as error:
+        except OSError as error:
             self.finalize("Write failed.")
             logger.warning("Failed writing to socket: %s.", error)
             raise error
@@ -290,14 +304,14 @@ class RemoteServiceServer(RemoteServiceBase):
         For other arguments see RemoteServiceBase.
 
         """
-        super(RemoteServiceServer, self).__init__(remote_address)
+        super().__init__(remote_address)
         self.local_service = local_service
 
         self.pending_incoming_requests_threads = WeakSet()
 
     def finalize(self, reason=""):
         """See RemoteServiceBase.finalize."""
-        super(RemoteServiceServer, self).finalize(reason)
+        super().finalize(reason)
 
         for thread in self.pending_incoming_requests_threads:
             thread.kill(RPCError(reason), block=False)
@@ -320,7 +334,7 @@ class RemoteServiceServer(RemoteServiceBase):
         while True:
             try:
                 data = self._read()
-            except IOError:
+            except OSError:
                 break
 
             if len(data) == 0:
@@ -342,6 +356,7 @@ class RemoteServiceServer(RemoteServiceBase):
         try:
             message = json.loads(data.decode('utf-8'))
         except ValueError:
+            self.disconnect("Bad request received")
             logger.warning("Cannot parse incoming message, discarding.")
             return
 
@@ -357,8 +372,9 @@ class RemoteServiceServer(RemoteServiceBase):
 
         """
         # Validate the request.
-        if not {"__id", "__method", "__data"}.issubset(iterkeys(request)):
-            logger.warning("Request is missing some fields, ingoring.")
+        if not {"__id", "__method", "__data"}.issubset(request.keys()):
+            self.disconnect("Bad request received")
+            logger.warning("Request is missing some fields, ignoring.")
             return
 
         # Determine the ID.
@@ -399,7 +415,7 @@ class RemoteServiceServer(RemoteServiceBase):
         # Send it.
         try:
             self._write(data)
-        except IOError:
+        except OSError:
             # Log messages have already been produced.
             return
 
@@ -432,8 +448,7 @@ class RemoteServiceClient(RemoteServiceBase):
             configuration.
 
         """
-        super(RemoteServiceClient, self).__init__(
-            get_service_address(remote_service_coord))
+        super().__init__(get_service_address(remote_service_coord))
         self.remote_service_coord = remote_service_coord
 
         self.pending_outgoing_requests = dict()
@@ -450,9 +465,9 @@ class RemoteServiceClient(RemoteServiceBase):
 
     def finalize(self, reason=""):
         """See RemoteServiceBase.finalize."""
-        super(RemoteServiceClient, self).finalize(reason)
+        super().finalize(reason)
 
-        for result in itervalues(self.pending_outgoing_requests_results):
+        for result in self.pending_outgoing_requests_results.values():
             result.set_exception(RPCError(reason))
 
         self.pending_outgoing_requests.clear()
@@ -465,7 +480,7 @@ class RemoteServiceClient(RemoteServiceBase):
         try:
             sock = gevent.socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect(self.remote_address)
-        except socket.error as error:
+        except OSError as error:
             logger.debug("Couldn't connect to %s: %s.",
                          self._repr_remote(), error)
         else:
@@ -475,27 +490,27 @@ class RemoteServiceClient(RemoteServiceBase):
         """Maintain the connection up, if required.
 
         """
-        if self.connected:
-            self.run()
-
-        if self.auto_retry is not None:
-            while True:
+        while True:
+            self._connect()
+            while not self.connected and self.auto_retry is not None:
+                gevent.sleep(self.auto_retry)
                 self._connect()
-                while not self.connected:
-                    gevent.sleep(self.auto_retry)
-                    self._connect()
+            if self.connected:
                 self.run()
+            if self.auto_retry is None:
+                break
 
     def connect(self):
         """Connect and start the main loop.
 
         """
-        self._connect()
+        if self._loop is not None and not self._loop.ready():
+            raise RuntimeError("Already (auto-re)connecting")
         self._loop = gevent.spawn(self._run)
 
-    def disconnect(self):
+    def disconnect(self, reason="Disconnection requested."):
         """See RemoteServiceBase.disconnect."""
-        if super(RemoteServiceClient, self).disconnect():
+        if super().disconnect(reason=reason):
             self._loop.kill()
             self._loop = None
 
@@ -511,7 +526,7 @@ class RemoteServiceClient(RemoteServiceBase):
         while True:
             try:
                 data = self._read()
-            except IOError:
+            except OSError:
                 break
 
             if len(data) == 0:
@@ -533,6 +548,7 @@ class RemoteServiceClient(RemoteServiceBase):
         try:
             message = json.loads(data.decode('utf-8'))
         except ValueError:
+            self.disconnect("Bad response received")
             logger.warning("Cannot parse incoming message, discarding.")
             return
 
@@ -548,8 +564,9 @@ class RemoteServiceClient(RemoteServiceBase):
 
         """
         # Validate the response.
-        if not {"__id", "__data", "__error"}.issubset(iterkeys(response)):
-            logger.warning("Response is missing some fields, ingoring.")
+        if not {"__id", "__data", "__error"}.issubset(response.keys()):
+            self.disconnect("Bad response received")
+            logger.warning("Response is missing some fields, ignoring.")
             return
 
         # Determine the ID.
@@ -603,7 +620,7 @@ class RemoteServiceClient(RemoteServiceBase):
         # Send it.
         try:
             self._write(data)
-        except IOError:
+        except OSError:
             result.set_exception(RPCError("Write failed."))
             return result
 

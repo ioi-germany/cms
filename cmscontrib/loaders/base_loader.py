@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -18,18 +17,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import with_metaclass
-
 from abc import ABCMeta, abstractmethod
 
 
-class BaseLoader(with_metaclass(ABCMeta, object)):
+class BaseLoader(metaclass=ABCMeta):
     """Base class for deriving loaders.
 
     Each loader must extend this class and support the following
@@ -88,7 +79,7 @@ class TaskLoader(BaseLoader):
     """
 
     def __init__(self, path, file_cacher):
-        super(TaskLoader, self).__init__(path, file_cacher)
+        super().__init__(path, file_cacher)
 
     @abstractmethod
     def get_task(self, get_statement):
@@ -136,7 +127,7 @@ class UserLoader(BaseLoader):
     """
 
     def __init__(self, path, file_cacher):
-        super(UserLoader, self).__init__(path, file_cacher)
+        super().__init__(path, file_cacher)
 
     @abstractmethod
     def get_user(self):
@@ -182,7 +173,7 @@ class TeamLoader(BaseLoader):
     """
 
     def __init__(self, path, file_cacher):
-        super(TeamLoader, self).__init__(path, file_cacher)
+        super().__init__(path, file_cacher)
 
     @abstractmethod
     def get_team(self):
@@ -228,7 +219,7 @@ class ContestLoader(BaseLoader):
     """
 
     def __init__(self, path, file_cacher):
-        super(ContestLoader, self).__init__(path, file_cacher)
+        super().__init__(path, file_cacher)
 
     @abstractmethod
     def get_contest(self):

@@ -1,10 +1,31 @@
+{% import 'macro/submission.html' as macro_submission %}
+
 {% extends "contest.html" %}
 
 {% set page = "task_submissions" %}
 
+{% set score_type = get_score_type(dataset=task.active_dataset) %}
+
+{# Whether tokens are allowed on this contest. #}
+{% set can_use_tokens_in_contest =
+       tokens_contest != TOKEN_MODE_DISABLED
+       and tokens_tasks != TOKEN_MODE_DISABLED %}
+{# Whether tokens are allowed on this task. #}
+{% set can_use_tokens =
+       tokens_contest != TOKEN_MODE_DISABLED
+       and tokens_task != TOKEN_MODE_DISABLED %}
+{# Whether the user has a token to play (maybe after waiting some time). #}
+{% set can_play_token =
+       can_use_tokens
+       and actual_phase == 0
+       and (tokens_info[0] > 0 or tokens_info[0] == -1) %}
+{# Whether the user can play a token right now (only meaningful when
+   can_play_token = true). #}
+{% set can_play_token_now = can_play_token and tokens_info[2] is none %}
+
 {% block additional_js %}
 
-$(document).on("click", "#submission_list tbody tr td.status .details", function (event) {
+$(document).on("click", ".submission_list tbody tr td.status .details", function (event) {
     var submission_id = $(this).parent().parent().attr("data-submission");
     var modal = $("#submission_detail");
     var modal_body = modal.children(".modal-body");
@@ -29,6 +50,11 @@ $(document).on("click", "#submission_list tbody tr td.status .details", function
     modal.modal("show");
 });
 
+function is_status_terminal (status) {
+    return status == {{ SubmissionResult.COMPILATION_FAILED }}
+        || status == {{ SubmissionResult.SCORED }};
+};
+
 function get_score_class (score, max_score) {
     if (score <= 0) {
         return "score_0";
@@ -39,44 +65,121 @@ function get_score_class (score, max_score) {
     }
 };
 
-update_submission_row = function (submission_id, data) {
-    var row = $("#submission_list tbody tr[data-submission=\"" + submission_id + "\"]");
+/**
+ * Update the score (public or tokened) in the UI (both in the task score and in
+ * the submission row) given the results of a newly scored submisson
+ *
+ * score_elem: table cell with the submission score to update.
+ * task_score_elem: container element of the task score to update.
+ * score (Number): the score of the submission.
+ * score_message (String): the score of the submission as a string.
+ * task_score (Number): the current score of the task.
+ * task_score_message (String): the current score of the task as a string.
+ * task_score_is_partial (Boolean): if some submission has yet to be scored.
+ * max_score (Number): maximum score of the task.
+ */
+update_score = function(score_elem, task_score_elem,
+        score, score_message,
+        task_score, task_score_message, task_score_is_partial,
+        max_score) {
+    // Submission row.
+    if (score !== undefined) {
+        score_elem.addClass(get_score_class(score, max_score));
+        score_elem.removeClass("undefined");
+        score_elem.text(score_message);
+    }
+
+    // Task score.
+    var task_score_span = task_score_elem.find(".score");
+    task_score_span.text(task_score_message);
+    if (task_score_is_partial) {
+        task_score_span.append(
+            $("<img class=\"details\" src=\"{{ url("static", "loading.gif") }}\"/>"));
+    }
+    task_score_elem.removeClass("undefined");
+    task_score_elem.removeClass("score_0");
+    task_score_elem.removeClass("score_0_100");
+    task_score_elem.removeClass("score_100");
+    task_score_elem.addClass(get_score_class(task_score, max_score));
+};
+
+update_scores = function (submission_id, data) {
+    var row = $(".submission_list tbody tr[data-submission=\"" + submission_id + "\"]");
     row.attr("data-status", data["status"]);
-    row.children("td.status").html(data["status_text"]);
-    if (data["status"] == {{ SubmissionResult.SCORED }}) {
-        if (data["public_score"] != undefined) {
-            row.children("td.public_score").addClass(get_score_class(data["public_score"], data["max_public_score"]));
-            row.children("td.public_score").removeClass("undefined");
-            row.children("td.public_score").html(data["public_score_message"]);
-        }
-        if (data["score"] != undefined) {
-            // This element may not exist, if max_public_score == max_score.
-            row.children("td.total_score").addClass(get_score_class(data["score"], data["max_score"]));
+    row.children("td.status").text(data["status_text"]);
+    var terminal_status = is_status_terminal(data["status"]);
+    var is_unit_test = ("verdict" in data);
+    
+    if (!terminal_status) {
+        row.children("td.status").append(
+            $("<img class=\"details\" src=\"{{ url("static", "loading.gif") }}\"/>"));
+    } else {
+        row.children("td.status").append(
+            $("<a class=\"details\">{% trans %}details{% endtrans %}</a>"));
+    }
+    if (terminal_status) {
+        update_score(
+            row.children("td.public_score"), $("#task_score_public"),
+            data["public_score"], data["public_score_message"],
+            data["task_public_score"], data["task_public_score_message"],
+            data["task_score_is_partial"], data["max_public_score"]);
+            
+        if (is_unit_test) {
+            row.children("td.total_score").text(data["score_message"]);
             row.children("td.total_score").removeClass("undefined");
-            row.children("td.total_score").html(data["score_message"]);
+            
+            row.removeClass("unit_test_undefined");
+            row.children("td.verdict").text(data["verdict"][1]);
+            
+            if(data["verdict"][0]) row.addClass("unit_test_ok");
+            else row.addClass("unit_test_failed");
         }
-        if (data["verdict"] != undefined) {
-            // unit test verdict
-            row.children("td.unit_test").addClass(get_score_class(data["verdict"][0], 1));
-            row.children("td.unit_test").removeClass("undefined");
-            row.children("td.unit_test").html(data["verdict"][1] + " (" + data["comment"] + ")");
+        else {   
+{% if can_use_tokens %}
+            update_score(
+                row.children("td.total_score"), $("#task_score_tokened"),
+                data["score"], data["score_message"],
+                data["task_tokened_score"], data["task_tokened_score_message"],
+                data["task_score_is_partial"], data["max_score"]);
+{% elif score_type.feedback() == "full" or actual_phase == 3 %}
+            update_score(
+                row.children("td.total_score"), $("#task_score_tokened"),
+                data["score"], data["score_message"],
+                data["task_actual_score"], data["task_actual_score_message"],
+                data["task_score_is_partial"], data["max_score"]);
+{% endif %}
         }
-    } else if (data["status"] != {{ SubmissionResult.COMPILATION_FAILED }}) {
-        schedule_update_submission_row(submission_id);
+
+    } else {
+        schedule_update_scores(submission_id);
     }
 };
 
-schedule_update_submission_row = function (submission_id) {
+schedule_update_scores = function (submission_id) {
+    if (typeof(schedule_update_scores.delays) === "undefined") {
+        schedule_update_scores.delays = {};
+    }
+    if (!schedule_update_scores.delays[submission_id]) {
+        schedule_update_scores.delays[submission_id] = 1000.0;
+    } else {
+        // We want exponential backoff, but slightly staggered across submissions to
+        // avoid asking about all of them at the same time, so we use 1.4 plus a
+        // value depending on the submission id.
+        var hash = (37 * parseInt(submission_id)) % 100 / 100.0;
+        schedule_update_scores.delays[submission_id] =
+            schedule_update_scores.delays[submission_id]
+                * (1.4 + hash * 0.2);
+    }
     setTimeout(function () {
         $.get(utils.contest_url("tasks", "{{ task.name }}", "submissions", submission_id), function (data) {
-            update_submission_row(submission_id, data);
+            update_scores(submission_id, data);
         });
-    }, 10000);
+    }, schedule_update_scores.delays[submission_id]);
 };
 
 $(document).ready(function () {
-    $('#submission_list tbody tr[data-status][data-status!="{{ SubmissionResult.COMPILATION_FAILED }}"][data-status!="{{ SubmissionResult.SCORED }}"]').each(function (idx, elem) {
-        schedule_update_submission_row($(this).attr("data-submission"));
+    $('.submission_list tbody tr[data-status][data-status!="{{ SubmissionResult.COMPILATION_FAILED }}"][data-status!="{{ SubmissionResult.SCORED }}"]').each(function (idx, elem) {
+        schedule_update_scores($(this).attr("data-submission"));
     });
 });
 
@@ -90,6 +193,51 @@ $(document).ready(function () {
     <h1>{% trans name=task.title, short_name=task.name %}{{ name }} ({{ short_name }}) <small>submissions</small>{% endtrans %}</h1>
 </div>
 
+{% if score_type is defined %}
+    {% set two_task_scores = score_type.max_public_score > 0
+        and (can_use_tokens or score_type.feedback() == "full")%}
+<div class="task_score_container row-fluid">
+
+    {% if score_type.max_public_score > 0 %}
+        {# Show the public score (alone, if everything is public or tokens are disabled, or together with the tokened score). #}
+    <div id="task_score_public"
+         class="{{ "span6" if two_task_scores else "span12" }} well well-small task_score {{ get_score_class(public_score, score_type.max_public_score, task.score_precision) }}">
+        <span>
+        {{ score_type.public_score_header }}
+        </span>
+      <br/>
+        <span class="score">
+            {{ score_type.format_score(public_score, score_type.max_public_score, none, task.score_precision, translation=translation) }}
+        {% if is_score_partial %}
+            <img src="{{ url("static", "loading.gif") }}" />
+        {% endif %}
+        </span>
+    </div>
+    {% endif %}
+
+    {% if can_use_tokens or score_type.feedback() == "full" or actual_phase == 3 %}
+        {# Show the tokened score (alone if everything is non-public, or together with the public score). #}
+    <div id="task_score_tokened"
+         class="{{ "span6" if two_task_scores else "span12" }}  well well-small task_score {{ get_score_class(actual_score if score_type.feedback() == "full" or actual_phase == 3 else tokened_score, score_type.max_score, task.score_precision) if can_use_tokens or score_type.feedback() == "full" or actual_phase == 3 else "undefined" }}">
+        <span>
+        {{ score_type.private_score_header }}
+        </span>
+      <br/>
+        <span class="score">
+        {% if can_use_tokens or score_type.feedback() == "full" or actual_phase == 3  %}
+            {{ score_type.format_score(actual_score if score_type.feedback() == "full" or actual_phase == 3 else tokened_score, score_type.max_score, none, task.score_precision, translation=translation) }}
+            {% if is_score_partial %}
+            <img src="{{ url("static", "loading.gif") }}" />
+            {% endif %}       
+        {% else %}
+            {% trans %}N/A{% endtrans %}
+        {% endif %}
+        </span>
+    </div>
+    {% endif %}
+
+</div>
+{% endif %}
 
 <h2 style="margin-bottom: 10px">{% trans %}Submit a solution{% endtrans %}</h2>
 
@@ -168,11 +316,11 @@ $(document).ready(function () {
 
 <h2 style="margin: 40px 0 10px">{% trans %}Previous submissions{% endtrans %}</h2>
 
-{% if tokens_contest != TOKEN_MODE_DISABLED and tokens_tasks != TOKEN_MODE_DISABLED and actual_phase == 0 %}
+{% if can_use_tokens_in_contest and actual_phase == 0 %}
 <div style="padding-bottom:10px">
-    {% set can_play_token = actual_phase == 0 and (tokens_info[0] > 0 or tokens_info[0] == -1) %}
-    {% set need_to_wait = tokens_info[2] is not none %}
-    {% if can_play_token %}
+    {% if not can_use_tokens %}
+        {% trans %}Tokens are not allowed on this task.{% endtrans %}
+    {% elif can_play_token %}
         {% if tokens_info[0] == -1 %}
             {% trans %}Right now, you have infinite tokens available on this task.{% endtrans %}
         {% elif tokens_info[0] == 1 %}
@@ -180,7 +328,7 @@ $(document).ready(function () {
         {% else %}
             {% trans tokens=tokens_info[0] %}Right now, you have {{ tokens }} tokens available on this task.{% endtrans %}
         {% endif %}
-        {% if need_to_wait %}
+        {% if not can_play_token_now %}
             {% trans expiration_time=tokens_info[2]|format_datetime_smart %}
                 But you have to wait until {{ expiration_time }} to use them.
             {% endtrans %}
@@ -210,84 +358,65 @@ $(document).ready(function () {
 </div>
 {% endif %}
 
+{% set more_than_one_block = False %}
 
-{% set score_type = get_score_type(dataset=task.active_dataset) %}
+{% if submissions|rejectattr("additional_info", "none")|list|length > 0 %}
+<h3>{% trans %}Unit Tests{% endtrans %}</h3>
+    {% set more_than_one_block = True %}
+  {{ macro_submission.rows(
+      url,
+      contest_url,
+      translation,
+      xsrf_form_html,
+      actual_phase,
+      task,
+      submissions,
+      can_use_tokens,
+      can_play_token,
+      can_play_token_now,
+      submissions_download_allowed,
+      false,
+      true) }}
+{% endif %}
 
-{% set show_date = not submissions|map(attribute="timestamp")|all("today") %}
+{% if submissions|selectattr("additional_info", "none")|rejectattr("official")|list|length > 0 %}
+    {% set more_than_one_block = True %}
 
+<h3>{% trans %}Unofficial submissions{% endtrans %}</h3>
+  {{ macro_submission.rows(
+      url,
+      contest_url,
+      translation,
+      xsrf_form_html,
+      actual_phase,
+      task,
+      submissions,
+      can_use_tokens,
+      can_play_token,
+      can_play_token_now,
+      submissions_download_allowed,
+      false,
+      false) }}
+{% endif %}
 
-<table id="submission_list" class="table table-bordered table-striped">
-{% set num_cols = 2 %}
-    <colgroup>
-{% if show_date %}
-        <col class="datetime"/>
-{% else %}
-        <col class="time"/>
+{% if more_than_one_block %}
+<h3>{% trans %}Official submissions{% endtrans %}</h3>
 {% endif %}
-        <col class="status"/>
-{% if score_type is defined %}
-        <col class="public_score"/>
-        <col class="total_score"/>
-        {% set num_cols = num_cols + 2 %}
-{% endif %}
-{% set any_unit_tests = submissions|any("is_unit_test") %}
-{% if any_unit_tests %}
-        <col class="unit_test"/>
-{% endif %}
-{% if actual_phase >= +3 %}
-        <col class="considered_in_score"/>
-    {% set num_cols = num_cols + 1 %}
-{% endif %}
-{% if submissions_download_allowed %}
-        <col class="files"/>
-    {% set num_cols = num_cols + 1 %}
-{% endif %}
-{% if tokens_contest != TOKEN_MODE_DISABLED and tokens_tasks != TOKEN_MODE_DISABLED and actual_phase == 0 %}
-        <col class="token"/>
-    {% set num_cols = num_cols + 1 %}
-{% endif %}
-    </colgroup>
-    <thead>
-        <tr>
-{% if show_date %}
-            <th class="datetime">{% trans %}Date and time{% endtrans %}</th>
-{% else %}
-            <th class="time">{% trans %}Time{% endtrans %}</th>
-{% endif %}
-            <th class="status">{% trans %}Status{% endtrans %}</th>
-{% if score_type is defined %}
-            <th class="public_score">{{ score_type.public_score_header }}</th>
-            <th class="total_score">{{ score_type.private_score_header }}</th>
-{% endif %}
-{% if any_unit_tests %}
-            <th class="unit_test">{{ _("Unit test") }}</th>
-{% endif %}
-{% if actual_phase >= +3 %}
-            <th class="considered_in_score">{% trans %}Official{% endtrans %}</th>
-{% endif %}
-{% if submissions_download_allowed %}
-            <th class="files">{% trans %}Files{% endtrans %}</th>
-{% endif %}
-{% if tokens_contest != TOKEN_MODE_DISABLED and tokens_tasks != TOKEN_MODE_DISABLED and actual_phase == 0 %}
-            <th class="token">{% trans %}Token{% endtrans %}</th>
-{% endif %}
-        </tr>
-    </thead>
-    <tbody>
-    {% if submissions|length == 0 %}
-        <tr>
-            <td colspan="{{ num_cols }}" class="no_submissions">{% trans %}no submissions yet{% endtrans %}</td>
-        </tr>
-    {% else %}
-        {% for s in submissions|sort(attribute="timestamp")|reverse %}
-            {# loop.revindex is broken: https://github.com/pallets/jinja/issues/794 #}
-            {% set s_idx = submissions|length - loop.index0 %}
-            {% set sr = s.get_result(s.task.active_dataset) or undefined %}
-            {% include "submission_row.html" %}
-        {% endfor %}
-    {% endif %}
-    </tbody>
-</table>
+
+{{ macro_submission.rows(
+    url,
+    contest_url,
+    translation,
+    xsrf_form_html,
+    actual_phase,
+    task,
+    submissions,
+    can_use_tokens,
+    can_play_token,
+    can_play_token_now,
+    submissions_download_allowed,
+    true,
+    false) }}
 
 <div class="modal fade hide wide" id="submission_detail">
     <div class="modal-header">

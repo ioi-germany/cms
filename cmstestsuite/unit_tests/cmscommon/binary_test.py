@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,14 +18,6 @@
 
 """Tests for the binary module"""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import PY2
-
 import binascii
 import unittest
 
@@ -40,7 +31,6 @@ class TestBinToHex(unittest.TestCase):
         self.assertEqual(bin_to_hex(b"\xFF\xFF\xFF\xFF"), "ffffffff")
         self.assertEqual(bin_to_hex(b"\x00" * 1000), "0" * 2000)
 
-    @unittest.skipIf(PY2, "Python2 allows strings")
     def test_string(self):
         with self.assertRaises(TypeError):
             bin_to_hex("cms")
@@ -49,11 +39,9 @@ class TestBinToHex(unittest.TestCase):
 class TestHexToBin(unittest.TestCase):
 
     def setUp(self):
-        super(TestHexToBin, self).setUp()
+        super().setUp()
         # The exception type depend on Python's version.
         self.error = binascii.Error
-        if PY2:
-            self.error = TypeError
 
     def test_success(self):
         self.assertEqual(hex_to_bin("3200a0"), b"\x32\x00\xa0")
@@ -76,7 +64,6 @@ class TestBinToB64(unittest.TestCase):
         self.assertEqual(bin_to_b64(b"\xFF\xFF\xFF\xFF"), "/////w==")
         self.assertEqual(bin_to_b64(b"\x00" * 3000), "A" * (3000 * 4 // 3))
 
-    @unittest.skipIf(PY2, "Python2 allows strings")
     def test_string(self):
         with self.assertRaises(TypeError):
             bin_to_b64("cms")

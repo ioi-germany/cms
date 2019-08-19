@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -20,27 +19,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 
-import tornado.web
 import tornado.escape
+import tornado.web
 import tornado.wsgi
-
 from gevent.pywsgi import WSGIServer
-
-from werkzeug.wsgi import DispatcherMiddleware, SharedDataMiddleware
 from werkzeug.contrib.fixers import ProxyFix
+from werkzeug.wsgi import DispatcherMiddleware, SharedDataMiddleware
 
 from cms.db.filecacher import FileCacher
 from cms.server.file_middleware import FileServerMiddleware
-
 from .service import Service
 from .web_rpc import RPCMiddleware
 
@@ -58,7 +47,7 @@ class WebService(Service):
 
     def __init__(self, listen_port, handlers, parameters, shard=0,
                  listen_address=""):
-        super(WebService, self).__init__(shard)
+        super().__init__(shard)
 
         static_files = parameters.pop('static_files', [])
         rpc_enabled = parameters.pop('rpc_enabled', False)

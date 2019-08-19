@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -30,16 +29,7 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys
-
 import logging
-import os
 import traceback
 
 import tornado.web
@@ -63,7 +53,7 @@ class BaseHandler(CommonRequestHandler):
     """
 
     def __init__(self, *args, **kwargs):
-        super(BaseHandler, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # The list of interface translations the user can choose from.
         self.available_translations = self.service.translations
         # The translation that best matches the user's system settings
@@ -86,11 +76,11 @@ class BaseHandler(CommonRequestHandler):
         """This method is executed at the beginning of each request.
 
         """
-        super(BaseHandler, self).prepare()
+        super().prepare()
         self.setup_locale()
 
     def setup_locale(self):
-        lang_codes = list(iterkeys(self.available_translations))
+        lang_codes = list(self.available_translations.keys())
 
         browser_langs = parse_accept_header(
             self.request.headers.get("Accept-Language", ""),

@@ -82,7 +82,7 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
           {% else %}
           <table>
             <tbody>
-            {% for statement in itervalues(task.statements) %}
+            {% for statement in task.statements.values() %}
               <tr>
                 <td><a href="{{ url("file", statement.digest, "statement.pdf") }}">Statement for language "{{ statement.language }}"</a></td>
                 <td>
@@ -111,7 +111,7 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
           {% if task.attachments|length == 0 %}
             No attachments.
           {% else %}
-            {% for attachment in itervalues(task.attachments) %}
+            {% for attachment in task.attachments.values() %}
               <div class="attachment">
                 <a href="{{ url("file", attachment.digest, attachment.filename) }}">{{ attachment.filename }}</a>
                 - <a onclick="CMS.AWSUtils.ajax_delete('{{ url("task", task.id, "attachment", attachment.id) }}'); ">Delete</a>
@@ -132,7 +132,7 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
           {% if task.spoilers|length == 0 %}
             No spoilers.
           {% else %}
-            {% for spoiler in itervalues(task.spoilers) %}
+            {% for spoiler in iter(task.spoilers.values()) %}
               <div class="spoiler">
                 <a href="{{ url("file", spoiler.digest, spoiler.filename) }}">{{ spoiler.filename }}</a>
                 - <a onclick="CMS.AWSUtils.ajax_delete('{{ url("task", task.id, "spoiler", spoiler.id) }}'); ">Delete</a>
@@ -278,7 +278,8 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
         <td>
           <select name="score_mode">
             <option value="{{ SCORE_MODE_MAX_TOKENED_LAST }}" {{ "selected" if task.score_mode == SCORE_MODE_MAX_TOKENED_LAST else "" }}>Use best among tokened and last submissions (IOI 2010-2012)</option>
-            <option value="{{ SCORE_MODE_MAX }}" {{ "selected" if task.score_mode == SCORE_MODE_MAX else "" }}>Use best among all submissions (IOI 2013-)</option>
+            <option value="{{ SCORE_MODE_MAX }}" {{ "selected" if task.score_mode == SCORE_MODE_MAX else "" }}>Use best among all submissions (IOI 2013-2016)</option>
+            <option value="{{ SCORE_MODE_MAX_SUBTASK }}" {{ "selected" if task.score_mode == SCORE_MODE_MAX_SUBTASK else "" }}>Use the sum over each subtask of the best result for that subtask across all submissions (IOI 2017-)</option>
           </select>
         </td>
       </tr>
@@ -371,7 +372,7 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
             <span class="info" title="Total maximum memory usage for each evaluation, in MiB (2^20 bytes)."></span>
             Memory limit
           </td>
-          <td><input type="text" name="memory_limit_{{ dataset.id }}" value="{{ dataset.memory_limit if dataset.memory_limit is not none else "" }}"/> MiB</td>
+          <td><input type="text" name="memory_limit_{{ dataset.id }}" value="{{ dataset.memory_limit // (1024 * 1024) if dataset.memory_limit is not none else "" }}"/> MiB</td>
         </tr>
 
         <tr><td colspan=2><h3>Task type settings (<a href="http://cms.readthedocs.org/en/{{ rtd_version }}/Task%20types.html" target="_blank">documentation</a>)</h3></td></tr>
@@ -383,13 +384,13 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
           <td>
 
             <select name="task_type_{{ dataset.id }}">
-              {% for task_type_name, task_type in iteritems(TASK_TYPES) %}
+              {% for task_type_name, task_type in TASK_TYPES.items() %}
               <option value="{{ task_type_name }}" {% if dataset.task_type == task_type_name %}selected{% endif %}>{{ task_type_name }}</option>
               {% endfor %}
             </select>
           {% set parameters = dataset.task_type_parameters %}
 
-          {% for task_type_name, task_type in iteritems(TASK_TYPES) %}
+          {% for task_type_name, task_type in TASK_TYPES.items() %}
           <table class="TaskTypeOptions TaskTypeOptions_{{ dataset.id }} bordered" id="TaskType{{ task_type_name }}Options_{{ dataset.id }}" style="display: none;">
             {% for i in range(task_type.ACCEPTED_PARAMETERS|length) %}
               {% set param_def = task_type.ACCEPTED_PARAMETERS[i] %}
@@ -418,7 +419,7 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
             {% if dataset.managers|length == 0 %}
               No managers.
             {% else %}
-              {% for manager in itervalues(dataset.managers) %}
+              {% for manager in dataset.managers.values() %}
                 <div class="manager">
                   <a href="{{ url("file", manager.digest, manager.filename) }}">{{ manager.filename }}</a>
                   - <a onclick="CMS.AWSUtils.ajax_delete('{{ url("dataset", dataset.id, "manager", manager.id, "delete") }}');">Delete</a>
@@ -436,7 +437,7 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
           </td>
           <td>
             <select name="score_type_{{ dataset.id }}">
-              {% for score_type_name, score_type in iteritems(SCORE_TYPES) %}
+              {% for score_type_name, score_type in SCORE_TYPES.items() %}
               <option value="{{ score_type_name }}" {% if dataset.score_type == score_type_name %}selected{% endif %}>{{ score_type_name }}</option>
               {% endfor %}
             </select>

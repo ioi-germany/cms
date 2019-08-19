@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2016-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,14 +18,6 @@
 
 """Interfaces for supported programming languages."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import with_metaclass
-
 import logging
 import os
 from abc import ABCMeta, abstractmethod
@@ -35,7 +26,7 @@ from abc import ABCMeta, abstractmethod
 logger = logging.getLogger(__name__)
 
 
-class Language(with_metaclass(ABCMeta, object)):
+class Language(metaclass=ABCMeta):
     """A supported programming language"""
 
     @property

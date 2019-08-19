@@ -1,15 +1,15 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2016 Masaki Hara <ackie.h.gmai@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
+# Copyright © 2018 William Di Luigi <williamdiluigi@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -27,13 +27,6 @@
 """Utilities functions that interacts with the database.
 
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
 
 import logging
 
@@ -89,7 +82,7 @@ __all__ = [
 
 # Instantiate or import these objects.
 
-version = 37
+version = 42
 
 engine = create_engine(config.database, echo=config.database_debug,
                        pool_timeout=60, pool_recycle=120)
@@ -103,9 +96,9 @@ from .types import CastingArray, Codename, Filename, FilenameSchema, \
     FilenameSchemaArray, Digest
 from .base import Base
 from .fsobject import FSObject, LargeObject
+from .admin import Admin
 from .contest import Contest, Announcement
 from .user import User, Team, Participation, Message, Question, Group
-from .admin import Admin
 from .task import Task, Statement, Attachment, Spoiler, Dataset, \
     Manager, Testcase
 from .submission import Submission, File, Token, SubmissionResult, \
@@ -149,5 +142,6 @@ def get_submission_results_for_dataset(self, dataset):
         .options(subqueryload(SubmissionResult.executables))\
         .options(subqueryload(SubmissionResult.evaluations))\
         .all()
+
 
 Dataset.get_submission_results = get_submission_results_for_dataset

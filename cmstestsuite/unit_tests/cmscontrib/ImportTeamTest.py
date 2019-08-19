@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,22 +18,14 @@
 
 """Tests for the ImportTeam script"""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import unittest
 
 # Needs to be first to allow for monkey patching the DB connection string.
 from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
 
 from cms.db import SessionGen, Team
-
-from cmscontrib.loaders.base_loader import TeamLoader
 from cmscontrib.ImportTeam import TeamImporter
+from cmscontrib.loaders.base_loader import TeamLoader
 
 
 def fake_loader_factory(team):
@@ -56,7 +47,7 @@ def fake_loader_factory(team):
 class TestImportTeam(DatabaseMixin, unittest.TestCase):
 
     def setUp(self):
-        super(TestImportTeam, self).setUp()
+        super().setUp()
 
         # DB already contains a team.
         self.team = self.add_team()
@@ -67,7 +58,7 @@ class TestImportTeam(DatabaseMixin, unittest.TestCase):
 
     def tearDown(self):
         self.delete_data()
-        super(TestImportTeam, self).tearDown()
+        super().tearDown()
 
     @staticmethod
     def do_import(team):

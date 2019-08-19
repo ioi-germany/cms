@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -21,13 +20,6 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 import unittest
 
@@ -40,7 +32,7 @@ class TestLogService(unittest.TestCase):
     SERVICE_NAME = "RandomService"
     SERVICE_SHARD = 0
     OPERATION = "Random operation"
-    CREATED = 1234567890.123
+    CREATED = 1_234_567_890.123
     EXC_TEXT = "Random exception"
 
     def setUp(self):

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2014 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -21,23 +20,16 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
+import unittest
+from unittest.mock import patch
 
 import gevent
-import unittest
-
-from mock import patch
 
 from cms import Address
 from cms.io import Executor, FakeQueueItem, TriggeredService
 
 
-class Notifier(object):
+class Notifier:
     def __init__(self):
         self._notifications = 0
 
@@ -50,7 +42,7 @@ class Notifier(object):
 
 class FakeExecutor(Executor):
     def __init__(self, notifier, batch_executions=False):
-        super(FakeExecutor, self).__init__(batch_executions)
+        super().__init__(batch_executions)
         self._notifier = notifier
 
     def execute(self, operation):
@@ -59,27 +51,26 @@ class FakeExecutor(Executor):
 
 class FakeSlowExecutor(FakeExecutor):
     def __init__(self, notifier, slowness):
-        super(FakeSlowExecutor, self).__init__(notifier)
+        super().__init__(notifier)
         self._slowness = slowness
 
     def execute(self, operation):
         gevent.sleep(self._slowness)
-        super(FakeSlowExecutor, self).execute(operation)
+        super().execute(operation)
 
 
 class FakeBatchExecutor(FakeExecutor):
     def __init__(self, notifier):
-        super(FakeBatchExecutor, self).__init__(notifier,
-                                                batch_executions=True)
+        super().__init__(notifier, batch_executions=True)
 
     def execute(self, operations):
         # Notifying only once per call, not once per operation.
-        super(FakeBatchExecutor, self).execute(operations[0])
+        super().execute(operations[0])
 
 
 class FakeTriggeredService(TriggeredService):
     def __init__(self, shard, timeout):
-        super(FakeTriggeredService, self).__init__(shard)
+        super().__init__(shard)
         self._timeout = timeout
 
         # Operations scheduled to be returned at the next

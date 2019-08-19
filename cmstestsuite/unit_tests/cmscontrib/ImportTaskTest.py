@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,23 +18,14 @@
 
 """Tests for the ImportTask script"""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-import six
-
 import unittest
 
 # Needs to be first to allow for monkey patching the DB connection string.
 from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
 
 from cms.db import SessionGen, Submission, Task
-
-from cmscontrib.loaders.base_loader import TaskLoader
 from cmscontrib.ImportTask import TaskImporter
+from cmscontrib.loaders.base_loader import TaskLoader
 
 
 def fake_loader_factory(task, task_has_changed=False):
@@ -57,7 +47,7 @@ def fake_loader_factory(task, task_has_changed=False):
 class TestImportTask(DatabaseMixin, unittest.TestCase):
 
     def setUp(self):
-        super(TestImportTask, self).setUp()
+        super().setUp()
 
         # DB already contains a task in a contest with a submission.
         self.contest = self.add_contest()
@@ -80,7 +70,7 @@ class TestImportTask(DatabaseMixin, unittest.TestCase):
 
     def tearDown(self):
         self.delete_data()
-        super(TestImportTask, self).tearDown()
+        super().tearDown()
 
     @staticmethod
     def do_import(task, contest_id, update,
@@ -115,19 +105,19 @@ class TestImportTask(DatabaseMixin, unittest.TestCase):
             if active_dataset_id is not None:
                 self.assertEqual(active_dataset_id, t.active_dataset_id)
             if dataset_ids is not None:
-                six.assertCountEqual(self, dataset_ids,
-                                     (d.id for d in t.datasets))
+                self.assertCountEqual(dataset_ids,
+                                      (d.id for d in t.datasets))
             if dataset_descriptions is not None:
-                six.assertCountEqual(self, dataset_descriptions,
-                                     (d.description for d in t.datasets))
+                self.assertCountEqual(dataset_descriptions,
+                                      (d.description for d in t.datasets))
             if dataset_task_types is not None:
-                six.assertCountEqual(self, dataset_task_types,
-                                     (d.task_type for d in t.datasets))
+                self.assertCountEqual(dataset_task_types,
+                                      (d.task_type for d in t.datasets))
             if dataset_manager_digests is not None:
-                six.assertCountEqual(self, dataset_manager_digests,
-                                     (m.digest
-                                      for d in t.datasets
-                                      for m in six.itervalues(d.managers)))
+                self.assertCountEqual(dataset_manager_digests,
+                                      (m.digest
+                                       for d in t.datasets
+                                       for m in d.managers.values()))
 
     def test_clean_import(self):
         # Completely new task, import and attach it to the contest.

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2012 Bernard Blackham <bernard@largestprime.net>
@@ -21,28 +20,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import itervalues
-
 import atexit
-import errno
-import io
 import json
 import logging
 import os
-import psutil
 import re
 import signal
 import socket
 import subprocess
 import threading
 import time
-from future.moves.urllib.parse import urlsplit
+from urllib.parse import urlsplit
+
+import psutil
 
 from cmscommon.datetime import monotonic_time
 from cmstestsuite import CONFIG, TestException
@@ -58,7 +48,7 @@ logger = logging.getLogger(__name__)
 _MAX_ATTEMPTS = 20
 
 
-class RemoteService(object):
+class RemoteService:
     """Class which implements the RPC protocol used by CMS.
 
     This is deliberately a re-implementation in order to catch or
@@ -100,7 +90,7 @@ class RemoteService(object):
         return reply
 
 
-class Program(object):
+class Program:
     """An instance of a program, which might be running or not."""
 
     def __init__(self, cms_config, service_name, shard=0, contest=None,
@@ -204,9 +194,7 @@ class Program(object):
     def _check_with_backoff(self):
         """Check and wait that the service is healthy."""
         self.healthy = False
-        attempts = 0
-        while attempts < _MAX_ATTEMPTS:
-            attempts += 1
+        for attempts in range(_MAX_ATTEMPTS):
             self._check()
             if not self.healthy:
                 time.sleep(0.2 * (1.2 ** attempts))
@@ -227,10 +215,11 @@ class Program(object):
                 self._check_ranking_web_server()
             else:
                 self._check_service()
-        except socket.error as error:
+        except ConnectionRefusedError:
             self.healthy = False
-            if error.errno != errno.ECONNREFUSED:
-                raise TestException("Weird connection state.")
+        except OSError:
+            self.healthy = False
+            raise TestException("Weird connection state.")
         else:
             self.healthy = True
 
@@ -273,8 +262,8 @@ class Program(object):
             stdout = None
             stderr = None
         else:
-            stdout = io.open(os.devnull, "wb")
-            stderr = stdout
+            stdout = subprocess.DEVNULL
+            stderr = subprocess.STDOUT
         instance = subprocess.Popen(cmdline, stdout=stdout, stderr=stderr)
         if self.cpu_limit is not None:
             logger.info("Limiting %s to %d%% CPU time",
@@ -285,7 +274,7 @@ class Program(object):
         return instance
 
 
-class ProgramStarter(object):
+class ProgramStarter:
     """Utility to keep track of all programs started."""
 
     def __init__(self, cpu_limits=None):
@@ -318,12 +307,10 @@ class ProgramStarter(object):
         self._programs[(service_name, shard, contest)] = p
 
     def count_unhealthy(self):
-        return len([p for p in itervalues(self._programs) if not p.healthy])
+        return len([p for p in self._programs.values() if not p.healthy])
 
     def wait(self):
-        attempts = 0
-        while attempts <= _MAX_ATTEMPTS:
-            attempts += 1
+        for attempts in range(_MAX_ATTEMPTS):
             unhealthy = self.count_unhealthy()
             if unhealthy == 0:
                 logger.info("All healthy! Continuing.")
@@ -332,12 +319,12 @@ class ProgramStarter(object):
             time.sleep(0.2 * (1.2 ** attempts))
         raise TestException(
             "Failed to bring up services: %s" % ", ".join(
-                p.coord for p in itervalues(self._programs) if not p.healthy))
+                p.coord for p in self._programs.values() if not p.healthy))
 
     def stop_all(self):
-        for p in itervalues(self._programs):
+        for p in self._programs.values():
             p.log_cpu_times()
-        for p in itervalues(self._programs):
+        for p in self._programs.values():
             p.stop()
-        for p in itervalues(self._programs):
+        for p in self._programs.values():
             p.wait_or_kill()

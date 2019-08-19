@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2012 Bernard Blackham <bernard@largestprime.net>
@@ -18,18 +17,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import os
 import re
+from abc import ABCMeta, abstractmethod
 
 from cms.grading.languagemanager import get_language
-
 from cmstestsuite.functionaltestframework import FunctionalTestFramework
 
 
@@ -37,9 +29,10 @@ class TestFailure(Exception):
     pass
 
 
-class Check(object):
+class Check(metaclass=ABCMeta):
+    @abstractmethod
     def check(self, *args, **kwargs):
-        raise NotImplementedError
+        pass
 
 
 class CheckOverallScore(Check):
@@ -139,7 +132,7 @@ class CheckNonzeroReturn(CheckAbstractEvaluationFailure):
             "Execution failed because the return code was nonzero")
 
 
-class Test(object):
+class Test:
     def __init__(self, name, task, filenames, languages, checks,
                  user_tests=False):
         self.framework = FunctionalTestFramework()

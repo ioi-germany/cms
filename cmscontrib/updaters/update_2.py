@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -29,18 +28,10 @@ bd80d0c930e25972eeda861719f96990de6e7822
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, itervalues, iteritems
-
 
 def split_dict(src, *keys):
     ret = dict()
-    for k in list(iterkeys(src)):
+    for k in list(src.keys()):
         v = src[k]
         if k in keys:
             ret[k] = v
@@ -48,7 +39,7 @@ def split_dict(src, *keys):
     return ret
 
 
-class Updater(object):
+class Updater:
 
     def __init__(self, data):
         assert data["_version"] == 1
@@ -61,7 +52,7 @@ class Updater(object):
         return str(self.next_id)
 
     def run(self):
-        for k in list(iterkeys(self.objs)):
+        for k in list(self.objs.keys()):
             if k.startswith("_"):
                 continue
             v = self.objs[k]
@@ -88,7 +79,7 @@ class Updater(object):
         dataset_data["description"] = "Default"
         dataset_data["autojudge"] = False
 
-        for id_ in itervalues(dataset_data["managers"]):
+        for id_ in dataset_data["managers"].values():
             del self.objs[id_]["task"]
             self.objs[id_]["dataset"] = dataset_id
 
@@ -119,7 +110,7 @@ class Updater(object):
         sr_data["submission"] = submission_id
         sr_data["dataset"] = dataset_id
 
-        for id_ in itervalues(sr_data["executables"]):
+        for id_ in sr_data["executables"].values():
             self.objs[id_]["submission"] = submission_id
             self.objs[id_]["dataset"] = dataset_id
             self.objs[id_]["submission_result"] = sr_id
@@ -146,7 +137,7 @@ class Updater(object):
         ur_data["user_test"] = user_test_id
         ur_data["dataset"] = dataset_id
 
-        for id_ in itervalues(ur_data["executables"]):
+        for id_ in ur_data["executables"].values():
             self.objs[id_]["submission"] = user_test_id
             self.objs[id_]["dataset"] = dataset_id
             self.objs[id_]["submission_result"] = ur_id
