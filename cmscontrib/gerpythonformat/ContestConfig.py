@@ -121,8 +121,8 @@ class ContestConfig(CommonConfig):
         self.exported["restricted_feedback"] = self.restricted_feedback = ("full", False)
 
         # TODO
-        #self.exported["token_feedback"] = self._token_feedback
-        #self.exported["std_token_feedback"] = self._token_feedback(3, 2)
+        self.exported["token_feedback"] = self._token_feedback
+        self.exported["std_token_feedback"] = self._token_feedback(3, 2)
 
         # Default submission limits
         self.submission_limits(None, None)
@@ -176,8 +176,8 @@ class ContestConfig(CommonConfig):
                              (as opposed to restricted feedback)
 
         """
-        return ("token", all_cases, TaskConfig.tokens, gen_initial, gen_number,
-                gen_interval, gen_max, min_interval, max_number)
+        return ("token", all_cases, gen_initial, gen_number, gen_interval,
+                gen_max, min_interval, max_number)
 
     @exported_function
     def load_template(self, name, **kwargs):

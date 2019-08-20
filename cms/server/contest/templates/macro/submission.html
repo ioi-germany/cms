@@ -27,6 +27,7 @@ unit_test (boolean): whether to display only the unit tests (true) or
     and hence setting this parameter to true is only expected to be meaningful
     if official=false
 #}
+{% set can_use_tokens = can_use_tokens and not unit_test %}
 {% set gettext = translation.gettext %}
 {% set score_type = get_score_type(dataset=task.active_dataset) %}
 {% set show_date = not submissions|map(attribute="timestamp")|all("today") %}
@@ -69,7 +70,7 @@ unit_test (boolean): whether to display only the unit tests (true) or
     {% if 0 < score_type.max_public_score %}
             <th class="public_score"> {{ score_type.public_score_header }} </th>
     {% endif %}
-            <th class="total_score"> {{ score_type.private_score_header }} </th>
+            <th class="total_score">{% trans %}Actual score{% endtrans %} </th>
 {% endif %}
 {% if unit_test %}
             <th class="verdict"> Verdict </th>

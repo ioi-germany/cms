@@ -339,7 +339,7 @@ class SubtaskGroup(ScoreType):
         # TODO Also show sample subtasks and detailed feedback in RWS?
 
         private_score = final_score
-        if self.parameters["feedback"] in ["full", "no"]:
+        if self.parameters["feedback"] in ["full", "no", "token"]:
             public_score = sample_score
         elif self.parameters["feedback"] == "partial":
             public_score = final_score
@@ -356,7 +356,7 @@ class SubtaskGroup(ScoreType):
         return (string, string): public score header, private score header
 
         """
-        if self.parameters["feedback"] in ["full", "no"]:
+        if self.parameters["feedback"] in ["full", "no", "token"]:
             public_score_header = "Sample score"
         elif self.parameters["feedback"] == "partial":
             public_score_header = "Partial feedback score"
@@ -364,7 +364,9 @@ class SubtaskGroup(ScoreType):
             raise Exception("Unknown feedback type '{}'".format(
                 self.parameters["feedback"]))
 
-        private_score_header = "Actual score"
+        private_score_header = \
+            "Tokened score" if self.parameters["feedback"] == "token" \
+            else "Actual score"
 
         return public_score_header, private_score_header
 
@@ -476,7 +478,7 @@ class SubtaskGroup(ScoreType):
         See the same method in ScoreType for details.
 
         """
-        if self.parameters["feedback"] in ["full", "no"]:
+        if self.parameters["feedback"] in ["full", "no", "token"]:
             public_score, public_score_details = \
                 self._compute_score(submission_result, "sample")
         elif self.parameters["feedback"] == "partial":
