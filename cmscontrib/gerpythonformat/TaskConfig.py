@@ -564,7 +564,7 @@ class TaskConfig(CommonConfig, Scope):
     This object is exported as a variable called :samp:`task`.
     """
 
-    def __init__(self, upstream, rules, name, num, feedback,
+    def __init__(self, upstream, rules, name, num, feedback, score_mode,
                  ignore_latex=False, minimal=False):
         super(TaskConfig, self).__init__(rules, ignore_latex)
         self.no_tokens()
@@ -636,7 +636,7 @@ class TaskConfig(CommonConfig, Scope):
             self.tokens(*tuple(feedback[2:]))
 
         # Score mode
-        self._score_mode = None
+        self._score_mode = score_mode
 
         # Only compile statement (and hopefully everything necessary for this)
         self.minimal = minimal
@@ -1226,37 +1226,6 @@ class TaskConfig(CommonConfig, Scope):
 
     def _has_restricted_feedback_level(self):
         return self._feedback_level == FEEDBACK_LEVEL_RESTRICTED
-
-    @exported_function
-    def score_mode_max_tokened_last(self):
-        """
-        The score for a task will be the maximum of the score of all
-        tokened submissions and the last submission.
-
-        This is the default for all tasks without full feedback.
-
-        """
-        self._score_mode = SCORE_MODE_MAX_TOKENED_LAST
-
-    @exported_function
-    def score_mode_max(self):
-        """
-        The score for a task will be the maximum of the score of all
-        submissions.
-
-        """
-        self._score_mode = SCORE_MODE_MAX
-
-    @exported_function
-    def score_mode_max_subtask(self):
-        """
-        The score for a subtask will be the maximum of the scores of all
-        submissions. The score for the whole task will be the sum of the
-        scores of the subtasks.
-        
-        This is the default for all tasks with full feedback.
-        """
-        self._score_mode = SCORE_MODE_MAX_SUBTASK
 
     def score_mode(self):
         if self._score_mode is None:

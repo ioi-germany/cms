@@ -28,6 +28,9 @@ from cmscontrib.gerpythonformat.TaskConfig import TaskConfig
 from cmscontrib.gerpythonformat.LocationStack import chdir
 from cms.db import Contest, User, Group, Participation, Team
 from cmscommon.crypto import build_password
+from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
+    SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK
+
 import os
 import shutil
 from datetime import datetime, timedelta
@@ -119,6 +122,9 @@ class ContestConfig(CommonConfig):
         self.exported["partial_feedback"] = self.partial_feedback = ("partial", True)
         self.exported["full_feedback"] = self.full_feedback = ("full", True)
         self.exported["restricted_feedback"] = self.restricted_feedback = ("full", False)
+        self.exported["score_max"] = SCORE_MODE_MAX
+        self.exported["score_max_subtask"] = SCORE_MODE_MAX_SUBTASK
+        self.exported["score_max_tokened_last"] = SCORE_MODE_MAX_TOKENED_LAST
 
         # TODO
         self.exported["token_feedback"] = self._token_feedback
@@ -392,7 +398,7 @@ class ContestConfig(CommonConfig):
                    team)
         return user
 
-    def _task(self, s, feedback, minimal):
+    def _task(self, s, feedback, score_mode, minimal):
         """
         Add a task to this contest (full version, not accessible from
         config.py).
@@ -401,6 +407,8 @@ class ContestConfig(CommonConfig):
                      folder with the same name
         feedback:    type of feedback (one of the variables no_feedback,
                      partial_feedback, full_feedback, restricted_feedback)
+        score_mode:  how to calculate the final score (one of SCORE_MODE_MAX, 
+                     SCORE_MODE_MAX_SUBTASK, SCORE_MODE_MAX_TOKENED_LAST)
         minimal (bool): only try to compile statement?
 
         """
@@ -423,7 +431,7 @@ class ContestConfig(CommonConfig):
 
             with TaskConfig(self, os.path.abspath(".rules"),
                             s, len(self.tasks),
-                            feedback,
+                            feedback, score_mode,
                             ignore_latex=self.ignore_latex,
                             minimal=minimal) as taskconfig:
                 for f in self.ontasks:
@@ -438,7 +446,7 @@ class ContestConfig(CommonConfig):
                 print_msg("Task {} loaded completely".format(s), success=True)
 
     @exported_function
-    def task(self, s, feedback):
+    def task(self, s, feedback, score_mode=None):
         """
         Add a task to this contest (version accessible from config.py).
 
@@ -448,7 +456,7 @@ class ContestConfig(CommonConfig):
                      partial_feedback, full_feedback, restricted_feedback)
 
         """
-        self._task(s, feedback, False)
+        self._task(s, feedback, score_mode, False)
 
     @exported_function
     def test_user(self, u):
