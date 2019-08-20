@@ -651,12 +651,6 @@ class TaskConfig(CommonConfig, Scope):
         with header("Loading task {}".format(self.name), depth=2):
             super(TaskConfig, self)._readconfig(filename)
 
-        """
-        # Are we allowed to use tokens?
-        if self.token_mode != "disabled" and \
-           self.upstream.token_mode != "disabled":
-            self.feedback = "token"
-        """
         print_msg("Creating test case zip files")
         # Automatically make a ZIP file containing the saved test cases
         self._makesavedzip()
