@@ -29,7 +29,7 @@ from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonCon
 from cmscontrib.gerpythonformat.Executable import ExitCodeException
 from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, merge_constraints
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
-    SCORE_MODE_MAX
+    SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK
 from cms import FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
 from cms.db import Task, Statement, Testcase, Dataset, \
     Attachment, Spoiler, Manager, Submission, File, \
@@ -1244,15 +1244,24 @@ class TaskConfig(CommonConfig, Scope):
         The score for a task will be the maximum of the score of all
         submissions.
 
-        This is the default for all tasks with full feedback.
-
         """
         self._score_mode = SCORE_MODE_MAX
+
+    @exported_function
+    def score_mode_max_subtask(self):
+        """
+        The score for a subtask will be the maximum of the scores of all
+        submissions. The score for the whole task will be the sum of the
+        scores of the subtasks.
+        
+        This is the default for all tasks with full feedback.
+        """
+        self._score_mode = SCORE_MODE_MAX_SUBTASK
 
     def score_mode(self):
         if self._score_mode is None:
             if self.feedback == "full":
-                return SCORE_MODE_MAX
+                return SCORE_MODE_MAX_SUBTASK
             else:
                 return SCORE_MODE_MAX_TOKENED_LAST
         else:

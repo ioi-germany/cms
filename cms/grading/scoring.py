@@ -236,13 +236,25 @@ def _task_score_max_subtask(score_details_tokened):
             # Submission did not compile, ignore it.
             continue
 
+        subtask_scores = None
+
         try:
             subtask_scores = dict(
                 (subtask["idx"],
                  subtask["score_fraction"] * subtask["max_score"])
                 for subtask in details)
         except Exception:
-            subtask_scores = None
+            pass
+
+        # TODO: it would be better to harmonize this with the format in the CMS;
+        # however, because of unit tests this would me mean we'd have to change
+        # the format the rest of the CMS uses...
+        try:
+            subtask_scores = dict((i, s["score"])
+                                  for i, s in enumerate(details["subtasks"])
+                                  if not s["sample"])
+        except Exception:
+            pass
 
         if subtask_scores is None or len(subtask_scores) == 0:
             # Task's score type is not group, assume a single subtask.
