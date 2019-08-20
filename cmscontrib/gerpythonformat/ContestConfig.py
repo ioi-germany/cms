@@ -83,6 +83,11 @@ class ContestConfig(CommonConfig):
 
     This object is exported as a variable called :samp:`contest`.
     """
+    no_feedback = ("no", True)
+    partial_feedback = ("partial", True)
+    full_feedback = ("full", True)
+    restricted_feedback = ("full", False)
+
 
     def __init__(self, rules, name, ignore_latex=False, onlytask=None,
                  minimal=False):
@@ -118,17 +123,15 @@ class ContestConfig(CommonConfig):
 
         # Export variables
         self.exported["contest"] = self
-        self.exported["no_feedback"] = self.no_feedback = ("no", True)
-        self.exported["partial_feedback"] = self.partial_feedback = ("partial", True)
-        self.exported["full_feedback"] = self.full_feedback = ("full", True)
-        self.exported["restricted_feedback"] = self.restricted_feedback = ("full", False)
+        self.exported["no_feedback"] = self.no_feedback
+        self.exported["partial_feedback"] = self.partial_feedback
+        self.exported["full_feedback"] = self.full_feedback
+        self.exported["restricted_feedback"] = self.restricted_feedback
+        self.exported["token_feedback"] = self._token_feedback
+        self.exported["std_token_feedback"] = self._token_feedback(3, 2)
         self.exported["score_max"] = SCORE_MODE_MAX
         self.exported["score_max_subtask"] = SCORE_MODE_MAX_SUBTASK
         self.exported["score_max_tokened_last"] = SCORE_MODE_MAX_TOKENED_LAST
-
-        # TODO
-        self.exported["token_feedback"] = self._token_feedback
-        self.exported["std_token_feedback"] = self._token_feedback(3, 2)
 
         # Default submission limits
         self.submission_limits(None, None)
@@ -446,7 +449,7 @@ class ContestConfig(CommonConfig):
                 print_msg("Task {} loaded completely".format(s), success=True)
 
     @exported_function
-    def task(self, s, feedback, score_mode=None):
+    def task(self, s, feedback=None, score_mode=None):
         """
         Add a task to this contest (version accessible from config.py).
 
@@ -456,7 +459,7 @@ class ContestConfig(CommonConfig):
                      partial_feedback, full_feedback, restricted_feedback)
 
         """
-        self._task(s, feedback, score_mode, False)
+        self._task(s, feedback or self.restricted_feedback, score_mode, False)
 
     @exported_function
     def test_user(self, u):
