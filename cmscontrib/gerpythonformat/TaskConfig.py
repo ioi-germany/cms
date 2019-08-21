@@ -27,7 +27,8 @@ from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header,
     remaining_line_length, indent
 from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
 from cmscontrib.gerpythonformat.Executable import ExitCodeException
-from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, merge_constraints
+from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, \
+    merge_constraints, TypesetValue
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK
 from cms import FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
@@ -112,6 +113,12 @@ class Scope(object):
         """
 
         self.special_cases.append(descr)
+
+    def _collect_constraints(self):
+        res = {}
+        for c in self._get_constraints():
+            res = merge_constraints(res, c.uncompress())
+        return res
 
 
 class MySubtask(Scope):
@@ -250,12 +257,6 @@ class MyGroup(Scope):
         contained in this group.
         """
         return os.path.join(self.subtask.directory, self.name)
-
-    def _collect_constraints(self):
-        res = {}
-        for c in self._get_constraints():
-            res = merge_constraints(res, c.uncompress())
-        return res
 
     def _dummy_case(self, name):
         if name is None:
@@ -661,6 +662,37 @@ class TaskConfig(CommonConfig, Scope):
 
         if self.tasktype is None:
             raise Exception("You have to specify a task type")
+
+    def curr_scope(self):
+        if len(self.group_stack) > 0:
+            return self.group_stack[-1]
+        elif len(self.subtask_stack) > 0:
+            return self.subtask_stack[-1]
+        else:
+            return self
+
+    @exported_function
+    def get_constraint(self, name):
+        return self.curr_scope()._collect_constraints()[TypesetValue(name, "")]
+
+    @exported_function
+    def get_constraint_lower(self, name):
+        return self.get_constraint(name)[0]
+
+    @exported_function
+    def get_constraint_upper(self, name):
+        return self.get_constraint(name)[1]
+
+    @exported_function
+    def get_constraint_value(self, name):
+        l = self.get_constraint_lower(name)
+        u = self.get_constraint_upper(name)
+        
+        if l == u:
+            return l
+        else:
+            raise ValueError("calling get_constraint_value although lower and "
+                             "upper do not agree")
 
     # Supplement helpers
 
