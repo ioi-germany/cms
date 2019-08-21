@@ -63,6 +63,10 @@ template<typename T> T get_constraint_upper(const string &name) {
     return *get_constraint<T>(name).second;
 }
 
+template<typename T> pair<T, T> GET_CONSTRAINT(const string &name) {
+    return {get_constraint_lower<T>(name), get_constraint_upper<T>(name)};
+}
+
 template<typename T> T get_constraint_value(const string &name) {
     pair<T, T> constraint = get_constraint<T>(name);
     
