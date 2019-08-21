@@ -25,6 +25,16 @@ class TypesetValue(object):
         self.val = val
         self.typeset = typeset
 
+    def __eq__(self, rhs):
+        if isinstance(rhs, TypesetValue):
+            return self.val == rhs.val
+        else:
+            return False
+
+    def __hash__(self):
+        return self.val.__hash__()
+
+
 GROUP_CHARACTER = "\""
 ANNOTATION_BEGIN = "("
 ANNOTATION_END = ")"
