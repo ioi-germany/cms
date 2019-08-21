@@ -183,8 +183,8 @@ class Constraint(object):
         self.max = max
 
     def uncompress(self):
-        return {v: (Constraint.eval(self.min),
-                    Constraint.eval(self.max)) for v in self.variables}
+        return {v.val: (Constraint.eval(self.min),
+                        Constraint.eval(self.max)) for v in self.variables}
 
     def merge(self, rhs):
         if rhs.min is not None:

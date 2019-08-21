@@ -28,7 +28,7 @@ from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header,
 from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
 from cmscontrib.gerpythonformat.Executable import ExitCodeException
 from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, \
-    merge_constraints, TypesetValue
+    merge_constraints
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK
 from cms import FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
@@ -673,7 +673,7 @@ class TaskConfig(CommonConfig, Scope):
 
     @exported_function
     def get_constraint(self, name):
-        return self.curr_scope()._collect_constraints()[TypesetValue(name, "")]
+        return self.curr_scope()._collect_constraints()[name]
 
     @exported_function
     def get_constraint_lower(self, name):
@@ -711,7 +711,7 @@ class TaskConfig(CommonConfig, Scope):
         s += "void load_constraints() {\n"
         for var, ran in iteritems(constraints):
             s += '\tput_integral_constraint("{}", {}, {});\n'.\
-                     format(var.val, cppify(ran[0]), cppify(ran[1]))
+                     format(var, cppify(ran[0]), cppify(ran[1]))
         for desc in self.current_group._get_special_cases():
             s += '\tadd_special_case("{}");\n'.format(desc)
         s += "}\n"
