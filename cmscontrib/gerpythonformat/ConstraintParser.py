@@ -18,12 +18,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
-from six import iteritems
-
 import string
 
 class TypesetValue(object):
@@ -278,7 +272,7 @@ class Constraint(object):
                   "}": ")",
                   "\\cdot": "*"}
 
-        for old, new in iteritems(coding):
+        for old, new in iter(coding.items()):
             s = s.replace(old, new)
 
         return eval(s)
@@ -356,7 +350,7 @@ def merge(c1, c2, var):
 #than in the first (e.g., (_,100) in the first and (_,1000) in the second).
 def merge_constraints(cl1, cl2):
     res = dict(cl1)
-    for var, ran in iteritems(cl2):
+    for var, ran in iter(cl2.items()):
         if var in res:
             res[var] = merge(res[var], ran, var)
         else:
