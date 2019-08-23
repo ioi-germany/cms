@@ -1624,7 +1624,8 @@ class TaskConfig(CommonConfig, Scope):
              "expected_partial_feedback_score_info": submission.partial_feedback_score_info,
              "expected_final_score": submission.score,
              "expected_final_score_info": submission.score_info,
-             "task_name": self.name}, sort_keys=True)
+             "task_name": self.name,
+             "score_precision": tdb.score_precision}, sort_keys=True)
 
         return sdb
 
@@ -1744,8 +1745,16 @@ class TaskConfig(CommonConfig, Scope):
             print()
 
         if compile_ok:
+            submission_info = json.loads(sdb.additional_info)
+            score_precision = sdb.task.score_precision
+
             def print_score_info(prefix, name):
                 score = details[prefix + "_score"]
+                rounded_score = round(score, score_precision)
+                
+                if score != rounded_score:
+                    score = "{} ({})".format(rounded_score, score)
+
                 if details[prefix + "_score_okay"]:
                     score = green(score)
                 else:

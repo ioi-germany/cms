@@ -642,8 +642,11 @@ class SubtaskGroup(ScoreType):
                 if subtasks[-1]["status"][0] <= 0:
                     subtasks_failed = True
 
+        score_precision = submission_info["score_precision"]
+
         def is_in(x, l):
-            return l[0] <= x <= l[1]
+            return round(l[0], score_precision) <= round(x, score_precision) \
+                                                <= round(l[1], score_precision)
 
         sample_score = self._compute_score(submission_result, "sample")[0]
         partial_feedback_score = self._compute_score(submission_result, "partial")[0]
