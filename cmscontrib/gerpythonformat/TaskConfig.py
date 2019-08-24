@@ -26,7 +26,8 @@ from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header,
     yellow, box, side_by_side, pad_left, add_line_breaks, \
     remaining_line_length, indent
 from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
-from cmscontrib.gerpythonformat.Executable import ExitCodeException
+from cmscontrib.gerpythonformat.Executable import ExitCodeException, \
+    InternalPython
 from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, \
     merge_constraints
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
@@ -619,6 +620,10 @@ class TaskConfig(CommonConfig, Scope):
         # utils
         self.exported["token_equ"] = self.upstream.token_equ_fp
         self.exported["arbitrary"] = "arbitrary"
+
+        def empty_output_generator(*args, **kwargs):
+            pass
+        self.exported["empty"] = InternalPython(empty_output_generator)
 
         # Get data from upstream, but not the other way round
         self.inheriting = True
