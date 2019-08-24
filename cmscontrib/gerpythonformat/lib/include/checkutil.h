@@ -68,14 +68,14 @@ template<typename T> pair<T, T> GET_CONSTRAINT(const string &name) {
 }
 
 template<typename T> T get_constraint_value(const string &name) {
-    pair<T, T> constraint = get_constraint<T>(name);
+    pair<T, T> constraint = GET_CONSTRAINT<T>(name);
     
-    if(*constraint.first != *constraint.second) {
+    if(constraint.first != constraint.second) {
         cerr << "asking for constraint value although lower != upper -- why?" << endl;
         exit(42);
     }
     
-    return *constraint.first;
+    return constraint.first;
 }
 
 /* Register an automatic constraint */
