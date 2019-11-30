@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -20,14 +19,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Utility functions for importers"""
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys
 
 import functools
 import logging
@@ -276,7 +267,7 @@ def _update_dict(old_dict, new_dict, update_value_fn=None):
     """
     if update_value_fn is None:
         update_value_fn = _update_object
-    for key in set(iterkeys(old_dict)) | set(iterkeys(new_dict)):
+    for key in set(old_dict.keys()) | set(new_dict.keys()):
         if key in new_dict:
             if key not in old_dict:
                 logger.info("Creating {}".format(
@@ -322,7 +313,7 @@ def _update_list_with_key(old_list, new_list, key,
     old_dict = dict((key(v), v) for v in old_list)
     new_dict = dict((key(v), v) for v in new_list)
 
-    for k in set(iterkeys(old_dict)) | set(iterkeys(new_dict)):
+    for k in set(old_dict.keys()) | set(new_dict.keys()):
         if k in new_dict:
             if k not in old_dict:
                 # Add new value to the old dictionary.

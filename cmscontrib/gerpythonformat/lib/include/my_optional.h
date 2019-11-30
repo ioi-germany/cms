@@ -37,12 +37,20 @@ template<typename T> class my_optional
     bool has_value() const { return _has_value; }
 
     T& operator*() {
-        if(not has_value()) throw "trying to dereference an empty my_optional";        
+        if(not has_value()) {
+            cerr << "trying to dereference an empty my_optional" << endl;
+            throw "trying to dereference an empty my_optioanl";
+        }
+       
         return data;
     }
     
     const T& operator*() const {
-        if(not has_value()) throw "trying to dereference an empty my_optional";
+        if(not has_value()) {
+            cerr << "trying to dereference an empty my_optional" << endl;
+            throw "trying to dereference an empty my_optioanl";
+        }
+
         return data;
     }
 

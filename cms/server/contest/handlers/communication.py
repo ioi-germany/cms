@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -28,13 +27,6 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 
 import tornado.web
@@ -42,7 +34,6 @@ import tornado.web
 from cms.server import multi_contest
 from cms.server.contest.communication import accept_question, \
     UnacceptableQuestion, QuestionsNotAllowed
-
 from .contest import ContestHandler
 
 
@@ -80,7 +71,7 @@ class QuestionHandler(ContestHandler):
         except QuestionsNotAllowed:
             raise tornado.web.HTTPError(404)
         except UnacceptableQuestion as e:
-            self.notify_error(e.subject, e.text)
+            self.notify_error(e.subject, e.text, e.text_params)
         else:
             self.notify_success(N_("Question received"),
                                 N_("Your question has been received, you "

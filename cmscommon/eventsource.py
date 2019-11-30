@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -17,25 +16,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import re
 import time
 from collections import deque
 from weakref import WeakSet
 
-from future.utils import text_to_native_str
 from gevent import Timeout
-from gevent.queue import Queue, Empty
 from gevent.pywsgi import WSGIHandler
-
-from werkzeug.wrappers import Request
+from gevent.queue import Queue, Empty
 from werkzeug.exceptions import NotAcceptable
+from werkzeug.wrappers import Request
 
 
 __all__ = [
@@ -85,7 +75,7 @@ def format_event(id_, event, data):
     return b'\n'.join(result)
 
 
-class Publisher(object):
+class Publisher:
     """The publish part of a pub-sub broadcast system.
 
     Publish-subscribe is actually an improper name, as there's just one
@@ -119,7 +109,7 @@ class Publisher(object):
 
         """
         # Number of microseconds since epoch.
-        key = int(time.time() * 1000000)
+        key = int(time.time() * 1_000_000)
         msg = format_event("%x" % key, event, data)
         # Put into cache.
         self._cache.append((key, msg))
@@ -160,7 +150,7 @@ class Publisher(object):
         return Subscriber(queue)
 
 
-class Subscriber(object):
+class Subscriber:
     """The subscribe part of a pub-sub broadcast system.
 
     This class receives the messages sent to the Publisher that created
@@ -202,7 +192,7 @@ class Subscriber(object):
             pass
 
 
-class EventSource(object):
+class EventSource:
     """A class that implements a Server-Sent Events [1] handler.
 
     This class is intended to be extended: it takes charge of all the
@@ -286,7 +276,7 @@ class EventSource(object):
         # this by seeing when a call to write() fails, i.e. raises an
         # exception. This behavior isn't documented by the PEP, but it
         # seems reasonable and it's present in gevent (which raises a
-        # socket.error).
+        # OSError).
 
         # The third non-standard behavior that we expect (related to
         # the previous one) is that no one in the application-to-client
@@ -313,11 +303,8 @@ class EventSource(object):
         # it explicitly to avoid unwanted caching by unaware proxies and
         # middlewares.
         write = start_response(
-            text_to_native_str("200 OK"),
-            [(text_to_native_str("Content-Type"),
-              text_to_native_str("text/event-stream; charset=utf-8")),
-             (text_to_native_str("Cache-Control"),
-              text_to_native_str("no-cache"))])
+            "200 OK", [("Content-Type", "text/event-stream; charset=utf-8"),
+                       ("Cache-Control", "no-cache")])
 
         # This is a part of the fourth hack (see above).
         if hasattr(start_response, "__self__") and \
@@ -390,7 +377,7 @@ class EventSource(object):
                 # fails. We're conservative, and allow any unexpected
                 # event to interrupt the request. We hope it's enough
                 # to detect when the client disconnects. It is with
-                # gevent, which raises a socket.error. The timeout (we
+                # gevent, which raises an OSError. The timeout (we
                 # catch that too) is just an extra precaution.
                 except Exception:
                     # This is part of the fourth hack (see above).

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -23,16 +22,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
-
 import errno
-import io
 import json
 import logging
 import os
@@ -64,7 +54,7 @@ class ConfigError(Exception):
     pass
 
 
-class AsyncConfig(object):
+class AsyncConfig:
     """This class will contain the configuration for the
     services. This needs to be populated at the initilization stage.
 
@@ -85,7 +75,7 @@ class AsyncConfig(object):
 async_config = AsyncConfig()
 
 
-class Config(object):
+class Config:
     """This class will contain the configuration for CMS. This needs
     to be populated at the initilization stage. This is loaded by
     default with some sane data. See cms.conf.sample in the config
@@ -119,7 +109,7 @@ class Config(object):
 
         # Sandbox.
         # Max size of each writable file during an evaluation step, in KiB.
-        self.max_file_size = 1048576
+        self.max_file_size = 1024 * 1024  # 1 GiB
         # Max processes, CPU time (s), memory (KiB) for compilation runs.
         self.compilation_sandbox_max_processes = 1000
         self.compilation_sandbox_max_time_s = 10.0
@@ -137,15 +127,15 @@ class Config(object):
         # ContestWebServer.
         self.contest_listen_address = [""]
         self.contest_listen_port = [8888]
-        self.cookie_duration = 1800
+        self.cookie_duration = 30 * 60  # 30 minutes
         self.submit_local_copy = True
         self.submit_local_copy_path = "%s/submissions/"
         self.tests_local_copy = True
         self.tests_local_copy_path = "%s/tests/"
         self.is_proxy_used = None  # (deprecated in favor of num_proxies_used)
         self.num_proxies_used = None
-        self.max_submission_length = 100000
-        self.max_input_length = 5000000
+        self.max_submission_length = 100_000  # 100 KB
+        self.max_input_length = 5_000_000  # 5 MB
         self.stl_path = "/usr/share/cppreference/doc/html/"
         # Prefix of 'shared-mime-info'[1] installation. It can be found
         # out using `pkg-config --variable=prefix shared-mime-info`, but
@@ -164,7 +154,7 @@ class Config(object):
         self.https_certfile = None
 
         # PrintingService
-        self.max_print_length = 10000000
+        self.max_print_length = 10_000_000  # 10 MB
         self.printer = None
         self.paper_size = "A4"
         self.max_pages_per_job = 10
@@ -250,15 +240,15 @@ class Config(object):
         """
         # Load config file.
         try:
-            with io.open(path, 'rt', encoding='utf-8') as f:
+            with open(path, 'rt', encoding='utf-8') as f:
                 data = json.load(f)
-        except IOError as error:
-            if error.errno == errno.ENOENT:
-                logger.debug("Couldn't find config file %s.", path)
-            else:
-                logger.warning("I/O error while opening file %s: [%s] %s",
-                               path, errno.errorcode[error.errno],
-                               os.strerror(error.errno))
+        except FileNotFoundError:
+            logger.debug("Couldn't find config file %s.", path)
+            return False
+        except OSError as error:
+            logger.warning("I/O error while opening file %s: [%s] %s",
+                           path, errno.errorcode[error.errno],
+                           os.strerror(error.errno))
             return False
         except ValueError as error:
             logger.warning("Invalid syntax in file %s: %s", path, error)
@@ -291,7 +281,7 @@ class Config(object):
         del data["other_services"]
 
         # Put everything else in self.
-        for key, value in iteritems(data):
+        for key, value in data.items():
             setattr(self, key, value)
 
         return True

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -25,27 +24,20 @@ filters, tests, etc. that are useful for generic global usage.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, itervalues, iteritems
-
 from jinja2 import Environment, StrictUndefined, contextfilter, \
     contextfunction, environmentfunction
 
-from cms.db import SubmissionResult, UserTestResult
-from cmscommon.datetime import make_datetime, make_timestamp, utc, local_tz
-from cmscommon.mimetypes import get_type_for_file_name, get_name_for_type, \
-    get_icon_for_type
 from cms import TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE, \
     TOKEN_MODE_MIXED, FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
+from cms.db import SubmissionResult, UserTestResult
 from cms.grading import format_status_text
 from cms.grading.languagemanager import get_language
 from cms.locale import DEFAULT_TRANSLATION
-from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, SCORE_MODE_MAX
+from cmscommon.constants import \
+    SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK, SCORE_MODE_MAX_TOKENED_LAST
+from cmscommon.datetime import make_datetime, make_timestamp, utc, local_tz
+from cmscommon.mimetypes import get_type_for_file_name, get_name_for_type, \
+    get_icon_for_type
 
 
 @contextfilter
@@ -121,10 +113,10 @@ def dictselect(ctx, d, test=None, *args, **kwargs):
     by = kwargs.pop("by", "key")
     if len(kwargs) > 0:
         raise ValueError("Invalid keyword argument: %s"
-                         % next(iterkeys(kwargs)))
+                         % next(iter(kwargs.keys())))
     if by not in {"key", "value"}:
         raise ValueError("Invalid value of \"by\" keyword argument: %s" % by)
-    return dict((k, v) for k, v in iteritems(d)
+    return dict((k, v) for k, v in d.items()
                 if ctx.call(test, {"key": k, "value": v}[by], *args))
 
 
@@ -146,17 +138,16 @@ def today(ctx, dt):
 
 
 def instrument_generic_toolbox(env):
-    env.globals["iterkeys"] = iterkeys
-    env.globals["itervalues"] = itervalues
-    env.globals["iteritems"] = iteritems
+    env.globals["iter"] = iter
     env.globals["next"] = next
 
     # Needed for some constants.
     env.globals["SubmissionResult"] = SubmissionResult
     env.globals["UserTestResult"] = UserTestResult
 
-    env.globals["SCORE_MODE_MAX"] = SCORE_MODE_MAX
     env.globals["SCORE_MODE_MAX_TOKENED_LAST"] = SCORE_MODE_MAX_TOKENED_LAST
+    env.globals["SCORE_MODE_MAX"] = SCORE_MODE_MAX
+    env.globals["SCORE_MODE_MAX_SUBTASK"] = SCORE_MODE_MAX_SUBTASK
 
     env.globals["TOKEN_MODE_DISABLED"] = TOKEN_MODE_DISABLED
     env.globals["TOKEN_MODE_FINITE"] = TOKEN_MODE_FINITE

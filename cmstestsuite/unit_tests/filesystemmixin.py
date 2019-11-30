@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -21,29 +20,21 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
-import io
 import os
 import shutil
 import tempfile
 
 
-class FileSystemMixin(object):
+class FileSystemMixin:
     """Mixin for tests with filesystem access."""
 
     def setUp(self):
-        super(FileSystemMixin, self).setUp()
+        super().setUp()
         self.base_dir = tempfile.mkdtemp()
 
     def tearDown(self):
         shutil.rmtree(self.base_dir)
-        super(FileSystemMixin, self).tearDown()
+        super().tearDown()
 
     def get_path(self, inner_path):
         "Return the full path for a given inner path within the temp dir."
@@ -74,6 +65,6 @@ class FileSystemMixin(object):
 
         """
         path = self.get_path(inner_path)
-        with io.open(path, "wb") as f:
+        with open(path, "wb") as f:
             f.write(content)
         return path

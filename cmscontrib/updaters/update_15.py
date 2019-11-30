@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2014 Luca Versari <veluca93@gmail.com>
@@ -26,18 +25,10 @@ This converts the dump to the new schema introduced to support user
 and contest separation.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys
-
 
 def split_dict(src, *keys):
     ret = dict()
-    for k in list(iterkeys(src)):
+    for k in list(src.keys()):
         v = src[k]
         if k in keys:
             ret[k] = v
@@ -45,7 +36,7 @@ def split_dict(src, *keys):
     return ret
 
 
-class Updater(object):
+class Updater:
     def __init__(self, data):
         assert data["_version"] == 14
         self.objs = data
@@ -57,7 +48,7 @@ class Updater(object):
         return str(self.next_id)
 
     def run(self):
-        for k in list(iterkeys(self.objs)):
+        for k in list(self.objs.keys()):
             if k.startswith("_"):
                 continue
             v = self.objs[k]

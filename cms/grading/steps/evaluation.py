@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2015 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -26,21 +25,12 @@
 
 """High level functions to perform standardized evaluations."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
-
 import logging
-
-from .messages import HumanMessage, MessageCollection
-from .stats import execution_stats
 
 from cms import config
 from cms.grading.Sandbox import Sandbox
+from .messages import HumanMessage, MessageCollection
+from .stats import execution_stats
 
 
 logger = logging.getLogger(__name__)
@@ -79,7 +69,7 @@ EVALUATION_MESSAGES = MessageCollection([
     HumanMessage("signal",
                  N_("Execution killed (could be triggered by violating memory "
                     "limits)"),
-                 N_("The evaluation was killed by a signal."
+                 N_("The evaluation was killed by a signal. "
                     "Among other things, this might be caused by exceeding "
                     "the memory limit. Note that if this is the reason, "
                     "the memory usage visible in the submission details is "
@@ -109,8 +99,8 @@ def evaluation_step(sandbox, commands,
     commands ([[str]]): evaluation commands to execute.
     time_limit (float|None): time limit in seconds (applied to each command);
         if None, no time limit is enforced.
-    memory_limit (int|None): memory limit in MiB (applied to each command); if
-        None, no memory limit is enforced.
+    memory_limit (int|None): memory limit in bytes (applied to each command);
+        if None, no memory limit is enforced.
     dirs_map ({str: (str|None, str|None)}|None): if not None, a dict
         from external directories to a pair of strings: the first is the path
         they should be mapped to inside the sandbox, the second, is
@@ -195,17 +185,18 @@ def evaluation_step_before_run(sandbox, command,
         sandbox.wallclock_timeout = None
 
     if memory_limit is not None:
-        sandbox.address_space = memory_limit * 1024
+        sandbox.address_space = memory_limit
     else:
         sandbox.address_space = None
 
-    sandbox.fsize = config.max_file_size
+    # config.max_file_size is in KiB
+    sandbox.fsize = config.max_file_size * 1024
 
     sandbox.stdin_file = stdin_redirect
     sandbox.stdout_file = stdout_redirect
     sandbox.stderr_file = "stderr.txt"
 
-    for src, (dest, options) in iteritems(dirs_map):
+    for src, (dest, options) in dirs_map.items():
         sandbox.add_mapped_directory(src, dest=dest, options=options)
     for name in [sandbox.stderr_file, sandbox.stdout_file]:
         if name is not None:

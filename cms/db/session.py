@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -27,21 +26,13 @@ interact with SQLAlchemy objects.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
-import psycopg2
 
-from sqlalchemy.orm import sessionmaker, scoped_session
+import psycopg2
 from sqlalchemy.engine.url import make_url
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 from cms import config
-
 from . import engine
 
 
@@ -55,7 +46,7 @@ ScopedSession = scoped_session(Session)
 # Session = sessionmaker(db, twophase=True)
 
 
-class SessionGen(object):
+class SessionGen:
     """This allows us to create handy local sessions simply with:
 
     with SessionGen() as session:

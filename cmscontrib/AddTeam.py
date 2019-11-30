@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2016 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -21,13 +20,6 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
 import gevent.monkey
@@ -37,10 +29,10 @@ import argparse
 import logging
 import sys
 
+from sqlalchemy.exc import IntegrityError
+
 from cms import utf8_decoder
 from cms.db import SessionGen, Team
-
-from sqlalchemy.exc import IntegrityError
 
 
 logger = logging.getLogger(__name__)

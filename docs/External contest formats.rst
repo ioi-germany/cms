@@ -65,6 +65,8 @@ The following are optional keys.
 
 - ``stop`` (integer; also accepted: ``fine``): the UNIX timestamp of the end of the contest (copied in the ``stop`` field); defaults to zero, meaning that contest times haven't yet been decided.
 
+- ``timezone`` (string): the timezone for the contest (e.g., "Europe/Rome").
+
 - ``per_user_time`` (integer): if set, the contest will be USACO-like (as explained in :ref:`configuringacontest_usaco-like-contests`); if unset, the contest will be traditional (not USACO-like).
 
 - ``token_*``: additional token parameters for the contest, see :ref:`configuringacontest_tokens` (the names of the parameters are the same as the internal names described there).
@@ -139,7 +141,7 @@ The task YAML files require the following keys.
 
 - ``n_input`` (integer): number of test cases to be evaluated for this task; the actual test cases are retrieved from the :ref:`task directory <externalcontestformats_task-directory>`.
 
-- ``score_mode``: the score mode for the task, as in :ref:`configuringacontest_score`; it can be ``max_tokened_last`` (for the legacy behavior), or ``max`` (for the modern behavior).
+- ``score_mode``: the score mode for the task, as in :ref:`configuringacontest_score`; it can be ``max_tokened_last``, ``max``, or ``max_subtask``.
 
 - ``token_mode``: the token mode for the task, as in :ref:`configuringacontest_tokens`; it can be ``disabled``, ``infinite`` or ``finite``; if this is not specified, the loader will try to infer it from the remaining token parameters (in order to retain compatibility with the past), but you are not advised to relay on this behavior.
 
@@ -147,7 +149,7 @@ The following are optional keys.
 
 - ``time_limit`` (float; also accepted: ``timeout``): the timeout limit for this task in seconds; defaults to no limitations.
 
-- ``memory_limit`` (integer; also accepted: ``memlimit``): the memory limit for this task in megabytes; defaults to no limitations.
+- ``memory_limit`` (integer; also accepted: ``memlimit``): the memory limit for this task in mibibytes; defaults to no limitations.
 
 - ``public_testcases`` (string; also accepted: ``risultati``): a comma-separated list of test cases (identified by their numbers, starting from 0) that are marked as public, hence their results are available to contestants even without using tokens. If the given string is equal to ``all``, then the importer will mark all testcases as public.
 

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2015 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -29,27 +28,17 @@ again should be idempotent.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
-
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
 import gevent.monkey
 gevent.monkey.patch_all()  # noqa
 
 import argparse
-import io
 import ipaddress
 import json
 import logging
 import os
 import sys
-
 from datetime import datetime, timedelta
 
 from sqlalchemy.types import \
@@ -57,14 +46,12 @@ from sqlalchemy.types import \
 from sqlalchemy.dialects.postgresql import ARRAY, CIDR, JSONB
 
 import cms.db as class_hook
-
 from cms import utf8_decoder
 from cms.db import version as model_version, Codename, Filename, \
-    FilenameSchema, FilenameSchemaArray, Digest
-from cms.db import SessionGen, Contest, Submission, SubmissionResult, \
-    UserTest, UserTestResult, PrintJob, init_db, drop_db, enumerate_files
+    FilenameSchema, FilenameSchemaArray, Digest, SessionGen, Contest, \
+    Submission, SubmissionResult, UserTest, UserTestResult, PrintJob, init_db, \
+    drop_db, enumerate_files
 from cms.db.filecacher import FileCacher
-
 from cmscommon.archive import Archive
 from cmscommon.datetime import make_datetime
 from cmscommon.digest import path_digest
@@ -131,7 +118,7 @@ def decode_value(type_, value):
             "Unknown SQLAlchemy column type: %s" % type_)
 
 
-class DumpImporter(object):
+class DumpImporter:
 
     """This service imports data from a directory that has been
     the target of a DumpExport. The process of exporting and
@@ -191,8 +178,8 @@ class DumpImporter(object):
             if self.load_model:
                 logger.info("Importing the contest from a JSON file.")
 
-                with io.open(os.path.join(self.import_dir,
-                                          "contest.json"), "rb") as fin:
+                with open(os.path.join(self.import_dir,
+                                       "contest.json"), "rb") as fin:
                     # TODO - Throughout all the code we'll assume the
                     # input is correct without actually doing any
                     # validations.  Thus, for example, we're not
@@ -243,14 +230,14 @@ class DumpImporter(object):
                 assert self.datas["_version"] == model_version
 
                 self.objs = dict()
-                for id_, data in iteritems(self.datas):
+                for id_, data in self.datas.items():
                     if not id_.startswith("_"):
                         self.objs[id_] = self.import_object(data)
-                for id_, data in iteritems(self.datas):
+                for id_, data in self.datas.items():
                     if not id_.startswith("_"):
                         self.add_relationships(data, self.objs[id_])
 
-                for k, v in list(iteritems(self.objs)):
+                for k, v in list(self.objs.items()):
 
                     # Skip submissions if requested
                     if self.skip_submissions and isinstance(v, Submission):
@@ -423,7 +410,7 @@ class DumpImporter(object):
                 setattr(obj, prp.key, list(self.objs[i] for i in val))
             elif isinstance(val, dict):
                 setattr(obj, prp.key,
-                        dict((k, self.objs[v]) for k, v in iteritems(val)))
+                        dict((k, self.objs[v]) for k, v in val.items()))
             else:
                 raise RuntimeError(
                     "Unknown RelationshipProperty value: %s" % type(val))
@@ -444,9 +431,9 @@ class DumpImporter(object):
 
         # First read the description.
         try:
-            with io.open(descr_path, 'rt', encoding='utf-8') as fin:
+            with open(descr_path, 'rt', encoding='utf-8') as fin:
                 description = fin.read()
-        except IOError:
+        except OSError:
             description = ''
 
         # Put the file.

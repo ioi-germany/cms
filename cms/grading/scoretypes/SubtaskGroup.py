@@ -6,7 +6,7 @@
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -339,7 +339,7 @@ class SubtaskGroup(ScoreType):
         # TODO Also show sample subtasks and detailed feedback in RWS?
 
         private_score = final_score
-        if self.parameters["feedback"] in ["full", "no"]:
+        if self.parameters["feedback"] in ["full", "no", "token"]:
             public_score = sample_score
         elif self.parameters["feedback"] == "partial":
             public_score = final_score
@@ -356,7 +356,7 @@ class SubtaskGroup(ScoreType):
         return (string, string): public score header, private score header
 
         """
-        if self.parameters["feedback"] in ["full", "no"]:
+        if self.parameters["feedback"] in ["full", "no", "token"]:
             public_score_header = "Sample score"
         elif self.parameters["feedback"] == "partial":
             public_score_header = "Partial feedback score"
@@ -364,7 +364,9 @@ class SubtaskGroup(ScoreType):
             raise Exception("Unknown feedback type '{}'".format(
                 self.parameters["feedback"]))
 
-        private_score_header = "Final score"
+        private_score_header = \
+            "Tokened score" if self.parameters["feedback"] == "token" \
+            else "Actual score"
 
         return public_score_header, private_score_header
 
@@ -476,7 +478,7 @@ class SubtaskGroup(ScoreType):
         See the same method in ScoreType for details.
 
         """
-        if self.parameters["feedback"] in ["full", "no"]:
+        if self.parameters["feedback"] in ["full", "no", "token"]:
             public_score, public_score_details = \
                 self._compute_score(submission_result, "sample")
         elif self.parameters["feedback"] == "partial":
@@ -640,8 +642,11 @@ class SubtaskGroup(ScoreType):
                 if subtasks[-1]["status"][0] <= 0:
                     subtasks_failed = True
 
+        score_precision = submission_info["score_precision"]
+
         def is_in(x, l):
-            return l[0] <= x <= l[1]
+            return round(l[0], score_precision) <= round(x, score_precision) \
+                                                <= round(l[1], score_precision)
 
         sample_score = self._compute_score(submission_result, "sample")[0]
         partial_feedback_score = self._compute_score(submission_result, "partial")[0]

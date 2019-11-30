@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,22 +18,14 @@
 
 """Tests for the ImportDataset script"""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import unittest
 
 # Needs to be first to allow for monkey patching the DB connection string.
 from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
 
 from cms.db import Dataset, SessionGen
-
-from cmscontrib.loaders.base_loader import TaskLoader
 from cmscontrib.ImportDataset import DatasetImporter
+from cmscontrib.loaders.base_loader import TaskLoader
 
 
 def fake_loader_factory(task, dataset):
@@ -59,7 +50,7 @@ def fake_loader_factory(task, dataset):
 class TestImportDataset(DatabaseMixin, unittest.TestCase):
 
     def setUp(self):
-        super(TestImportDataset, self).setUp()
+        super().setUp()
 
         # DB already contains a dataset.
         self.task = self.add_task()
@@ -74,7 +65,7 @@ class TestImportDataset(DatabaseMixin, unittest.TestCase):
 
     def tearDown(self):
         self.delete_data()
-        super(TestImportDataset, self).tearDown()
+        super().tearDown()
 
     @staticmethod
     def do_import(task, dataset, description):

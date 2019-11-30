@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -23,13 +22,6 @@
 """Task type for output only tasks.
 
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
 
 import logging
 
@@ -86,7 +78,7 @@ class OutputOnly(TaskType):
     testable = False
 
     def __init__(self, parameters):
-        super(OutputOnly, self).__init__(parameters)
+        super().__init__(parameters)
         self.output_eval = self.parameters[0]
 
     def get_compilation_commands(self, unused_submission_format):
@@ -107,7 +99,7 @@ class OutputOnly(TaskType):
     @staticmethod
     def _get_user_output_filename(job):
         return OutputOnly.USER_OUTPUT_FILENAME_TEMPLATE % \
-            job.operation["testcase_codename"]
+            job.operation.testcase_codename
 
     def compile(self, job, file_cacher):
         """See TaskType.compile."""

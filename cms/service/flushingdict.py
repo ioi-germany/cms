@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2016 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -18,14 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
-
 import logging
 
 import gevent
@@ -37,7 +28,7 @@ from cmscommon.datetime import monotonic_time
 logger = logging.getLogger(__name__)
 
 
-class FlushingDict(object):
+class FlushingDict:
     """A dict that periodically flushes its content to a callback.
 
     The dict flushes after a specified time since the latest entry
@@ -88,7 +79,7 @@ class FlushingDict(object):
         with self.d_lock:
             self.fd = self.d
             self.d = dict()
-        self.callback(list(iteritems(self.fd)))
+        self.callback(list(self.fd.items()))
         self.fd = dict()
 
     def __contains__(self, key):

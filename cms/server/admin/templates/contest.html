@@ -40,7 +40,7 @@
                                   All the allowed languages must have task support, for example in managed tasks."></span>
         Allowed programming languages
       </td>
-      <td>
+      <td class="wrapping-options">
         {% for lang in LANGUAGES %}
           <label><input type="checkbox" name="languages" value="{{ lang.name }}" {{ "checked" if lang.name in contest.languages else "" }}>{{ lang.name }}</label>
         {% endfor %}
@@ -99,6 +99,15 @@
       </td>
       <td>
         <input type="checkbox" id="allow_password_authentication" name="allow_password_authentication" {{ "checked" if contest.allow_password_authentication else "" }}/>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="info" title="If checked, contestants will be able to autonomously create a user account and a participation in the contest."></span>
+        <label for="allow_registration">Allow registration</label>
+      </td>
+      <td>
+        <input type="checkbox" id="allow_registration" name="allow_registration" {{ "checked" if contest.allow_registration else "" }}/>
       </td>
     </tr>
     <tr>

@@ -1,8 +1,64 @@
-{# This snippet shows a row of a submission table using the variable s as input #}
+{% import "macro/reevaluation_buttons.html" as macro_reevaluation_buttons %}
+{% import 'macro/pages.html' as macro_pages %}
 
-{% if shown_dataset is defined %}
-  {% set dataset = shown_dataset %}
+
+{% macro rows(admin, url, page_url, submissions, page, pages, dataset=none) -%}
+{#
+Render a table of submission data.
+
+admin (Admin): the logged in admin.
+url (Url): the URL instance referring to the root of AWS.
+page_url (Url): the URL instance referring to the page displaying the table.
+submissions ([Submissions]): the list of submissions to display in the table
+    (current page only).
+page (int): 0-based number of the current page.
+pages (int): total number of pages.
+dataset (Dataset|None): the dataset to show results for, or if not defined use
+    the active one.
+#}
+{% if pages == 0 %}
+<p>No submissions found.</p>
+
 {% else %}
+
+{{ macro_pages.selector(page_url, page, pages) }}
+
+<table class="bordered">
+  <thead>
+    <tr>
+      <th>Time</th>
+      <th>User</th>
+      <th>Task</th>
+      <th>Status</th>
+      <th>Files</th>
+      <th>Token</th>
+      <th>Official</th>
+      <th>Comment</th>
+      <th>Reevaluate</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in submissions|sort(attribute="timestamp")|reverse %}
+      {{ row(admin, url, s, dataset) }}
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{%- endmacro %}
+
+
+{% macro row(admin, url, s, dataset=None) -%}
+{#
+Render a table's row containing a submission data.
+
+admin (Admin): the logged in admin.
+url (Url): the URL instance referring to the root of AWS.
+s (Submission): the submission to render.
+dataset (Dataset|None): the dataset to show results for, or if not defined use
+    the active one.
+#}
+
+{% if dataset is none %}
   {% set dataset = s.task.active_dataset %}
 {% endif %}
 
@@ -72,7 +128,7 @@
       Scored ({{ sr.score }} / {{ max_score }})
       <div id="evaluation_{{ s.id }}" class="score_details" style="display: none;">
         {% if score_type is defined %}
-          {{ score_type.get_html_details(sr.score_details)|safe }}
+          {{ score_type.get_html_details(sr.score_details, FEEDBACK_LEVEL_FULL)|safe }}
         {% else %}
         [Cannot get score type - see logs]
         {% endif %}
@@ -113,9 +169,12 @@
     {{ s.short_comment }}
   </td>
   <td>
-    {{ ReevaluationButtons(
+    {{ macro_reevaluation_buttons.reevaluation_buttons(
+           admin.permission_all,
            url("submission", s.id, dataset.id),
            submission_id=s.id,
            dataset_id=dataset.id) }}
   </td>
 </tr>
+
+{%- endmacro %}

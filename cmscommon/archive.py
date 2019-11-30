@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2014-2015 William Di Luigi <williamdiluigi@gmail.com>
@@ -22,19 +21,11 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
-import io
 import os
 import shutil
 import tempfile
-import patoolib
 
+import patoolib
 from patoolib.util import PatoolError
 
 from cms import config
@@ -48,7 +39,7 @@ class ArchiveException(Exception):
     pass
 
 
-class Archive(object):
+class Archive:
     """Class to manage archives.
 
     This class has static methods to test, extract, and create
@@ -115,7 +106,7 @@ class Archive(object):
 
         """
         temp_file, temp_filename = tempfile.mkstemp(dir=config.temp_dir)
-        with io.open(temp_file, "wb") as temp_file:
+        with open(temp_file, "wb") as temp_file:
             temp_file.write(raw_data)
 
         try:
@@ -211,7 +202,7 @@ class Archive(object):
             # Unfortunately, patoolib does not expose an API to do this.
             raise NotImplementedError("Cannot read before unpacking.")
         else:
-            return io.open(os.path.join(self.temp_dir, file_path), "rb")
+            return open(os.path.join(self.temp_dir, file_path), "rb")
 
     def write(self, file_path, file_object):
         """Writes a file in the archive in place.

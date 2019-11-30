@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -25,24 +24,17 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 import time
 
 import gevent.lock
 
-from cms.io import Service, rpc_method
 from cms.db import SessionGen, Contest, enumerate_files
 from cms.db.filecacher import FileCacher, TombstoneError
 from cms.grading import JobException
-from cms.grading.tasktypes import get_task_type
 from cms.grading.Job import CompilationJob, EvaluationJob, JobGroup
+from cms.grading.tasktypes import get_task_type
+from cms.io import Service, rpc_method
 
 
 logger = logging.getLogger(__name__)

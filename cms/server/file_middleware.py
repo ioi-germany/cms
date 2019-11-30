@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -17,13 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 from werkzeug.exceptions import HTTPException, NotFound, ServiceUnavailable
 from werkzeug.wrappers import Response, Request
 from werkzeug.wsgi import responder, wrap_file
@@ -34,7 +26,7 @@ from cms.db.filecacher import FileCacher, TombstoneError
 SECONDS_IN_A_YEAR = 365 * 24 * 60 * 60
 
 
-class FileServerMiddleware(object):
+class FileServerMiddleware:
     """Intercept requests wanting to serve files and serve those files.
 
     Tornado's WSGI adapter contravenes the specification by buffering

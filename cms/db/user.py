@@ -1,9 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2015 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2015 William Di Luigi <williamdiluigi@gmail.com>
@@ -28,25 +27,18 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 from datetime import datetime, timedelta
 
+from sqlalchemy.dialects.postgresql import ARRAY, CIDR
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column, ForeignKey, CheckConstraint, \
     UniqueConstraint
 from sqlalchemy.types import Boolean, Integer, String, Unicode, DateTime, \
     Interval
-from sqlalchemy.orm import backref, relationship
 from sqlalchemy.dialects.postgresql import ARRAY, CIDR
 
 from cmscommon.crypto import generate_random_password, build_password
-
-from . import CastingArray, Codename, Base, Contest
+from . import CastingArray, Codename, Base, Admin, Contest
 
 
 class Group(Base):
@@ -204,8 +196,8 @@ class User(Base):
 
     participations = relationship(
         "Participation",
-        cascade = "all, delete-orphan",
-        passive_deletes = True,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
         back_populates="user")
 
 
@@ -429,6 +421,18 @@ class Message(Base):
         Participation,
         back_populates="messages")
 
+    # Admin that sent the message (or null if the admin has been later
+    # deleted). Admins only loosely "own" a message, so we do not back
+    # populate any field in Admin, nor we delete the message when the admin
+    # gets deleted.
+    admin_id = Column(
+        Integer,
+        ForeignKey(Admin.id,
+                   onupdate="CASCADE", ondelete="SET NULL"),
+        nullable=True,
+        index=True)
+    admin = relationship(Admin)
+
 
 class Question(Base):
     """Class to store a private question from the user to the
@@ -498,3 +502,15 @@ class Question(Base):
     participation = relationship(
         Participation,
         back_populates="questions")
+
+    # Latest admin to interact with the question (null if no interactions
+    # yet, or if the admin has been later deleted). Admins only loosely "own" a
+    # question, so we do not back populate any field in Admin, nor delete the
+    # question if the admin gets deleted.
+    admin_id = Column(
+        Integer,
+        ForeignKey(Admin.id,
+                   onupdate="CASCADE", ondelete="SET NULL"),
+        nullable=True,
+        index=True)
+    admin = relationship(Admin)

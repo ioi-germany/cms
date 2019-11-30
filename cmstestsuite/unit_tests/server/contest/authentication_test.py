@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -21,17 +20,10 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import ipaddress
 import unittest
 from datetime import timedelta
-from mock import patch
+from unittest.mock import patch
 
 # Needs to be first to allow for monkey patching the DB connection string.
 from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
@@ -48,15 +40,25 @@ from cmscommon.datetime import make_datetime
 class TestValidateLogin(DatabaseMixin, unittest.TestCase):
 
     def setUp(self):
-        super(TestValidateLogin, self).setUp()
+        super().setUp()
         self.timestamp = make_datetime()
+        self.add_contest()
         self.contest = self.add_contest(allow_password_authentication=True)
+        self.add_user(username="otheruser")
         self.user = self.add_user(
             username="myuser", password=build_password("mypass"))
         self.participation = self.add_participation(
             contest=self.contest, user=self.user)
 
     def assertSuccess(self, username, password, ip_address):
+        # We had an issue where due to a misuse of contains_eager we ended up
+        # with the wrong user attached to the participation. This only happens
+        # if the correct user isn't already in the identity map, which is what
+        # these lines trigger.
+        self.session.flush()
+        self.session.expire(self.user)
+        self.session.expire(self.contest)
+
         authenticated_participation, cookie = validate_login(
             self.session, self.contest, self.timestamp,
             username, password, ipaddress.ip_address(ip_address))
@@ -64,6 +66,8 @@ class TestValidateLogin(DatabaseMixin, unittest.TestCase):
         self.assertIsNotNone(authenticated_participation)
         self.assertIsNotNone(cookie)
         self.assertIs(authenticated_participation, self.participation)
+        self.assertIs(authenticated_participation.user, self.user)
+        self.assertIs(authenticated_participation.contest, self.contest)
 
     def assertFailure(self, username, password, ip_address):
         authenticated_participation, cookie = validate_login(
@@ -150,9 +154,11 @@ class TestValidateLogin(DatabaseMixin, unittest.TestCase):
 class TestAuthenticateRequest(DatabaseMixin, unittest.TestCase):
 
     def setUp(self):
-        super(TestAuthenticateRequest, self).setUp()
+        super().setUp()
         self.timestamp = make_datetime()
+        self.add_contest()
         self.contest = self.add_contest()
+        self.add_user(username="otheruser")
         self.user = self.add_user(
             username="myuser", password=build_password("mypass"))
         self.participation = self.add_participation(
@@ -176,10 +182,23 @@ class TestAuthenticateRequest(DatabaseMixin, unittest.TestCase):
         # autologin or thanks to the cookie) and return the cookie that should
         # be set (or None, if it should be cleared/left unset).
         # The arguments are the same as those of attempt_authentication.
+
+        # We had an issue where due to a misuse of contains_eager we ended up
+        # with the wrong user attached to the participation. This only happens
+        # if the correct user isn't already in the identity map, which is what
+        # these lines trigger.
+        self.session.flush()
+        self.session.expire(self.user)
+        self.session.expire(self.contest)
+
         authenticated_participation, cookie = \
             self.attempt_authentication(**kwargs)
+
         self.assertIsNotNone(authenticated_participation)
         self.assertIs(authenticated_participation, self.participation)
+        self.assertIs(authenticated_participation.user, self.user)
+        self.assertIs(authenticated_participation.contest, self.contest)
+
         return cookie
 
     def assertSuccessAndCookieRefreshed(self, **kwargs):
@@ -234,14 +253,7 @@ class TestAuthenticateRequest(DatabaseMixin, unittest.TestCase):
         # Cookies are of no use if one cannot login by password.
         self.contest.allow_password_authentication = False
         self.assertFailure()
-
-        # The cookie works with all methods as it holds the plaintext password.
         self.contest.allow_password_authentication = True
-        self.user.password = hash_password("mypass", method="bcrypt")
-        self.assertSuccessAndCookieRefreshed()
-
-        self.user.password = hash_password("mypass", method="plaintext")
-        self.assertSuccessAndCookieRefreshed()
 
         # Cookies contain the password, which is validated every time.
         self.user.password = build_password("newpass")

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -27,14 +26,6 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-import six
-
 import csv
 import io
 
@@ -42,7 +33,6 @@ from sqlalchemy.orm import joinedload
 
 from cms.db import Contest
 from cms.grading.scoring import task_score
-
 from .base import BaseHandler, require_permission
 
 
@@ -74,8 +64,7 @@ class RankingHandler(BaseHandler):
             total_score = 0.0
             partial = False
             for task in self.contest.tasks:
-                t_score, t_partial = task_score(p, task)
-                t_score = round(t_score, task.score_precision)
+                t_score, t_partial = task_score(p, task, rounded=True)
                 p.scores.append((t_score, t_partial))
                 total_score += t_score
                 partial = partial or t_partial
@@ -94,12 +83,7 @@ class RankingHandler(BaseHandler):
             self.set_header("Content-Disposition",
                             "attachment; filename=\"ranking.csv\"")
 
-            if six.PY3:
-                output = io.StringIO()  # untested
-            else:
-                # In python2 we must use this because its csv module does not
-                # support unicode input
-                output = io.BytesIO()
+            output = io.StringIO()  # untested
             writer = csv.writer(output)
 
             include_partial = True
@@ -140,10 +124,7 @@ class RankingHandler(BaseHandler):
                 if include_partial:
                     row.append("*" if partial else "")
 
-                if six.PY3:
-                    writer.writerow(row)  # untested
-                else:
-                    writer.writerow([s.encode("utf-8") for s in row])
+                writer.writerow(row)  # untested
 
             self.finish(output.getvalue())
         else:

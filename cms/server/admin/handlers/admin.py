@@ -1,8 +1,7 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2015 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2015-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,20 +21,11 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys
-
 import logging
 
 from cms.db import Admin
 from cmscommon.crypto import hash_password
 from cmscommon.datetime import make_datetime
-
 from .base import BaseHandler, SimpleHandler, require_permission
 
 
@@ -129,7 +119,7 @@ class AdminHandler(BaseHandler):
         admin = self.safe_get_item(Admin, admin_id)
 
         self.r_params = self.render_params()
-        self.r_params["admin"] = admin
+        self.r_params["admin_being_edited"] = admin
         self.render("admin.html", **self.r_params)
 
     @require_permission(BaseHandler.PERMISSION_ALL, self_allowed=True)
@@ -150,7 +140,7 @@ class AdminHandler(BaseHandler):
         # allowed because they are editing their own details, they can
         # only change a subset of the fields.
         if not self.current_user.permission_all:
-            for key in iterkeys(new_attrs):
+            for key in new_attrs.keys():
                 if key not in AdminHandler.SELF_MODIFIABLE_FIELDS:
                     del new_attrs[key]
         admin.set_attrs(new_attrs)

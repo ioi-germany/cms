@@ -1,12 +1,11 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013-2017 Luca Wehrstedt <luca.wehrstedt@gmail.com>
-# Copyright © 2014 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2014-2018 William Di Luigi <williamdiluigi@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -26,31 +25,16 @@ that saves the resources usage in that machine.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import PY3, iteritems
-
 import logging
 import os
 import re
+import sys
 import time
 from collections import defaultdict, deque
-if PY3:
-    from shlex import quote as shell_quote
-else:
-    from pipes import quote as shell_quote
+from shlex import quote as shell_quote
 
 import psutil
-
 from gevent import subprocess
-try:
-    from subprocess import DEVNULL  # py3k
-except ImportError:
-    DEVNULL = os.open(os.devnull, os.O_WRONLY)
 
 from cms import config, get_safe_shard, ServiceCoord
 from cms.io import Service, rpc_method
@@ -58,6 +42,8 @@ from cms.io import Service, rpc_method
 
 logger = logging.getLogger(__name__)
 
+
+BIN_PATH = os.path.dirname(sys.argv[0])
 
 B_TO_MB = 1024 * 1024
 
@@ -67,7 +53,7 @@ PSUTIL_PROC_ATTRS = \
     ["cmdline", "cpu_times", "create_time", "memory_info", "num_threads"]
 
 
-class ProcessMatcher(object):
+class ProcessMatcher:
     def __init__(self):
         # Running processes, lazily loaded.
         self._procs = None
@@ -87,7 +73,7 @@ class ProcessMatcher(object):
         if self._procs is None:
             self._procs = ProcessMatcher._get_interesting_running_processes()
         shards = self._procs.get(service.name, {})
-        for shard, proc in iteritems(shards):
+        for shard, proc in shards.items():
             if get_safe_shard(service.name, shard) == service.shard:
                 logger.debug("Found %s", service)
                 if cpu_times is not None:
@@ -152,7 +138,9 @@ class ProcessMatcher(object):
         if "python" not in cl_interpreter:
             return None
 
-        cl_service = re.search(r"\bcms([a-zA-Z]+)$", cmdline[start_index + 1])
+        cl_service = re.search(r"^%s([a-zA-Z]+)$" %
+                               re.escape(os.path.join(BIN_PATH, "cms")),
+                               cmdline[start_index + 1])
         if not cl_service:
             return None
         cl_service = cl_service.groups()[0]
@@ -258,7 +246,7 @@ class ResourceService(Service):
                 # it, since it causes no trouble.
                 logger.info("Restarting (%s, %s)...",
                             service.name, service.shard)
-                command = "cms%s" % service.name
+                command = os.path.join(BIN_PATH, "cms%s" % service.name)
                 if not config.installed:
                     command = os.path.join(
                         ".",
@@ -271,9 +259,8 @@ class ResourceService(Service):
                     args += ["-c", "ALL"]
                 try:
                     process = subprocess.Popen(args,
-                                               stdout=DEVNULL,
-                                               stderr=subprocess.STDOUT
-                                               )
+                                               stdout=subprocess.DEVNULL,
+                                               stderr=subprocess.STDOUT)
                 except Exception:
                     logger.error("Error for command line %s",
                                  shell_quote(" ".join(args)))
@@ -343,13 +330,11 @@ class ResourceService(Service):
         data["cpu"]["num_cpu"] = psutil.cpu_count()
         self._prev_cpu_times = cpu_times
 
-        # Memory. The following relations hold (I think... I only
-        # verified them experimentally on a swap-less system):
-        # * vmem.free == vmem.available - vmem.cached - vmem.buffers
-        # * vmem.total == vmem.used + vmem.free
-        # That means that cache & buffers are counted both in .used
-        # and in .available. We want to partition the memory into
-        # types that sum up to vmem.total.
+        # Memory. The following equality should hold, as per psutil >= 4.4:
+        #   vmem.total = vmem.used + vmem.buffers + vmem.cached + vmem.free
+        # Although psutil documentation describes the "used" field as
+        # platform-dependent, on Linux specifically it matches the output
+        # of the free(1) utility.
         vmem = psutil.virtual_memory()
         swap = psutil.swap_memory()
         data["memory"] = {
@@ -357,7 +342,7 @@ class ResourceService(Service):
             "ram_available": vmem.free / B_TO_MB,
             "ram_cached": vmem.cached / B_TO_MB,
             "ram_buffers": vmem.buffers / B_TO_MB,
-            "ram_used": (vmem.used - vmem.cached - vmem.buffers) / B_TO_MB,
+            "ram_used": vmem.used / B_TO_MB,
             "swap_total": swap.total / B_TO_MB,
             "swap_available": swap.free / B_TO_MB,
             "swap_used": swap.used / B_TO_MB,

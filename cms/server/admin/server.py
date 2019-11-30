@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -26,27 +25,18 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, itervalues
-
 import logging
 
 from sqlalchemy import func, not_
 
-from cmscommon.binary import hex_to_bin
 from cms import config, ServiceCoord, get_service_shards
 from cms.db import SessionGen, Dataset, Submission, SubmissionResult, Task
 from cms.io import WebService, rpc_method
 from cms.service import EvaluationService
-
+from cmscommon.binary import hex_to_bin
 from .authentication import AWSAuthMiddleware
-from .jinja2_toolbox import AWS_ENVIRONMENT
 from .handlers import HANDLERS
+from .jinja2_toolbox import AWS_ENVIRONMENT
 from .rpc_authorization import rpc_authorization_checker
 
 
@@ -68,7 +58,7 @@ class AdminWebServer(WebService):
             "rpc_auth": self.is_rpc_authorized,
             "xsrf_cookies": True,
         }
-        super(AdminWebServer, self).__init__(
+        super().__init__(
             config.admin_listen_port,
             HANDLERS,
             parameters,
@@ -186,12 +176,12 @@ class AdminWebServer(WebService):
             queries['total'] = total_query
 
             stats = {}
-            keys = list(iterkeys(queries))
+            keys = list(queries.keys())
             results = queries[keys[0]].union_all(
                 *(queries[key] for key in keys[1:])).all()
 
         for i, k in enumerate(keys):
             stats[k] = results[i][0]
-        stats['compiling'] += 2 * stats['total'] - sum(itervalues(stats))
+        stats['compiling'] += 2 * stats['total'] - sum(stats.values())
 
         return stats

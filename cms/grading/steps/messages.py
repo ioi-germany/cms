@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2015 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -26,20 +25,13 @@
 
 """Utilities to handle messages for contestants about execution outcomes."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 
 
 logger = logging.getLogger(__name__)
 
 
-class HumanMessage(object):
+class HumanMessage:
     """Represent a possible outcome message for a grading, to be presented
     to the contestants.
 
@@ -58,7 +50,7 @@ class HumanMessage(object):
         self.help_text = help_text
 
 
-class MessageCollection(object):
+class MessageCollection:
     """Represent a collection of messages, with error checking."""
 
     def __init__(self, messages=None):

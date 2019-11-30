@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -21,22 +20,14 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import unittest
 from collections import namedtuple
-
-from mock import Mock, patch
+from unittest.mock import Mock, patch
 
 # Needs to be first to allow for monkey patching the DB connection string.
-from cms import config
 from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
 
+from cms import config
 from cms.db import PrintJob
 from cms.server.contest.printing import accept_print_job, \
     UnacceptablePrintJob, PrintingDisabled
@@ -55,7 +46,7 @@ FILE_DIGEST = bytes_digest(FILE_CONTENT)
 class TestAcceptPrintJob(DatabaseMixin, unittest.TestCase):
 
     def setUp(self):
-        super(TestAcceptPrintJob, self).setUp()
+        super().setUp()
         self.file_cacher = Mock()
         self.file_cacher.put_file_content.return_value = FILE_DIGEST
         self.timestamp = make_datetime()
@@ -98,7 +89,7 @@ class TestAcceptPrintJob(DatabaseMixin, unittest.TestCase):
                                 MockHTTPFile("foo.txt", "other content")]})
 
     def test_storage_failure(self):
-        self.file_cacher.put_file_content.side_effect = IOError("sth wrong")
+        self.file_cacher.put_file_content.side_effect = OSError("sth wrong")
         with self.assertRaises(UnacceptablePrintJob):
             self.call({"file": [MockHTTPFile("myfile.pdf", FILE_CONTENT)]})
 

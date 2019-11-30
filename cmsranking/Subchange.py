@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2011-2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -16,13 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
 
 from cmsranking.Entity import Entity, InvalidData
 
@@ -76,9 +68,9 @@ class Subchange(Entity):
                     assert isinstance(i, str), \
                         "Field 'extra' isn't a list of strings"
         except KeyError as exc:
-            raise InvalidData("Field %s is missing" % exc.message)
+            raise InvalidData("Field %s is missing" % exc)
         except AssertionError as exc:
-            raise InvalidData(exc.message)
+            raise InvalidData(str(exc))
 
     def set(self, data):
         self.validate(data)

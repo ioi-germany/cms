@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -33,14 +32,6 @@ generality (there could be duplicate of missing files, omitted fields,
 etc.) and try to match them against the desired format for a submission.
 
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys
 
 import os.path
 
@@ -282,7 +273,7 @@ def match_files_and_language(given_files, given_language_name,
     elif len(matched_files_by_language) > 1:
         raise InvalidFilesOrLanguage(
             "there is more than one language that matches all the files: %r"
-            % set(iterkeys(matched_files_by_language)))
+            % set(matched_files_by_language.keys()))
 
     language, files = matched_files_by_language.popitem()
 

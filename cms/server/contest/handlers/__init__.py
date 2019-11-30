@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -9,7 +8,7 @@
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2015-2016 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2015-2018 William Di Luigi <williamdiluigi@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,16 +23,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
+from .communication import \
+    CommunicationHandler, \
+    QuestionHandler
 from .main import \
     LoginHandler, \
     LogoutHandler, \
+    RegistrationHandler, \
     StartHandler, \
     NotificationsHandler, \
     PrintingHandler, \
@@ -57,9 +53,6 @@ from .taskusertest import \
     UserTestDetailsHandler, \
     UserTestIOHandler, \
     UserTestFileHandler
-from .communication import \
-    CommunicationHandler, \
-    QuestionHandler
 
 
 HANDLERS = [
@@ -68,6 +61,7 @@ HANDLERS = [
 
     (r"/login", LoginHandler),
     (r"/logout", LogoutHandler),
+    (r"/register", RegistrationHandler),
     (r"/start", StartHandler),
     (r"/notifications", NotificationsHandler),
     (r"/printing", PrintingHandler),

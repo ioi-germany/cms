@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2016 William Di Luigi <williamdiluigi@gmail.com>
@@ -24,13 +23,6 @@ activating it).
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
 import gevent.monkey
@@ -44,7 +36,6 @@ import sys
 from cms import utf8_decoder
 from cms.db import Dataset, SessionGen
 from cms.db.filecacher import FileCacher
-
 from cmscontrib.importing import ImportDataError, task_from_db
 from cmscontrib.loaders import choose_loader, build_epilog
 
@@ -52,7 +43,7 @@ from cmscontrib.loaders import choose_loader, build_epilog
 logger = logging.getLogger(__name__)
 
 
-class DatasetImporter(object):
+class DatasetImporter:
     def __init__(self, path, description, loader_class):
         self.file_cacher = FileCacher()
         self.description = description

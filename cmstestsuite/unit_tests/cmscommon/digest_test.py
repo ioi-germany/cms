@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,19 +18,10 @@
 
 """Tests for the the digest module"""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import PY2
-
 import unittest
 
-from cmstestsuite.unit_tests.filesystemmixin import FileSystemMixin
-
 from cmscommon.digest import Digester, bytes_digest, path_digest
+from cmstestsuite.unit_tests.filesystemmixin import FileSystemMixin
 
 
 _EMPTY_DIGEST = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
@@ -41,7 +31,7 @@ _CONTENT_DIGEST = "040f06fd774092478d450774f5ba30c5da78acc8"
 class TestDigester(unittest.TestCase):
 
     def setUp(self):
-        super(TestDigester, self).setUp()
+        super().setUp()
         self.d = Digester()
 
     def test_success(self):
@@ -53,7 +43,6 @@ class TestDigester(unittest.TestCase):
         self.d.update(b"")
         self.assertEqual(self.d.digest(), _EMPTY_DIGEST)
 
-    @unittest.skipIf(PY2, "Python2 allows strings")
     def test_string(self):
         with self.assertRaises(TypeError):
             self.d.update("")
@@ -67,7 +56,6 @@ class TestBytesDigest(unittest.TestCase):
     def test_empty(self):
         self.assertEqual(bytes_digest(b""), _EMPTY_DIGEST)
 
-    @unittest.skipIf(PY2, "Python2 allows strings")
     def test_string(self):
         with self.assertRaises(TypeError):
             bytes_digest("")
@@ -76,7 +64,7 @@ class TestBytesDigest(unittest.TestCase):
 class TestPathDigest(FileSystemMixin, unittest.TestCase):
 
     def setUp(self):
-        super(TestPathDigest, self).setUp()
+        super().setUp()
         self.filename = "f"
         self.path = self.get_path(self.filename)
 
@@ -89,11 +77,10 @@ class TestPathDigest(FileSystemMixin, unittest.TestCase):
         self.assertEqual(path_digest(self.path), _EMPTY_DIGEST)
 
     def test_long(self):
-        content = b"0" * 1000000
+        content = b"0" * 1_000_000
         self.write_file(self.filename, content)
         self.assertEqual(path_digest(self.path), bytes_digest(content))
 
-    @unittest.skipIf(PY2, "Python2 uses IOError")
     def test_not_found(self):
         with self.assertRaises(FileNotFoundError):
             path_digest(self.path)

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -23,13 +22,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
 
 import logging
 
@@ -56,10 +48,11 @@ class PrintingDisabled(Exception):
 class UnacceptablePrintJob(Exception):
     """Raised when a printout request can't be accepted."""
 
-    def __init__(self, subject, text):
-        super(UnacceptablePrintJob, self).__init__(subject, text)
+    def __init__(self, subject, text, text_params=None):
+        super().__init__(subject, text, text_params)
         self.subject = subject
         self.text = text
+        self.text_params = text_params
 
 
 def accept_print_job(sql_session, file_cacher, participation, timestamp, files):
@@ -96,8 +89,8 @@ def accept_print_job(sql_session, file_cacher, participation, timestamp, files):
     if config.max_jobs_per_user <= old_count:
         raise UnacceptablePrintJob(
             N_("Too many print jobs!"),
-            N_("You have reached the maximum limit of at most %d print jobs.")
-            % config.max_jobs_per_user)
+            N_("You have reached the maximum limit of at most %d print jobs."),
+            config.max_jobs_per_user)
 
     if len(files) != 1 or "file" not in files or len(files["file"]) != 1:
         raise UnacceptablePrintJob(
@@ -110,7 +103,7 @@ def accept_print_job(sql_session, file_cacher, participation, timestamp, files):
     if len(data) > config.max_print_length:
         raise UnacceptablePrintJob(
             N_("File too big!"),
-            N_("Each file must be at most %d bytes long.") %
+            N_("Each file must be at most %d bytes long."),
             config.max_print_length)
 
     try:

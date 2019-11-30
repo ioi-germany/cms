@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -28,23 +27,14 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import ipaddress
 import json
 import logging
 import traceback
-
 from datetime import datetime, timedelta
 from functools import wraps
 
 import tornado.web
-
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import subqueryload
 
@@ -54,8 +44,8 @@ from cms.db import Admin, Contest, Participation, Question, Submission, \
 from cms.grading.scoretypes import get_score_type_class
 from cms.grading.tasktypes import get_task_type_class
 from cms.server import CommonRequestHandler, FileHandlerMixin
-from cmscommon.datetime import make_datetime
 from cmscommon.crypto import hash_password, parse_authentication
+from cmscommon.datetime import make_datetime
 
 
 logger = logging.getLogger(__name__)
@@ -283,7 +273,7 @@ class BaseHandler(CommonRequestHandler):
         """This method is executed at the beginning of each request.
 
         """
-        super(BaseHandler, self).prepare()
+        super().prepare()
         self.contest = None
 
     def render(self, template_name, **params):
@@ -443,10 +433,11 @@ class BaseHandler(CommonRequestHandler):
             try:
                 value = int(value)
             except:
-                raise ValueError("Can't cast %s to float." % value)
+                raise ValueError("Can't cast %s to int." % value)
             if not 0 < value:
                 raise ValueError("Invalid memory limit.")
-            dest["memory_limit"] = value
+            # AWS displays the value as MiB, but it is stored as bytes.
+            dest["memory_limit"] = value * 1024 * 1024
 
     def get_task_type(self, dest, name, params):
         """Parse the task type.

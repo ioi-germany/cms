@@ -26,15 +26,17 @@ from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header,
     yellow, box, side_by_side, pad_left, add_line_breaks, \
     remaining_line_length, indent
 from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
-from cmscontrib.gerpythonformat.Executable import ExitCodeException
-from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, merge_constraints
+from cmscontrib.gerpythonformat.Executable import ExitCodeException, \
+    InternalPython
+from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, \
+    merge_constraints
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
-    SCORE_MODE_MAX
+    SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK
 from cms import FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
 from cms.db import Task, Statement, Testcase, Dataset, \
     Attachment, Spoiler, Manager, Submission, File, \
     SubmissionResult
-from cms.grading.tasktypes import get_task_type
+from cms.grading.tasktypes import get_task_type, Communication
 from cms.grading.languagemanager import filename_to_language
 from cms.grading.Job import CompilationJob, EvaluationJob
 from cms.rules.Rule import JobRule, ZipRule
@@ -112,6 +114,12 @@ class Scope(object):
         """
 
         self.special_cases.append(descr)
+
+    def _collect_constraints(self):
+        res = {}
+        for c in self._get_constraints():
+            res = merge_constraints(res, c.uncompress())
+        return res
 
 
 class MySubtask(Scope):
@@ -250,12 +258,6 @@ class MyGroup(Scope):
         contained in this group.
         """
         return os.path.join(self.subtask.directory, self.name)
-
-    def _collect_constraints(self):
-        res = {}
-        for c in self._get_constraints():
-            res = merge_constraints(res, c.uncompress())
-        return res
 
     def _dummy_case(self, name):
         if name is None:
@@ -564,7 +566,7 @@ class TaskConfig(CommonConfig, Scope):
     This object is exported as a variable called :samp:`task`.
     """
 
-    def __init__(self, upstream, rules, name, num, feedback,
+    def __init__(self, upstream, rules, name, num, feedback, score_mode,
                  ignore_latex=False, minimal=False):
         super(TaskConfig, self).__init__(rules, ignore_latex)
         self.no_tokens()
@@ -619,6 +621,10 @@ class TaskConfig(CommonConfig, Scope):
         self.exported["token_equ"] = self.upstream.token_equ_fp
         self.exported["arbitrary"] = "arbitrary"
 
+        def empty_output_generator(*args, **kwargs):
+            pass
+        self.exported["empty"] = InternalPython(empty_output_generator)
+
         # Get data from upstream, but not the other way round
         self.inheriting = True
         self.bequeathing = False
@@ -632,8 +638,11 @@ class TaskConfig(CommonConfig, Scope):
         else:
             self._feedback_level_restricted()
 
+        if self.feedback == "token":
+            self.tokens(*tuple(feedback[2:]))
+
         # Score mode
-        self._score_mode = None
+        self._score_mode = score_mode
 
         # Only compile statement (and hopefully everything necessary for this)
         self.minimal = minimal
@@ -648,11 +657,6 @@ class TaskConfig(CommonConfig, Scope):
         with header("Loading task {}".format(self.name), depth=2):
             super(TaskConfig, self)._readconfig(filename)
 
-        # Are we allowed to use tokens?
-        if self.token_mode != "disabled" and \
-           self.upstream.token_mode != "disabled":
-            self.feedback = "token"
-
         print_msg("Creating test case zip files")
         # Automatically make a ZIP file containing the saved test cases
         self._makesavedzip()
@@ -663,6 +667,37 @@ class TaskConfig(CommonConfig, Scope):
 
         if self.tasktype is None:
             raise Exception("You have to specify a task type")
+
+    def curr_scope(self):
+        if len(self.group_stack) > 0:
+            return self.group_stack[-1]
+        elif len(self.subtask_stack) > 0:
+            return self.subtask_stack[-1]
+        else:
+            return self
+
+    @exported_function
+    def get_constraint(self, name):
+        return self.curr_scope()._collect_constraints()[name]
+
+    @exported_function
+    def get_constraint_lower(self, name):
+        return self.get_constraint(name)[0]
+
+    @exported_function
+    def get_constraint_upper(self, name):
+        return self.get_constraint(name)[1]
+
+    @exported_function
+    def get_constraint_value(self, name):
+        l = self.get_constraint_lower(name)
+        u = self.get_constraint_upper(name)
+        
+        if l == u:
+            return l
+        else:
+            raise ValueError("calling get_constraint_value although lower and "
+                             "upper do not agree")
 
     # Supplement helpers
 
@@ -681,7 +716,7 @@ class TaskConfig(CommonConfig, Scope):
         s += "void load_constraints() {\n"
         for var, ran in iteritems(constraints):
             s += '\tput_integral_constraint("{}", {}, {});\n'.\
-                     format(var.val, cppify(ran[0]), cppify(ran[1]))
+                     format(var, cppify(ran[0]), cppify(ran[1]))
         for desc in self.current_group._get_special_cases():
             s += '\tadd_special_case("{}");\n'.format(desc)
         s += "}\n"
@@ -874,10 +909,7 @@ class TaskConfig(CommonConfig, Scope):
                 self.managers["%slib.pas" % self.name] = \
                     os.path.join(self.wdir, "lib.pas")
         self.managers["manager"] = manager.get_path()
-        compilation_param = "alone"
-        if stub:
-            compilation_param = "grader"
-        self.tasktypeparameters = ([compilation_param, 1])
+        self.tasktypeparameters = ([1, "stub" if stub else "alone", "fifo_io"])
 
     @exported_function
     def output_generator(self, s):
@@ -1232,32 +1264,10 @@ class TaskConfig(CommonConfig, Scope):
     def _has_restricted_feedback_level(self):
         return self._feedback_level == FEEDBACK_LEVEL_RESTRICTED
 
-    @exported_function
-    def score_mode_max_tokened_last(self):
-        """
-        The score for a task will be the maximum of the score of all
-        tokened submissions and the last submission.
-
-        This is the default for all tasks without full feedback.
-
-        """
-        self._score_mode = SCORE_MODE_MAX_TOKENED_LAST
-
-    @exported_function
-    def score_mode_max(self):
-        """
-        The score for a task will be the maximum of the score of all
-        submissions.
-
-        This is the default for all tasks with full feedback.
-
-        """
-        self._score_mode = SCORE_MODE_MAX
-
     def score_mode(self):
         if self._score_mode is None:
             if self.feedback == "full":
-                return SCORE_MODE_MAX
+                return SCORE_MODE_MAX_SUBTASK
             else:
                 return SCORE_MODE_MAX_TOKENED_LAST
         else:
@@ -1434,7 +1444,7 @@ class TaskConfig(CommonConfig, Scope):
                       score_type="SubtaskGroup",
                       score_type_parameters=score_type_parameters)
         ddb.time_limit = float(self._timelimit)
-        ddb.memory_limit = self._memorylimit
+        ddb.memory_limit = self._memorylimit * 1024 * 1024
 
         # Add test cases
         for c in self.cases:
@@ -1471,7 +1481,7 @@ class TaskConfig(CommonConfig, Scope):
         for s in self.testsubmissions:  # submissions are saved because they
                                         # are referenced through the user
                                         # object
-            sdb = self._makesubmission(s, pdb, tdb)
+            sdb = self._makesubmission(s, pdb, tdb, official=False)
             # dummy id, the correct value is inserted by GerImporter.py
             sdb.task_id = 0
             sdb.task = tdb
@@ -1510,7 +1520,7 @@ class TaskConfig(CommonConfig, Scope):
 
         return sdbs
 
-    def _makesubmission(self, submission, participation, tdb):
+    def _makesubmission(self, submission, participation, tdb, official=True):
         """
         Create and return a test submission database object.
 
@@ -1520,6 +1530,9 @@ class TaskConfig(CommonConfig, Scope):
                                        participation
 
         tdb (Task): database object for the task
+
+        official (boolean): whether this submission is official (i.e. counts
+                            towards the score)
 
         return (Submission): database object for the submission
 
@@ -1576,7 +1589,8 @@ class TaskConfig(CommonConfig, Scope):
             timestamp=datetime.utcnow(),
             language=submission_lang,
             participation=participation,
-            comment="%s" % (", ".join(os.path.basename(f) for f in files)))
+            comment="%s" % (", ".join(os.path.basename(f) for f in files)),
+            official=official)
         sdb.task = tdb
         sdb.timestamp = datetime.utcnow()
         sdb.language = submission_lang
@@ -1594,7 +1608,7 @@ class TaskConfig(CommonConfig, Scope):
 
         # Unit tests
         def m_abs(rel):
-            return max(int(rel * self._memorylimit), 1)
+            return max(int(rel * self._memorylimit * 1024 * 1024), 1)
 
         def t_abs(rel):
             return float(rel * self._timelimit)
@@ -1615,7 +1629,8 @@ class TaskConfig(CommonConfig, Scope):
              "expected_partial_feedback_score_info": submission.partial_feedback_score_info,
              "expected_final_score": submission.score,
              "expected_final_score_info": submission.score_info,
-             "task_name": self.name}, sort_keys=True)
+             "task_name": self.name,
+             "score_precision": tdb.score_precision}, sort_keys=True)
 
         return sdb
 
@@ -1735,8 +1750,16 @@ class TaskConfig(CommonConfig, Scope):
             print()
 
         if compile_ok:
+            submission_info = json.loads(sdb.additional_info)
+            score_precision = sdb.task.score_precision
+
             def print_score_info(prefix, name):
                 score = details[prefix + "_score"]
+                rounded_score = round(score, score_precision)
+                
+                if score != rounded_score:
+                    score = "{} ({})".format(rounded_score, score)
+
                 if details[prefix + "_score_okay"]:
                     score = green(score)
                 else:

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -28,21 +27,12 @@ of the old supported versions to the current one.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import PY3
-
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
 import gevent.monkey
 gevent.monkey.patch_all()  # noqa
 
 import argparse
-import io
 import json
 import logging
 import os
@@ -50,8 +40,8 @@ import shutil
 import sys
 
 from cms import utf8_decoder
-from cmscommon.archive import Archive
 from cms.db import version as model_version
+from cmscommon.archive import Archive
 
 
 logger = logging.getLogger(__name__)
@@ -101,7 +91,7 @@ def main():
             "CMS is able to understand.")
         return 1
 
-    with io.open(path, 'rb') as fin:
+    with open(path, 'rb') as fin:
         data = json.load(fin)
 
     # If no "_version" field is found we assume it's a v1.0
@@ -146,12 +136,8 @@ def main():
 
     assert data["_version"] == to_version
 
-    if PY3:
-        with io.open(path, 'wt', encoding="utf-8") as fout:
-            json.dump(data, fout, indent=4, sort_keys=True)
-    else:
-        with io.open(path, 'wb') as fout:
-            json.dump(data, fout, indent=4, sort_keys=True)
+    with open(path, 'wt', encoding="utf-8") as fout:
+        json.dump(data, fout, indent=4, sort_keys=True)
 
     if archive is not None:
         # Keep the old archive, just rename it

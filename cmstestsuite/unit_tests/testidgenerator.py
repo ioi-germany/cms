@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2015-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,13 +18,6 @@
 
 """Utilities to generate "unique" test ids."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import random
 
 from cmscommon.digest import bytes_digest
@@ -34,7 +26,7 @@ from cmscommon.digest import bytes_digest
 def unique_long_id():
     """Return a unique id of type long."""
     if not hasattr(unique_long_id, "id"):
-        unique_long_id.id = random.randint(0, 1000000000)
+        unique_long_id.id = random.randint(0, 1_000_000_000)
     unique_long_id.id += 1
     return unique_long_id.id
 

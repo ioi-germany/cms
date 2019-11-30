@@ -1,13 +1,13 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2015 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2018 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -26,20 +26,12 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 
 import tornado.web
 
 from cms.db import Contest, Question, Participation
 from cmscommon.datetime import make_datetime
-
 from .base import BaseHandler, require_permission
 
 
@@ -102,6 +94,7 @@ class QuestionReplyHandler(BaseHandler):
         question.reply_timestamp = question.last_action
         question.reply_source = "web"
         question.ignored = False
+        question.admin = self.current_user
 
         if self.try_commit():
             logger.info("Reply sent to user %s in contest %s for "
@@ -136,6 +129,7 @@ class QuestionIgnoreHandler(BaseHandler):
         question.reply_source = "web"
         question.reply_subject = None
         question.reply_text = None
+        question.admin = self.current_user
 
         if self.try_commit():
             logger.info("Question '%s' by user %s in contest %s has "
@@ -143,6 +137,42 @@ class QuestionIgnoreHandler(BaseHandler):
                         question.subject,
                         question.participation.user.username,
                         question.participation.contest.name,
-                        ["unignored", "ignored"][should_ignore])
+                        "ignored" if should_ignore else "unignored")
+
+        self.redirect(ref)
+
+
+class QuestionClaimHandler(BaseHandler):
+    """Called when the manager chooses to claim or unclaim a question."""
+
+    @require_permission(BaseHandler.PERMISSION_MESSAGING)
+    def post(self, contest_id, question_id):
+        ref = self.url("contest", contest_id, "questions")
+        question = self.safe_get_item(Question, question_id)
+        self.contest = self.safe_get_item(Contest, contest_id)
+
+        # Protect against URLs providing incompatible parameters.
+        if self.contest is not question.participation.contest:
+            raise tornado.web.HTTPError(404)
+
+        # Can claim/unclaim only a question not ignored or answered.
+        if question.ignored or question.reply_timestamp is not None:
+            raise tornado.web.HTTPError(405)
+
+        should_claim = self.get_argument("claim", "no") == "yes"
+
+        # Commit the change.
+        if should_claim:
+            question.admin = self.current_user
+        else:
+            question.admin = None
+        if self.try_commit():
+            logger.info("Question '%s' by user %s in contest %s has "
+                        "been %s by %s",
+                        question.subject,
+                        question.participation.user.username,
+                        question.participation.contest.name,
+                        "claimed" if should_claim else "unclaimed",
+                        self.current_user.name)
 
         self.redirect(ref)

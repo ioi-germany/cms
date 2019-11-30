@@ -23,7 +23,7 @@
 \lhead{}
 
 \makeatletter
-\def\sthelper#1#2{{\sffamily\bfseries \tSubtask\ #1 (#2 \ifnum#2=1\tPoint\else\tPoints\fi).\enspace}}
+\def\sthelper#1#2{{\sffamily\bfseries \tSubtask\ #1 ($\symbf{#2}$ \ifnum#2=1\tPoint\else\tPoints\fi).\enspace}}
 \newcount\stcount
 \stcount=0
 \def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -18,14 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Tests for the step utils."""
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import assertRegex
 
 import unittest
 
@@ -46,7 +37,7 @@ TWO_COMMANDS = [["test", "command", "1"], ["command", "2"]]
 class TestGenericStep(unittest.TestCase):
 
     def setUp(self):
-        super(TestGenericStep, self).setUp()
+        super().setUp()
         self.sandbox = FakeIsolateSandbox(None)
 
     def test_single_command_success(self):
@@ -125,7 +116,7 @@ class TestGenericStep(unittest.TestCase):
         self.sandbox.fake_execute_data(
             True, b"o1", b"e1", 0.1, 0.5, 1000, "OK")
         self.sandbox.fake_execute_data(
-            True, b"o2", b"e2", 1.0, 5.0, 10000, "OK")
+            True, b"o2", b"e2", 1.0, 5.0, 10_000, "OK")
 
         stats = generic_step(self.sandbox, TWO_COMMANDS, "name",
                              collect_output=True)
@@ -135,7 +126,7 @@ class TestGenericStep(unittest.TestCase):
         # Stats are the combination of the two.
         self.assertEqual(stats, get_stats(1.1,  # sum
                                           5.5,  # sum
-                                          10000 * 1024,  # max
+                                          10_000 * 1024,  # max
                                           Sandbox.EXIT_OK,
                                           stdout="o1\n===\no2",
                                           stderr="e1\n===\ne2"))
@@ -144,7 +135,7 @@ class TestGenericStep(unittest.TestCase):
         self.sandbox.fake_execute_data(
             True, b"o1", b"e1", 0.1, 0.5, 1000, "RE")
         self.sandbox.fake_execute_data(
-            True, b"o2", b"e2", 1.0, 5.0, 10000, "OK")
+            True, b"o2", b"e2", 1.0, 5.0, 10_000, "OK")
 
         stats = generic_step(self.sandbox, TWO_COMMANDS, "name",
                              collect_output=True)
@@ -160,7 +151,7 @@ class TestGenericStep(unittest.TestCase):
         self.sandbox.fake_execute_data(
             False, b"o1", b"e1", 0.1, 0.5, 1000, "XX")
         self.sandbox.fake_execute_data(
-            True, b"o2", b"e2", 1.0, 5.0, 10000, "OK")
+            True, b"o2", b"e2", 1.0, 5.0, 10_000, "OK")
 
         stats = generic_step(self.sandbox, TWO_COMMANDS, "name")
 
@@ -179,8 +170,8 @@ class TestGenericStep(unittest.TestCase):
                              collect_output=True)
 
         # UTF-8 invalid parts are replaced with funny question marks (\uFFFD).
-        assertRegex(self, stats["stdout"], "^o.*1$")
-        assertRegex(self, stats["stderr"], "^e.*2$")
+        self.assertRegex(stats["stdout"], "^o.*1$")
+        self.assertRegex(stats["stderr"], "^e.*2$")
 
 
 if __name__ == "__main__":

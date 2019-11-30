@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,14 +18,6 @@
 
 """Tests for parameter types."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import PY2
-
 import unittest
 
 from tornado.web import MissingArgumentError
@@ -35,7 +26,7 @@ from cms.grading.ParameterTypes import ParameterTypeString, \
     ParameterTypeInt, ParameterTypeChoice, ParameterTypeCollection
 
 
-class FakeHandler(object):
+class FakeHandler:
     """Fake handler with a static set of arguments."""
 
     def __init__(self, arguments):
@@ -51,7 +42,7 @@ class TestParameterTypeString(unittest.TestCase):
     """Test the class ParameterTypeString."""
 
     def setUp(self):
-        super(TestParameterTypeString, self).setUp()
+        super().setUp()
         self.p = ParameterTypeString("name", "shortname", "description")
 
     def test_validate_success(self):
@@ -64,7 +55,6 @@ class TestParameterTypeString(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.p.validate(["asd"])
 
-    @unittest.skipIf(PY2, "In Python2 bytes is a string type")
     def test_validate_failure_bytes(self):
         with self.assertRaises(ValueError):
             self.p.validate(b"asd")
@@ -90,7 +80,7 @@ class TestParameterTypeInt(unittest.TestCase):
     """Test the class ParameterTypeInt."""
 
     def setUp(self):
-        super(TestParameterTypeInt, self).setUp()
+        super().setUp()
         self.p = ParameterTypeInt("name", "shortname", "description")
 
     def test_validate_success(self):
@@ -129,7 +119,7 @@ class TestParameterTypeChoice(unittest.TestCase):
     """Test the class ParameterTypeChoice."""
 
     def setUp(self):
-        super(TestParameterTypeChoice, self).setUp()
+        super().setUp()
         self.p = ParameterTypeChoice("name", "shortname", "description", {
             "c1": "First choice",
             "c2": "Second choice",
@@ -166,7 +156,7 @@ class TestParameterTypeCollection(unittest.TestCase):
     """Test the class ParameterTypeCollection."""
 
     def setUp(self):
-        super(TestParameterTypeCollection, self).setUp()
+        super().setUp()
         self.p = ParameterTypeCollection("name", "shortname", "description", [
             ParameterTypeInt("name0", "shortname0", "desc0"),
             ParameterTypeString("name1", "shortname1", "desc1"),

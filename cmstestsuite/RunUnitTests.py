@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2013-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -18,21 +17,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import argparse
-import io
+import datetime
 import logging
 import os
 import re
-import sys
 import subprocess
-import datetime
+import sys
 
 from cms import utf8_decoder
 from cmstestsuite import CONFIG, TestException, sh
@@ -90,8 +81,8 @@ def run_unittests(test_list):
         results += " %s.%s\n" % (path, filename)
 
     if failures:
-        with io.open(FAILED_UNITTEST_FILENAME,
-                     "wt", encoding="utf-8") as failed_filename:
+        with open(FAILED_UNITTEST_FILENAME,
+                  "wt", encoding="utf-8") as failed_filename:
             for path, filename in failures:
                 failed_filename.write("%s %s\n" % (path, filename))
         results += "\n"
@@ -111,9 +102,9 @@ def load_test_list_from_file(filename):
     if not os.path.exists(filename):
         return []
     try:
-        lines = io.open(filename, "rt", encoding="utf-8").readlines()
-        return [line.strip().split(" ") for line in lines]
-    except (IOError, OSError) as error:
+        with open(filename, "rt", encoding="utf-8") as f:
+            return [line.strip().split(" ") for line in f.readlines()]
+    except OSError as error:
         print("Failed to read test list. %s." % error)
         return None
 
@@ -185,7 +176,7 @@ def main():
     try:
         git_root = subprocess.check_output(
             "git rev-parse --show-toplevel", shell=True,
-            stderr=io.open(os.devnull, "wb")).decode('utf8').strip()
+            stderr=subprocess.DEVNULL).decode('utf8').strip()
     except subprocess.CalledProcessError:
         print("Please run the unit tests from the git repository.")
         return 1

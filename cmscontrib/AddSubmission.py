@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2015-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -20,14 +19,6 @@
 """Utility to submit a solution for a user.
 
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, iteritems
 
 import argparse
 import logging
@@ -67,7 +58,7 @@ def language_from_submitted_files(files):
     """
     # TODO: deduplicate with the code in SubmitHandler.
     language = None
-    for filename in iterkeys(files):
+    for filename in files.keys():
         this_language = filename_to_language(files[filename])
         if this_language is None and ".%l" in filename:
             raise ValueError(
@@ -145,7 +136,7 @@ def add_submission(contest_id, username, task_name, timestamp, files):
         # Create objects in the DB.
         submission = Submission(make_datetime(timestamp), language_name,
                                 participation=participation, task=task)
-        for filename, digest in iteritems(file_digests):
+        for filename, digest in file_digests.items():
             session.add(File(filename, digest, submission=submission))
         session.add(submission)
         session.commit()

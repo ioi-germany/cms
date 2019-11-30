@@ -1,8 +1,7 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2016-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2016-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,13 +18,6 @@
 
 """Python programming language, version 2, definition."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import os
 
 from cms.grading import CompiledLanguage
@@ -41,6 +33,8 @@ class Python2CPython(CompiledLanguage):
 
     """
 
+    MAIN_FILENAME = "__main__.pyc"
+
     @property
     def name(self):
         """See Language.name."""
@@ -55,11 +49,27 @@ class Python2CPython(CompiledLanguage):
                                  source_filenames, executable_filename,
                                  for_evaluation=True):
         """See Language.get_compilation_commands."""
-        py_command = ["/usr/bin/python2", "-m", "py_compile",
-                      source_filenames[0]]
-        mv_command = ["/bin/mv", "%s.pyc" % os.path.splitext(os.path.basename(
-                      source_filenames[0]))[0], executable_filename]
-        return [py_command, mv_command]
+        zip_filename = "%s.zip" % executable_filename
+
+        commands = []
+        files_to_package = []
+        commands.append(["/usr/bin/python2", "-m", "compileall", "."])
+        for idx, source_filename in enumerate(source_filenames):
+            basename = os.path.splitext(os.path.basename(source_filename))[0]
+            pyc_filename = "%s.pyc" % basename
+            # The file with the entry point must be in first position.
+            if idx == 0:
+                commands.append(["/bin/mv", pyc_filename, self.MAIN_FILENAME])
+                files_to_package.append(self.MAIN_FILENAME)
+            else:
+                files_to_package.append(pyc_filename)
+
+        # zip does not support writing to a file without extension.
+        commands.append(["/usr/bin/zip", "-r", zip_filename]
+                        + files_to_package)
+        commands.append(["/bin/mv", zip_filename, executable_filename])
+
+        return commands
 
     def get_evaluation_commands(
             self, executable_filename, main=None, args=None):

@@ -3,6 +3,7 @@
  * Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  * Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
+ * Copyright © 2018 Gregor Eesmaa <gregoreesmaa1@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -52,11 +53,11 @@ CMS.AWSUtils = function(url_root, timestamp,
 CMS.AWSUtils.create_url_builder = function(url_root) {
     return function() {
         var url = url_root;
-        for (let component of arguments) {
+        for (var i = 0; i < arguments.length; ++i) {
             if (url.substr(-1) != "/") {
                 url += "/";
             }
-            url += encodeURIComponent(component);
+            url += encodeURIComponent(arguments[i]);
         }
         return url;
     };
@@ -312,6 +313,121 @@ CMS.AWSUtils.prototype.close_notification = function(item) {
 
 
 /**
+ * Provides table row comparator for specified column and order.
+ */
+function get_table_row_comparator(column_idx, numeric, ascending) {
+    return function(a, b) {
+        var valA = $(a).children("td").eq(column_idx).text();
+        var valB = $(b).children("td").eq(column_idx).text();
+        var result = numeric
+            ? Number(valA) - Number(valB)
+            : valA.localeCompare(valB);
+        return ascending ? -result : result;
+    }
+}
+
+
+/**
+ * Sorts specified table by specified column in specified order.
+ */
+CMS.AWSUtils.sort_table = function(table, column_idx, ascending) {
+    var initial_column_idx = table.data("initial_sort_column_idx");
+    var ranks_column = table.data("ranks_column");
+    column_idx += ranks_column ? 1 : 0;
+    var table_rows = table
+        .children("tbody")
+        .children("tr");
+    var column_header = table
+        .children("thead")
+        .children("tr")
+        .children("th")
+        .eq(column_idx);
+    var settings = (column_header.attr("data-sort-settings") || "").split(" ");
+
+    var numeric = settings.indexOf("numeric") >= 0;
+
+    // If specified, flip column's natural order, e.g. due to meaning of values.
+    if (settings.indexOf("reversed") >= 0) {
+        ascending = !ascending;
+    }
+
+    // Normalize column index, converting negative to positive from the end.
+    column_idx = column_header.index();
+
+    // Reassign arrows to headers
+    table.find(".column-sort").html("&varr;");
+    column_header.find(".column-sort").html(ascending ? "&uarr;" : "&darr;");
+
+    // Do the sorting, by initial column and then by selected column.
+    table_rows
+        .sort(get_table_row_comparator(initial_column_idx, numeric, ascending))
+        .sort(get_table_row_comparator(column_idx, numeric, ascending))
+        .each(function(idx, row) {
+            table.children("tbody").append(row)
+        });
+
+    if (ranks_column) {
+        table_rows.each(function(idx, row) {
+            $(row).children("td").first().text(idx + 1)
+        });
+    }
+};
+
+
+/**
+ * Makes table sortable, adding ranks column and sorting buttons in header.
+ */
+CMS.AWSUtils.init_table_sort = function(table, ranks_column,
+                                        initial_column_idx,
+                                        initial_ascending) {
+    table.addClass("sortable");
+    var table_column_headers = table
+        .children("thead")
+        .children("tr");
+    var table_rows = table
+        .children("tbody")
+        .children("tr");
+
+    // Normalize column index, converting negative to positive from the end.
+    initial_column_idx = table_column_headers
+        .children("th")
+        .eq(initial_column_idx)
+        .index();
+
+    table.data("ranks_column", ranks_column);
+    table.data("initial_sort_column_idx", initial_column_idx);
+
+    // Declaring sort settings.
+    var previous_column_idx = initial_column_idx;
+    var ascending = initial_ascending;
+
+    // Add sorting indicators to column headers
+    table_column_headers
+        .children("th")
+        .each(function(column_idx, header) {
+            $("<a/>", {
+                href: "#",
+                class: "column-sort",
+                click: function() {
+                    ascending = !ascending && previous_column_idx == column_idx;
+                    previous_column_idx = column_idx;
+                    CMS.AWSUtils.sort_table(table, column_idx, ascending);
+                }
+            }).appendTo(header);
+        });
+
+    // Add ranks column
+    if (ranks_column) {
+        table_column_headers.prepend("<th>#</th>");
+        table_rows.prepend("<td></td>");
+    }
+
+    // Do initial sorting
+    CMS.AWSUtils.sort_table(table, initial_column_idx, initial_ascending);
+};
+
+
+/**
  * Return a string representation of the number with two digits.
  *
  * n (int): a number with one or two digits.
@@ -329,8 +445,10 @@ CMS.AWSUtils.prototype.two_digits = function(n) {
 
 /**
  * Update the remaining time showed in the "remaining" div.
+ *
+ * timer (int): handle for the timer that called this function, or -1 if none
  */
-CMS.AWSUtils.prototype.update_remaining_time = function() {
+CMS.AWSUtils.prototype.update_remaining_time = function(timer = -1) {
     // We assume this.phase always is the correct phase (since this
     // method also refreshes the page when the phase changes).
     var relevant_timestamp = null;
@@ -360,8 +478,8 @@ CMS.AWSUtils.prototype.update_remaining_time = function() {
     var countdown_sec =
         relevant_timestamp - this.timestamp - (now - this.first_date) / 1000;
     if (countdown_sec <= 0) {
+        clearInterval(timer);
         location.reload();
-        return;
     }
 
     $("#remaining_text").text(text);

@@ -1,3 +1,5 @@
+{% import "macro/reevaluation_buttons.html" as macro_reevaluation_buttons %}
+
 {% extends "base.html" %}
 
 {% block core %}
@@ -122,6 +124,18 @@
           {% endif %}
         </td>
       </tr>
+      {% if status == SubmissionResult.SCORED and st is defined %}
+      <tr>
+        <td>Score as seen by user</td>
+        <td>
+          {% if s.token is not none %}
+            {{ st.format_score(sr.score, st.max_score, sr.score_details, s.task.score_precision) }}
+          {% else %}
+            {{ st.format_score(sr.public_score, st.max_public_score, sr.public_score_details, s.task.score_precision) }}
+          {% endif %}
+        </td>
+      </tr>
+      {% endif %}
       {% if sr is not none %}
       <tr>
         <td>Failures during compilation</td>
@@ -146,13 +160,14 @@
       </tr>
       <tr>
         <td>Max memory used</td>
-        <td>{% if m is not none %}{{ m // (1024 ** 2) }} MiB{% else %}N/A{% endif %}</td>
+        <td>{% if m is not none %}{{ m // (1024 * 1024) }} MiB{% else %}N/A{% endif %}</td>
       </tr>
       {% endif %}
       <tr>
         <td>Reevaluate</td>
         <td>
-          {{ ReevaluationButtons(
+          {{ macro_reevaluation_buttons.reevaluation_buttons(
+                 admin.permission_all,
                  url("submission", s.id, shown_dataset.id),
                  submission_id=s.id,
                  dataset_id=shown_dataset.id) }}
@@ -185,9 +200,9 @@
 
   <div class="score_details" id="evaluation_{{ s.id }}">
     {% if s.tokened() %}
-      {{ st.get_html_details(sr.score_details)|safe }}
+      {{ st.get_html_details(sr.score_details, s.task.feedback_level)|safe }}
     {% else %}
-      {{ st.get_html_details(sr.public_score_details)|safe }}
+      {{ st.get_html_details(sr.public_score_details, s.task.feedback_level)|safe }}
     {% endif %}
   </div>
 </div>
@@ -232,7 +247,7 @@
             ({{ ev.execution_wall_clock_time }} s)
             {% endif %}
             {% if ev.execution_memory is not none %}
-            ({{ (ev.execution_memory // 1024) // 1024 }} MiB)
+            ({{ ev.execution_memory // (1024 * 1024) }} MiB)
             {% endif %}
           </td>
           <td>{{ ev.evaluation_sandbox }}</td>

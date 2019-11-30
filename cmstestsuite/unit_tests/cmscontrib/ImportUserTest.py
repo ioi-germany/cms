@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,23 +18,14 @@
 
 """Tests for the ImportUser script"""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-import six
-
 import unittest
 
 # Needs to be first to allow for monkey patching the DB connection string.
 from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
 
 from cms.db import Participation, SessionGen, User
-
-from cmscontrib.loaders.base_loader import UserLoader
 from cmscontrib.ImportUser import UserImporter
+from cmscontrib.loaders.base_loader import UserLoader
 
 
 def fake_loader_factory(user):
@@ -57,7 +47,7 @@ def fake_loader_factory(user):
 class TestImportUser(DatabaseMixin, unittest.TestCase):
 
     def setUp(self):
-        super(TestImportUser, self).setUp()
+        super().setUp()
 
         # DB already contains a user participating in a contest.
         self.contest = self.add_contest()
@@ -72,7 +62,7 @@ class TestImportUser(DatabaseMixin, unittest.TestCase):
 
     def tearDown(self):
         self.delete_data()
-        super(TestImportUser, self).tearDown()
+        super().tearDown()
 
     @staticmethod
     def do_import(user, contest_id):
@@ -98,8 +88,8 @@ class TestImportUser(DatabaseMixin, unittest.TestCase):
             if contest_ids is not None:
                 db_participations = session.query(Participation) \
                     .filter(Participation.user_id == u.id).all()
-                six.assertCountEqual(
-                    self, contest_ids,
+                self.assertCountEqual(
+                    contest_ids,
                     (p.contest_id for p in db_participations))
 
     def test_clean_import(self):

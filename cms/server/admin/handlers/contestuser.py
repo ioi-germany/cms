@@ -1,9 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2015 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2017 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
@@ -30,13 +29,6 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 
 import tornado.web
@@ -44,7 +36,6 @@ import tornado.web
 from cms.db import Contest, Group, Message, Participation, Submission, User, \
     Team
 from cmscommon.datetime import make_datetime
-
 from .base import BaseHandler, require_permission
 
 
@@ -276,7 +267,8 @@ class MessageHandler(BaseHandler):
         message = Message(make_datetime(),
                           self.get_argument("message_subject", ""),
                           self.get_argument("message_text", ""),
-                          participation=participation)
+                          participation=participation,
+                          admin=self.current_user)
         self.sql_session.add(message)
         if self.try_commit():
             logger.info("Message submitted to user %s in contest %s.",

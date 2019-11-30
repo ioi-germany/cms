@@ -1,0 +1,282 @@
+{% macro rows(url, contest_url, translation, xsrf_form_html,
+              actual_phase, task, submissions,
+              can_use_tokens, can_play_token, can_play_token_now,
+              submissions_download_allowed, official, unit_test) -%}
+{#
+Render a submission table with all (un)official submissions passed.
+
+url (Url): the URL instance referring to the root of CWS.
+contest_url (Url): the URL instance referring to the main contest page.
+translation (Translation): locale to use to show messages.
+xsrf_form_html (str): input element for the XSRF protection.
+actual_phase (int): phase of the contest.
+task (Task): the task this page refers to.
+submissions ([Submission]): all the submissions of the participation on this
+    task.
+can_use_tokens (bool): whether tokens are allowed for this task.
+can_play_token (bool): if can_use_tokens is true, whether the user has a
+    token to play (possibly after waiting some time).
+can_play_token_now (bool): if can_play_tokens is true, whether the user
+    does not need to wait before playing a token.
+submissions_download_allowed (boolean): whether to allow users to download
+    their submissions.
+official (boolean): whether to display only the official (true) or unofficial
+    (false) submissions in the submissions list.
+unit_test (boolean): whether to display only the unit tests (true) or 
+    normal submissions (false) -- note that unit tests are usually unofficial
+    and hence setting this parameter to true is only expected to be meaningful
+    if official=false
+#}
+{% set can_use_tokens = can_use_tokens and not unit_test %}
+{% set gettext = translation.gettext %}
+{% set score_type = get_score_type(dataset=task.active_dataset) %}
+{% set show_date = not submissions|map(attribute="timestamp")|all("today") %}
+<table class="submission_list {{ "unit_test_list" if unit_test else ""}} table table-bordered table-striped">
+{% set num_cols = 2 %}
+    <colgroup>
+{% if show_date %}
+        <col class="datetime"/>
+{% else %}
+        <col class="time"/>
+{% endif %}
+        <col class="status"/>
+{% if score_type is defined %}
+    {% if 0 < score_type.max_public_score %}
+        <col class="public_score"/>
+        {% set num_cols = num_cols + 1 %}
+    {% endif %}
+        <col class="total_score"/>
+    {% set num_cols = num_cols + 1 %}
+
+{% endif %}
+{% if submissions_download_allowed %}
+        <col class="files"/>
+    {% set num_cols = num_cols + 1 %}
+{% endif %}
+{% if can_use_tokens and actual_phase == 0 %}
+        <col class="token"/>
+    {% set num_cols = num_cols + 1 %}
+{% endif %}
+    </colgroup>
+    <thead>
+        <tr>
+{% if show_date %}
+            <th class="datetime">{% trans %}Date and time{% endtrans %}</th>
+{% else %}
+            <th class="time">{% trans %}Time{% endtrans %}</th>
+{% endif %}
+            <th class="status">{% trans %}Status{% endtrans %}</th>
+{% if score_type is defined %}
+    {% if 0 < score_type.max_public_score %}
+            <th class="public_score"> {{ score_type.public_score_header }} </th>
+    {% endif %}
+            <th class="total_score">{% trans %}Actual score{% endtrans %} </th>
+{% endif %}
+{% if unit_test %}
+            <th class="verdict"> Verdict </th>
+{% endif %}
+{% if submissions_download_allowed %}
+            <th class="files">{% trans %}Files{% endtrans %}</th>
+{% endif %}
+{% if can_use_tokens and actual_phase == 0 %}
+            <th class="token">{% trans %}Token{% endtrans %}</th>
+{% endif %}
+        </tr>
+    </thead>
+    <tbody>
+    {% set num_displayed = (submissions|selectattr("official")|list|length if official else submissions|rejectattr("official")|list|length) > 0 %}
+    {% if num_displayed == 0 %}
+        <tr>
+            <td colspan="{{ num_cols }}" class="no_submissions">{% trans %}no submissions{% endtrans %}</td>
+        </tr>
+    {% else %}
+        {% for s in submissions|sort(attribute="timestamp")|reverse %}
+            {% set unit_test_case = (s.additional_info != None) %}
+            {% if s.official == official and unit_test_case == unit_test %}
+                {# loop.revindex is broken: https://github.com/pallets/jinja/issues/794 #}
+                {{ row(
+                    url,
+                    contest_url,
+                    translation,
+                    xsrf_form_html,
+                    actual_phase,
+                    s,
+                    submissions|length - loop.index0,
+                    show_date,
+                    can_use_tokens,
+                    can_play_token,
+                    can_play_token_now,
+                    submissions_download_allowed,
+                    unit_test) }}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+    </tbody>
+</table>
+{%- endmacro %}
+
+{% macro row(url, contest_url, translation, xsrf_form_html,
+             actual_phase, s, s_num, show_date,
+             can_use_tokens, can_play_token, can_play_token_now,
+             submissions_download_allowed, unit_test) -%}
+{#
+Render a row in a submission table.
+
+url (Url): the URL instance referring to the root of CWS.
+contest_url (Url): the URL instance referring to the main contest page.
+translation (Translation): locale to use to show messages.
+xsrf_form_html (str): input element for the XSRF protection.
+actual_phase (int): phase of the contest.
+s (Submission): the submission to display.
+s_num (int): 1-based position of the submission in the list of
+    submissions of the currently logged in participaiton on this task.
+show_date (bool): whether to display only the time or also the date.
+can_use_tokens (bool): whether tokens are allowed for this task.
+can_play_token (bool): if can_use_tokens is true, whether the user has a
+    token to play (possibly after waiting some time).
+can_play_token_now (bool): if can_play_tokens is true, whether the user
+    does not need to wait before playing a token.
+submissions_download_allowed (bool): whether to allow users to download
+    their submissions.
+unit_test (bool): whether this is a unit test
+#}
+
+{% set gettext = translation.gettext %}
+{% set task = s.task %}
+{% set score_type = get_score_type(dataset=task.active_dataset) %}
+{% set sr = s.get_result(task.active_dataset) or undefined %}
+{% set status = sr.get_status() if sr is defined else SubmissionResult.COMPILING  %}
+<tr data-submission="{{ s_num }}" data-status="{{ status }}"
+{% if unit_test %}
+    {% if status == SubmissionResult.SCORED %}
+        {% if sr.unit_test_score_details["verdict"][0] == 0 %}
+            class = "unit_test_failed"
+        {% else %}
+            class = "unit_test_ok"
+        {% endif %}
+    {% else %}
+        class = "unit_test_undefined"
+    {% endif %}
+{% endif %}
+>
+{% if show_date %}
+    <td class="datetime">{{ s.timestamp|format_datetime }}</td>
+{% else %}
+    <td class="time">{{ s.timestamp|format_time }}</td>
+{% endif %}
+    <td class="status">
+{% if status == SubmissionResult.COMPILING %}
+        {% trans %}Compiling...{% endtrans %}
+      <img class="details" src="{{ url("static", "loading.gif") }}" />
+{% elif status == SubmissionResult.COMPILATION_FAILED %}
+        {% trans %}Compilation failed{% endtrans %}
+        <a class="details">{% trans %}details{% endtrans %}</a>
+{% elif status == SubmissionResult.EVALUATING %}
+        {% trans %}Evaluating...{% endtrans %}
+      <img class="details" src="{{ url("static", "loading.gif") }}" />
+{% elif status == SubmissionResult.SCORING %}
+        {% trans %}Scoring...{% endtrans %}
+      <img class="details" src="{{ url("static", "loading.gif") }}" />
+{% elif status == SubmissionResult.SCORED %}
+        {% trans %}Evaluated{% endtrans %}
+        <a class="details">{% trans %}details{% endtrans %}</a>
+{% endif %}
+    </td>
+{% if score_type is defined and score_type.max_public_score > 0 %}
+    {% if status == SubmissionResult.SCORED %}
+    <td class="public_score {{ get_score_class(sr.public_score, score_type.max_public_score, task.score_precision) }}">
+        {{ score_type.format_score(sr.public_score, score_type.max_public_score, sr.public_score_details, task.score_precision, translation=translation) }}
+    </td>
+    {% else %}
+    <td class="public_score undefined">
+        {% trans %}N/A{% endtrans %}
+    </td>
+    {% endif %}
+{% endif %}
+{% if score_type is defined %}
+    {% if status == SubmissionResult.SCORED and (s.token is not none or actual_phase == 3 or score_type.feedback() == "full" or unit_test) %}
+    <td class="total_score {{ get_score_class(sr.score, score_type.max_score, task.score_precision) }}">
+        {{ score_type.format_score(sr.score, score_type.max_score, sr.score_details, task.score_precision, translation=translation) }}
+    </td>
+    {% else %}
+    <td class="total_score undefined">
+        {% trans %}N/A{% endtrans %}
+    </td>
+    {% endif %}
+{% endif %}
+{% if unit_test %}
+    <td class="verdict">
+    {% if status == SubmissionResult.SCORED %}
+        {{ sr.unit_test_score_details["verdict"][1] }}
+    {% else %}
+        pending...
+    {% endif %}
+    </td>
+{% endif %}
+{% if submissions_download_allowed %}
+    <td class="files">
+        {# We replace '.%l' with the actual language only when it occurs as an extension at the end of the string and only when #}
+        {# there isn't another file with that name. This allows to securily reverse the replacement and should work great in #}
+        {# the common case. Yet, it still allows the marginal case of both 'foo.%l' and 'foo.c' in the submission format. #}
+        {% if s.files|length == 0 %}
+        <a class="btn disabled">
+            {% trans %}None{% endtrans %}
+        </a>
+        {% elif s.files|length == 1 %}
+            {% set filename = next(iter(s.files.keys())) %}
+            {% if s.language is not none %}
+                {% set filename = filename|replace(".%l", (s.language|to_language).source_extension) %}
+            {% endif %}
+        <a class="btn" href="{{ contest_url("tasks", task.name, "submissions", s_num, "files", filename) }}">
+            {% trans %}Download{% endtrans %}
+        </a>
+        {% else %}
+        <div class="btn-group">
+            <a class="btn dropdown-toggle" data-toggle="dropdown">
+                {% trans %}Download{% endtrans %}
+                <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+            {% for filename in s.files %}
+                {% if s.language is not none %}
+                    {% set temp_filename = filename|replace(".%l", (s.language|to_language).source_extension) %}
+                    {% if temp_filename not in s.files %}
+                        {% set filename = temp_filename %}
+                    {% endif %}
+                {% endif %}
+                <li>
+                    <a href="{{ contest_url("tasks", task.name, "submissions", s_num, "files", filename) }}">
+                        {{ filename }}
+                    </a>
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </td>
+{% endif %}
+{% if can_use_tokens and actual_phase == 0 %}
+    <td class="token">
+        {% if s.token is not none %}
+        <a class="btn disabled">{% trans %}Played{% endtrans %}</a>
+        {% else %}
+            {% if can_play_token_now %}
+              {# Can play a token right now: show the button. #}
+        <form action="{{ contest_url("tasks", task.name, "submissions", s_num, "token") }}" method="POST">
+            {{ xsrf_form_html|safe }}
+            <button type="submit" class="btn btn-warning">{% trans %}Play!{% endtrans %}</button>
+        </form>
+            {% elif can_play_token or tokens_info[1] is not none %}
+              {# Can play a token, but only after a min_interval expires,
+                 or after the next token generation: ask to wait. #}
+        <a class="btn btn-warning disabled">{% trans %}Wait...{% endtrans %}</a>
+            {% else %}
+              {# No tokens to play at this moment, nor more will be
+                 generated: tell the user there are no tokens. #}
+        <a class="btn disabled">{% trans %}No tokens{% endtrans %}</a>
+            {% endif %}
+        {% endif %}
+    </td>
+{% endif %}
+</tr>
+{%- endmacro %}

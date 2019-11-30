@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2016 Peyman Jabbarzade Ganje <peyman.jabarzade@gmail.com>
@@ -16,14 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
 
 import logging
 import zipfile
@@ -80,7 +71,7 @@ def import_testcases_from_zipfile(
             skipped_tc = []
             overwritten_tc = []
             added_tc = []
-            for codename, testdata in iteritems(tests):
+            for codename, testdata in tests.items():
                 # If input or output file isn't found, skip it.
                 if not testdata[0] or not testdata[1]:
                     continue

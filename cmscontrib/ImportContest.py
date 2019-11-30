@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -30,13 +29,6 @@ database.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 # We enable monkey patching to make many libraries gevent-friendly
 # (for instance, urllib3, used by requests)
 import gevent.monkey
@@ -53,7 +45,6 @@ from cms import utf8_decoder
 from cms.db import SessionGen, User, Team, Participation, Task, Contest
 from cms.db import Group
 from cms.db.filecacher import FileCacher
-
 from cmscontrib.importing import ImportDataError, update_contest, update_task
 from cmscontrib.importing import update_group
 from cmscontrib.loaders import choose_loader, build_epilog
@@ -62,7 +53,7 @@ from cmscontrib.loaders import choose_loader, build_epilog
 logger = logging.getLogger(__name__)
 
 
-class ContestImporter(object):
+class ContestImporter:
 
     """This script creates a contest and all its associations to users
     and tasks.

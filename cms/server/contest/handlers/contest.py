@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -30,14 +29,6 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, iteritems
-
 import ipaddress
 import logging
 
@@ -45,14 +36,12 @@ import tornado.web
 
 from cms import config, TOKEN_MODE_MIXED
 from cms.db import Contest, Submission, Task, UserTest
-from cms.server import FileHandlerMixin
 from cms.locale import filter_language_codes
+from cms.server import FileHandlerMixin
 from cms.server.contest.authentication import authenticate_request
 from cmscommon.datetime import get_timezone
-
-from ..phase_management import compute_actual_phase
-
 from .base import BaseHandler
+from ..phase_management import compute_actual_phase
 
 
 logger = logging.getLogger(__name__)
@@ -71,7 +60,7 @@ class ContestHandler(BaseHandler):
 
     """
     def __init__(self, *args, **kwargs):
-        super(ContestHandler, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.contest_url = None
 
     def prepare(self):
@@ -79,13 +68,13 @@ class ContestHandler(BaseHandler):
 
         if self.contest.allowed_localizations:
             lang_codes = filter_language_codes(
-                list(iterkeys(self.available_translations)),
+                list(self.available_translations.keys()),
                 self.contest.allowed_localizations)
             self.available_translations = dict(
-                (k, v) for k, v in iteritems(self.available_translations)
+                (k, v) for k, v in self.available_translations.items()
                 if k in lang_codes)
 
-        super(ContestHandler, self).prepare()
+        super().prepare()
 
         if self.is_multi_contest():
             self.contest_url = self.url[self.contest.name]
@@ -117,7 +106,8 @@ class ContestHandler(BaseHandler):
                 # render_params in this class assumes the contest is loaded,
                 # so we cannot call it without a fully defined contest. Luckily
                 # the one from the base class is enough to display a 404 page.
-                self.r_params = super(ContestHandler, self).render_params()
+                super().prepare()
+                self.r_params = super().render_params()
                 raise tornado.web.HTTPError(404)
         else:
             # Select the contest specified on the command line
@@ -171,7 +161,7 @@ class ContestHandler(BaseHandler):
         return participation
 
     def render_params(self):
-        ret = super(ContestHandler, self).render_params()
+        ret = super().render_params()
 
         ret["contest"] = self.contest
 
@@ -250,9 +240,10 @@ class ContestHandler(BaseHandler):
         task (Task): a task for the contest that is being served.
         submission_num (str): a positive number, in decimal encoding.
 
-        return (Submission|None): the submission_num-th submission, in
-            chronological order, that was sent by the currently logged
-            in contestant on the given task (None if not found).
+        return (Submission|None): the submission_num-th submission
+            (1-based), in chronological order, that was sent by the
+            currently logged in contestant on the given task (None if
+            not found).
 
         """
         return self.sql_session.query(Submission) \
@@ -280,19 +271,22 @@ class ContestHandler(BaseHandler):
             .offset(int(user_test_num) - 1) \
             .first()
 
-    def add_notification(self, subject, text, level):
-        self.service.add_notification(
-            self.current_user.user.username, self.timestamp,
-            self._(subject), self._(text), level)
+    def add_notification(self, subject, text, level, text_params=None):
+        subject = self._(subject)
+        text = self._(text)
+        if text_params is not None:
+            text %= text_params
+        self.service.add_notification(self.current_user.user.username,
+                                      self.timestamp, subject, text, level)
 
-    def notify_success(self, subject, text):
-        self.add_notification(subject, text, NOTIFICATION_SUCCESS)
+    def notify_success(self, subject, text, text_params=None):
+        self.add_notification(subject, text, NOTIFICATION_SUCCESS, text_params)
 
-    def notify_warning(self, subject, text):
-        self.add_notification(subject, text, NOTIFICATION_WARNING)
+    def notify_warning(self, subject, text, text_params=None):
+        self.add_notification(subject, text, NOTIFICATION_WARNING, text_params)
 
-    def notify_error(self, subject, text):
-        self.add_notification(subject, text, NOTIFICATION_ERROR)
+    def notify_error(self, subject, text, text_params=None):
+        self.add_notification(subject, text, NOTIFICATION_ERROR, text_params)
 
 
 class FileHandler(ContestHandler, FileHandlerMixin):

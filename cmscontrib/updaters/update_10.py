@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -26,31 +25,23 @@ commit that created this same file.
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
 
-
-class Updater(object):
+class Updater:
 
     def __init__(self, data):
         assert data["_version"] == 9
         self.objs = data
 
     def run(self):
-        for k, v in iteritems(self.objs):
+        for k, v in self.objs.items():
             if k.startswith("_"):
                 continue
             if v["_class"] == "Contest":
                 if v["start"] is None:
                     # make_timestamp(datetime(2000, 01, 01))
-                    v["start"] = 946684800.0
+                    v["start"] = 946_684_800.0
                 if v["stop"] is None:
                     # make_timestamp(datetime(2030, 01, 01))
-                    v["stop"] = 1893456000.0
+                    v["stop"] = 1_893_456_000.0
 
         return self.objs

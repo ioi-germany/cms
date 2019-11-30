@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2011-2016 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -17,21 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
-
-import io
 import errno
 import json
 import logging
 import os
-import pkg_resources
 import sys
+
+import pkg_resources
 
 from cmsranking.Logger import add_file_handler
 
@@ -42,7 +33,7 @@ logger = logging.getLogger(__name__)
 CMS_RANKING_CONFIG_ENV_VAR = "CMS_RANKING_CONFIG"
 
 
-class Config(object):
+class Config:
     """An object holding the current configuration.
 
     """
@@ -147,17 +138,17 @@ class Config(object):
         """
         for conf_path in conf_paths:
             try:
-                with io.open(conf_path, "rt") as conf_fobj:
+                with open(conf_path, "rt", encoding="utf-8") as conf_fobj:
                     logger.info("Using config file %s.", conf_path)
                     return self._load_one(conf_fobj)
-            except IOError as error:
-                # If it's because it doesn't exist we just skip to the
-                # next one. Otherwise it's probably unintended and the
-                # user should do something about it.
-                if error.errno != errno.ENOENT:
-                    logger.critical("Unable to access config file %s: %s.",
-                                    conf_path, os.strerror(error.errno))
-                    return False
+            except FileNotFoundError:
+                # If it doesn't exist we just skip to the next one.
+                pass
+            except OSError as error:
+                logger.critical("Unable to access config file %s: [%s] %s.",
+                                conf_path, errno.errorcode[error.errno],
+                                os.strerror(error.errno))
+                return False
         logger.warning("No config file found, using hardcoded defaults.")
         return True
 
@@ -180,7 +171,7 @@ class Config(object):
             return False
 
         # Store every config property.
-        for key, value in iteritems(data):
+        for key, value in data.items():
             if key.startswith("_"):
                 continue
             if not hasattr(self, key):

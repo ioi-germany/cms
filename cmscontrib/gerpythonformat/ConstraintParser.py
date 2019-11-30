@@ -18,18 +18,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
-from six import iteritems
-
 import string
 
 class TypesetValue(object):
     def __init__(self, val, typeset):
         self.val = val
         self.typeset = typeset
+
+    def __eq__(self, rhs):
+        if isinstance(rhs, TypesetValue):
+            return self.val == rhs.val
+        else:
+            return False
+
+    def __hash__(self):
+        return self.val.__hash__()
+
 
 GROUP_CHARACTER = "\""
 ANNOTATION_BEGIN = "("
@@ -179,8 +183,8 @@ class Constraint(object):
         self.max = max
 
     def uncompress(self):
-        return {v: [Constraint.eval(self.min),
-                    Constraint.eval(self.max)] for v in self.variables}
+        return {v.val: (Constraint.eval(self.min),
+                        Constraint.eval(self.max)) for v in self.variables}
 
     def merge(self, rhs):
         if rhs.min is not None:
@@ -278,7 +282,7 @@ class Constraint(object):
                   "}": ")",
                   "\\cdot": "*"}
 
-        for old, new in iteritems(coding):
+        for old, new in iter(coding.items()):
             s = s.replace(old, new)
 
         return eval(s)
@@ -356,7 +360,7 @@ def merge(c1, c2, var):
 #than in the first (e.g., (_,100) in the first and (_,1000) in the second).
 def merge_constraints(cl1, cl2):
     res = dict(cl1)
-    for var, ran in iteritems(cl2):
+    for var, ran in iter(cl2.items()):
         if var in res:
             res[var] = merge(res[var], ran, var)
         else:

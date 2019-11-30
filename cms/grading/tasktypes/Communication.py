@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -22,14 +21,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iterkeys, iteritems
-
 import logging
 import os
 import signal
@@ -37,13 +28,13 @@ import tempfile
 from functools import reduce
 
 from cms import config, rmtree
+from cms.db import Executable
+from cms.grading.ParameterTypes import ParameterTypeChoice, ParameterTypeInt
 from cms.grading.Sandbox import wait_without_std, Sandbox
-from cms.grading.steps import compilation_step,  evaluation_step_before_run, \
+from cms.grading.languagemanager import LANGUAGES, get_language
+from cms.grading.steps import compilation_step, evaluation_step_before_run, \
     evaluation_step_after_run, extract_outcome_and_text, \
     human_evaluation_message, merge_execution_stats, trusted_step
-from cms.grading.languagemanager import LANGUAGES, get_language
-from cms.grading.ParameterTypes import ParameterTypeChoice, ParameterTypeInt
-from cms.db import Executable
 from cms.grading.tasktypes import check_files_number
 from . import TaskType, check_executables_number, check_manager_present, \
     create_sandbox, delete_sandbox, is_manager_for_compilation
@@ -61,15 +52,15 @@ class Communication(TaskType):
     """Task type class for tasks with a fully admin-controlled process.
 
     The task type will run *manager*, an admin-provided executable, and one or
-    more instances of the user solution, compiled together with a
+    more instances of the user solution, optionally compiled together with a
     language-specific stub.
 
     During the evaluation, the manager and each of the user processes
     communicate via FIFOs. The manager will read the input, send it (possibly
-    with some modifications) to the user process(es). The user processes, via
-    functions provided by the stub, will communicate with the manager. Finally,
-    the manager will decide outcome and text, and print them on stdout and
-    stderr.
+    with some modifications) to the user process(es). The user processes, either
+    via functions provided by the stub or by themselves, will communicate with
+    the manager. Finally, the manager will decide outcome and text, and print
+    them on stdout and stderr.
 
     The manager reads the input from stdin and writes to stdout and stderr the
     standard manager output (that is, the outcome on stdout and the text on
@@ -79,8 +70,10 @@ class Communication(TaskType):
     to a file named "output.txt"; the content of this file will be shown to
     users submitting a user test.
 
-    The stub receives as argument the fifos (from and to the manager) and if
-    there are more than one user processes, the 0-based index of the process.
+    The user process receives as argument the fifos (from and to the manager)
+    and, if there are more than one user processes, the 0-based index of the
+    process. The pipes can also be set up to be redirected to stdin/stdout: in
+    that case the names of the pipes are not passed as arguments.
 
     """
     # Filename of the manager (the stand-alone, admin-provided program).
@@ -99,7 +92,9 @@ class Communication(TaskType):
 
     # Constants used in the parameter definition.
     COMPILATION_ALONE = "alone"
-    COMPILATION_GRADER = "grader"
+    COMPILATION_STUB = "stub"
+    USER_IO_STD = "std_io"
+    USER_IO_FIFOS = "fifo_io"
 
     ALLOW_PARTIAL_SUBMISSION = False
 
@@ -108,14 +103,29 @@ class Communication(TaskType):
         "compilation",
         "",
         {COMPILATION_ALONE: "Submissions are self-sufficient",
-         COMPILATION_GRADER: "Submissions are compiled with a grader"})
+         COMPILATION_STUB: "Submissions are compiled with a grader"})
 
     _NUM_PROCESSES = ParameterTypeInt(
         "Number of Processes",
         "num_processes",
         "")
 
-    ACCEPTED_PARAMETERS = [_COMPILATION, _NUM_PROCESSES]
+    _COMPILATION = ParameterTypeChoice(
+        "Compilation",
+        "compilation",
+        "",
+        {COMPILATION_ALONE: "Submissions are self-sufficient",
+         COMPILATION_STUB: "Submissions are compiled with a stub"})
+
+    _USER_IO = ParameterTypeChoice(
+        "User I/O",
+        "user_io",
+        "",
+        {USER_IO_STD: "User processes read from stdin and write to stdout",
+         USER_IO_FIFOS: "User processes read from and write to fifos, "
+                        "whose paths are given as arguments"})
+
+    ACCEPTED_PARAMETERS = [_NUM_PROCESSES, _COMPILATION, _USER_IO]
 
     testable = False
 
@@ -125,35 +135,31 @@ class Communication(TaskType):
         return "Communication"
 
     def __init__(self, parameters):
-        super(Communication, self).__init__(parameters)
+        super().__init__(parameters)
 
-        self.compilation = parameters[0]
-        self.num_processes = 1
-        if len(self.parameters) > 1:
-            self.num_processes = self.parameters[1]
+        self.num_processes = self.parameters[0]
+        self.compilation = self.parameters[1]
+        self.io = self.parameters[2]
 
     def get_compilation_commands(self, submission_format):
         """See TaskType.get_compilation_commands."""
+        codenames_to_compile = []
+        if self._uses_stub():
+            codenames_to_compile.append(self.STUB_BASENAME + ".%l")
+        codenames_to_compile.extend(submission_format)
+        executable_filename = self._executable_filename(submission_format)
         res = dict()
         for language in LANGUAGES:
-            # Collect source filenames.
             source_ext = language.source_extension
-            source_filenames = []
-            if self._uses_grader:
-                source_filenames.append(self.STUB_BASENAME + source_ext)
-            for codename in submission_format:
-                source_filenames.append(codename.replace(".%l", source_ext))
-            # Compute executable name.
-            executable_filename = self._executable_filename(submission_format)
-            # Build the compilation commands.
-            commands = language.get_compilation_commands(
-                source_filenames, executable_filename)
-            res[language.name] = commands
+            res[language.name] = language.get_compilation_commands(
+                [codename.replace(".%l", source_ext)
+                 for codename in codenames_to_compile],
+                executable_filename)
         return res
 
     def get_user_managers(self):
         """See TaskType.get_user_managers."""
-        if self._uses_grader():
+        if self._uses_stub():
             return [self.STUB_BASENAME + ".%l"]
         else:
             return []
@@ -162,8 +168,11 @@ class Communication(TaskType):
         """See TaskType.get_auto_managers."""
         return [self.MANAGER_FILENAME]
 
-    def _uses_grader(self):
-        return self.compilation == Communication.COMPILATION_GRADER
+    def _uses_stub(self):
+        return self.compilation == self.COMPILATION_STUB
+
+    def _uses_fifos(self):
+        return self.io == self.USER_IO_FIFOS
 
     @staticmethod
     def _executable_filename(codenames):
@@ -188,36 +197,37 @@ class Communication(TaskType):
 
         # Prepare the files to copy in the sandbox and to add to the
         # compilation command.
-        files_to_get = {}
-        source_filenames = []
+        filenames_to_compile = []
+        filenames_and_digests_to_get = {}
         # The stub, that must have been provided (copy and add to compilation).
-        if self._uses_grader():
+        if self._uses_stub():
             stub_filename = self.STUB_BASENAME + source_ext
             if not check_manager_present(job, stub_filename):
                 return
-            source_filenames.append(stub_filename)
-            files_to_get[stub_filename] = job.managers[stub_filename].digest
+            filenames_to_compile.append(stub_filename)
+            filenames_and_digests_to_get[stub_filename] = \
+                job.managers[stub_filename].digest
         # User's submitted file(s) (copy and add to compilation).
-        for codename, file_ in iteritems(job.files):
-            source_filename = codename.replace(".%l", source_ext)
-            source_filenames.append(source_filename)
-            files_to_get[source_filename] = file_.digest
+        for codename, file_ in job.files.items():
+            filename = codename.replace(".%l", source_ext)
+            filenames_to_compile.append(filename)
+            filenames_and_digests_to_get[filename] = file_.digest
         # Any other useful manager (just copy).
-        for filename, manager in iteritems(job.managers):
+        for filename, manager in job.managers.items():
             if is_manager_for_compilation(filename, language):
-                files_to_get[filename] = manager.digest
+                filenames_and_digests_to_get[filename] = manager.digest
 
         # Prepare the compilation command
-        executable_filename = self._executable_filename(iterkeys(job.files))
+        executable_filename = self._executable_filename(job.files.keys())
         commands = language.get_compilation_commands(
-            source_filenames, executable_filename)
+            filenames_to_compile, executable_filename)
 
         # Create the sandbox.
         sandbox = create_sandbox(file_cacher, name="compile")
         job.sandboxes.append(sandbox.get_root_path())
 
         # Copy all required files in the sandbox.
-        for filename, digest in iteritems(files_to_get):
+        for filename, digest in filenames_and_digests_to_get.items():
             sandbox.create_file_from_storage(filename, digest)
 
         # Run the compilation.
@@ -237,13 +247,13 @@ class Communication(TaskType):
                 Executable(executable_filename, digest)
 
         # Cleanup.
-        delete_sandbox(sandbox, job.success)
+        delete_sandbox(sandbox, job.success, job.keep_sandbox)
 
     def evaluate(self, job, file_cacher):
         """See TaskType.evaluate."""
         if not check_executables_number(job, 1):
             return
-        executable_filename = next(iterkeys(job.executables))
+        executable_filename = next(iter(job.executables.keys()))
         executable_digest = job.executables[executable_filename].digest
 
         # Make sure the required manager is among the job managers.
@@ -256,13 +266,13 @@ class Communication(TaskType):
 
         # Create FIFOs.
         fifo_dir = [tempfile.mkdtemp(dir=config.temp_dir) for i in indices]
-        if not self._uses_grader():
+        if not self._uses_stub():
             abortion_control_fifo_dir = tempfile.mkdtemp(dir=config.temp_dir)
         fifo_user_to_manager = [
             os.path.join(fifo_dir[i], "u%d_to_m" % i) for i in indices]
         fifo_manager_to_user = [
             os.path.join(fifo_dir[i], "m_to_u%d" % i) for i in indices]
-        if not self._uses_grader():
+        if not self._uses_stub():
             fifo_solution_quitter = os.path.join(abortion_control_fifo_dir, "sq")
             fifo_manager_quitter = os.path.join(abortion_control_fifo_dir, "mq")
         for i in indices:
@@ -271,7 +281,7 @@ class Communication(TaskType):
             os.chmod(fifo_dir[i], 0o755)
             os.chmod(fifo_user_to_manager[i], 0o666)
             os.chmod(fifo_manager_to_user[i], 0o666)
-        if not self._uses_grader():
+        if not self._uses_stub():
             os.mkfifo(fifo_solution_quitter)
             os.mkfifo(fifo_manager_quitter)
             os.chmod(abortion_control_fifo_dir, 0o755)
@@ -284,7 +294,7 @@ class Communication(TaskType):
             os.path.join(sandbox_fifo_dir[i], "u%d_to_m" % i) for i in indices]
         sandbox_fifo_manager_to_user = [
             os.path.join(sandbox_fifo_dir[i], "m_to_u%d" % i) for i in indices]
-        if not self._uses_grader():
+        if not self._uses_stub():
             sandbox_abortion_control_fifo_dir = "/abort"
             sandbox_fifo_solution_quitter = \
                 os.path.join(sandbox_abortion_control_fifo_dir, "sq")
@@ -317,7 +327,7 @@ class Communication(TaskType):
         for i in indices:
             manager_command += [sandbox_fifo_user_to_manager[i],
                                 sandbox_fifo_manager_to_user[i]]
-        if not self._uses_grader():
+        if not self._uses_stub():
             manager_command += [sandbox_fifo_solution_quitter,
                                 sandbox_fifo_manager_quitter]
         # We could use trusted_step for the manager, since it's fully
@@ -338,33 +348,40 @@ class Communication(TaskType):
                                  config.trusted_sandbox_max_time_s)
         manager_dirs_map = dict((fifo_dir[i], (sandbox_fifo_dir[i], "rw"))
                                 for i in indices)
-        if not self._uses_grader():
+        if not self._uses_stub():
             manager_dirs_map[abortion_control_fifo_dir] = \
                 (sandbox_abortion_control_fifo_dir, "rw")
         manager = evaluation_step_before_run(
             sandbox_mgr,
             manager_command,
             manager_time_limit,
-            config.trusted_sandbox_max_memory_kib // 1024,
+            config.trusted_sandbox_max_memory_kib * 1024,
             dirs_map=manager_dirs_map,
             writable_files=[self.OUTPUT_FILENAME],
             stdin_redirect=self.INPUT_FILENAME,
             multiprocess=job.multithreaded_sandbox)
 
-        if not self._uses_grader():
+        if not self._uses_stub():
             solution_quitter = open(fifo_solution_quitter, "r")
             manager_quitter = open(fifo_manager_quitter, "w")
             manager_quitter_open = True
 
         # Start the user submissions compiled with the stub.
         language = get_language(job.language)
+        main = self.STUB_BASENAME if self._uses_stub() else executable_filename
         processes = [None for i in indices]
         for i in indices:
-            args = [sandbox_fifo_manager_to_user[i],
-                    sandbox_fifo_user_to_manager[i]]
+            args = []
+            stdin_redirect = None
+            stdout_redirect = None
+            if self._uses_fifos():
+                args.extend([sandbox_fifo_manager_to_user[i],
+                             sandbox_fifo_user_to_manager[i]])
+            stdin_redirect = sandbox_fifo_manager_to_user[i]
+            stdout_redirect = sandbox_fifo_user_to_manager[i]
             if self.num_processes != 1:
                 args.append(str(i))
-            if self._uses_grader():
+            if self._uses_stub():
                 main = self.STUB_BASENAME
             else:
                 main = executable_filename
@@ -383,11 +400,11 @@ class Communication(TaskType):
                 job.time_limit,
                 job.memory_limit,
                 dirs_map={fifo_dir[i]: (sandbox_fifo_dir[i], "rw")},
-                stdin_redirect=sandbox_fifo_manager_to_user[i],
-                stdout_redirect=sandbox_fifo_user_to_manager[i],
+                stdin_redirect=stdin_redirect,
+                stdout_redirect=stdout_redirect,
                 multiprocess=job.multithreaded_sandbox)
 
-        if not self._uses_grader():
+        if not self._uses_stub():
             # Manager still running but wants to quit
             if solution_quitter.read() == "<3":
                 for i in indices:
@@ -399,7 +416,7 @@ class Communication(TaskType):
         # Wait for the processes to conclude, without blocking them on I/O.
         wait_without_std(processes + [manager])
 
-        if not self._uses_grader():
+        if not self._uses_stub():
             solution_quitter.close()
             if manager_quitter_open:
                 manager_quitter.close()
@@ -431,7 +448,6 @@ class Communication(TaskType):
         # terminate correctly, we report an error (and no need for user stats).
         if not success:
             stats_user = None
-            pass
 
         # If just asked to execute, fill text and set dummy outcome.
         elif job.only_execution:
@@ -465,11 +481,11 @@ class Communication(TaskType):
         job.text = text
         job.plus = stats_user
 
-        delete_sandbox(sandbox_mgr, job.success)
+        delete_sandbox(sandbox_mgr, job.success, job.keep_sandbox)
         for s in sandbox_user:
-            delete_sandbox(s, job.success)
-        if not config.keep_sandbox:
+            delete_sandbox(s, job.success, job.keep_sandbox)
+        if job.success and not config.keep_sandbox and not job.keep_sandbox:
             for d in fifo_dir:
                 rmtree(d)
-            if not self._uses_grader():
+            if not self._uses_stub():
                 rmtree(abortion_control_fifo_dir)

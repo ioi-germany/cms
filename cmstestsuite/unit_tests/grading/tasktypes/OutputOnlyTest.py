@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2018 Stefano Maggiolo <s.maggiolo@gmail.com>
@@ -19,16 +18,8 @@
 
 """Tests for the OutputOnly task type."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import unittest
-
-from mock import MagicMock
+from unittest.mock import MagicMock
 
 from cms.db import File
 from cms.grading.Job import EvaluationJob
@@ -51,7 +42,7 @@ class TestEvaluate(TaskTypeTestMixin, unittest.TestCase):
     """
 
     def setUp(self):
-        super(TestEvaluate, self).setUp()
+        super().setUp()
         self.setUpMocks("OutputOnly")
         self.file_cacher = MagicMock()
 
@@ -61,7 +52,7 @@ class TestEvaluate(TaskTypeTestMixin, unittest.TestCase):
         return EvaluationJob(input="digest of input",
                              output="digest of correct output",
                              files=files,
-                             operation=operation.to_dict(),
+                             operation=operation,
                              multithreaded_sandbox=True)
 
     def prepare(self, parameters, files):

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
@@ -29,13 +28,6 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-
 import logging
 import re
 
@@ -49,10 +41,8 @@ from cms.server.contest.submission import get_submission_count, \
     TestingNotAllowed, UnacceptableUserTest, accept_user_test
 from cmscommon.crypto import encrypt_number
 from cmscommon.mimetypes import get_type_for_file_name
-
-from ..phase_management import actual_phase_required
-
 from .contest import ContestHandler, FileHandler
+from ..phase_management import actual_phase_required
 
 
 logger = logging.getLogger(__name__)
@@ -147,8 +137,8 @@ class UserTestHandler(ContestHandler):
                            self.current_user.user.username, task_name)
             raise tornado.web.HTTPError(404)
         except UnacceptableUserTest as e:
-            logger.info("Sent error: `%s' - `%s'", e.subject, e.text)
-            self.notify_error(e.subject, e.text)
+            logger.info("Sent error: `%s' - `%s'", e.subject, e.formatted_text)
+            self.notify_error(e.subject, e.text, e.text_params)
         else:
             self.service.evaluation_service.new_user_test(
                 user_test_id=user_test.id)

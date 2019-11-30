@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2015-2016 William Di Luigi <williamdiluigi@gmail.com>
@@ -23,16 +22,7 @@
 
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from future.builtins.disabled import *  # noqa
-from future.builtins import *  # noqa
-from six import iteritems
-
 import argparse
-import io
 import logging
 import os
 import sys
@@ -93,7 +83,7 @@ def filter_top_scoring(results, unique):
                 usertask[key].append(value)
 
     results = []
-    for key, values in iteritems(usertask):
+    for key, values in usertask.items():
         for value in values:
             results.append(value[2])  # the "old" row
 
@@ -134,6 +124,7 @@ def main():
                              "  time: submission timestamp\n"
                              "  user: username\n"
                              "  task: taskname\n"
+                             "  score: raw score\n"
                              " (default: {id}.{file}{ext})",
                         default="{id}.{file}{ext}")
     parser.add_argument("output_dir", action="store", type=utf8_decoder,
@@ -217,7 +208,8 @@ def main():
                                             name=filename_base,
                                             ext=filename_ext,
                                             time=timef, user=u_name,
-                                            task=t_name)
+                                            task=t_name,
+                                            score=sr_score)
             filename = os.path.join(args.output_dir, filename)
             if os.path.exists(filename):
                 logger.warning("Skipping file '%s' because it already exists",
@@ -255,11 +247,11 @@ def main():
                         ) + data
 
                     # Print utf8-encoded, possibly altered data
-                    with io.open(filename, "wt", encoding="utf-8") as f_out:
+                    with open(filename, "wt", encoding="utf-8") as f_out:
                         f_out.write(data)
                 else:
                     # Print raw, untouched binary data
-                    with io.open(filename, "wb") as f_out:
+                    with open(filename, "wb") as f_out:
                         f_out.write(data)
 
             done += 1
