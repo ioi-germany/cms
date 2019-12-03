@@ -51,12 +51,20 @@ class SubtaskGroup(ScoreType):
 
     """
     # Mark strings for localization.
-    N_("Group")
+    N_("Case")
     N_("Outcome")
     N_("Details")
     N_("Execution time")
     N_("Memory used")
+    N_("Group")
     N_("N/A")
+    N_("All correct")
+    N_("Sample score")
+    N_("T")
+    N_("M")
+    N_("A")
+    N_("Testcase verdict")
+    N_("Group verdict")
     TEMPLATE = """\
 {% if not details["unit_test"] %}{# Normal submission #}
 {% if details["evaluated"] %}
@@ -154,7 +162,7 @@ class SubtaskGroup(ScoreType):
 <div class="subtask {% if details["sample_score_okay"] %}correct{% else %}notcorrect{% endif %}">
     <div class="subtask-head">
         <span class="title" style="margin-top:-2px">
-            Sample score
+            {% trans %}Sample score{% endtrans %}
         </span>
         <span class="score">
             {% if details["sample_score_okay"] %}OKAY{% else %}FAILED{% endif %}

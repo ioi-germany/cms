@@ -22,7 +22,7 @@ submissions_download_allowed (boolean): whether to allow users to download
     their submissions.
 official (boolean): whether to display only the official (true) or unofficial
     (false) submissions in the submissions list.
-unit_test (boolean): whether to display only the unit tests (true) or 
+unit_test (boolean): whether to display only the unit tests (true) or
     normal submissions (false) -- note that unit tests are usually unofficial
     and hence setting this parameter to true is only expected to be meaningful
     if official=false
@@ -73,7 +73,7 @@ unit_test (boolean): whether to display only the unit tests (true) or
             <th class="total_score">{% trans %}Actual score{% endtrans %} </th>
 {% endif %}
 {% if unit_test %}
-            <th class="verdict"> Verdict </th>
+            <th class="verdict">{% trans %}Verdict{% endtrans %}</th>
 {% endif %}
 {% if submissions_download_allowed %}
             <th class="files">{% trans %}Files{% endtrans %}</th>
