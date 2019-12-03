@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Contest Management System 1.5.dev0\n"
 "Report-Msgid-Bugs-To: contestms@googlegroups.com\n"
-"POT-Creation-Date: 2019-02-23 11:44+0100\n"
+"POT-Creation-Date: 2019-12-01 12:17+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -30,7 +30,7 @@ msgstr ""
 msgid "Partially correct"
 msgstr ""
 
-msgid "#"
+msgid "Case"
 msgstr ""
 
 msgid "Outcome"
@@ -43,6 +43,33 @@ msgid "Execution time"
 msgstr ""
 
 msgid "Memory used"
+msgstr ""
+
+msgid "Group"
+msgstr ""
+
+msgid "All correct"
+msgstr ""
+
+msgid "Sample score"
+msgstr ""
+
+msgid "T"
+msgstr ""
+
+msgid "M"
+msgstr ""
+
+msgid "A"
+msgstr ""
+
+msgid "Testcase verdict"
+msgstr ""
+
+msgid "Group verdict"
+msgstr ""
+
+msgid "#"
 msgstr ""
 
 msgid "Score details temporarily unavailable."
@@ -853,39 +880,6 @@ msgstr ""
 msgid "Standard error"
 msgstr ""
 
-msgid "None"
-msgstr ""
-
-msgid "Download"
-msgstr ""
-
-msgid "Played"
-msgstr ""
-
-msgid "Play!"
-msgstr ""
-
-msgid "Wait..."
-msgstr ""
-
-msgid "No tokens"
-msgstr ""
-
-msgid "Public score"
-msgstr ""
-
-msgid "Total score"
-msgstr ""
-
-msgid "Score"
-msgstr ""
-
-msgid "Token"
-msgstr ""
-
-msgid "no submissions"
-msgstr ""
-
 #, python-format
 msgid "%(name)s (%(short_name)s) <small>description</small>"
 msgstr ""
@@ -946,23 +940,14 @@ msgstr ""
 msgid "unknown"
 msgstr ""
 
+msgid "Analysis Spoilers"
+msgstr ""
+
 msgid "loading..."
 msgstr ""
 
 #, python-format
 msgid "%(name)s (%(short_name)s) <small>submissions</small>"
-msgstr ""
-
-msgid "Score:"
-msgstr ""
-
-msgid "Public score:"
-msgstr ""
-
-msgid "Score of tokened submissions:"
-msgstr ""
-
-msgid "Total score:"
 msgstr ""
 
 msgid "Submit a solution"
@@ -1012,6 +997,9 @@ msgstr ""
 msgid "But you will have to wait until %(expiration_time)s to use it."
 msgstr ""
 
+msgid "Unit Tests"
+msgstr ""
+
 msgid "Unofficial submissions"
 msgstr ""
 
@@ -1022,6 +1010,9 @@ msgid "Submission details"
 msgstr ""
 
 msgid "Close"
+msgstr ""
+
+msgid "Download"
 msgstr ""
 
 msgid "Submit a test"
@@ -1050,5 +1041,32 @@ msgid "Test details"
 msgstr ""
 
 msgid "Evaluation outcome"
+msgstr ""
+
+msgid "Wait..."
+msgstr ""
+
+msgid "None"
+msgstr ""
+
+msgid "Actual score"
+msgstr ""
+
+msgid "Verdict"
+msgstr ""
+
+msgid "Token"
+msgstr ""
+
+msgid "no submissions"
+msgstr ""
+
+msgid "Played"
+msgstr ""
+
+msgid "Play!"
+msgstr ""
+
+msgid "No tokens"
 msgstr ""
 
