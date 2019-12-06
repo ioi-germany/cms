@@ -885,7 +885,7 @@ class TaskConfig(CommonConfig, Scope):
         self.tasktypeparameters = ([evaluation_param])
 
     @exported_function
-    def communication(self, manager, stub=True):
+    def communication(self, manager, stub=True, num_processes=1):
         """
         Specify this to be a communication task.
 
@@ -895,7 +895,7 @@ class TaskConfig(CommonConfig, Scope):
                               the file name of the executable)
 
         Submissions are linked together with interface.{c,cpp,pas}.
-
+        num_processes:        e.g. set to 2 for a Two-Step task
         """
         self.tasktype = "Communication"
         if stub:
@@ -909,7 +909,7 @@ class TaskConfig(CommonConfig, Scope):
                 self.managers["%slib.pas" % self.name] = \
                     os.path.join(self.wdir, "lib.pas")
         self.managers["manager"] = manager.get_path()
-        self.tasktypeparameters = ([1, "stub" if stub else "alone", "fifo_io"])
+        self.tasktypeparameters = ([num_processes, "stub" if stub else "alone", "fifo_io"])
 
     @exported_function
     def output_generator(self, s):
