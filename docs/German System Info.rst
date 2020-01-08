@@ -83,9 +83,9 @@ The following is the bot's self-specification containing a list of commands avai
 
 Constraints
 ===========
-Die Limits für die einzelnen Teilaufgaben sowie die globalen Limits sollte man *nicht* in Aufgabenstellung und Checker einzeln hardcoden sondern einzig und allein in die ``config.py``-Datei schreiben. Dazu steht der Befehl ``constraint`` zur Verfügung, dessen Syntax unten erläutert wird. Die Semantik ist hingegen die folgende: ein Constraint legt für eine *Variable* optional obere und untere Schranken fest. Diese Schranken sind (beliebig große) ganze Zahlen. Constraints sind kumulativ, was auch oft genutzt wird: hat man z.B. eine Aufgabe, bei der in allen Testfällen 1 ≤ N ≤ 1000 garantiert ist und in einer Teilaufgabe N ≤ 100, so würde man den ersten Constraint global festlegen und den zweiten in der entsprechenden Teilaufgabe. Während im Aufgabenstatement für die entsprechende Teilaufgabe tatsächlich nur N ≤ 100 abgedruckt würde, würde der Checker trotzdem auch 1 ≤ N überprüfen. Beachte allerdings, dass die Bedingung N ≤ 100 *nur für die entsprechende Teilaufgabe* gilt, nicht für die nächste – aber das ist ja auch das, was man haben möchte.
+Die Limits für die einzelnen Teilaufgaben sowie die globalen Limits sollte man *nicht* in Aufgabenstellung und Checker einzeln hardcoden, sondern einzig und allein in die ``config.py``-Datei schreiben. Dazu steht der Befehl ``constraint`` zur Verfügung, dessen Syntax unten erläutert wird. Die Semantik ist hingegen die folgende: ein Constraint legt für eine *Variable* optional obere und untere Schranken fest. Diese Schranken sind (beliebig große) ganze Zahlen. Constraints sind kumulativ, was auch oft genutzt wird: hat man z.B. eine Aufgabe, bei der in allen Testfällen 1 ≤ N ≤ 1000 garantiert ist und in einer Teilaufgabe N ≤ 100, so würde man den ersten Constraint global festlegen und den zweiten in der entsprechenden Teilaufgabe. Während im Aufgabenstatement für die entsprechende Teilaufgabe tatsächlich nur N ≤ 100 abgedruckt würde, würde der Checker trotzdem auch 1 ≤ N überprüfen. Beachte allerdings, dass die Bedingung N ≤ 100 *nur für die entsprechende Teilaufgabe* gilt, nicht für die nächste – aber das ist ja auch das, was man haben möchte.
 
-Zur Syntax: Constraints werden mit dem Befehl ``constraint`` erzeugt. Dieser kann global (d.h. außerhalb aller ``with subtask``-Blocks von ``config.py``) oder für eine Teilaufgabe (dementsprechend in ihrem entsprechenden ``with subtask``-Block) hinzugefügt werden. Manchmal möchte man einen Constraint *stumm* stellen. Dieser taucht dann nicht automatisch im Statement auf, sondern nur wenn man ihn explizit abfragt. Das kann man erreichen, indem man den Schlüsselwortparameter ``silent`` auf ``True`` setzt. Dieser Mechanismus ist besonders hilfreich, um irgendwelche aufgabenspezifischen Konstanten zu spezifizieren.
+Zur Syntax: Constraints werden mit dem Befehl ``constraint`` erzeugt. Dieser kann global (d.h. außerhalb aller ``with subtask``-Blocks von ``config.py``) oder für eine Teilaufgabe (dementsprechend in ihrem entsprechenden ``with subtask``-Block) hinzugefügt werden. Manchmal möchte man einen Constraint *stumm* stellen. Dieser taucht dann nicht automatisch im Statement auf, sondern nur, wenn man ihn explizit abfragt. Das kann man erreichen, indem man den Schlüsselwortparameter ``silent`` auf ``True`` setzt. Dieser Mechanismus ist besonders hilfreich, um irgendwelche aufgabenspezifischen Konstanten zu spezifizieren.
 
 Der Befehl ``constraint`` erwartet als Argument einen String, der eine durch Kommata getrennte Liste von *Constraints* enthält, wobei ein Constraint wiederum die folgende Syntax benutzt:
 
@@ -95,7 +95,7 @@ Der Befehl ``constraint`` erwartet als Argument einen String, der eine durch Kom
 
 Eine *Variable* wird dabei wie folgt beschrieben: zunächst der Name der Variable, dann *optional* in Klammern eingeschlossen TeX-Code, der angibt, wie diese Variable in der Aufgabenstellung gesetzt werden soll (ansonsten wird hierfür der Name selbst als TeX-Code interpretiert). Setzt man den TeX-Code global, wird derselbe Code auch für die entsprechenden Teilaufgaben verwendet, sofern man dort selbst nicht anderen Code dafür spezifiziert. Das ist auch der Grund, warum dieses Feature überhaupt hilfreich sein kann: ist der TeX-Code aufwendig, muss man ihn trotzdem nur einmal spezifizieren (außerdem müsste man bei Layout-Änderungen diese nur an einer Stelle vornehmen). Leerraum um Variablennamen oder TeX-Code wird standardmäßig ignoriert; möchte man ihn aus irgendwelchen Gründen trotzdem verwenden, kann man wieder die Variante mit Anführungszeichen verwenden.
 
-Beachte, dass weder Name noch TeX-Code aus technischen weder Gründen öffnende oder schließende runde oder eckige Klammern enthalten dürfen noch Kommata, einen Doppelpunkt oder normale Anführungszeichen ``"``. Möchte man irgendwelche dieser Zeichen außer dem Anführungszeichen verwenden, kann man den entsprechenden Teil in Anführungszeichen einschließen. Hier sind ein paar Beispiele für gültige Variablendefitionen:
+Beachte, dass aus technischen Gründen weder Name noch TeX-Code weder öffnende oder schließende runde oder eckige Klammern enthalten dürfen noch Kommata, einen Doppelpunkt oder normale Anführungszeichen ``"``. Möchte man irgendwelche dieser Zeichen außer dem Anführungszeichen verwenden, kann man den entsprechenden Teil in Anführungszeichen einschließen. Hier sind ein paar Beispiele für gültige Variablendefitionen:
 
 .. sourcecode:: plain
 
@@ -114,9 +114,9 @@ Die folgenden Beispiele wären hingegen *nicht* zulässig:
     (x_1-y_1)(x_2-y_2)
     diffprod((x_1-y_2)(x_2-y_2))
 
-Im ersten Beispiel würde dies als zwei getrennte Variablen ``d_{i`` und ``j}`` interpretiert; der Constraint-Parser selbst würde sich dementsprechend auch gar nicht beschweren, aber es würde evtl. ungültiger-TeX-Code erzeugt. Im zweiten und dritten Beispiel würden die Klammern jeweils als Zeichen, dass eine Spezifikation von TeX-Code folgt, interpretiert werden und der Parser würde sich beschweren.
+Im ersten Beispiel würde dies als zwei getrennte Variablen ``d_{i`` und ``j}`` interpretiert; der Constraint-Parser selbst würde sich dementsprechend auch gar nicht beschweren, aber es würde evtl. ungültiger TeX-Code erzeugt. Im zweiten und dritten Beispiel würden die Klammern jeweils als Zeichen, dass eine Spezifikation von TeX-Code folgt, interpretiert werden und der Parser würde sich beschweren.
 
-Die oberen Schranken werden in der Form ``[untere Schranke, obere Schranke]`` spezifiziert. Hierbei gilt für ``untere Schranke`` und ``obere Schranke`` dieselbe Syntax wie für Variablennamen: man spezifiziert den Wert (üblicherweise als Ziffernfolge) und optional in Klammern TeX-Code, wie die entsprechende Schranke gesetzt werden soll. Hierbei gelten auch wieder die Einschränkungen zu besonderen Zeichen und man kann wieder auf ``"`` zurückgreifen, um diese zu umgehen. Wird kein TeX-Code spezifiziert, wird die entsprechende untere Schranke automatisch schön gesetzt: lange Zahlen werden in Ziffernblöcke mit kleinem Leerraum dazwischen aufgeteilt.
+Die Schranken werden in der Form ``[untere Schranke, obere Schranke]`` spezifiziert. Hierbei gilt für ``untere Schranke`` und ``obere Schranke`` dieselbe Syntax wie für Variablennamen: man spezifiziert den Wert (üblicherweise als Ziffernfolge) und optional in Klammern TeX-Code, wie die entsprechende Schranke gesetzt werden soll. Hierbei gelten auch wieder die Einschränkungen zu besonderen Zeichen und man kann wieder auf ``"`` zurückgreifen, um diese zu umgehen. Wird kein TeX-Code spezifiziert, wird die entsprechende Schranke automatisch schön gesetzt: Lange Zahlen werden in Ziffernblöcke mit kleinem Leerraum dazwischen aufgeteilt.
 
 Möchte man nur untere oder nur obere Schranke verwenden, kann man die entsprechende andere Grenze einfach weglassen. Die folgenden Beispiele wären also alle zulässig:
 
@@ -134,9 +134,9 @@ Im Fall, dass obere und untere Schranke übereinstimmen, kann man das Komma (und
     N: [42]
     N: 42
 
-wären alle zulässig und haben denselben Effekt. Natürlich sind die beiden unteren Notation zu empfehlen (besonders, wenn der entsprechende Wert komplizierter ist oder man TeX-Code spezifizieren möchte...).
+wären alle zulässig und haben denselben Effekt. Natürlich sind die beiden unteren Notationen zu empfehlen (besonders, wenn der entsprechende Wert komplizierter ist oder man TeX-Code spezifizieren möchte...).
 
-Oft hilfreich in der Praxis: in einem begrenzten Umfang ist auch für den Wert selbst TeX-Code zulässig. Dieser wird dann automatisch (wenn auch etwas heuristisch) in Python-Code umgewandelt, der dann wiederum ausgewertet wird, um eine Zahl zu erhalten. Damit ist einfache Arithmetik möglich. Zulässig und korrekt interpretiert würden z.B.
+Oft hilfreich in der Praxis: In einem begrenzten Umfang ist auch für den Wert selbst TeX-Code zulässig. Dieser wird dann automatisch (wenn auch etwas heuristisch) in Python-Code umgewandelt, der dann wiederum ausgewertet wird, um eine Zahl zu erhalten. Damit ist einfache Arithmetik möglich. Zulässig und korrekt interpretiert würden z.B.
 
 .. sourcecode:: plain
 
@@ -165,21 +165,21 @@ Damit ist die Beschreibung des Formats abgeschlossen und die Interpretation als 
 * ``constraint("A: 1, N: [,1000]")`` erzeugt den TeX-Code ``$A=1, N\le 1000$``
 * ``constraint("X: 3000", silent=True)`` erzeugt gar keinen TeX-Code (s.o.)
 
-Natürlich muss man die spezifizieren Constraints auch in Statement und Checker wieder abfragen. Das wird jetzt erklärt:
+Natürlich muss man die spezifizierten Constraints auch in Statement und Checker wieder abfragen. Das wird jetzt erklärt:
 
 Constraints im Checker verwenden
 --------------------------------
 
 Möchte man die Constraints für seinen Checker verwenden (und das sollte man!), muss man *vor* ``#include<checkframework.h>`` noch ``#include"constraints.h"`` hinzufügen. (Führt man den Checker aus, wird man dann mit einem ``Constraints loaded`` begrüßt.)
 
-In den meisten Fällen benutzt man die Constraints automatisch mit den Methoden des globalen ``token_stream``-Objekts ``t``, das man zum Parsen der Eingabedatei verwendet. Genauer verwendet man fast immer die Methode ``parse_and_auto_check<Typ>(Name, nächster Whitespace)``: ist ``Name`` der Name einer Variable, die mit dem Constraint-System definiert wurde, prüft das automatisch ob:
+In den meisten Fällen benutzt man die Constraints automatisch mit den Methoden des globalen ``token_stream``-Objekts ``t``, das man zum Parsen der Eingabedatei verwendet. Genauer verwendet man fast immer die Methode ``parse_and_auto_check<Typ>(Name, nächster Whitespace)``: Ist ``Name`` der Name einer Variable, die mit dem Constraint-System definiert wurde, prüft das automatisch, ob:
 
 * obere und untere Schranke (sofern vorhanden) sowie das tatsächliche Eingabetoken im Datentyp ``Typ`` gespeichert werden können (``Typ`` sollte irgendein ganzzahliger Typ sein)
 * ob die Zahl in der Eingabe die spezifizierten Beschränkungen erfüllt
 
 Neben den Standardtypen ist dabei auch ``big_int`` (für beliebig lange ganze Zahlen) als Wert für ``Typ`` zulässig.
 
-Es gibt alternativ auch die Möglichkeit, irgendeine Zahl (z.B. eine die sich per Rechnung aus der Eingabe ergibt), anhand der Constraints zu überprüfen. Dazu verwendet man ``auto_check_bounds<Typ>(Name, zu prüfender Wert)``. Schließlich besteht die Möglichkeit, die Schranken eines Constraints selbst abzufragen. Die grundlegende Funktion dazu ist ``get_constraint<Typ>(Name)``, welche ein Paar von ``my_optional<Typ>`` zurückgibt, wobei ``my_optional`` eine sehr primitive Implementierung von C++17-``optional`` ist. Das prüft auch direkt, ob die Schranken in den Typ ``Typ`` passen. Möchte man nur eine der beiden Schranken, kann man ``get_constraint_lower<Typ>(Name)`` bzw. ``get_constraint_upper<Typ>(Name)`` verwenden. Diese geben einfach ein Element vom Typ ``Typ`` zurück und prüfen auch gleich, ob die entsprechende Schranke nicht doch leer ist. Sind obere und untere Schranke auch noch identisch, steht schließlich der Befehl ``get_constraint_value<Typ>(Name)`` zur Verfügung.
+Es gibt alternativ auch die Möglichkeit, irgendeine Zahl (z.B. eine, die sich per Rechnung aus der Eingabe ergibt), anhand der Constraints zu überprüfen. Dazu verwendet man ``auto_check_bounds<Typ>(Name, zu prüfender Wert)``. Schließlich besteht die Möglichkeit, die Schranken eines Constraints selbst abzufragen. Die grundlegende Funktion dazu ist ``get_constraint<Typ>(Name)``, welche ein Paar von ``my_optional<Typ>`` zurückgibt, wobei ``my_optional`` eine sehr primitive Implementierung von C++17-``optional`` ist. Das prüft auch direkt, ob die Schranken in den Typ ``Typ`` passen. Möchte man nur eine der beiden Schranken, kann man ``get_constraint_lower<Typ>(Name)`` bzw. ``get_constraint_upper<Typ>(Name)`` verwenden. Diese geben einfach ein Element vom Typ ``Typ`` zurück und prüfen auch gleich, ob die entsprechende Schranke nicht doch leer ist. Sind obere und untere Schranke auch noch identisch, steht schließlich der Befehl ``get_constraint_value<Typ>(Name)`` zur Verfügung.
 
 
 Constraints im Statement
@@ -189,9 +189,9 @@ Wie man Constraints im Statement verwendet, ist unten im Kapitel *Automatische T
 
 Teilaufgaben mit Spezialfällen
 ------------------------------
-Oft gibt es auch Teilaufgaben, in denen zwar die Limits genauso groß sind wie im Rest der Aufgabe, dafür aber die Eingabe auf irgendwelche Spezialfälle eingeschränkt werden; z.B. könnte es in einer Graphenaufgabe eine Teilaufgabe geben, in der die Eingabe ein Baum ist.
+Oft gibt es auch Teilaufgaben, in denen zwar die Limits genauso groß sind wie im Rest der Aufgabe, dafür aber die Eingabe auf irgendwelche Spezialfälle eingeschränkt wird; z.B. könnte es in einer Graphenaufgabe eine Teilaufgabe geben, in der die Eingabe ein Baum ist.
 
-Um dies auf einfache und durchsichtige Weise zu bewerkstelligen, steht der Befehl ``special_case`` zur Verfügung, den man üblicherweise einem ``with subtask``-Block aufruft. Dieser erwartet einfach nur einen String als Parameter und hat die Semantik *dieser Subtask gehört zu diesem Spezialfall*. Im obigen Beispiel würde man etwa ``special_case("tree")`` schreiben.
+Um dies auf einfache und durchsichtige Weise zu bewerkstelligen, steht der Befehl ``special_case`` zur Verfügung, den man üblicherweise in einem ``with subtask``-Block aufruft. Dieser erwartet einfach nur einen String als Parameter und hat die Semantik *dieser Subtask gehört zu diesem Spezialfall*. Im obigen Beispiel würde man etwa ``special_case("tree")`` schreiben.
 
 Die Überprüfung, ob dieser Spezialfall dann auch gilt, ist Aufgabe des Checkers. In jedem Checker, der wie oben beschrieben das Constraint-System lädt, steht der Befehl ``is_special_case`` zur Verfügung. Dieser erwartet wiederum nur einen String ``Fall`` als Parameter und gibt einen Boolean zurück: ob der entsprechende Testfall in einer Teilaufgabe verwendet wird, für die in ``config.py`` der Befehl ``special_case(Fall)`` ausgeführt wurde.
 
@@ -211,8 +211,7 @@ Aktuell hat ``special_case`` keinerlei Auswirkung auf das TeX-Statement, da mir 
 
 Automatische Teile des Statements
 =================================
-
-Viele Teile der Struktur einer Aufgabe, die in der ``config.py``-Datei spezifiziert werden, möchte man auch im Statement wiederholen. Dazu gehören insbesondere die Limits für Zeit und Speicher oder die Beschränkungen für die Eingabe. Wenn man an irgendetwas rumschraubt (z.B. weil der Server langsamer ist als der eigene Rechner), möchte man diese natürlich nicht an allen möglichen Stellen ändern, sondern am besten nur an einer: der ``config.py``-Datei selbst. Unser Aufgabensystem hat mehrere Features, die dabei helfen, solche Redudanzen zu vermeiden, und die man *unbedingt* nutzen sollte. Ein Beispiel dafür ist das ``constraint``-System, das wegen seiner eigenen Syntax oben bereits diskutiert wurde und auf das wir unten noch einmal zu sprechen kommen.
+Viele Teile der Struktur einer Aufgabe, die in der ``config.py``-Datei spezifiziert werden, möchte man auch im Statement wiederholen. Dazu gehören insbesondere die Limits für Zeit und Speicher oder die Beschränkungen für die Eingabe. Wenn man an irgendetwas rumschraubt (z.B. weil der Server langsamer ist als der eigene Rechner), möchte man diese natürlich nicht an allen möglichen Stellen ändern, sondern am besten nur an einer: der ``config.py``-Datei selbst. Unser Aufgabensystem hat mehrere Features, die dabei helfen, solche Redundanzen zu vermeiden, und die man *unbedingt* nutzen sollte. Ein Beispiel dafür ist das ``constraint``-System, das wegen seiner eigenen Syntax oben bereits diskutiert wurde und auf das wir unten noch einmal zu sprechen kommen.
 
 
 Teilaufgaben
@@ -292,7 +291,7 @@ und dem folgenden TeX-Code
 
     Deine Lösung darf aus höchstens \currconstraintupper{max_n} Knoten bestehen.
     % Ausgabe: Deine Lösung darf aus höchstens $30\,000$ Knoten bestehen.
-    
+
     % ...
     \section*{Beschränkungen}
     Stets gilt \currconstraints. % Ausgabe: Stets gilt $M\le 3\,000$.
@@ -390,7 +389,7 @@ Beispiele
 
 2. Möchte man denselben Graphen als gerichteten Graphen interpretieren, so ist das Flag ``directed`` hinzuzufügen.
 
-3. Wenn man ausdrücklich auf 0-Indizierung besteht, kann man nach Angabe des Flags ``zero_based`` stattdessen das folgende verwenden:
+3. Wenn man ausdrücklich auf 0-Indizierung besteht, kann man nach Angabe des Flags ``zero_based`` stattdessen das Folgende verwenden:
 
      .. sourcecode:: plain
 
@@ -401,7 +400,7 @@ Beispiele
         2 3
         3 0
 
-4. Übergibt man das Flag ``weighted``, so würde die folgende Datei als ein (ungerichteter) gewichteter Graph mit vier Knoten und drei Kanten interpretieren:
+4. Übergibt man das Flag ``weighted``, so würde die folgende Datei als ein (ungerichteter) gewichteter Graph mit vier Knoten und drei Kanten interpretiert:
 
     .. sourcecode:: plain
 
@@ -451,7 +450,7 @@ Einfache Graphen zeichnen
 -------------------------
 In den meisten Fällen verwendet man dazu das TeX-Makro ``\drawgraph``; dieses erwartet als Parameter den Pfad zu der Eingabedatei (im Format wie oben), die gelesen werden soll, sowie optional in eckigen Klammern die Flags und Parameter wie oben beschrieben (in beliebiger Reihenfolge, durch Kommata getrennt, Leerzeichensindoptional). Zwei Beispiele:
 
-1. Enthält ``1.in`` den Text aus dem ersten Beispiel oben, so würde ``\drawgraph{1.in}`` diesen zeichnen. Wäre die Datei in einem Unterordner ``inputs`` würde man stattdessen ``\drawgraph{inputs/1.in}`` verwenden.
+1. Enthält ``1.in`` den Text aus dem ersten Beispiel oben, so würde ``\drawgraph{1.in}`` diesen zeichnen. Wäre die Datei in einem Unterordner ``inputs``, würde man stattdessen ``\drawgraph{inputs/1.in}`` verwenden.
 
 2. Enthält ``8.in`` das allerletzte Beispiel oben, so würde ``\drawgraph[weighted,tree]{8.in}`` den entsprechenden Graphen zeichnen.
 
