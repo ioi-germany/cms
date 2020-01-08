@@ -183,6 +183,10 @@ class ResourceService(Service):
                 self.contest_id is None:
             logger.warning("Will not run ProxyService "
                            "since it requires a contest id.")
+        if "TelegramBotService" in (s.name for s in self._local_services) and \
+                self.contest_id is None:
+            logger.warning("Will not run TelegramBotService "
+                           "since it currently requires a contest id.")
         # Dict service with bool to mark if we will restart them.
         self._will_restart = dict((service,
                                    None if not self.autorestart else True)
@@ -225,7 +229,9 @@ class ResourceService(Service):
             if service.name == "LogService" or \
                     service.name == "ResourceService" or \
                     (self.contest_id is None and
-                     service.name == "ProxyService"):
+                     service.name == "ProxyService") or \
+                    (self.contest_id is None and#TODO remove this as soon as TelegramBot can handle lack of contest_id
+                     service.name == "TelegramBotService"):
                 continue
 
             # If the user specified not to restart some service, we
@@ -465,6 +471,10 @@ class ResourceService(Service):
 
         # ProxyService requires contest_id
         if self.contest_id is None and name == "ProxyService":
+            return None
+
+        # TelegramBotService requires contest_id (currently -- TODO fix this)
+        if self.contest_id is None and name == "TelegramBotService":
             return None
 
         try:
