@@ -59,7 +59,11 @@ class SubtaskGroup(ScoreType):
     N_("Group")
     N_("N/A")
     N_("All correct")
+    N_("Score Verdicts")
+    N_("Group and Testcase Verdicts")
     N_("Sample score")
+    N_("Partial feedback score")
+    N_("Final score")
     N_("T")
     N_("M")
     N_("A")
@@ -159,6 +163,7 @@ class SubtaskGroup(ScoreType):
 {% endfor %}
 {% endif %}
 {% else %}{# Unit test #}
+<h3>Score Verdicts</h3>
 <div class="subtask {% if details["sample_score_okay"] %}correct{% else %}notcorrect{% endif %}">
     <div class="subtask-head">
         <span class="title" style="margin-top:-2px">
@@ -170,6 +175,8 @@ class SubtaskGroup(ScoreType):
     </div>
     <div class="subtask-body">
         <table class="table table-bordered table-striped">
+            <col style="width:50%;">
+            <col style="width:50%;">
             <tr>
             <td>
                 Expected: {{details["expected_sample_score"]}}
@@ -185,7 +192,7 @@ class SubtaskGroup(ScoreType):
 <div class="subtask {% if details["partial_feedback_score_okay"] %}correct{% else %}notcorrect{% endif %}">
     <div class="subtask-head">
         <span class="title" style="margin-top:-2px">
-            Partial feedback score
+            {% trans %}Partial feedback score{% endtrans %}
         </span>
         <span class="score">
             {% if details["partial_feedback_score_okay"] %}OKAY{% else %}FAILED{% endif %}
@@ -193,6 +200,8 @@ class SubtaskGroup(ScoreType):
     </div>
     <div class="subtask-body">
         <table class="table table-bordered table-striped">
+            <col style="width:50%;">
+            <col style="width:50%;">
             <tr>
             <td>
                 Expected: {{details["expected_partial_feedback_score"]}}
@@ -208,7 +217,7 @@ class SubtaskGroup(ScoreType):
 <div class="subtask {% if details["final_score_okay"] %}correct{% else %}notcorrect{% endif %}">
     <div class="subtask-head">
         <span class="title" style="margin-top:-2px">
-            Final score
+            {% trans %}Final score{% endtrans %}
         </span>
         <span class="score">
             {% if details["final_score_okay"] %}OKAY{% else %}FAILED{% endif %}
@@ -216,6 +225,8 @@ class SubtaskGroup(ScoreType):
     </div>
     <div class="subtask-body">
         <table class="table table-bordered table-striped">
+            <col style="width:50%;">
+            <col style="width:50%;">
             <tr>
             <td>
                 Expected: {{details["expected_final_score"]}}
@@ -227,8 +238,7 @@ class SubtaskGroup(ScoreType):
         </table>
     </div>
 </div>
-<br><br>
-
+<h3>Group and Testcase Verdicts</h3>{# TODO Abstand nach oben verringern #}
 {% for st in details["subtasks"] %}
     {% if st["status"][0] == 1337%}
 <div class="subtask partiallycorrect">

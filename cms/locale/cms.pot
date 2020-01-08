@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Contest Management System 1.5.dev0\n"
 "Report-Msgid-Bugs-To: contestms@googlegroups.com\n"
-"POT-Creation-Date: 2019-12-01 12:17+0100\n"
+"POT-Creation-Date: 2019-12-15 19:20+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -51,7 +51,19 @@ msgstr ""
 msgid "All correct"
 msgstr ""
 
+msgid "Score Verdicts"
+msgstr ""
+
+msgid "Group and Testcase Verdicts"
+msgstr ""
+
 msgid "Sample score"
+msgstr ""
+
+msgid "Partial feedback score"
+msgstr ""
+
+msgid "Final score"
 msgstr ""
 
 msgid "T"
