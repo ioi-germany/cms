@@ -3,13 +3,13 @@
 # This file is distributed under the same license as the Contest Management
 # System project.
 #
-# Manuel Gundlach <manuel.gundlach@gmail.com>, 2019.
+# Manuel Gundlach <manuel.gundlach@gmail.com>, 2019, 2020.
 msgid ""
 msgstr ""
 "Project-Id-Version: Contest Management System 1.5.dev0\n"
 "Report-Msgid-Bugs-To: contestms@googlegroups.com\n"
-"POT-Creation-Date: 2019-12-01 12:17+0100\n"
-"PO-Revision-Date: 2019-12-01 13:01+0100\n"
+"POT-Creation-Date: 2019-12-15 19:14+0100\n"
+"PO-Revision-Date: 2020-01-08 16:39+0100\n"
 "Last-Translator: Manuel Gundlach <manuel.gundlach@gmail.com>\n"
 "Language: de\n"
 "Language-Team: German <kde-i18n-de@kde.org>\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.4.0\n"
-"X-Generator: Lokalize 19.08.3\n"
+"X-Generator: Lokalize 19.12.0\n"
 
 msgid "N/A"
 msgstr "nicht verfügbar"
@@ -52,11 +52,22 @@ msgstr "Gruppe"
 
 #, fuzzy
 msgid "All correct"
-msgstr "Teilweise korrekt"
+msgstr "All correct"
 
-#, fuzzy
+msgid "Score Verdicts"
+msgstr "Punktzahlurteile"
+
+msgid "Group and Testcase Verdicts"
+msgstr "Gruppen- und Testfallurteile"
+
 msgid "Sample score"
-msgstr "Gesamtpunktzahl"
+msgstr "Beispielpunktzahl"
+
+msgid "Partial feedback score"
+msgstr ""
+
+msgid "Final score"
+msgstr "Endgültige Punktzahl"
 
 msgid "T"
 msgstr "Z"
@@ -65,7 +76,7 @@ msgid "M"
 msgstr "S"
 
 msgid "A"
-msgstr ""
+msgstr "A"
 
 msgid "Testcase verdict"
 msgstr "Testfallurteil"
@@ -96,9 +107,8 @@ msgstr "Kompilation fehlgeschlagen"
 msgid "Your submission did not compile correctly."
 msgstr "Deine Einsendung konnte nicht fehlerfrei kompiliert werden."
 
-#, fuzzy
 msgid "Compilation timed out"
-msgstr "Kompilationszeit überschritten"
+msgstr "Kompilationszeitlimit überschritten"
 
 msgid ""
 "Your submission exceeded the time limit while compiling. This might be "
@@ -167,7 +177,7 @@ msgid "Your submission used too much CPU time."
 msgstr "Deine Einsendung benötigte zu viel CPU-Zeit."
 
 msgid "Execution timed out (wall clock limit exceeded)"
-msgstr "Zeitlimit überschritten (wall clock limit überschritten)"
+msgstr "Zeitlimit überschritten (Echtzeitlimit überschritten)"
 
 msgid ""
 "Your submission used too much total time. This might be triggered by "
@@ -197,13 +207,14 @@ msgstr ""
 "Zuweisung ist, die das Signal ausgelöst hat."
 
 msgid "Execution failed because the return code was nonzero"
-msgstr "Ausführung beendet, da der Rückgabewert (return code) nicht Null war"
+msgstr ""
+"Ausführung fehlgeschlagen, da der Rückgabewert (return-Code) nicht Null war"
 
 msgid ""
 "Your submission failed because it exited with a return code different from 0."
 msgstr ""
 "Deine Einsendung ist fehlgeschlagen, da sie mit einem von Null verschiedenen"
-" Rückgabewert (return code) endete."
+" Rückgabewert (return-Code) endete."
 
 msgid "Execution completed successfully"
 msgstr "Ausführung erfolgreich beendet"
@@ -682,9 +693,10 @@ msgid ""
 " the server with customized URLs) may be considered cheating and may lead to"
 " disqualification."
 msgstr ""
-"Denke daran, dass Versuche, sich am Contest Management System zu schaffen zu"
-" machen (wie das Sondieren angepasster URLs) als Unterschleif ausgelegt "
-"werden können und zur Disqualifizierung führen können."
+"Wir weisen darauf hin, dass Versuche, sich am Contest Management System zu "
+"schaffen zu machen (wie das Sondieren angepasster URLs), als Unterschleif "
+"ausgelegt werden können und möglicherweise die Disqualifizierung nach sich "
+"ziehen."
 
 msgid ""
 "If you encountered this error during normal usage, please notify the contest"
@@ -1084,7 +1096,7 @@ msgstr "unbekannt"
 
 #, fuzzy
 msgid "Analysis Spoilers"
-msgstr "Bis zum Beginn des Analyse-Modus:"
+msgstr ""
 
 msgid "loading..."
 msgstr "laden..."
@@ -1115,7 +1127,7 @@ msgstr "Bisherige Einsendungen"
 # Wozu is das da?
 #, fuzzy
 msgid "Tokens are not allowed on this task."
-msgstr "Tokens sind in dieser Aufgabe nicht erlaubt."
+msgstr "Tokens sind in dieser Aufgabe nicht zugelassen."
 
 msgid "Right now, you have infinite tokens available on this task."
 msgstr ""
@@ -1204,9 +1216,8 @@ msgstr "Augenblick..."
 msgid "None"
 msgstr ""
 
-#, fuzzy
 msgid "Actual score"
-msgstr "Gesamtpunktzahl"
+msgstr "Gültige Punktzahl"
 
 msgid "Verdict"
 msgstr "Urteil"
