@@ -50,7 +50,7 @@ Clarification requests can be seen and answered and announcements be made via a 
 
 The following is the bot's self-specification containing a list of commands available:
 
-.. sourcecode:: plain
+.. sourcecode:: text
 
     A bot allowing to access clarification requests and announcements
     of a CMS contest via Telegram.
@@ -89,7 +89,7 @@ Zur Syntax: Constraints werden mit dem Befehl ``constraint`` erzeugt. Dieser kan
 
 Der Befehl ``constraint`` erwartet als Argument einen String, der eine durch Kommata getrennte Liste von *Constraints* enthält, wobei ein Constraint wiederum die folgende Syntax benutzt:
 
-.. sourcecode:: plain
+.. sourcecode:: text
 
     [Durch Kommata getrennte Liste von Variablen]: [Beschreibung der zulässigen Werte]
 
@@ -97,7 +97,7 @@ Eine *Variable* wird dabei wie folgt beschrieben: zunächst der Name der Variabl
 
 Beachte, dass aus technischen Gründen weder Name noch TeX-Code weder öffnende oder schließende runde oder eckige Klammern enthalten dürfen noch Kommata, einen Doppelpunkt oder normale Anführungszeichen ``"``. Möchte man irgendwelche dieser Zeichen außer dem Anführungszeichen verwenden, kann man den entsprechenden Teil in Anführungszeichen einschließen. Hier sind ein paar Beispiele für gültige Variablendefitionen:
 
-.. sourcecode:: plain
+.. sourcecode:: text
 
     dij("d_{i,j}")
     "d_{i,j}"
@@ -108,7 +108,7 @@ Die ersten beiden Beispiele und die letzten beiden werden im Statement jeweils g
 
 Die folgenden Beispiele wären hingegen *nicht* zulässig:
 
-.. sourcecode:: plain
+.. sourcecode:: text
 
     d_{i,j}
     (x_1-y_1)(x_2-y_2)
@@ -120,7 +120,7 @@ Die Schranken werden in der Form ``[untere Schranke, obere Schranke]`` spezifizi
 
 Möchte man nur untere oder nur obere Schranke verwenden, kann man die entsprechende andere Grenze einfach weglassen. Die folgenden Beispiele wären also alle zulässig:
 
-.. sourcecode:: plain
+.. sourcecode:: text
 
     N: [,100000]
     N: [3,]
@@ -128,7 +128,7 @@ Möchte man nur untere oder nur obere Schranke verwenden, kann man die entsprech
 
 Im Fall, dass obere und untere Schranke übereinstimmen, kann man das Komma (und auch die eckigen Klammern nach Wunsch) einfach weglassen:
 
-.. sourcecode:: plain
+.. sourcecode:: text
 
     N: [42,42]
     N: [42]
@@ -138,7 +138,7 @@ wären alle zulässig und haben denselben Effekt. Natürlich sind die beiden unt
 
 Oft hilfreich in der Praxis: In einem begrenzten Umfang ist auch für den Wert selbst TeX-Code zulässig. Dieser wird dann automatisch (wenn auch etwas heuristisch) in Python-Code umgewandelt, der dann wiederum ausgewertet wird, um eine Zahl zu erhalten. Damit ist einfache Arithmetik möglich. Zulässig und korrekt interpretiert würden z.B.
 
-.. sourcecode:: plain
+.. sourcecode:: text
 
     10^{15}
     5\cdot 10^8
@@ -147,7 +147,7 @@ Oft hilfreich in der Praxis: In einem begrenzten Umfang ist auch für den Wert s
 
 Nicht erlaubt wären hingegen z.B.
 
-.. sourcecode:: plain
+.. sourcecode:: text
 
     1/2
     \frac{4}{2}
@@ -333,7 +333,7 @@ Die möglichen Parameter sind im nächsten Abschnitt beschrieben:
 
 Das erwartete Format der Graphendatei ist wie folgt (Teile in eckigen Klammern sind je nach überreichten Flags und Parametern optional):
 
-.. sourcecode:: plain
+.. sourcecode:: text
 
     [Ignorierter Teil]
     #Knoten [#Kanten]
@@ -345,7 +345,7 @@ Das erwartete Format der Graphendatei ist wie folgt (Teile in eckigen Klammern s
 
 Die Listen von Knoten müssen dabei jeweils das Format
 
-.. sourcecode:: plain
+.. sourcecode:: text
 
     #Knoten
     Liste der Knoten
@@ -378,7 +378,7 @@ Beispiele
 ---------
 1. Ein ungewichteter Graph mit vier Knoten und fünf Kanten ließe sich z.B. wie folgt codieren (keine Parameter nötig):
 
-    .. sourcecode:: plain
+    .. sourcecode:: text
 
         4 5
         1 2
@@ -391,7 +391,7 @@ Beispiele
 
 3. Wenn man ausdrücklich auf 0-Indizierung besteht, kann man nach Angabe des Flags ``zero_based`` stattdessen das Folgende verwenden:
 
-     .. sourcecode:: plain
+     .. sourcecode:: text
 
         4 5
         0 1
@@ -402,7 +402,7 @@ Beispiele
 
 4. Übergibt man das Flag ``weighted``, so würde die folgende Datei als ein (ungerichteter) gewichteter Graph mit vier Knoten und drei Kanten interpretiert:
 
-    .. sourcecode:: plain
+    .. sourcecode:: text
 
         4 3
         1 2 42
@@ -411,7 +411,7 @@ Beispiele
 
 5. Es wird komplizierter: die folgende Datei wäre eine gültige Codierung für denselben Graphen, wenn es zusätzlich Knotengewichte gibt (die Zahlen an den Knoten können natürlich auch eine andere Bedeutung als Gewichte haben...); hierzu ist neben ``weighted`` zusätzlich noch ``annotated`` anzugeben:
 
-    .. sourcecode:: plain
+    .. sourcecode:: text
 
         4 3
         2
@@ -426,7 +426,7 @@ Beispiele
 
 7. Hier ist ein Beispiel mit zwei Arten von Knotenmarkierungen, wofür ``markings=2`` anzugeben ist. Knoten 1 und 2 tragen die erste Markierung, Knoten 1, 3 und 4 die zweite:
 
-    .. sourcecode:: plain
+    .. sourcecode:: text
 
         4 4
         2 1 2
@@ -438,7 +438,7 @@ Beispiele
 
 8. Übergibt man das Flag ``tree`` (und natürlich ``weighted``), ließe sich Beispiel 3 auch wie folgt codieren:
 
-    .. sourcecode:: plain
+    .. sourcecode:: text
 
         4
         1 2 42
@@ -466,7 +466,7 @@ Für kompliziertere Graphen, bei denen man von Hand Veränderungen vornehmen mö
 
 Ein Beispiel:
 
-.. sourcecode:: plain
+.. sourcecode:: text
 
     \begin{graphpicture}
     \load[weighted]{1.in}
