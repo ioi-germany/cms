@@ -72,13 +72,14 @@ class PlainTemplate(Template):
         task.supplement_file("latex", "taskinfo.tex")
         shutil.copy(os.path.join(os.path.dirname(__file__), "header.tex"),
                     os.path.join(task.wdir, "header.tex"))
-        shutil.copy(os.path.join(os.path.dirname(__file__), 
+        shutil.copy(os.path.join(os.path.dirname(__file__),
                                  "taskinfo-base.tex"),
                     os.path.join(task.wdir, "taskinfo-base.tex"))
         task.supply("latex", r"\input{taskinfo-base.tex}")
         task.supply("latex", def_latex("basicheader",
                                        input_latex("header.tex")))
         task.supply_latex("taskname", task.simple_query("name"))
+        task.supply_latex("tasktitle", task.simple_query("title"))
         task.supply_latex("contestname",
                           task.contest.simple_query("_description"))
         task.supply_latex("timelimit", task.latex_timelimit)
@@ -195,7 +196,7 @@ class PlainTemplate(Template):
     def scoped_constraints(self, task):
         r = []
         acc_constraints = {}
-        
+
         def constraint_values_for_scope(i, scope_list):
             curr_constraints = acc_constraints.copy()
 
