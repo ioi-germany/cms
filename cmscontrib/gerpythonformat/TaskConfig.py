@@ -78,9 +78,9 @@ class Scope(object):
 
     def _get_special_cases(self):
         res = []
-        
+
         if self.upscope is not None:
-            res += self.upscope._get_special_cases()        
+            res += self.upscope._get_special_cases()
         res += self.special_cases
         return res
 
@@ -555,6 +555,7 @@ class TaskConfig(CommonConfig, Scope):
     :ivar contest: The contest this task belongs to
     :ivar wdir: The build directory for this task
     :ivar name: The (short) name of this task
+    :ivar title: The (long) title of this task
     :ivar num: The (0-based) index of this task
     :ivar subtasks: List of the subtasks
     :ivar cases: List of the test cases
@@ -566,7 +567,7 @@ class TaskConfig(CommonConfig, Scope):
     This object is exported as a variable called :samp:`task`.
     """
 
-    def __init__(self, upstream, rules, name, num, feedback, score_mode,
+    def __init__(self, upstream, rules, name, title, num, feedback, score_mode,
                  ignore_latex=False, minimal=False):
         super(TaskConfig, self).__init__(rules, ignore_latex)
         self.no_tokens()
@@ -584,6 +585,7 @@ class TaskConfig(CommonConfig, Scope):
         self.wdir = os.getcwd()
 
         self.name = name
+        self.title = title
         self.num = num
 
         self._dataset = "imported"
@@ -692,7 +694,7 @@ class TaskConfig(CommonConfig, Scope):
     def get_constraint_value(self, name):
         l = self.get_constraint_lower(name)
         u = self.get_constraint_upper(name)
-        
+
         if l == u:
             return l
         else:
@@ -723,16 +725,6 @@ class TaskConfig(CommonConfig, Scope):
         return s
 
     # Simple task properties
-
-    @exported_function
-    def title(self, s):
-        """
-        Set the task title.
-
-        s (unicode): task title
-
-        """
-        self._title = s
 
     @exported_function
     def dataset(self, s):
@@ -1130,7 +1122,7 @@ class TaskConfig(CommonConfig, Scope):
             print_msg("Skipping testcase (minimal mode)")
             self.group_stack[-1]._dummy_case(kwargs.get("name"))
             return
-        
+
         if len(self.group_stack) == 0:
             raise Exception("add_testcase() called outside group")
         return self.group_stack[-1].add_testcase(*args, **kwargs)
@@ -1359,7 +1351,7 @@ class TaskConfig(CommonConfig, Scope):
         self.file_cacher = file_cacher
 
         tdb = Task(name=self.name,
-                   title=self._title,
+                   title=self.title,
                    num=self.num,
                    contest=contest)
         self._set_tokens(tdb)
@@ -1501,14 +1493,14 @@ class TaskConfig(CommonConfig, Scope):
 
         if len(self.testsubmissions) == 0:
             print()
-            box(" No Unit Tests for Task \"{}\"! ".format(self._title),
+            box(" No Unit Tests for Task \"{}\"! ".format(self.title),
                 red("You should define some unit tests for this task!"),
                 double=True)
             print()
 
         elif len(unit_tests) != 0:
             print()
-            box(" Unit Test Statistics for Task \"{}\" ".format(self._title),
+            box(" Unit Test Statistics for Task \"{}\" ".format(self.title),
                 (green("All unit tests passed.") if len(failed) == 0
                  else red("{} unit test{} failed:\n".format(len(failed),
                                                             "s" if len(failed) > 1 else "") +
@@ -1756,7 +1748,7 @@ class TaskConfig(CommonConfig, Scope):
             def print_score_info(prefix, name):
                 score = details[prefix + "_score"]
                 rounded_score = round(score, score_precision)
-                
+
                 if score != rounded_score:
                     score = "{} ({})".format(rounded_score, score)
 

@@ -36,6 +36,7 @@ import shutil
 from datetime import datetime, timedelta
 from importlib import import_module
 import pytz
+import json
 
 
 class MyGroup(object):
@@ -410,7 +411,7 @@ class ContestConfig(CommonConfig):
                      folder with the same name
         feedback:    type of feedback (one of the variables no_feedback,
                      partial_feedback, full_feedback, restricted_feedback)
-        score_mode:  how to calculate the final score (one of SCORE_MODE_MAX, 
+        score_mode:  how to calculate the final score (one of SCORE_MODE_MAX,
                      SCORE_MODE_MAX_SUBTASK, SCORE_MODE_MAX_TOKENED_LAST)
         minimal (bool): only try to compile statement?
 
@@ -426,6 +427,24 @@ class ContestConfig(CommonConfig):
             raise Exception("Task {} specified multiple times".format(s))
 
         with chdir(s):
+            # Find out the task's long title from the info.json
+            if not os.path.isfile("info.json"):
+                raise Exception("Couldn't find task info file. Make sure it "
+                                "is named 'info.json' and located on the "
+                                "topmost level of the folder {}"
+                                .format(os.getcwd()))
+
+            try:
+                taskinfo = json.loads(open("info.json").read())
+            except:
+                raise Exception("Task info file (info.json) is corrupt")
+
+            if "title" not in taskinfo:
+                raise Exception("Title entry is missing from task info (info.json)")
+
+            title = taskinfo["title"]
+
+            #Configure the task
             if not os.path.isfile("config.py"):
                 raise Exception("Couldn't find task config file. Make sure it "
                                 "is named 'config.py' and located on the "
@@ -433,7 +452,7 @@ class ContestConfig(CommonConfig):
                                 .format(os.getcwd()))
 
             with TaskConfig(self, os.path.abspath(".rules"),
-                            s, len(self.tasks),
+                            s, title, len(self.tasks),
                             feedback, score_mode,
                             ignore_latex=self.ignore_latex,
                             minimal=minimal) as taskconfig:
