@@ -50,6 +50,10 @@ class LgTemplate(PlainTemplate):
                     os.path.join(task.wdir, "graphdrawing.lua"))
 
         # Register contestheader.tex as \taskheader
+        shutil.copy(os.path.join(os.path.dirname(__file__), "logo.eps"),
+                    os.path.join(task.wdir, "logo.eps"))
+        # shutil.copyfile(os.path.join(os.path.dirname(__file__), "logo.eps"),
+        #                "logo.eps")
         shutil.copy(os.path.join(os.path.dirname(__file__),
                                  "contestheader.tex"),
                     os.path.join(task.wdir, "taskheader.tex"))
@@ -61,22 +65,6 @@ class LgTemplate(PlainTemplate):
                         os.path.join(task.wdir, "translation.tex"))
         task.supply("latex", def_latex("translationheader",
                                        input_latex("translation.tex")))
-        # Compile bar.asy
-        shutil.copyfile(os.path.join(os.path.dirname(__file__), "graphics.cfg"),
-                        "graphics.cfg")
-        shutil.copyfile(os.path.join(os.path.dirname(__file__), "mystyle.asy"),
-                        "mystyle.asy")
-        shutil.copyfile(os.path.join(os.path.dirname(__file__), "logo.eps"),
-                        "logo.eps")
-        shutil.copyfile(os.path.join(os.path.dirname(__file__), "bar.asy"),
-                        "bar.asy")
-        task.supply_asy("lg", self.contest.simple_query("lg"))
-        task.supply_asy("taskname", task.simple_query("name"))
-        task.supplement_file("asy", "info.asy")
-        task.compile("bar.asy")
-
-        # Tell Latex where bar.pdf can be found
-        task.supply("latex", def_latex("barpdf", "bar.pdf"))
 
         task.supply("latex", def_latex("feedback", task.feedback))
 
@@ -97,11 +85,11 @@ class LgTemplate(PlainTemplate):
                r"""\multicolumn{1}{|c}{\sffamily Input} && """ \
                r"""\multicolumn{1}{c|}{\sffamily Output} \\ """ \
                r"""\hline"""
-        
+
         self.supply_case_table(
             task,
             start=r"""\begin{longtable}[l]{p{\inputwidth}@{\hskip0pt}p{.52cm}"""
-                  r"""@{\hskip0pt}p{\outputwidth}}""" + 
+                  r"""@{\hskip0pt}p{\outputwidth}}""" +
                   r"""\caption*{\ifnum\numsamples=1{\tSample}"""
                   r"""\else{\tSamples}\fi}\\""" + head +
                   r"""\noalign{\smallskip}\endfirsthead""" +
