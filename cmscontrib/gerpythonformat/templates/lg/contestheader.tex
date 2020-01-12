@@ -20,20 +20,29 @@
 
 \translationheader
 
+\newlength{\myoddoffset}
+\setlength{\myoddoffset}{\marginparwidth + \marginparsep + \marginparsep}
+\fancyheadoffset[roh,reh]{\myoddoffset}
+
 \def\logo{
 \begin{tikzpicture}
-    \clip (0,0) rectangle (7.5cm, 7.2cm);
-    \node[anchor=south west] (pic) at (0, 0) {\includegraphics[clip,scale=.55,draft=false]{logo.eps}};
-
     \begin{scope}[yshift=.75cm]
         \node[white!40!black, rotate=16.125, anchor=west, align=left] at (15:2.25cm)
-        {\mbox{}\\[.6ex]{\bfseries\contestname}\\Aufgabe:\enspace\bfseries\taskname\\[-.8ex]};
+        {\mbox{}\\[.6ex]{\bfseries\contestname\quad}\\Aufgabe:\enspace\bfseries\taskname\quad\\[-.8ex]};
     \end{scope}
+
+    \path (current bounding box.north east);
+    \pgfgetlastxy{\XCoord}{\YCoord};
+    \pgfmathsetmacro{\bndx}{max(215, \XCoord)};
+    \pgfmathsetmacro{\bndy}{max(200, \YCoord)};
+
+    \clip (0,0) rectangle (\bndx pt,\bndy pt);
+    \node[anchor=south west] (pic) at (0, 0) {\includegraphics[scale=.55]{logo.eps}};
 \end{tikzpicture}
 }
 
 %\rhead{\vbox to \headh{\vbox to 0pt{\vskip-2in\hbox to 0pt{\hskip\hsize\hskip-1.5in\includegraphics{\barpdf}}}\quad\null}}
-\rhead{\vbox to \headh{\vbox to 0pt{\vskip-2in\hbox to 0pt{\hskip\hsize\hskip-1.5in\logo}}\quad\null}}
+\rhead{\vbox to \headh{\vbox to 0pt{\vskip-2in{\logo}}\quad\null}}
 
 \lhead{}
 
