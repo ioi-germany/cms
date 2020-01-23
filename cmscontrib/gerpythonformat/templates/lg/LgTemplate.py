@@ -49,18 +49,18 @@ class LgTemplate(PlainTemplate):
         shutil.copy(os.path.join(os.path.dirname(__file__), "graphdrawing.lua"),
                     os.path.join(task.wdir, "graphdrawing.lua"))
 
-        # Register contestheader.tex as \taskheader
+        # Provide access to our logo
         shutil.copy(os.path.join(os.path.dirname(__file__), "logo.eps"),
                     os.path.join(task.wdir, "logo.eps"))
-        # shutil.copyfile(os.path.join(os.path.dirname(__file__), "logo.eps"),
-        #                "logo.eps")
+
+        # Register contestheader.tex as \taskheader
         shutil.copy(os.path.join(os.path.dirname(__file__),
                                  "contestheader.tex"),
                     os.path.join(task.wdir, "taskheader.tex"))
         task.supply("latex", def_latex("taskheader",
                                        input_latex("taskheader.tex")))
         # Register translation.tex as \translationheader
-        shutil.copyfile(os.path.join(os.path.dirname(__file__),
+        shutil.copy(os.path.join(os.path.dirname(__file__),
                                      "translation.tex"),
                         os.path.join(task.wdir, "translation.tex"))
         task.supply("latex", def_latex("translationheader",
