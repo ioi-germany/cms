@@ -66,6 +66,12 @@ class LgTemplate(PlainTemplate):
         task.supply("latex", def_latex("translationheader",
                                        input_latex("translation.tex")))
 
+        # Provide common asy files
+        shutil.copyfile(os.path.join(os.path.dirname(__file__), "graphics.cfg"),
+                        "graphics.cfg")
+        shutil.copyfile(os.path.join(os.path.dirname(__file__), "mystyle.asy"),
+                        "mystyle.asy")
+
         task.supply("latex", def_latex("feedback", task.feedback))
 
         task.supply("latex", r"\newcount\numsubtasks ")
