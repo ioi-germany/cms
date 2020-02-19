@@ -3,6 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2017-2018 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2020 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,6 +30,7 @@ from telegram.ext import *
 
 from cms import config
 from cms.db import Session, Contest, Question, Participation, Announcement
+from cms.db.util import get_contest_list
 from cms.io import Service
 from cmscommon.datetime import make_datetime
 
@@ -40,6 +42,9 @@ def strip_cmd(s):
 def split_off_header(s):
     l = s.split('\n')
     return l[0], "\n".join(l[1:])
+
+def split_off_contest(s):
+    return s.split("_",1)
 
 def bold(s):
     return "*" + s + "*"
@@ -112,8 +117,10 @@ class MyQuestion(WithDatabaseAccess):
 
     def format(self, new):
         Q = self.question
-    
+
         return bold(("NEW " if new else "") + "QUESTION\n") +  \
+               italic("    contest: ") + "{}\n".format(Q.participation.\
+                                                       contest.description) + \
                italic("    from: ") + Q.participation.user.username + "\n" + \
                italic("    timestamp: ") + "{}".format(Q.question_timestamp) + \
                "\n\n" + (bold(Q.subject) + "\n" + Q.text).strip() + "\n\n" + \
@@ -207,12 +214,14 @@ class MyAnnouncement(WithDatabaseAccess):
     def __init__(self, announcement):
         self.announcement = announcement
         super(MyAnnouncement, self).\
-            __init__(Session.object_session(self.announcement))    
+            __init__(Session.object_session(self.announcement))
 
     def format(self, new):
         A = self.announcement
-    
+
         return bold(("NEW " if new else "") + "ANNOUNCEMENT\n") + \
+               italic("    contest: ") + "{}\n".format(A.contest.\
+                                                       description) + \
                italic("    timestamp: ") + "{}\n\n".format(A.timestamp) + \
                bold(A.subject) + "\n" + A.text
 
@@ -252,6 +261,8 @@ class MyContest(WithDatabaseAccess):
 
         self.contest_id = contest_id
         self.contest = Contest.get_from_id(contest_id, self.sql_session)
+        self.name = self.contest.name
+        self.description = self.contest.description
         self.questions = QuestionList(self.contest_id)
         self.announcements = AnnouncementList(self.contest_id)
 
@@ -281,14 +292,14 @@ class TelegramBot:
         (Clarification Requests/Announcements/etc) happening
     """
 
-    def __init__(self, contest):
+    def __init__(self, contests=None):
         self.pwd = config.bot_pwd # Password needed during startup
         self.id = None            # We will only communicate with the group of
                                   # this id (will be set during startup)
         self.questions = {}
         self.q_notifications = {}
         self.messages_issued = []
-        self.contest = contest
+        self.contests = contests
 
         self.updater = Updater(token=config.bot_token)
         self.dispatcher = self.updater.dispatcher
@@ -360,8 +371,16 @@ class TelegramBot:
         # Everything is fine
         self.id = update.message.chat_id
 
+        message = "Congratulations! I'm now bound to thy will!\n"
+        if len(self.contests) == 1:
+            message += "I'll assist you with the following contest.\n"
+        else:
+            message += "I'll assist you with the following contests.\n"
+        message += '\n'.join(italic(" "+c.name+": ") + \
+                             c.description for c in self.contests)
         bot.send_message(chat_id=self.id,
-                         text="Congratulations! I'm now bound to thy will!")
+                        text=message,
+                        parse_mode="Markdown")
 
     def announce(self, bot, update):
         """ Make an announcement
@@ -379,11 +398,42 @@ class TelegramBot:
                              "announcement in another chat!")
             return
 
-        header, msg = split_off_header(strip_cmd(update.message.text))
+        if len(self.contests) > 1:
+            kb =  [[InlineKeyboardButton(text=self.contests[i].description,
+                                        callback_data="A_"+str(i)+"_"+
+                                        update.message.text)]
+                   for i in range(len(self.contests)) ] + \
+                   [[InlineKeyboardButton(text="<I would not.>",
+                                          callback_data="A_N_")]]
 
-        if not self.contest.announce(header, msg):
+            update.message.reply_text(text="Which contest would you like to " +
+                                        "announce this in?",
+                                    parse_mode="Markdown",
+                                    reply_markup=InlineKeyboardMarkup(kb))
+        elif len(self.contests) == 1:
+            self._do_announce(update, update.message.text)
+        else:
+            update.answer(text="There's no contest I could announce this in.")
+
+    def _callback_announce(self, update, decision, text):
+        bot = update.bot
+
+        if decision == "N":
+            update.answer(text="Alright, I won't announce anything."
+                          "Why bother?")
+        else:
+            self._do_announce(update, text, int(decision))
+
+        bot.delete_message(chat_id=self.id,
+                           message_id=update.message.message_id)
+
+    def _do_announce(self, update, text, i=0):
+        contest = self.contests[i]
+        header, msg = split_off_header(strip_cmd(text))
+        if not contest.announce(header, msg):
             self.issue_reply(update.message,
-                             "I have announced the following:\n\n" +
+                             "I have announced the following " +
+                             "in " + contest.description + ":\n\n" +
                              bold(header) + "\n" + msg,
                              parse_mode="Markdown")
         else:
@@ -406,31 +456,33 @@ class TelegramBot:
             return
 
         a = cq.data
-        
+
         if len(a) < 2:
             logger.warning("A weird callback has occured!")
             self.issue_message(bot,
                                chat_id=self.id,
                                text="Warning! A weird callback that I can't "
                                     "interprete has occured!")
-        
+
         if a[0] == 'R':
             self._callback_reply(cq, a[2:])
         elif a[0] == 'P':
             self._callback_purge(cq, a[2:])
+        elif a[0] == 'A':
+            self._callback_announce(cq, *split_off_contest(a[2:]))
         else:
             logger.warning("A weird callback has occured!")
             self.issue_message(bot,
                                chat_id=self.id,
                                text="Warning! A weird callback that I can't "
                                     "interprete has occured!")
-            
+
     def _callback_reply(self, cq, a):
         msg_id = cq.message.message_id
         q = self.questions[msg_id]
 
         self.reply_question(cq, q, a, short_answer=True)
-    
+
     def _question_notification_params(self, q, new):
         kb =  [[InlineKeyboardButton(text="Yes", callback_data="R_Yes"),
                 InlineKeyboardButton(text="No",  callback_data="R_No")],
@@ -444,7 +496,7 @@ class TelegramBot:
                [InlineKeyboardButton(text="〈ignore question〉",
                                      parse_mode="Markdown",
                                      callback_data="R_/ignore")]]
-        
+
         return {"text": q.format(new), "parse_mode": "Markdown",
                 "reply_markup": InlineKeyboardMarkup(kb)}
 
@@ -455,7 +507,7 @@ class TelegramBot:
                                  chat_id=self.id,
                                  **self._question_notification_params(q, new))
         self.questions[msg.message_id] = q
-        
+
         if Q.id not in self.q_notifications:
             self.q_notifications[Q.id] = []
         self.q_notifications[Q.id].append(msg)
@@ -504,28 +556,29 @@ class TelegramBot:
         if self.id is None:
             return
 
-        new_qs, new_as, updated_as, ignored_qs, unignored_qs = \
-            self.contest.poll_questions()
+        for c in self.contests:
+            new_qs, new_as, updated_as, ignored_qs, unignored_qs = \
+                c.poll_questions()
 
-        for q in new_qs:
-            self._notify_question(bot, q, True, False)
+            for q in new_qs:
+                self._notify_question(bot, q, True, False)
 
-        for q in new_as:
-            self._notify_answer(q, True)
+            for q in new_as:
+                self._notify_answer(q, True)
 
-        for q in updated_as:
-            self._notify_answer(q, False)
+            for q in updated_as:
+                self._notify_answer(q, False)
 
-        for q in ignored_qs:
-            self._notify_question_ignore(q, True)
+            for q in ignored_qs:
+                self._notify_question_ignore(q, True)
 
-        for q in unignored_qs:
-            self._notify_question_ignore(q, False)
+            for q in unignored_qs:
+                self._notify_question_ignore(q, False)
 
-        new_announcements = self.contest.poll_announcements()
+            new_announcements = c.poll_announcements()
 
-        for a in new_announcements:
-            self._notify_announcement(bot, a, True)
+            for a in new_announcements:
+                self._notify_announcement(bot, a, True)
 
     def list_open_questions(self, bot, update):
         if self.id is None:
@@ -542,7 +595,8 @@ class TelegramBot:
                                     "questions in another chat!")
             return
 
-        qs = self.contest.get_all_open_questions()
+        qs = [q for c in self.contests
+                for q in c.get_all_open_questions()]
 
         notification = ""
 
@@ -576,7 +630,8 @@ class TelegramBot:
                                     "questions in another chat!")
             return
 
-        qs = self.contest.get_all_questions()
+        qs = [q for c in self.contests
+                for q in c.get_all_questions()]
 
         if len(qs) == 1:
             notification = "There is currently *1* question:"
@@ -586,7 +641,7 @@ class TelegramBot:
                            "questions" + ("" if len(qs) == 0 else ":")
 
         self.issue_message(bot,
-                           chat_id=self.id, 
+                           chat_id=self.id,
                            text=notification,
                            parse_mode="Markdown")
 
@@ -608,7 +663,8 @@ class TelegramBot:
                                     "announcements in another chat!")
             return
 
-        announcements = self.contest.get_all_announcements()
+        announcements = [a for c in self.contests
+                           for a in c.get_all_announcements()]
 
         if len(announcements) == 1:
             notification = "There is currently *1* announcement:"
@@ -643,11 +699,11 @@ class TelegramBot:
                     "contest\n" + \
                     bold("/allquestions") + " — shows " + italic("all") + " " \
                     "questions of the current contest (" + \
-                    italic("use this with care as it tends to produce quite a " 
+                    italic("use this with care as it tends to produce quite a "
                            "lot of output") + "!)\n" + \
                     bold("/allannouncements") + " — shows all announcements " \
                     "of the current contest (" + \
-                    italic("use this with care as it could produce quite a " 
+                    italic("use this with care as it could produce quite a "
                            "lot of output") + ")\n" + \
                     bold("/help") + " — prints this message\n" + \
                     bold("/purge") + " — deletes all messages sent by the " \
@@ -661,12 +717,12 @@ class TelegramBot:
                     "and announcements made via the web interface will also " \
                     "be posted and you can edit answers by replying to the " \
                     "corresponding message"
-        
+
         if update.message.chat_id == self.id:
             self.issue_reply(update.message,
                              HELP_TEXT,
                              parse_mode="Markdown")
-        else:            
+        else:
             update.message.reply_text(HELP_TEXT,
                                       parse_mode="Markdown")
 
@@ -692,7 +748,7 @@ class TelegramBot:
                [InlineKeyboardButton(text="Oh my god, no! Stop it! STOP!!!",
                                      callback_data="P_No")]]
 
-        update.message.reply_text(text="Are you sure you want me to " + 
+        update.message.reply_text(text="Are you sure you want me to " +
                                        bold("delete ") + "all messages I've "
                                        "sent during the current session?",
                                   parse_mode="Markdown",
@@ -700,7 +756,7 @@ class TelegramBot:
 
     def _callback_purge(self, update, decision):
         bot = update.bot
-    
+
         if decision == "Yes":
             update.answer(text="(passive-aggressive voice) Fine, I'll delete "
                                "my recent messages.")
@@ -710,8 +766,8 @@ class TelegramBot:
 
         bot.delete_message(chat_id=self.id,
                            message_id=update.message.message_id)
-    
-    def _do_purge(self, bot):        
+
+    def _do_purge(self, bot):
         for msg in self.messages_issued:
             if self.id == msg.chat_id:
                 bot.delete_message(chat_id=self.id,
@@ -772,13 +828,15 @@ class TelegramBot:
 
             else:
                 q.ignore()
-                
+
                 if short_answer:
                     update.answer(text="I have ignored this question!")
                 else:
                     self.issue_reply(update.message,
                                      "I have ignored this question!",
                                      quote=True)
+
+                self._update_question(q)
 
             return
 
@@ -791,7 +849,7 @@ class TelegramBot:
                                    "I have added your answer!",
                                    quote=True)
             self.questions[msg.message_id] = q
-     
+
         self._update_question(q)
 
     def run(self):
@@ -802,9 +860,15 @@ class TelegramBot:
 class TelegramBotService:
     """ A service running the above bot
     """
-    def __init__(self, shard, contest_id):
-        self.contest = MyContest(contest_id)
-        self.bot = TelegramBot(self.contest)
+    def __init__(self, shard, contest_id=None):
+        # A contest_id was provided, so we restrict ourselves to that contest
+        if contest_id is not None:
+            self.contests = [MyContest(contest_id)]
+        # No contest_id was provided, so we fetch all contests in the database
+        else:
+            contest_list = get_contest_list(Session())
+            self.contests = [ MyContest(c.id) for c in contest_list ]
+        self.bot = TelegramBot(self.contests)
 
     def run(self):
         self.bot.run()
