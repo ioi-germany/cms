@@ -454,18 +454,18 @@ class CommonConfig(object):
         """
         Specify the number of tokens available.
 
-        initial (int): number of tokens at the beginning of the contest
+        gen_initial (int): number of tokens at the beginning of the contest
 
         gen_number (int): number of tokens to generate each time
 
-        gen_time (timedelta): how often new tokens are generated
+        gen_interval (timedelta): how often new tokens are generated
 
-        max (int): limit for the number of tokens at any time
+        gen_max (int): limit for the number of tokens at any time
 
         min_interval (timedelta): time the user has to wait after using a
                                   token before he can use another token
 
-        total (int): maximum number of tokens the user can use in total
+        max_number (int): maximum number of tokens the user can use in total
 
         """
         self.token_mode = "finite"
