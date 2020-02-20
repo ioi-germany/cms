@@ -72,6 +72,7 @@
 \tTime: \timelimit\\
 \tMemory: \memlimit}
 
+% Feedback Section
 \def\feedbackheading{\sheading{\tFeedback}}
 \def\nofeedback{\feedbackheading \tNofeedback}
 \def\partialfeedback{\feedbackheading \tPartialfeedback}
@@ -89,7 +90,16 @@
 \let\dummyfeedack=\relax
 \def\showfeedback{\csname\feedback feedback\endcsname}
 
-\def\standardpart{\showcases\showlimits\showfeedback}
+% Scoring Section
+\def\scoringheading{\sheading{\tScoring}}
+\def\IOIXIIIscoring{\scoringheading \tScoringFromIOIXIII}
+\def\IOIXVIIscoring{\scoringheading \tScoringFromIOIXVII}
+\def\IOIXscoring   {\scoringheading \tScoringFromIOIX}
+\def\showscoring{\csname\scoring scoring\endcsname}
+
+% ---
+
+\def\standardpart{\showcases\showlimits\showfeedback\showscoring}
 \makeatother
 
 \def\flushsubtasks{\global\stcount=\numsubtasks}

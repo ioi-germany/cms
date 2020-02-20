@@ -4,6 +4,7 @@
 # Programming contest management system
 # Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2020 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,6 +26,8 @@ from __future__ import unicode_literals
 from cmscontrib.gerpythonformat.templates.plain.PlainTemplate \
     import PlainTemplate
 from cmscontrib.gerpythonformat.Supplement import def_latex, input_latex
+from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
+    SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK
 import os
 import shutil
 
@@ -73,6 +76,20 @@ class LgTemplate(PlainTemplate):
                         "mystyle.asy")
 
         task.supply("latex", def_latex("feedback", task.feedback))
+
+        # Provide the scoring mode
+        # We translate the internal constants for the different modes
+        # to the years they were first used at the IOI
+        # (note that we can't use the constants as they are because they contain
+        # underscores)
+        score_mode = task.score_mode()
+        if score_mode == SCORE_MODE_MAX_SUBTASK:
+            score_mode_year = "IOIXVII"
+        elif score_mode == SCORE_MODE_MAX:
+            score_mode_year = "IOIXIII"
+        elif score_mode == SCORE_MODE_MAX_TOKENED_LAST:
+            score_mode_year = "IOIX"
+        task.supply("latex", def_latex("scoring", score_mode_year))
 
         task.supply("latex", r"\newcount\numsubtasks ")
         task.supply("latex", lambda: r"\numsubtasks={}".\

@@ -4,7 +4,9 @@
 
 \ifthenelse{\equal{\TemplateLanguage}{de}}
 {
-% German translation
+% ==========================
+% === German translation ===
+% ==========================
 \def\tSubtask{Teilaufgabe}
 \def\tPoint{Punkt}
 \def\tPoints{Punkte}
@@ -13,6 +15,8 @@
 \def\tLimits{Limits}
 \def\tTime{Zeit}
 \def\tMemory{Speicher}
+
+%Feedback section
 \def\tFeedback{Feedback}
 \def\tNofeedback{Für diese Aufgabe ist kein erweitertes Feedback verfügbar. Die angegebene öffentliche Punktzahl entspricht nur deinem Ergebnis auf den öffentlichen Testfällen und hat im Allgemeinen wenig mit deiner tatsächlichen Punktzahl gemein.}
 \def\tPartialfeedback{Für diese Aufgabe ist \emph{partial feedback} verfügbar, d.h.~du bekommst das Abschneiden deines Programms auf einer festen Auswahl der Testfälle zu sehen. Die angegebene Punktzahl bezieht sich auf diese Auswahl der Testfälle und gibt damit einen Hinweis auf die endgültige Punktzahl deiner Einsendung. Letztere kann allerdings sowohl höher als auch niedriger als die angezeigte Punktzahl sein.}
@@ -22,11 +26,19 @@
 \def\tTokenFeedback{Für diese Aufgabe sind \emph{Tokens} verfügbar, d.h.~du kannst für eine begrenzte Anzahl von Einsendungen vollständiges Feedback erhalten, indem du ein sogenanntes Token einsetzt. Weitere Informationen, z.B.~über die Anzahl der verfügbaren Tokens, findest du im Wettbewerbssystem.}
 \def\tTokenRestrictedFeedback{Allerdings wird dir auch nach Einsetzen eines Tokens für jede Testfallgruppe immer nur der erste Testfall mit minimaler Punktzahl innerhalb der entsprechenden Gruppe angezeigt. (Hierbei ist die Reihenfolge der Fälle innerhalb der jeweiligen Gruppen fest.)}
 
+%Scoring section
+\def\tScoring{Bewertung}
+\def\tScoringFromIOIXVII{Deine endgültige Punktzahl auf diese Aufgabe ist die Summe über jede Teilaufgabe Deiner besten Punktzahl auf diese Teilaufgabe unter allen Deinen Einsendungen.}
+\def\tScoringFromIOIXIII{Deine endgültige Punktzahl auf diese Aufgabe ist die beste Punktzahl aller Deiner Einsendungen.}
+\def\tScoringFromIOIX   {Deine endgültige Punktzahl auf diese Aufgabe ist die beste Punktzahl aller Deiner mit Token versehenen Einsendungen und Deiner letzten Einsendung.}
+
 \def\tAND/{ und}
-\def\tANDs/{ und}
+\def\tANDs/{ und} %The and at the end of a series of at least three items (e.g., "Eggs, Milk, and Butter."). In English, this includes the Oxford comma. In German, it doesn't.
 }
 {
-% English translation
+% ===========================
+% === English translation ===
+% ===========================
 \def\tSubtask{Subtask}
 \def\tPoint{Point}
 \def\tPoints{Points}
@@ -35,15 +47,23 @@
 \def\tLimits{Limits}
 \def\tTime{Time}
 \def\tMemory{Memory}
+
+%Feedback section
 \def\tFeedback{Feedback}
 \def\tNofeedback{No additional feedback is available for this task. The score shown refers to the results on the sample case(s) and in general doesn't correspond in any way to your real score.}
 \def\tPartialfeedback{Partial feedback is given for this task, i.e.~you can see the verdicts for a fixed subset of the testcases. The score shown refers to this selection of testcases and therefore \emph{hints} towards your real score, which can be either lower or higher.}
-\def\tFullfeedbackGeneral{\feedbackmode\ is given for this task, i.e.~the score shown equals your real score.}
+\def\tFullfeedbackGeneral{\feedbackmode\ is given for this task, i.e.~the score shown equals your real score on this submission.}
 \def\tRestrictedfeedbackPrecise{However, for each testcase group you are only shown the verdict for the first testcase with minimal score in that group. (The order of the testcases in each of the groups is fixed.)}
 \def\tFullfeedbackPrecise{Moreover, you are shown the verdicts for all the testcases.}
 \def\tTokenFeedback{\emph{Tokens} are available for this task, i.e.~you can obtain feedback for a limited number of submissions by applying a so called token. More information, e.g.~about the number of available tokens, can be found in the contest system.}
 \def\tTokenRestrictedFeedback{However, even when you've applied a token, for each testcase group you are only shown the verdict for the first testcase with minimal score in that group. (The order of the testcases in each of the groups is fixed.)}
 
+%Scoring section
+\def\tScoring{Scoring}
+\def\tScoringFromIOIXVII{Your final score for this task is the sum over each subtask of your best score on that subtask across all your submissions.}
+\def\tScoringFromIOIXIII{Your final score for this task is the best score of all your submissions.}
+\def\tScoringFromIOIX   {Your final score for this task is the best score of all your tokened submissions and your last submission.}
+
 \def\tAND/{ and}
-\def\tANDs/{, and}
+\def\tANDs/{, and} %The and at the end of a series of at least three items (e.g., "Eggs, Milk, and Butter."). In English, this includes the Oxford comma.
 }
