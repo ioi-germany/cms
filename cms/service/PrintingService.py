@@ -173,7 +173,7 @@ class PrintingExecutor(Executor):
             # Add the title page
             title_tex = os.path.join(directory, "title_page.tex")
             title_pdf = os.path.join(directory, "title_page.pdf")
-            with open(title_tex, "wb") as f:
+            with open(title_tex, "w") as f:
                 f.write(self.jinja2_env.get_template("title_page.tex")
                         .render(user=user, filename=filename,
                                 timestr=timestr,
@@ -190,13 +190,11 @@ class PrintingExecutor(Executor):
                     "(error %d)" % (pretty_print_cmdline(cmd), ret))
 
             pdfmerger = PdfFileMerger()
-            with open(title_pdf, "rb") as file_:
-                pdfmerger.append(file_)
-            with open(source_pdf, "rb") as file_:
-                pdfmerger.append(file_)
+            pdfmerger.append(title_pdf)
+            pdfmerger.append(source_pdf)
             result = os.path.join(directory, "document.pdf")
-            with open(result, "wb") as file_:
-                pdfmerger.write(file_)
+            pdfmerger.write(result)
+            pdfmerger.close()
 
             try:
                 printer_connection = cups.Connection()
