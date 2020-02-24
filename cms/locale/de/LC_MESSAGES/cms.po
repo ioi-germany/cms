@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Contest Management System 1.5.dev0\n"
 "Report-Msgid-Bugs-To: contestms@googlegroups.com\n"
 "POT-Creation-Date: 2019-12-15 19:14+0100\n"
-"PO-Revision-Date: 2020-01-08 16:39+0100\n"
+"PO-Revision-Date: 2020-02-24 13:33+0100\n"
 "Last-Translator: Manuel Gundlach <manuel.gundlach@gmail.com>\n"
 "Language: de\n"
 "Language-Team: German <kde-i18n-de@kde.org>\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.4.0\n"
-"X-Generator: Lokalize 19.12.0\n"
+"X-Generator: Lokalize 19.12.2\n"
 
 msgid "N/A"
 msgstr "nicht verfügbar"
@@ -138,7 +138,6 @@ msgid "Output is correct"
 msgstr "Die Ausgabe ist korrekt"
 
 # Im Original kein Punkt -- dort inkonsistent
-
 msgid "Your submission ran and gave the correct answer"
 msgstr "Deine Einsendung lief und produzierte die richtige Ausgabe."
 
@@ -147,7 +146,6 @@ msgstr "Die Ausgabe ist teilweise korrekt"
 
 # Im Original kein Punkt -- dort inkonsistent
 # Im Original "the partially", mit unbestimmtem Übersetzt
-
 msgid "Your submission ran and gave the partially correct answer"
 msgstr "Deine Einsendung lief und produzierte eine teilweise richtige Ausgabe."
 
@@ -155,7 +153,6 @@ msgid "Output isn't correct"
 msgstr "Die Ausgabe ist nicht korrekt"
 
 # Im Original kein Punkt -- dort inkonsistent
-
 msgid "Your submission ran, but gave the wrong answer"
 msgstr "Deine Einsendung lief, produzierte aber die falsche Ausgabe."
 
@@ -165,7 +162,6 @@ msgid "Evaluation didn't produce file %s"
 msgstr "Bei Ausführung wurde keine Datei %s erzeugt"
 
 # Im Original kein Punkt -- dort inkonsistent
-
 msgid "Your submission ran, but did not write on the correct output file"
 msgstr ""
 "Deine Einsendung lief, schrieb aber nichts in die richtige Ausgabedatei."
@@ -357,7 +353,6 @@ msgid "Please try again."
 msgstr "Bitte erneut versuchen."
 
 # 'Abfrage' ist nicht wirklich passend
-
 msgid "Token request discarded"
 msgstr "Token-Abfrage verworfen"
 
@@ -687,7 +682,6 @@ msgstr ""
 "aufgetreten."
 
 # Nicht ganz glücklich mit 'Sondieren'
-
 msgid ""
 "Note that attempts to tamper with Contest Management System (such as probing"
 " the server with customized URLs) may be considered cheating and may lead to"
@@ -769,7 +763,6 @@ msgstr ""
 "Token darauf anwendest."
 
 # 'mit Symbol versehene' oder 'mit Symbolen versehene'?
-
 msgid ""
 "Your score for each task will be the maximum among the tokened submissions "
 "and the last one."
@@ -909,14 +902,14 @@ msgid ""
 "%(max_pages)s pages each."
 msgstr ""
 "Du kannst noch %(remaining_jobs)s Text- oder PDF-Dateien mit je bis "
-"zu%(max_pages)s Seiten drucken."
+"zu %(max_pages)s Seiten drucken."
 
 #, python-format
 msgid ""
 "You can print %(remaining_jobs)s more text files of up to %(max_pages)s "
 "pages each."
 msgstr ""
-"Du kannst noch %(remaining_jobs)s Text-Dateien mit je bis zu%(max_pages)s "
+"Du kannst noch %(remaining_jobs)s Text-Dateien mit je bis zu %(max_pages)s "
 "Seiten drucken."
 
 msgid "File (text or PDF)"
@@ -931,7 +924,7 @@ msgstr "Abschicken"
 msgid ""
 "You cannot print anything any more as you have used up your printing quota."
 msgstr ""
-"Du kannst nichts mehr ausdrucken, da Du dein Druckkontingent aufgebraucht "
+"Du kannst nichts mehr ausdrucken, da Du Dein Druckkontingent aufgebraucht "
 "hast."
 
 msgid "Previous print jobs"
@@ -1017,7 +1010,6 @@ msgid "Standard output"
 msgstr "Standard Output"
 
 # Arrrrgh
-
 msgid "Standard error"
 msgstr "Standard Error"
 
@@ -1032,7 +1024,6 @@ msgid "Download task statement"
 msgstr "Angabe zur Aufgabe herunterladen"
 
 # Im Original fehlt das Leerzeichen am Ende.
-
 msgid ""
 "The statement for this task is available in multiple versions, in different "
 "languages."
@@ -1041,7 +1032,6 @@ msgstr ""
 "Sprachen zur Verfügung. "
 
 # Im Original fehlt das Leerzeichen am Ende.
-
 msgid "You can see (and download) all of them using the list on the right."
 msgstr ""
 "Du siehst sie in der Liste auf der rechten Seite (und kannst sie dort "
@@ -1166,7 +1156,6 @@ msgid "Unit Tests"
 msgstr ""
 
 # Nicht ganz passend...
-
 msgid "Unofficial submissions"
 msgstr "Inoffizielle Einsendungen"
 
