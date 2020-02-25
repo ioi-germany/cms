@@ -43,9 +43,6 @@ def split_off_header(s):
     l = s.split('\n')
     return l[0], "\n".join(l[1:])
 
-def split_off_contest(s):
-    return s.split("_",1)
-
 def bold(s):
     return "*" + s + "*"
 
@@ -400,44 +397,52 @@ class TelegramBot:
 
         if len(self.contests) > 1:
             kb =  [[InlineKeyboardButton(text=self.contests[i].description,
-                                        callback_data="A_"+str(i)+"_"+
-                                        update.message.text)]
+                                        callback_data="A_"+str(i))]
                    for i in range(len(self.contests)) ] + \
                    [[InlineKeyboardButton(text="<I would not.>",
-                                          callback_data="A_N_")]]
+                                          callback_data="A_N")]]
 
             update.message.reply_text(text="Which contest would you like to " +
                                         "announce this in?",
                                     parse_mode="Markdown",
                                     reply_markup=InlineKeyboardMarkup(kb))
         elif len(self.contests) == 1:
-            self._do_announce(update, update.message.text)
+            self._do_announce(update, direct_announce=True)
         else:
             update.answer(text="There's no contest I could announce this in.")
 
-    def _callback_announce(self, update, decision, text):
+    def _callback_announce(self, update, decision):
         bot = update.bot
 
         if decision == "N":
             update.answer(text="Alright, I won't announce anything."
                           "Why bother?")
         else:
-            self._do_announce(update, text, int(decision))
+            self._do_announce(update, direct_announce=False, contest_id=int(decision))
 
         bot.delete_message(chat_id=self.id,
                            message_id=update.message.message_id)
 
-    def _do_announce(self, update, text, i=0):
-        contest = self.contests[i]
+    def _do_announce(self, update, direct_announce, contest_id=0):
+        # The function was called directly.
+        if direct_announce:
+            orig_msg = update.message
+        # The function was called from a button callback.
+        else:
+            orig_msg = update.message.reply_to_message
+
+        text = orig_msg.text
+
+        contest = self.contests[contest_id]
         header, msg = split_off_header(strip_cmd(text))
         if not contest.announce(header, msg):
-            self.issue_reply(update.message,
+            self.issue_reply(orig_msg,
                              "I have announced the following " +
                              "in " + contest.description + ":\n\n" +
                              bold(header) + "\n" + msg,
                              parse_mode="Markdown")
         else:
-            self.issue_reply(update.message,
+            self.issue_reply(orig_msg,
                              "Sorry, this didn't work...")
 
 
@@ -469,7 +474,7 @@ class TelegramBot:
         elif a[0] == 'P':
             self._callback_purge(cq, a[2:])
         elif a[0] == 'A':
-            self._callback_announce(cq, *split_off_contest(a[2:]))
+            self._callback_announce(cq, a[2:])
         else:
             logger.warning("A weird callback has occured!")
             self.issue_message(bot,
