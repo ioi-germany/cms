@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2017-2018 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2017-2020 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2020 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -324,7 +324,9 @@ class TelegramBot:
         return self.messages_issued[-1]
 
     def issue_reply(self, msg, *args, **kwargs):
-        self.messages_issued.append(msg.reply_text(*args, **kwargs))
+        self.messages_issued.append(
+            msg.bot.send_message(msg.chat.id, *args, **kwargs,
+                                 reply_to_message_id=msg.message_id))
         return self.messages_issued[-1]
 
     def start(self, bot, update, args=None):
@@ -402,10 +404,12 @@ class TelegramBot:
                    [[InlineKeyboardButton(text="<I would not.>",
                                           callback_data="A_N")]]
 
-            update.message.reply_text(text="Which contest would you like to " +
-                                        "announce this in?",
-                                    parse_mode="Markdown",
-                                    reply_markup=InlineKeyboardMarkup(kb))
+            bot.send_message(chat_id=self.id,
+                             reply_to_message_id=update.message.message_id,
+                             text="Which contest would you like to announce "
+                                  "this in?",
+                             parse_mode="Markdown",
+                             reply_markup=InlineKeyboardMarkup(kb))
         elif len(self.contests) == 1:
             self._do_announce(update, direct_announce=True)
         else:
