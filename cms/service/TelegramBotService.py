@@ -49,6 +49,9 @@ def bold(s):
 def italic(s):
     return "_" + s + "_"
 
+def escape(s):
+    return "".join("\\" + c if ord(c) > 32 and ord(c) < 127 else c for c in s)
+
 
 class WithDatabaseAccess(object):
     """ Base class for database access
@@ -101,27 +104,28 @@ class MyQuestion(WithDatabaseAccess):
 
     def format_answer(self):
         x,y = self.get_answer()
-        return bold(x) if x else y
+        return bold(x) if x else escape(y)
 
     def status_text(self):
         if self.answered():
-            return italic("This question has been answered:\n\n") + \
+            return italic(escape("This question has been answered:\n\n")) + \
                    self.format_answer()
         elif self.ignored():
-            return italic("This question has been ignored.")
+            return italic(escape("This question has been ignored."))
         else:
-            return italic("This question is currently open.")
+            return italic(escape("This question is currently open."))
 
     def format(self, new):
         Q = self.question
 
-        return bold(("NEW " if new else "") + "QUESTION\n") +  \
-               italic("    contest: ") + "{}\n".format(Q.participation.\
-                                                       contest.description) + \
-               italic("    from: ") + Q.participation.user.username + "\n" + \
-               italic("    timestamp: ") + "{}".format(Q.question_timestamp) + \
-               "\n\n" + (bold(Q.subject) + "\n" + Q.text).strip() + "\n\n" + \
-               self.status_text()
+        return bold(("NEW " if new else "") + "QUESTION\n") + \
+               italic("    contest: ") + \
+               escape("{}\n".format(Q.participation.contest.description)) + \
+               italic("    from: ") + escape(Q.participation.user.username) + \
+               "\n" + italic("    timestamp: ") + \
+               escape("{}".format(Q.question_timestamp)) + "\n\n" + \
+               (bold(escape(Q.subject)) + "\n" + escape(Q.text)).strip() + \
+               "\n\n" + self.status_text()
 
 
 class ListOfDatabaseEntries(object):
@@ -217,10 +221,11 @@ class MyAnnouncement(WithDatabaseAccess):
         A = self.announcement
 
         return bold(("NEW " if new else "") + "ANNOUNCEMENT\n") + \
-               italic("    contest: ") + "{}\n".format(A.contest.\
-                                                       description) + \
-               italic("    timestamp: ") + "{}\n\n".format(A.timestamp) + \
-               bold(A.subject) + "\n" + A.text
+               italic("    contest: ") + \
+               escape("{}\n".format(A.contest.description)) + \
+               italic("    timestamp: ") + \
+               escape("{}\n\n".format(A.timestamp)) + \
+               bold(escape(A.subject)) + "\n" + escape(A.text)
 
 
 class AnnouncementList(ListOfDatabaseEntries):
@@ -375,11 +380,12 @@ class TelegramBot:
             message += "I'll assist you with the following contest.\n"
         else:
             message += "I'll assist you with the following contests.\n"
-        message += '\n'.join(italic(" "+c.name+": ") + \
-                             c.description for c in self.contests)
+        message = escape(message) + \
+                      '\n'.join(italic(" " + escape(c.name) + ": ") + \
+                                escape(c.description) for c in self.contests)
         bot.send_message(chat_id=self.id,
                         text=message,
-                        parse_mode="Markdown")
+                        parse_mode="MarkdownV2")
 
     def announce(self, bot, update):
         """ Make an announcement
@@ -408,7 +414,6 @@ class TelegramBot:
                              reply_to_message_id=update.message.message_id,
                              text="Which contest would you like to announce "
                                   "this in?",
-                             parse_mode="Markdown",
                              reply_markup=InlineKeyboardMarkup(kb))
         elif len(self.contests) == 1:
             self._do_announce(update, direct_announce=True)
@@ -441,10 +446,10 @@ class TelegramBot:
         header, msg = split_off_header(strip_cmd(text))
         if not contest.announce(header, msg):
             self.issue_reply(orig_msg,
-                             "I have announced the following " +
-                             "in " + contest.description + ":\n\n" +
-                             bold(header) + "\n" + msg,
-                             parse_mode="Markdown")
+                             escape("I have announced the following " +
+                                    "in " + contest.description + ":\n\n") +
+                             bold(escape(header)) + "\n" + escape(msg),
+                             parse_mode="MarkdownV2")
         else:
             self.issue_reply(orig_msg,
                              "Sorry, this didn't work...")
@@ -503,10 +508,10 @@ class TelegramBot:
                 InlineKeyboardButton(text="Invalid question",
                                      callback_data="R_Invalid question")],
                [InlineKeyboardButton(text="〈ignore question〉",
-                                     parse_mode="Markdown",
+                                     parse_mode="MarkdownV2",
                                      callback_data="R_/ignore")]]
 
-        return {"text": q.format(new), "parse_mode": "Markdown",
+        return {"text": q.format(new), "parse_mode": "MarkdownV2",
                 "reply_markup": InlineKeyboardMarkup(kb)}
 
     def _notify_question(self, bot, q, new, show_status):
@@ -532,9 +537,9 @@ class TelegramBot:
                        else "The answer has been edited via CMS:\n\n"
 
         reply = self.issue_reply(msg,
-                                 text=notification + q.format_answer(),
+                                 text=escape(notification) + q.format_answer(),
                                  quote=True,
-                                 parse_mode="Markdown")
+                                 parse_mode="MarkdownV2")
 
         self.questions[reply.message_id] = q
         self._update_question(q)
@@ -546,9 +551,9 @@ class TelegramBot:
                               "{}ignored.\n\n".format("" if ignore else "un"))
 
         reply = self.issue_reply(msg,
-                                 text=notification,
+                                 text=escape(notification),
                                  quote=True,
-                                 parse_mode="Markdown")
+                                 parse_mode="MarkdownV2")
 
         self.questions[reply.message_id] = q
         self._update_question(q)
@@ -557,7 +562,7 @@ class TelegramBot:
         self.issue_message(bot,
                            chat_id=self.id,
                            text=a.format(new),
-                           parse_mode="Markdown")
+                           parse_mode="MarkdownV2")
 
     def update(self, bot, job):
         """ Check for new questions, answers, and announcements
@@ -619,7 +624,7 @@ class TelegramBot:
         self.issue_message(bot,
                            chat_id=self.id,
                            text=notification,
-                           parse_mode="Markdown")
+                           parse_mode="MarkdownV2")
 
         for q in qs:
             self._notify_question(bot, q, False, False)
@@ -652,7 +657,7 @@ class TelegramBot:
         self.issue_message(bot,
                            chat_id=self.id,
                            text=notification,
-                           parse_mode="Markdown")
+                           parse_mode="MarkdownV2")
 
         for q in qs:
             self._notify_question(bot, q, False, True)
@@ -687,53 +692,56 @@ class TelegramBot:
         self.issue_message(bot,
                            chat_id=self.id,
                            text=notification,
-                           parse_mode="Markdown")
+                           parse_mode="MarkdownV2")
 
         for a in announcements:
             self._notify_announcement(bot, a, False)
 
     def help(self, bot, update):
-        HELP_TEXT = "A bot allowing to access clarification requests and " \
-                    "announcements of a CMS contest via Telegram.\n\n" + \
-                    bold("/start") + " 〈" + italic("pwd") + "〉 — tries to " \
-                    "bind the bot to the current chat when used with the " \
-                    "correct password; the bot can only be bound to a single " \
-                    "chat at a time and all further binding attempts will be " \
-                    "rejected until the bot service has been restarted\n" + \
-                    bold("/announce") + " — adds the rest of the message as " \
-                    "an announcement to the current contest; everything " \
-                    "before the first line break will be used as header\n" + \
-                    bold("/openquestions") + " — shows all " + \
-                    italic("unanswered") + " questions of the current " \
-                    "contest\n" + \
-                    bold("/allquestions") + " — shows " + italic("all") + " " \
-                    "questions of the current contest (" + \
-                    italic("use this with care as it tends to produce quite a "
-                           "lot of output") + "!)\n" + \
-                    bold("/allannouncements") + " — shows all announcements " \
-                    "of the current contest (" + \
-                    italic("use this with care as it could produce quite a "
-                           "lot of output") + ")\n" + \
-                    bold("/help") + " — prints this message\n" + \
-                    bold("/purge") + " — deletes all messages sent by the " \
-                    "bot during the current session (" + \
-                    italic("standard restrictions apply: no messages older "
-                           "than 48h will be deleted") + ")\n\n" \
-                    "In addition this bot will post all new questions " \
-                    "appearing in the system. You can answer them by " \
-                    "replying to the corresponding post or using the " \
-                    "respective inline buttons. Moreover, all answers given " \
-                    "and announcements made via the web interface will also " \
-                    "be posted and you can edit answers by replying to the " \
-                    "corresponding message"
+        HELP_TEXT = \
+            escape("A bot allowing to access clarification requests and " 
+                   "announcements of a CMS contest via Telegram.\n\n") + \
+            bold("/start") + " 〈" + italic("pwd") + "〉" + \
+            escape(" — tries to bind the bot to the current chat when used "
+                   "with the correct password; the bot can only be bound to a "
+                   "single chat at a time and all further binding attempts "
+                   "will be rejected until the bot service has been "
+                   "restarted\n") + \
+            bold("/announce") + \
+            escape(" — adds the rest of the message as an announcement to the "
+                   "current contest; everything before the first line break "
+                   "will be used as header\n") + \
+            bold("/openquestions") + \
+            escape(" — shows all ") + italic("unanswered") + \
+            escape(" questions of the current contest\n") + \
+            bold("/allquestions") + \
+            escape(" — shows ") + italic("all") + \
+            escape(" questions of the current contest (") + \
+            italic("use this with care as it tends to produce quite a "
+                   "lot of output") + escape("!)\n") + \
+            bold("/allannouncements") + \
+            escape(" — shows all announcements of the current contest (") + \
+            italic("use this with care as it could produce quite a lot of "
+                   "output") + escape(")\n") + \
+            bold("/help") + escape(" — prints this message\n") + \
+            bold("/purge") + \
+            escape(" — deletes all messages sent by the bot during the current "
+                   "session\n\n") + \
+            escape("In addition this bot will post all new questions "
+                   "appearing in the system. You can answer them by "
+                   "replying to the corresponding post or using the "
+                   "respective inline buttons. Moreover, all answers given "
+                   "and announcements made via the web interface will also "
+                   "be posted and you can edit answers by replying to the "
+                   "corresponding message")
 
         if update.message.chat_id == self.id:
             self.issue_reply(update.message,
                              HELP_TEXT,
-                             parse_mode="Markdown")
+                             parse_mode="MarkdownV2")
         else:
             update.message.reply_text(HELP_TEXT,
-                                      parse_mode="Markdown")
+                                      parse_mode="MarkdownV2")
 
     def purge(self, bot, update):
         if self.id is None:
@@ -760,7 +768,6 @@ class TelegramBot:
         update.message.reply_text(text="Are you sure you want me to " +
                                        bold("delete ") + "all messages I've "
                                        "sent during the current session?",
-                                  parse_mode="Markdown",
                                   reply_markup=InlineKeyboardMarkup(kb))
 
     def _callback_purge(self, update, decision):
