@@ -29,6 +29,7 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton, bot
 from telegram.ext import *
 from telegram.ext.messagequeue import MessageQueue, queuedmessage
 from telegram.utils.request import Request
+from telegram.error import BadRequest as TelegramBadRequest
 
 from cms import config
 from cms.db import Session, Contest, Question, Participation, Announcement
@@ -560,6 +561,12 @@ class TelegramBot:
                 if Q.id not in self.q_notifications:
                     self.q_notifications[Q.id] = []
                 self.q_notifications[Q.id].append(msg)
+                
+                try:
+                    msg.edit_text(**self._question_notification_params(q,
+                                                                       False))
+                except TelegramBadRequest:
+                    logger.info("question was already up to date")
 
         return do_record
 
