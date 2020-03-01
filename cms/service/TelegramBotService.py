@@ -25,8 +25,10 @@ from __future__ import unicode_literals
 import logging
 import json
 
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton, bot, utils
 from telegram.ext import *
+from telegram.ext.messagequeue import MessageQueue, queuedmessage
+from telegram.utils.request import Request
 
 from cms import config
 from cms.db import Session, Contest, Question, Participation, Announcement
@@ -289,6 +291,30 @@ class MyContest(WithDatabaseAccess):
         return self.announcements.all()
 
 
+class BotWithMessageQueue(bot.Bot):
+    def __init__(self, *args, all_burst_limit = 2, all_time_limit_ms = 1010,
+                 group_burst_limit = 18, group_time_limit_ms = 60500, **kwargs):
+        super(BotWithMessageQueue, self).__init__(*args, **kwargs)
+
+        # internal variables used by @queuedmessage
+        self._is_messages_queued_default = True
+        self._msg_queue = MessageQueue(all_burst_limit, all_time_limit_ms,
+                                       group_burst_limit, group_time_limit_ms)
+
+    def __del__(self):
+        try:
+            self._msg_queue.stop()
+        except:
+            pass
+
+    def send_message(self, *args, **kwargs):
+        self._send_message_internal(*args, isgroup=True, **kwargs)
+
+    @queuedmessage
+    def _send_message_internal(self, *args, **kwargs):
+        return super(BotWithMessageQueue, self).send_message(*args, **kwargs)
+
+
 class TelegramBot:
     """ A telegram bot that allows easy access to all the communication
         (Clarification Requests/Announcements/etc) happening
@@ -303,7 +329,10 @@ class TelegramBot:
         self.messages_issued = []
         self.contests = contests
 
-        self.updater = Updater(token=config.bot_token)
+        bot = BotWithMessageQueue(token=config.bot_token,
+                                  request=Request(con_pool_size=8))
+
+        self.updater = Updater(bot=bot)
         self.dispatcher = self.updater.dispatcher
         self.job_queue = self.updater.job_queue
 
