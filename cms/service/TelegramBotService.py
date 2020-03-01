@@ -344,8 +344,6 @@ class TelegramBot:
         self.dispatcher.add_handler(CommandHandler('announce', self.announce))
         self.dispatcher.add_handler(CommandHandler('openquestions',
                                                    self.list_open_questions))
-        self.dispatcher.add_handler(CommandHandler('allquestions',
-                                                   self.list_all_questions))
         self.dispatcher.add_handler(CommandHandler('allannouncements',
                                                    self.list_all_announcements))
         self.dispatcher.add_handler(CommandHandler('help', self.help))
@@ -764,11 +762,6 @@ class TelegramBot:
             bold("/openquestions") + \
             escape(" — shows all ") + italic("unanswered") + \
             escape(" questions of the current contest\n") + \
-            bold("/allquestions") + \
-            escape(" — shows ") + italic("all") + \
-            escape(" questions of the current contest (") + \
-            italic("use this with care as it tends to produce quite a "
-                   "lot of output") + escape("!)\n") + \
             bold("/allannouncements") + \
             escape(" — shows all announcements of the current contest (") + \
             italic("use this with care as it could produce quite a lot of "
