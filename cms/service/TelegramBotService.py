@@ -25,7 +25,7 @@ from __future__ import unicode_literals
 import logging
 import json
 
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton, bot, utils
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton, bot
 from telegram.ext import *
 from telegram.ext.messagequeue import MessageQueue, queuedmessage
 from telegram.utils.request import Request
@@ -308,11 +308,13 @@ class BotWithMessageQueue(bot.Bot):
             pass
 
     def send_message(self, *args, **kwargs):
-        self._send_message_internal(*args, isgroup=True, **kwargs)
+        return self._send_message_internal(*args, isgroup=True, **kwargs)
 
     @queuedmessage
-    def _send_message_internal(self, *args, **kwargs):
-        return super(BotWithMessageQueue, self).send_message(*args, **kwargs)
+    def _send_message_internal(self, *args, on_send=lambda _ : None, **kwargs):
+        msg = super(BotWithMessageQueue, self).send_message(*args, **kwargs)
+        on_send(msg)
+        return msg
 
 
 class TelegramBot:
@@ -353,15 +355,20 @@ class TelegramBot:
 
         self.job_queue.run_repeating(self.update, interval=5, first=0)
 
-    def issue_message(self, bot, **kwargs):
-        self.messages_issued.append(bot.send_message(**kwargs))
-        return self.messages_issued[-1]
+    def _record_msg(self, f):
+        def do_record_msg(msg):
+            f(msg)
+            self.messages_issued.append(msg)
 
-    def issue_reply(self, msg, *args, **kwargs):
-        self.messages_issued.append(
-            msg.bot.send_message(msg.chat.id, *args, **kwargs,
-                                 reply_to_message_id=msg.message_id))
-        return self.messages_issued[-1]
+        return do_record_msg
+
+    def issue_message(self, bot, on_send = lambda _ : None, **kwargs):
+        bot.send_message(on_send = self._record_msg(on_send), **kwargs)
+
+    def issue_reply(self, msg, *args, on_send = lambda _ : None, **kwargs):
+        msg.bot.send_message(msg.chat.id, *args, **kwargs,
+                             reply_to_message_id=msg.message_id,
+                             on_send=self._record_msg(on_send))
 
     def start(self, bot, update, args=None):
         """ The registration process
@@ -543,17 +550,24 @@ class TelegramBot:
         return {"text": q.format(new), "parse_mode": "MarkdownV2",
                 "reply_markup": InlineKeyboardMarkup(kb)}
 
-    def _notify_question(self, bot, q, new, show_status):
-        Q = q.question
+    def _record_question(self, q, full):
+        def do_record(msg):
+            self.questions[msg.message_id] = q
 
+            if full:
+                Q = q.question
+                
+                if Q.id not in self.q_notifications:
+                    self.q_notifications[Q.id] = []
+                self.q_notifications[Q.id].append(msg)
+
+        return do_record
+
+    def _notify_question(self, bot, q, new, show_status):
         msg = self.issue_message(bot,
                                  chat_id=self.id,
-                                 **self._question_notification_params(q, new))
-        self.questions[msg.message_id] = q
-
-        if Q.id not in self.q_notifications:
-            self.q_notifications[Q.id] = []
-        self.q_notifications[Q.id].append(msg)
+                                 **self._question_notification_params(q, new),
+                                 on_send=self._record_question(q, True))
 
     def _update_question(self, q):
         for msg in self.q_notifications[q.question.id]:
@@ -892,8 +906,8 @@ class TelegramBot:
         else:
             msg = self.issue_reply(update.message,
                                    "I have added your answer!",
-                                   quote=True)
-            self.questions[msg.message_id] = q
+                                   quote=True,
+                                   on_send=self._record_question(q, False))
 
         self._update_question(q)
 
