@@ -677,38 +677,6 @@ class TelegramBot:
         for q in qs:
             self._notify_question(bot, q, False, False)
 
-    def list_all_questions(self, bot, update):
-        if self.id is None:
-            update.message.reply_text("You have to register me first (using "
-                                      "the /start command).")
-            return
-
-        if self.id != update.message.chat_id:
-            logger.warning("Warning! Someone tried to list all questions in "
-                           "a chat I'm not registered in!")
-            self.issue_message(bot,
-                               chat_id=self.id,
-                               text="Warning! Someone tried to list all "
-                                    "questions in another chat!")
-            return
-
-        qs = [q for c in self.contests
-                for q in c.get_all_questions()]
-
-        if len(qs) == 1:
-            notification = "There is currently *1* question:"
-        else:
-            notification = "There are currently " + \
-                           bold("no" if len(qs) == 0 else str(len(qs))) + " "\
-                           "questions" + ("" if len(qs) == 0 else ":")
-
-        self.issue_message(bot,
-                           chat_id=self.id,
-                           text=notification,
-                           parse_mode="MarkdownV2")
-
-        for q in qs:
-            self._notify_question(bot, q, False, True)
 
     def list_all_announcements(self, bot, update):
         if self.id is None:
