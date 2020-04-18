@@ -25,8 +25,11 @@ from __future__ import unicode_literals
 import logging
 import json
 
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton, bot
 from telegram.ext import *
+from telegram.ext.messagequeue import MessageQueue, queuedmessage
+from telegram.utils.request import Request
+from telegram.error import BadRequest as TelegramBadRequest
 
 from cms import config
 from cms.db import Session, Contest, Question, Participation, Announcement
@@ -289,6 +292,32 @@ class MyContest(WithDatabaseAccess):
         return self.announcements.all()
 
 
+class BotWithMessageQueue(bot.Bot):
+    def __init__(self, *args, all_burst_limit = 2, all_time_limit_ms = 1010,
+                 group_burst_limit = 18, group_time_limit_ms = 60500, **kwargs):
+        super(BotWithMessageQueue, self).__init__(*args, **kwargs)
+
+        # internal variables used by @queuedmessage
+        self._is_messages_queued_default = True
+        self._msg_queue = MessageQueue(all_burst_limit, all_time_limit_ms,
+                                       group_burst_limit, group_time_limit_ms)
+
+    def __del__(self):
+        try:
+            self._msg_queue.stop()
+        except:
+            pass
+
+    def send_message(self, *args, **kwargs):
+        return self._send_message_internal(*args, isgroup=True, **kwargs)
+
+    @queuedmessage
+    def _send_message_internal(self, *args, on_send=lambda _ : None, **kwargs):
+        msg = super(BotWithMessageQueue, self).send_message(*args, **kwargs)
+        on_send(msg)
+        return msg
+
+
 class TelegramBot:
     """ A telegram bot that allows easy access to all the communication
         (Clarification Requests/Announcements/etc) happening
@@ -303,7 +332,10 @@ class TelegramBot:
         self.messages_issued = []
         self.contests = contests
 
-        self.updater = Updater(token=config.bot_token)
+        bot = BotWithMessageQueue(token=config.bot_token,
+                                  request=Request(con_pool_size=8))
+
+        self.updater = Updater(bot=bot)
         self.dispatcher = self.updater.dispatcher
         self.job_queue = self.updater.job_queue
 
@@ -312,8 +344,6 @@ class TelegramBot:
         self.dispatcher.add_handler(CommandHandler('announce', self.announce))
         self.dispatcher.add_handler(CommandHandler('openquestions',
                                                    self.list_open_questions))
-        self.dispatcher.add_handler(CommandHandler('allquestions',
-                                                   self.list_all_questions))
         self.dispatcher.add_handler(CommandHandler('allannouncements',
                                                    self.list_all_announcements))
         self.dispatcher.add_handler(CommandHandler('help', self.help))
@@ -324,15 +354,20 @@ class TelegramBot:
 
         self.job_queue.run_repeating(self.update, interval=5, first=0)
 
-    def issue_message(self, bot, **kwargs):
-        self.messages_issued.append(bot.send_message(**kwargs))
-        return self.messages_issued[-1]
+    def _record_msg(self, f):
+        def do_record_msg(msg):
+            f(msg)
+            self.messages_issued.append(msg)
 
-    def issue_reply(self, msg, *args, **kwargs):
-        self.messages_issued.append(
-            msg.bot.send_message(msg.chat.id, *args, **kwargs,
-                                 reply_to_message_id=msg.message_id))
-        return self.messages_issued[-1]
+        return do_record_msg
+
+    def issue_message(self, bot, on_send = lambda _ : None, **kwargs):
+        bot.send_message(on_send = self._record_msg(on_send), **kwargs)
+
+    def issue_reply(self, msg, *args, on_send = lambda _ : None, **kwargs):
+        msg.bot.send_message(msg.chat.id, *args, **kwargs,
+                             reply_to_message_id=msg.message_id,
+                             on_send=self._record_msg(on_send))
 
     def start(self, bot, update, args=None):
         """ The registration process
@@ -514,17 +549,30 @@ class TelegramBot:
         return {"text": q.format(new), "parse_mode": "MarkdownV2",
                 "reply_markup": InlineKeyboardMarkup(kb)}
 
-    def _notify_question(self, bot, q, new, show_status):
-        Q = q.question
+    def _record_question(self, q, full):
+        def do_record(msg):
+            self.questions[msg.message_id] = q
 
+            if full:
+                Q = q.question
+                
+                if Q.id not in self.q_notifications:
+                    self.q_notifications[Q.id] = []
+                self.q_notifications[Q.id].append(msg)
+                
+                try:
+                    msg.edit_text(**self._question_notification_params(q,
+                                                                       False))
+                except TelegramBadRequest:
+                    logger.info("question was already up to date")
+
+        return do_record
+
+    def _notify_question(self, bot, q, new, show_status):
         msg = self.issue_message(bot,
                                  chat_id=self.id,
-                                 **self._question_notification_params(q, new))
-        self.questions[msg.message_id] = q
-
-        if Q.id not in self.q_notifications:
-            self.q_notifications[Q.id] = []
-        self.q_notifications[Q.id].append(msg)
+                                 **self._question_notification_params(q, new),
+                                 on_send=self._record_question(q, True))
 
     def _update_question(self, q):
         for msg in self.q_notifications[q.question.id]:
@@ -629,38 +677,6 @@ class TelegramBot:
         for q in qs:
             self._notify_question(bot, q, False, False)
 
-    def list_all_questions(self, bot, update):
-        if self.id is None:
-            update.message.reply_text("You have to register me first (using "
-                                      "the /start command).")
-            return
-
-        if self.id != update.message.chat_id:
-            logger.warning("Warning! Someone tried to list all questions in "
-                           "a chat I'm not registered in!")
-            self.issue_message(bot,
-                               chat_id=self.id,
-                               text="Warning! Someone tried to list all "
-                                    "questions in another chat!")
-            return
-
-        qs = [q for c in self.contests
-                for q in c.get_all_questions()]
-
-        if len(qs) == 1:
-            notification = "There is currently *1* question:"
-        else:
-            notification = "There are currently " + \
-                           bold("no" if len(qs) == 0 else str(len(qs))) + " "\
-                           "questions" + ("" if len(qs) == 0 else ":")
-
-        self.issue_message(bot,
-                           chat_id=self.id,
-                           text=notification,
-                           parse_mode="MarkdownV2")
-
-        for q in qs:
-            self._notify_question(bot, q, False, True)
 
     def list_all_announcements(self, bot, update):
         if self.id is None:
@@ -714,11 +730,6 @@ class TelegramBot:
             bold("/openquestions") + \
             escape(" — shows all ") + italic("unanswered") + \
             escape(" questions of the current contest\n") + \
-            bold("/allquestions") + \
-            escape(" — shows ") + italic("all") + \
-            escape(" questions of the current contest (") + \
-            italic("use this with care as it tends to produce quite a "
-                   "lot of output") + escape("!)\n") + \
             bold("/allannouncements") + \
             escape(" — shows all announcements of the current contest (") + \
             italic("use this with care as it could produce quite a lot of "
@@ -863,8 +874,8 @@ class TelegramBot:
         else:
             msg = self.issue_reply(update.message,
                                    "I have added your answer!",
-                                   quote=True)
-            self.questions[msg.message_id] = q
+                                   quote=True,
+                                   on_send=self._record_question(q, False))
 
         self._update_question(q)
 
