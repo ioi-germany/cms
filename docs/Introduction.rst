@@ -42,6 +42,8 @@ CMS is composed of several services, that can be run on a single or on many serv
 
 TaskOverviewWebServer is a webserver showing an overview of all tasks in a directory (mainly to simplify task selection). ResourceService doesn't start the TaskOverviewWebServer, so it has to be started manually.
 
+You can use GerTranslateWebServer to provide an intuitive interface for handling the translation of statements, intended for use by team leaders at olympiads.
+
 Finally, RankingWebServer, whose duty is of course to show the ranking. This webserver is - on purpose - separated from the inner core of CMS in order to ease the creation of mirrors and restrict the number of people that can access services that are directly connected to the database.
 
 Each of the core services is designed to be able to be killed and reactivated in a way that keeps the consistency of data, and does not block the functionalities provided by the other services.

@@ -1,0 +1,281 @@
+/* Colors from bootstrap.css (see there) */
+
+body {
+    padding-top:60px;
+}
+
+div.modal-backdrop.invisible {
+    display:none;
+}
+
+table.overview {
+    margin-top:15px;
+    margin-left:auto;
+    margin-right:auto;
+    width:99% !important;
+}
+
+table.overview tr > td:first-child {
+    position:relative;
+    overflow:hidden;
+}
+
+/*table.overview tr.new > td:first-child::after {
+    content:"NEW";
+    padding:2px 25px 3px 25px;
+    background-color:#c93529;
+    text-shadow:0px 0px 2px rgba(0, 0, 0, .5);
+    position:absolute;
+    right:-22px;
+    top:6px;
+    font-size:9px;
+    font-weight:bold;
+    letter-spacing:.03em;
+    line-height:10px;
+    color:white;
+    transform:rotate(45deg);
+}
+
+table.overview tr.new > td:first-child:hover::after {
+    opacity:.25;
+}*/
+
+ul.embedded {
+    margin:0px;
+    list-style-position:inside;
+}
+
+div.header {
+    position:fixed;
+    top:0px;
+    left:0px;
+    right:0px;
+    z-index:255;
+}
+
+div.header-inner {
+    border-radius:0px;
+    padding:5px 10px;
+}
+
+div.header button.btn-large {
+    min-height:40px;
+}
+
+form.my-form {
+    padding:0px;
+    margin:0px;
+    margin-right:7px;
+    float:left;
+}
+
+div.control-panel {
+    padding:10px 15px;
+    margin:7px;
+    background:#f5f5f5;
+    border-radius:6px;
+    margin-bottom:14px;
+    border:1px solid #ddd;
+    box-shadow:inset 0px 1px 0px white;
+}
+
+div.form-group {
+    padding:0px;
+    margin-top:7px;
+}
+
+div.short-container {
+    display:table-cell;
+    padding:0px;
+    margin:0px;
+}
+
+div.control-table {
+    width:100%;
+    margin:0px;
+    padding:0px;
+    overflow:auto;
+    display:table;
+    margin-bottom:-7px;
+}
+
+div.mini-table {
+    margin:0px;
+    padding:0px;
+    width:100%;
+    display:table;
+    overflow:auto;
+}
+
+div.two-cols
+{
+    margin:0px;
+    padding:0px;
+    overflow:auto;
+    display:table-row;
+}
+
+div.two-cols > div {
+    margin-bottom:0px;
+    display:table-cell;
+    border-spacing:0px;
+    width:50%;
+}
+
+div.two-cols > div > div {
+    height:100% !important;
+}
+
+div.modal-body > form > div.control-panel:last-child {
+    margin-bottom:7px;
+}
+
+form {
+    margin-bottom:0px;
+}
+
+td.th {
+    font-weight:bold;
+}
+
+span.task-name {
+    font-weight:bold;
+}
+
+pre.short {
+    max-height:145px;
+    overflow:scroll;
+    line-height:14px;
+}
+
+pre.short code {
+    font-size:10px;
+}
+
+@keyframes
+blink-fresh {
+    0% {
+        background:rgba(85, 172, 85, 0);
+    }
+
+
+    20% {
+        background:rgba(85, 172, 85, .25);
+    }
+
+    50% {
+        background:rgba(85, 172, 85, .25);
+    }
+
+    100% {
+        background:rgba(85, 172, 85, 0);
+    }
+}
+
+tr.fresh td {
+    animation-name:blink-fresh;
+    animation-duration:1s;
+    animation-timing-function:linear;
+}
+
+@keyframes
+blink-updated {
+    0% {
+        background:rgba(0, 112, 204, 0);
+    }
+
+
+    20% {
+        background:rgba(0, 112, 204, .25);
+    }
+
+    50% {
+        background:rgba(0, 112, 204, .25);
+    }
+
+    100% {
+        background:rgba(0, 112, 204, 0);
+    }
+}
+
+
+tr.updated td {
+    animation-name:blink-updated;
+    animation-duration:1s;
+    animation-timing-function:linear;
+}
+
+@keyframes
+blink-removed {
+    0% {
+        background:rgba(189, 54, 47, 0);
+    }
+
+
+    20% {
+        background:rgba(189, 54, 47, .25);
+    }
+
+    50% {
+        background:rgba(189, 54, 47, .25);
+    }
+
+    100% {
+        background:rgba(189, 54, 47, 0);
+    }
+}
+
+tr.removed td {
+    animation-name:blink-removed;
+    animation-duration:1s;
+    animation-timing-function:linear;
+}
+
+@keyframes
+vanish {
+    0% {
+        opacity:1;
+    }
+
+    100% {
+
+    }
+}
+
+
+tr.removed {
+    animation-name:vanish;
+    animation-duration:1s;
+    animation-timing-function:linear;
+    animation-fill-mode:forwards;
+}
+
+td.error-msg {
+    font-family:Menlo,Monaco,Consolas,"Courier New",monospace;
+    text-align:center;
+   /* color:white;
+    background-color:#ad2620 !important;
+    text-shadow:0px 0px 4px rgba(0, 0, 0, .25);*/
+    color:#bd362f;
+    text-shadow:0px 0px 4px #ee5f5b;
+}
+
+td.no-error {
+    display:none;
+}
+
+.hidden {
+    display:none;
+}
+
+div.json-info {
+    position:fixed;
+    right:.25%;
+    bottom:.25%;
+    max-width:400px;
+    box-shadow:20px 20px 10px 30px white;
+}
+
+div.json-info.no-errors {
+    display:none;
+}

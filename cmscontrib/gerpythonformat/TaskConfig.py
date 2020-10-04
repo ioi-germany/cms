@@ -78,9 +78,9 @@ class Scope(object):
 
     def _get_special_cases(self):
         res = []
-        
+
         if self.upscope is not None:
-            res += self.upscope._get_special_cases()        
+            res += self.upscope._get_special_cases()
         res += self.special_cases
         return res
 
@@ -567,7 +567,7 @@ class TaskConfig(CommonConfig, Scope):
     """
 
     def __init__(self, upstream, rules, name, num, feedback, score_mode,
-                 ignore_latex=False, minimal=False):
+                 ignore_latex=False, relevant_language=None, minimal=False):
         super(TaskConfig, self).__init__(rules, ignore_latex)
         self.no_tokens()
         Scope.__init__(self)
@@ -644,6 +644,9 @@ class TaskConfig(CommonConfig, Scope):
         # Score mode
         self._score_mode = score_mode
 
+        # Only compile statements that end with given string
+        self.relevant_language = relevant_language
+
         # Only compile statement (and hopefully everything necessary for this)
         self.minimal = minimal
 
@@ -692,7 +695,7 @@ class TaskConfig(CommonConfig, Scope):
     def get_constraint_value(self, name):
         l = self.get_constraint_lower(name)
         u = self.get_constraint_upper(name)
-        
+
         if l == u:
             return l
         else:
@@ -1130,7 +1133,7 @@ class TaskConfig(CommonConfig, Scope):
             print_msg("Skipping testcase (minimal mode)")
             self.group_stack[-1]._dummy_case(kwargs.get("name"))
             return
-        
+
         if len(self.group_stack) == 0:
             raise Exception("add_testcase() called outside group")
         return self.group_stack[-1].add_testcase(*args, **kwargs)
@@ -1756,7 +1759,7 @@ class TaskConfig(CommonConfig, Scope):
             def print_score_info(prefix, name):
                 score = details[prefix + "_score"]
                 rounded_score = round(score, score_precision)
-                
+
                 if score != rounded_score:
                     score = "{} ({})".format(rounded_score, score)
 
