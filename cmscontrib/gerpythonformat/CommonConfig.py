@@ -73,10 +73,11 @@ class CommonConfig(object):
     querying system.
     """
 
-    def __init__(self, rules, ignore_latex=False):
+    def __init__(self, rules, ignore_latex=False, relevant_language=None):
         self.upstream = None
         self.rules = rules
         self.ignore_latex = ignore_latex
+        self.relevant_language = relevant_language
 
         # how to exchange data with upstream
         self.inheriting = False
@@ -303,6 +304,9 @@ class CommonConfig(object):
         output = basename + ".pdf"
 
         if self.ignore_latex:
+            return output
+
+        if self.relevant_language is not None and not basename.endswith(self.relevant_language):
             return output
 
         with header("Compile {} to {} using LuaLaTeX"

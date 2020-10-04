@@ -105,7 +105,7 @@ class ContestConfig(CommonConfig):
     restricted_feedback = ("full", False)
 
 
-    def __init__(self, rules, name, ignore_latex=False, onlytask=None,
+    def __init__(self, rules, name, ignore_latex=False, relevant_language=None, onlytask=None,
                  minimal=False):
         """
         Initialize.
@@ -118,7 +118,7 @@ class ContestConfig(CommonConfig):
                            this name is ignored
 
         """
-        super(ContestConfig, self).__init__(rules, ignore_latex=ignore_latex)
+        super(ContestConfig, self).__init__(rules, ignore_latex=ignore_latex, relevant_language=relevant_language)
         self.infinite_tokens()
 
         self.onlytask = onlytask
@@ -475,6 +475,7 @@ class ContestConfig(CommonConfig):
                             s, len(self.tasks),
                             feedback, score_mode,
                             ignore_latex=self.ignore_latex,
+                            relevant_language=self.relevant_language,
                             minimal=minimal) as taskconfig:
                 for f in self.ontasks:
                     f(taskconfig)

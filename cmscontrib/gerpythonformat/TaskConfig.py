@@ -569,7 +569,7 @@ class TaskConfig(CommonConfig, Scope):
     """
 
     def __init__(self, upstream, rules, name, num, feedback, score_mode,
-                 ignore_latex=False, minimal=False):
+                 ignore_latex=False, relevant_language=None, minimal=False):
         super(TaskConfig, self).__init__(rules, ignore_latex)
         self.no_tokens()
         Scope.__init__(self)
@@ -645,6 +645,9 @@ class TaskConfig(CommonConfig, Scope):
 
         # Score mode
         self._score_mode = score_mode
+
+        # Only compile statements that end with given string
+        self.relevant_language = relevant_language
 
         # Only compile statement (and hopefully everything necessary for this)
         self.minimal = minimal
