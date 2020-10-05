@@ -166,6 +166,9 @@ This command installs python dependencies globally. Note that on some distros, l
     pip3 install --user -r requirements.txt
     python3 setup.py install --user
 
+
+.. _installation_venv:
+
 Method 2: Virtual environment
 -----------------------------
 
