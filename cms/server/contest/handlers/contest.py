@@ -32,7 +32,10 @@
 import ipaddress
 import logging
 
-import tornado.web
+try:
+    import tornado4.web as tornado_web
+except ImportError:
+    import tornado.web as tornado_web
 
 from cms import config, TOKEN_MODE_MIXED
 from cms.db import Contest, Submission, Task, UserTest
@@ -108,7 +111,7 @@ class ContestHandler(BaseHandler):
                 # the one from the base class is enough to display a 404 page.
                 super().prepare()
                 self.r_params = super().render_params()
-                raise tornado.web.HTTPError(404)
+                raise tornado_web.HTTPError(404)
         else:
             # Select the contest specified on the command line
             self.contest = Contest.get_from_id(
@@ -142,9 +145,7 @@ class ContestHandler(BaseHandler):
         cookie = self.get_secure_cookie(cookie_name)
 
         try:
-            # In py2 Tornado gives us the IP address as a native binary
-            # string, whereas ipaddress wants text (unicode) strings.
-            ip_address = ipaddress.ip_address(str(self.request.remote_ip))
+            ip_address = ipaddress.ip_address(self.request.remote_ip)
         except ValueError:
             logger.warning("Invalid IP address provided by Tornado: %s",
                            self.request.remote_ip)
