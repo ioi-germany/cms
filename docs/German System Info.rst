@@ -483,9 +483,15 @@ Weitere Beispiele
 -----------------
 Puh, das ist vermutlich ziemlich viel auf einmal! Aber kein Grund zu verzagen: als IOI-Coach kannst du in unserem Aufgabenrepo im Ordner ``samples`` eine Beispiel-TeX-Datei mit zugehörigem PDF-Output finden, die zahlreiche Beispielgraphen aus unseren Aufgaben enthält. Darüber hinaus verwenden immer mehr unserer Graphenaufgaben das Graphdrawing-System. In fast allen Fällen solltest du bereits durch einfache Anpassungen an so einem Beispiel zum gewünschten Ergebnis kommen.
 
+
+
 Task Translation Interface
 ==========================
+
 This is a web server and client to manage task translation by multiple users. For a given set of tasks, users can download task statements in form of TeX (and PDF) files, then upload the translated TeX files. They can then download and check the compiled PDF statement.
+
+.. warning::
+    This server accepts arbitrary TeX files and tries to compile them with ``pdflatex``. One can put malicious code in such a TeX file, **which everyone with access to the translation interface can use to run arbitrary code on the server**. Be sure to limit the interface to people you trust and who are allowed to access your server. You can run the task translation server on a separate machine / inside a virtual machine to limit access and *slightly* reduce potential damage. In a future implementation, the compilation will be done inside an ``isolate`` environment.
 
 The server's task repository is to be specified in ``cms.config``. In the repository, there must be a ``language.json`` file as well as a folder for each task that follows the :ref:`GermanFormat`.
 
