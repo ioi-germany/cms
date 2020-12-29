@@ -114,7 +114,7 @@ class TaskSpoilerViewHandler(FileHandler):
     """Shows an analysis spoiler file of a task in the contest.
 
     """
-    @tornado.web.authenticated
+    @tornado_web.authenticated
     @actual_phase_required(3)
     @multi_contest
     def get(self, task_name, filename):

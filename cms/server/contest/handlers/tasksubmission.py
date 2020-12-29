@@ -245,7 +245,7 @@ class SubmissionStatusHandler(ContestHandler):
                 data["task_actual_score"], score_type.max_score, None,
                 task.score_precision, translation=self.translation)
 
-    @tornado.web.authenticated
+    @tornado_web.authenticated
     @actual_phase_required(0, 3)
     @multi_contest
     def get(self, task_name, submission_num):
