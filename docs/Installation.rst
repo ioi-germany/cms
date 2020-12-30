@@ -38,9 +38,9 @@ You will also require a Linux kernel with support for control groups and namespa
 
 Then you require the compilation and execution environments for the languages you will use in your contest:
 
-* `GNU compiler collection <https://gcc.gnu.org/>`_ (for C, C++ and Java, respectively with executables ``gcc``, ``g++`` and ``gcj``);
+* `GNU compiler collection <https://gcc.gnu.org/>`_ (for C and C++, respectively with executables ``gcc`` and ``g++``);
 
-* alternatively, for Java, your choice of a JDK, for example OpenJDK (but any other JDK behaving similarly is fine, for example Oracle's);
+* for Java, your choice of a JDK, for example OpenJDK (but any other JDK behaving similarly is fine, for example Oracle's);
 
 * `Free Pascal <http://www.freepascal.org/>`_ (for Pascal, with executable ``fpc``);
 
@@ -59,23 +59,22 @@ All dependencies can be installed automatically on most Linux distributions.
 Ubuntu
 ------
 
-On Ubuntu 18.04, one will need to run the following script to satisfy all dependencies:
+On Ubuntu 20.04, one will need to run the following script to satisfy all dependencies:
 
 .. sourcecode:: bash
 
     # Feel free to change OpenJDK packages with your preferred JDK.
-    sudo apt-get install build-essential openjdk-8-jdk-headless fp-compiler \
-        postgresql postgresql-client python3.6 cppreference-doc-en-html \
+    sudo apt-get install build-essential openjdk-11-jdk-headless fp-compiler \
+        postgresql postgresql-client python3.8 cppreference-doc-en-html \
         cgroup-lite libcap-dev zip
 
     # Only if you are going to use pip/venv to install python dependencies
-    sudo apt-get install python3.6-dev libpq-dev libcups2-dev libyaml-dev \
+    sudo apt-get install python3.8-dev libpq-dev libcups2-dev libyaml-dev \
         libffi-dev python3-pip
 
     # Optional
-    sudo apt-get install nginx-full python2.7 php7.2-cli php7.2-fpm \
-        phppgadmin texlive-latex-base a2ps gcj-jdk haskell-platform rustc \
-        mono-mcs
+    sudo apt-get install nginx-full python2.7 php7.4-cli php7.4-fpm \
+        phppgadmin texlive-latex-base a2ps haskell-platform rustc mono-mcs
 
 The above commands provide a very essential Pascal environment. Consider installing the following packages for additional units: `fp-units-base`, `fp-units-fcl`, `fp-units-misc`, `fp-units-math` and `fp-units-rtl`.
 
@@ -208,14 +207,18 @@ Method 3: Using ``apt-get`` on Ubuntu
 
   It is usually possible to install python dependencies using your Linux distribution's package manager. However, keep in mind that the version of each package is controlled by the package mantainers and could be too new or too old for CMS. **On Ubuntu, this is generally not the case** since we try to build on the python packages that are available for the current LTS version.
 
+.. warning::
+
+  On Ubuntu 20.04, the shipped version of ``python3-gevent`` is too old to support the system Python 3 version. After installing other packages from the repositories, you should still install ``gevent>=1.5,<1.6``, for example, using the ``pip`` method above.
+
 To install CMS and its Python dependencies on Ubuntu, you can issue:
 
 .. sourcecode:: bash
 
     sudo python3 setup.py install
 
-    sudo apt-get install python3-setuptools python3-tornado python3-psycopg2 \
-         python3-sqlalchemy python3-psutil python3-netifaces python3-crypto \
+    sudo apt-get install python3-setuptools python3-tornado4 python3-psycopg2 \
+         python3-sqlalchemy python3-psutil python3-netifaces python3-pycryptodome \
          python3-bs4 python3-coverage python3-requests python3-werkzeug \
          python3-gevent python3-bcrypt python3-chardet patool python3-babel \
          python3-xdg python3-jinja2
@@ -237,7 +240,7 @@ To install CMS python dependencies on Arch Linux (again: assuming you did not us
     sudo python3 setup.py install
 
     sudo pacman -S --needed python-setuptools python-tornado python-psycopg2 \
-         python-sqlalchemy python-psutil python-netifaces python-crypto \
+         python-sqlalchemy python-psutil python-netifaces python-pycryptodome \
          python-beautifulsoup4 python-coverage python-requests python-werkzeug \
          python-gevent python-bcrypt python-chardet python-babel python-xdg \
          python-jinja

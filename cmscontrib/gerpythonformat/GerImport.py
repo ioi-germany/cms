@@ -56,10 +56,7 @@ class GerImport(Service):
 
     def make(self):
         self.file_cacher = FileCacher()
-        try:
-            self.make_helper()
-        finally:
-            self.file_cacher.destroy_cache()
+        self.make_helper()
 
     def make_helper(self):
         # Unset stack size limit
