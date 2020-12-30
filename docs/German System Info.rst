@@ -27,7 +27,13 @@ Dann bitte die Dokumentation `hier <https://contest.ioi-training.de/docs/>`_ (da
 Wichtig ist insbesondere `die Beschreibung des deutschen Aufgabenformates <https://contest.ioi-training.de/docs/External%20contest%20formats.html#german-import-format>`_.
 Führe testweise einfach mal ``cmsGerMake .`` zum Beispiel im Ordner ``contests/ioi2017_training1`` aus.
 
+.. warning::
 
+  CMS funktioniert derzeit nur mit python <=3.7. Damit es also nicht die aktuelle Version von Python benutzt, führen wir es in einer virtuellen Umgebung (``venv``) aus. Auf dem Server muss dazu das Kommando ``prep`` in jeder neu geöffneten shell ausgeführt werden, bevor ein CMS-Kommando verwendet wird; mit ``deactivate`` verlässt man ``venv`` wieder (üblicherweise nicht nötig).
+
+  Auf anderen Rechnern ist meistens auch schon eine zu neue Version von Python installiert. Dann muss man dort auch ein ``venv`` einrichten; siehe auch :ref:`hier <installation_venv>` für Details zu ``venv``. Mit einer zu neuen Version von Python scheitert die Installation der in ``requirements.txt`` festgelegten Python-Pakete.
+
+Um auf dem Server mit dem Aufgabenrepository zu arbeiten (z.B. einen Contest zu kompilieren oder zu importieren), verwenden wir dort den Ordner ``aioi_repo`` (dieser folgt ``aioi.git``, mit ``git pull`` bekommt man also den "aktuellen Stand").
 
 Webseiten des Wettbewerbssystems
 ================================
