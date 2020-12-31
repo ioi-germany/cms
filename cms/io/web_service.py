@@ -34,6 +34,7 @@ try:
     from werkzeug.wsgi import DispatcherMiddleware, SharedDataMiddleware
 except ImportError:
     from werkzeug.middleware.dispatcher import DispatcherMiddleware
+    from werkzeug.middleware.shared_data import SharedDataMiddleware
 
 from cms.db.filecacher import FileCacher
 from cms.server.file_middleware import FileServerMiddleware

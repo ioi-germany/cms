@@ -39,7 +39,10 @@
 
 import logging
 
-from werkzeug.wsgi import SharedDataMiddleware
+try:
+    from werkzeug.wsgi import SharedDataMiddleware
+except ImportError:
+    from werkzeug.middleware.shared_data import SharedDataMiddleware
 
 from cms import ConfigError, ServiceCoord, config
 from cms.io import WebService
