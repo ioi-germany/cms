@@ -1,0 +1,72 @@
+\input{language.tex}
+\documentclass{article}
+\usepackage[a4paper, left=25mm, right=25mm, top=25mm]{geometry}
+\usepackage[ngerman]{babel}
+\usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
+\usepackage[lining,scaled=.9]{FiraMono}
+\usepackage[mathrm=sym]{unicode-math}
+\usepackage[Scale=.9]{firamath-otf}
+\usepackage{luatexbase}
+\usepackage{microtype}
+\usepackage{tikz}
+\usepackage{fancyhdr}
+\usepackage{tabularx}
+\usepackage{colortbl}
+\usepackage{luacode}
+\usetikzlibrary{calc}
+
+\newif\ifshowwindow
+\showwindowfalse
+\pagestyle{empty}
+\parindent=0pt
+
+\input{translation.tex}
+\input{contest-overview.tex}
+
+\def\printoverviewpage#1#2#3{%
+  \begin{center}
+    \bfseries\LARGE\contestname\\
+    \large\tOverviewSheet
+  \end{center}
+
+% Print login information
+% The dimensions are chosen in such a way that in a standard window envelope
+% precisely the contestant name and login name will be visible
+\begin{tikzpicture}[remember picture, overlay]
+  \ifshowwindow
+    \node[xshift=20mm,yshift=-45mm] at (current page.north west)
+    {
+      \begin{tikzpicture}[remember picture, overlay,yscale=-1]
+        \draw[red,line width=2pt] (0,0) rectangle(85mm, 40mm);
+      \end{tikzpicture}
+    };
+  \fi
+
+  \node[xshift=25mm,yshift=-65mm, right, inner sep=0pt, outer sep=0pt] at (current page.north west)
+    {
+      \vbox
+      {
+        \par\smallskip%
+        \begin{tabularx}{\textwidth}{p{75mm}@{\hskip0pt}p{.52cm}@{\hskip0pt}X}
+          \hline
+          \multicolumn{1}{|c}{\sffamily\tContestant} && \multicolumn{1}{c|}{\sffamily\tPassword\kern4pt} \\
+          \hline\noalign{\smallskip}
+          \cellcolor[gray]{.9}\medskip{\centering{\Huge\ttfamily\bfseries #1}\par\medskip\centering{#2}\par}\medskip&&\cellcolor[gray]{.9}\medskip\vbox{\vss\begin{center}\Large\ttfamily #3\end{center}\par\vss}\par\medskip\\
+          \noalign{\smallskip}
+        \end{tabularx}
+      }
+    };
+  \end{tikzpicture}
+
+  \vspace{55mm}
+
+  \printtaskoverview
+  \par\vspace{17mm}
+
+  \printscoring
+  \vfill\eject
+}
+
+\begin{document}
+\input{overview-instructions.tex}
+\end{document}

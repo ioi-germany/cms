@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -78,9 +78,9 @@ class Scope(object):
 
     def _get_special_cases(self):
         res = []
-        
+
         if self.upscope is not None:
-            res += self.upscope._get_special_cases()        
+            res += self.upscope._get_special_cases()
         res += self.special_cases
         return res
 
@@ -212,6 +212,8 @@ class MySubtask(Scope):
     def _level(self):
         return 1
 
+    def max_score(self):
+        return sum(g.points for g in self.groups)
 
 class MyGroup(Scope):
     """
@@ -647,6 +649,10 @@ class TaskConfig(CommonConfig, Scope):
         # Only compile statement (and hopefully everything necessary for this)
         self.minimal = minimal
 
+    @exported_function
+    def max_score(self):
+        return sum(t.max_score() for t in self.subtasks if not t.sample)
+
     @property
     def unique_name(self):
         """Helper method for unit tests
@@ -692,7 +698,7 @@ class TaskConfig(CommonConfig, Scope):
     def get_constraint_value(self, name):
         l = self.get_constraint_lower(name)
         u = self.get_constraint_upper(name)
-        
+
         if l == u:
             return l
         else:
@@ -1130,7 +1136,7 @@ class TaskConfig(CommonConfig, Scope):
             print_msg("Skipping testcase (minimal mode)")
             self.group_stack[-1]._dummy_case(kwargs.get("name"))
             return
-        
+
         if len(self.group_stack) == 0:
             raise Exception("add_testcase() called outside group")
         return self.group_stack[-1].add_testcase(*args, **kwargs)
@@ -1756,7 +1762,7 @@ class TaskConfig(CommonConfig, Scope):
             def print_score_info(prefix, name):
                 score = details[prefix + "_score"]
                 rounded_score = round(score, score_precision)
-                
+
                 if score != rounded_score:
                     score = "{} ({})".format(rounded_score, score)
 
