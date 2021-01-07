@@ -134,7 +134,7 @@ class RegistrationHandler(ContestHandler):
         self.sql_session.add(user)
 
         participation = Participation(user=user, contest=self.contest,
-                                      team=team)
+                                      group=self.contest.main_group, team=team)
         self.sql_session.add(participation)
 
         self.sql_session.commit()
