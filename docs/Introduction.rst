@@ -59,7 +59,7 @@ With the exception of RWS, there are no cryptographic or authentication schemes 
 
 A basic firewall
 ----------------
-One hassle-free way of setting up a firewall is by using ``nftables``. Once installed, you should put the necessary rules into ``/etc/nftables.conf``. On a home computer, usually you can just use the following configuration. It basically blocks all ingoing connections. If the computer should be accessible via ``ssh``, ``http`` or ``https`` ports (e.g., because it's a server), uncomment the ``tcp dport {ssh, http, https} accept`` line and only keep the respective keywords. If you experience any issues, e.g. because your computer is running a remote printing server, just add the port numbers that have to remain open to that line.
+One hassle-free way of setting up a firewall is by using ``nftables``. Once installed, you should put the necessary rules into ``/etc/nftables.conf``, and then run ``systemctl start nftables`` and ``systemctl enable nftables``. On a home computer, usually you can just use the following configuration. It basically blocks all ingoing connections. If the computer should be accessible via ``ssh``, ``http`` or ``https`` ports (e.g., because it's a server), uncomment the ``tcp dport {ssh, http, https} accept`` line and only keep the respective keywords. If you experience any issues, e.g. because your computer is running a remote printing server, just add the port numbers that have to remain open to that line.
 
 .. sourcecode:: text
 
