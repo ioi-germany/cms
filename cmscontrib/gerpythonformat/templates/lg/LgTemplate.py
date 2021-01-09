@@ -38,7 +38,7 @@ class LgTemplate(PlainTemplate):
     def __init__(self, contest):
         super(LgTemplate, self).__init__(contest)
         self.contest = contest
-        self.contest.export_function(self.make_overview_sheet)
+        self.contest.export_function(self.make_overview_sheets)
 
         self.contest.supplement_file("contestoverview", "contest-overview.tex")
         self.contest.supplement_file("credentials", "overview-instructions.tex")
@@ -251,8 +251,13 @@ class LgTemplate(PlainTemplate):
     def language_supplement(self, code):
         return "\\def\\TemplateLanguage{%s}" % code
 
-    def make_overview_sheet(self, attach_statements=True):
-        """ Print an overview sheet, containing information about all tasks
+    def make_overview_sheets(self, attach_statements=False):
+        """
+        Print an overview sheet, containing information about all tasks
+
+        attach_statements (bool): whether we should collect all primary
+                                  statements for all users and add them to the
+                                  resp. PDF right after their overview sheet
         """
         teams = {}
 
