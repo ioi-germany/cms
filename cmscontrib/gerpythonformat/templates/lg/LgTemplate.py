@@ -219,18 +219,38 @@ class LgTemplate(PlainTemplate):
         self.contest.supply("contestoverview", def_latex("printscoring",
                                                          score_info))
         self.contest.supply("contestoverview",
-                            def_latex("contestname", self.contest.contestname))
+                            def_latex("contestname", self.contest._description))
 
-    def credentials_supplement(self, users):
-        cs = "\n".join("\\printoverviewpage{%s}{%s, %s}{%s}" %
-                           (u.username, u.lastname, u.firstname, u.password)
-                            for u in users)
+    def credentials_supplement(self, users, attach_statements):
+        def statements(u):
+            if not attach_statements:
+                return ""
+
+            L = []
+
+            for t in sorted(self.contest.tasks.values(), key=lambda x: x.name):
+                try:
+                    languages = u.primary_statements[t.name]
+                except TypeError:
+                    languages = u.primary_statements
+
+                if not isinstance(languages, list):
+                    languages = [languages]
+
+                L += [t._statements[l].file_ for l in languages]
+
+            return "".join("\\mycleardoublepage\\includepdf[pages=-]{%s}" % s
+                           for s in L) + "\\mycleardoublepage"
+
+        cs = "\n".join("\\printoverviewpage{%s}{%s, %s}{%s}{%s}" %
+                           (u.username, u.lastname, u.firstname, u.password,
+                            statements(u)) for u in users)
         return cs
 
     def language_supplement(self, code):
         return "\\def\\TemplateLanguage{%s}" % code
 
-    def make_overview_sheet(self):
+    def make_overview_sheet(self, attach_statements=True):
         """ Print an overview sheet, containing information about all tasks
         """
         teams = {}
@@ -252,7 +272,7 @@ class LgTemplate(PlainTemplate):
             return self.language_supplement(lang_code)
 
         def do_supply_credentials():
-            return self.credentials_supplement(user_list)
+            return self.credentials_supplement(user_list, attach_statements)
 
         self.contest.supply("lang", do_supply_language)
         self.contest.supply("credentials", do_supply_credentials)

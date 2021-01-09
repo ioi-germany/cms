@@ -13,7 +13,12 @@
 \usepackage{tabularx}
 \usepackage{colortbl}
 \usepackage{luacode}
+\usepackage{pdfpages}
 \usetikzlibrary{calc}
+
+\makeatletter
+\def\mycleardoublepage{\ifodd\c@page\else\null\vfill\eject\fi}
+\makeatother
 
 \newif\ifshowwindow
 \showwindowfalse
@@ -23,26 +28,36 @@
 \input{translation.tex}
 \input{contest-overview.tex}
 
-\def\printoverviewpage#1#2#3{%
-  \begin{center}
-    \bfseries\LARGE\contestname\\
-    \large\tOverviewSheet
-  \end{center}
+\def\printoverviewpage#1#2#3#4{%
+\begin{center}
+  \bfseries\LARGE\contestname\\
+  \large\tOverviewSheet
+\end{center}
+\par\medskip
+\tContestServer
 
 % Print login information
 % The dimensions are chosen in such a way that in a standard window envelope
 % precisely the contestant name and login name will be visible
 \begin{tikzpicture}[remember picture, overlay]
   \ifshowwindow
+    % red: area guaranteed to be visible
+    % blue: area actually visible
     \node[xshift=20mm,yshift=-45mm] at (current page.north west)
     {
       \begin{tikzpicture}[remember picture, overlay,yscale=-1]
         \draw[red,line width=2pt] (0,0) rectangle(85mm, 40mm);
       \end{tikzpicture}
     };
+  \node[xshift=20mm,yshift=-45mm] at (current page.north west)
+  {
+    \begin{tikzpicture}[remember picture, overlay,yscale=-1]
+      \draw[blue,line width=2pt] (0,0) rectangle(90mm, 45mm);
+    \end{tikzpicture}
+  };
   \fi
 
-  \node[xshift=25mm,yshift=-65mm, right, inner sep=0pt, outer sep=0pt] at (current page.north west)
+  \node[xshift=25mm,yshift=-67.5mm, right, inner sep=0pt, outer sep=0pt] at (current page.north west)
     {
       \vbox
       {
@@ -58,13 +73,13 @@
     };
   \end{tikzpicture}
 
-  \vspace{55mm}
+  \vspace{35mm}
 
+  \tGeneralRemarks
   \printtaskoverview
-  \par\vspace{17mm}
-
   \printscoring
   \vfill\eject
+  #4
 }
 
 \begin{document}

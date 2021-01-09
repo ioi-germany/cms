@@ -410,7 +410,7 @@ class ContestConfig(CommonConfig):
                      folder with the same name
         feedback:    type of feedback (one of the variables no_feedback,
                      partial_feedback, full_feedback, restricted_feedback)
-        score_mode:  how to calculate the final score (one of SCORE_MODE_MAX, 
+        score_mode:  how to calculate the final score (one of SCORE_MODE_MAX,
                      SCORE_MODE_MAX_SUBTASK, SCORE_MODE_MAX_TOKENED_LAST)
         minimal (bool): only try to compile statement?
 
