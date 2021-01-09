@@ -25,6 +25,7 @@ from __future__ import unicode_literals
 
 from cmscontrib.gerpythonformat.templates.plain.PlainTemplate \
     import PlainTemplate
+from cmscontrib.gerpythonformat.LocationStack import chdir
 from cmscontrib.gerpythonformat.Supplement import def_latex, input_latex
 from cmscontrib.gerpythonformat.ContestConfig import MyTeam
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
@@ -262,37 +263,40 @@ class LgTemplate(PlainTemplate):
                 teams[team_name] = []
             teams[team_name].append(u)
 
-        self.supply_overview()
-        self.contest._build_supplements_for_key("contestoverview")
+        if not os.path.exists("overview"):
+            os.mkdir("overview")
 
-        shutil.copy(os.path.join(os.path.dirname(__file__), "logo.eps"),
-                    os.path.join(self.contest.wdir, "logo.eps"))
+        with chdir("overview"):
+            self.supply_overview()
+            self.contest._build_supplements_for_key("contestoverview")
 
-        lang_code = ""
-        user_list = []
+            shutil.copy(os.path.join(os.path.dirname(__file__), "logo.eps"),
+                        os.path.join(os.getcwd(), "logo.eps"))
 
-        def do_supply_language():
-            return self.language_supplement(lang_code)
+            lang_code = ""
+            user_list = []
 
-        def do_supply_credentials():
-            return self.credentials_supplement(user_list, attach_statements)
+            def do_supply_language():
+                return self.language_supplement(lang_code)
 
-        self.contest.supply("lang", do_supply_language)
-        self.contest.supply("credentials", do_supply_credentials)
+            def do_supply_credentials():
+                return self.credentials_supplement(user_list, attach_statements)
 
-        for team,users in teams.items():
-            filename = "overview-sheet-" + team.name + ".tex"
+            self.contest.supply("lang", do_supply_language)
+            self.contest.supply("credentials", do_supply_credentials)
 
-            shutil.copy(os.path.join(os.path.dirname(__file__),
-                                         "overview-template.tex"),
-                        os.path.join(self.contest.wdir, filename))
-            shutil.copy(os.path.join(os.path.dirname(__file__),
-                                     "translation.tex"),
-                        os.path.join(os.path.join(self.contest.wdir,
-                                     "translation.tex")))
+            for team,users in teams.items():
+                filename = "overview-sheet-" + team.name + ".tex"
 
-            lang_code = str.lower(team.code)
-            user_list = users
-            self.contest._build_supplements_for_key("credentials")
-            self.contest._build_supplements_for_key("lang")
-            self.contest.compile(filename)
+                shutil.copy(os.path.join(os.path.dirname(__file__),
+                                             "overview-template.tex"),
+                            filename)
+                shutil.copy(os.path.join(os.path.dirname(__file__),
+                                         "translation.tex"),
+                                         "translation.tex")
+
+                lang_code = str.lower(team.code)
+                user_list = users
+                self.contest._build_supplements_for_key("credentials")
+                self.contest._build_supplements_for_key("lang")
+                self.contest.compile(filename)
