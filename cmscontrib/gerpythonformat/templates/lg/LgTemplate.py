@@ -265,6 +265,9 @@ class LgTemplate(PlainTemplate):
         self.supply_overview()
         self.contest._build_supplements_for_key("contestoverview")
 
+        shutil.copy(os.path.join(os.path.dirname(__file__), "logo.eps"),
+                    os.path.join(self.contest.wdir, "logo.eps"))
+
         lang_code = ""
         user_list = []
 
