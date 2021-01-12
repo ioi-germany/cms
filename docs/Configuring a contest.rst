@@ -140,7 +140,7 @@ In general, each user can have multiple ranges of IP addresses associated to it.
 Logging in with credentials
 ---------------------------
 
-If the autologin is not enabled, users can log in with username and password, which have to be specified in the user configuration (in cleartext, for the moment). The password can also be overridden for a specific contest in the participation configuration. These credentials need to be inserted by the admins (i.e. there's no way to sign up, of log in as a "guest", etc.).
+If the autologin is not enabled, users can log in with username and password, which have to be specified in the user configuration (in cleartext, for the moment). The password can also be overridden for a specific contest in the participation configuration. These credentials are usually inserted by the admins. Additionally, there is an option to allow everyone to create an account on the login page, choosing his own username and password.
 
 A successfully logged in user needs to reauthenticate after ``cookie_duration`` seconds (specified in the :file:`cms.conf` file) from when they last visited a page.
 
