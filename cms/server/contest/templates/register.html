@@ -44,11 +44,20 @@ $(document).ready(function() {
 
         e.preventDefault();
     });
+
+    var reload_captcha = function(e) {
+        // Load a new captcha, with a cookie containing (encoded) the changed username string
+        $("#captcha-img").attr('src',"/captcha?identifier="+$("#username").val());
+        $("#captcha-show").show();
+        $("#captcha-input").show();
+    };
+    $("#username").on('change',reload_captcha);
+    $("#captcha-img").on('click',reload_captcha);
 });
 </script>
 
 <div class="login_container">
-    <div class="login_box hero-unit" style="margin-top: -300px;">
+    <div class="login_box hero-unit" style="margin-top: -400px;">
 
         <div id="signup-mask">
             <h1>{% trans %}New user{% endtrans %}</h1>
@@ -118,6 +127,19 @@ $(document).ready(function() {
                         <label class="control-label" for="password-confirm">{% trans %}Confirm password{% endtrans %}</label>
                         <div class="controls">
                             <input required minlength="{{ MIN_PASSWORD_LENGTH }}" maxlength="{{ MAX_INPUT_LENGTH }}" type="password" class="input-xlarge" name="password-confirm" id="password-confirm" autocomplete="new-password">
+                            <span class="help-block"></span>
+                        </div>
+                    </div>
+                    <div id="captcha-show" class="control-group" style="display:none;">
+                        <label class="control-label" for="captcha-img" style="display:none;">u</label>
+                        <div class="controls">
+                            <img id="captcha-img" name="captcha-img" src="" />
+                        </div>
+                    </div>
+                    <div id="captcha-input" class="control-group" style="display:none;">
+                        <label class="control-label" for="captcha">{% trans %}Confirmation Code{% endtrans %}</label>
+                        <div class="controls">
+                            <input required minlength="{{ CAPTCHA_LENGTH }}" maxlength="{{ CAPTCHA_LENGTH }}" pattern="^[0-9]+$" type="number" class="input-xlarge" name="captcha" id="captcha">
                             <span class="help-block"></span>
                         </div>
                     </div>
