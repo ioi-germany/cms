@@ -509,3 +509,11 @@ Auch ``graphpicture`` erzeugt auf oberster Ebene ein ``tikzpicture`` und sollte 
 Weitere Beispiele
 -----------------
 Puh, das ist vermutlich ziemlich viel auf einmal! Aber kein Grund zu verzagen: als IOI-Coach kannst du in unserem Aufgabenrepo im Ordner ``samples`` eine Beispiel-TeX-Datei mit zugehörigem PDF-Output finden, die zahlreiche Beispielgraphen aus unseren Aufgaben enthält. Darüber hinaus verwenden immer mehr unserer Graphenaufgaben das Graphdrawing-System. In fast allen Fällen solltest du bereits durch einfache Anpassungen an so einem Beispiel zum gewünschten Ergebnis kommen.
+
+Übersichtszettel
+================
+Auf Wunsch erzeugt unser System auch automatisch *Übersichtszettel* für jeden Teilnehmer in einem gegebenen Wettbewerb. Diese enthalten allgemeine Informationen, eine Übersicht der Wettbewerbsaufgaben sowie die Anmeldedaten des Teilnehmers. Dieses Feature ist vor allem für Olympiaden gedacht, bei der jeder Teilnehmer einen Umschlag mit ausgedruckten Aufgabenstellungen bekommt; das Layout ist so gewählt, dass bei Verwendung einer DIN C4-Versandtasche genau der Nutzer- und tatsächliche Name im Fenster sichtbar wären, nicht aber Passwort oder wettbewerbsspezifische Informationen.
+
+Um die Übersichtszettel zu erzeugen, kann man den Befehl ``make_overview_sheets()`` in ``contest-config.py`` verwenden. **Wichtig: der Befehl sollte erst möglichst am Ende der Konfigurationsdatei verwendet werden, definitiv aber erst nachdem alle Aufgaben und alle Nutzer erstellt wurden.**
+
+Die Übersichtszettel werden in einem eigenen Ordner ``overview`` innerhalb des ``build``-Ordners angelegt. Auf Wunsch (Schlüsselwertargument ``attach_statements`` auf ``True`` setzen) können hinter jedem Übersichtszettel auch die "primären Statements" für den entsprechenden Nutzer eingebunden werden. Auf diese Weise kann man einfach die entsprechenden PDF ausdrucken und ohne Umsortieren direkt den Teamleitern zur Kontrolle geben und/oder sie in Umschläge stecken (das Template geht in diesem Fall von beidseitigem Druck aus und fügt wo nötig leere Seiten ein).

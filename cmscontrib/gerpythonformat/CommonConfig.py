@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2018 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -117,6 +117,13 @@ class CommonConfig(object):
         with open(os.path.abspath(filename), "rb") as f:
             code = compile(f.read(), os.path.abspath(filename), 'exec')
             exec(code, self.exported)
+
+    def export_function(self, f, name=None):
+        """
+        Make the function or method f available to configuration files under
+        the given name (or under its original name, if no other name is given)
+        """
+        self.exported[name or f.__name__] = f
 
     # Supplements
 
