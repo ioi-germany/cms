@@ -10,6 +10,7 @@
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2016 Masaki Hara <ackie.h.gmai@gmail.com>
 # Copyright © 2016 Peyman Jabbarzade Ganje <peyman.jabarzade@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -59,6 +60,7 @@ PACKAGE_DATA = {
         os.path.join("taskoverview", "static", "img", "*.*"),
         os.path.join("taskoverview", "static", "jq", "*.*"),
         os.path.join("taskoverview", "static", "js", "*.*"),
+        os.path.join("captcha", "static", "*.*"),
     ],
     "cms.service": [
         "templates/printing/*.*",
