@@ -47,7 +47,8 @@ $(document).ready(function() {
 
     var reload_captcha = function(e) {
         // Load a new captcha, with a cookie containing (encoded) the changed username string
-        $("#captcha-img").attr('src',"/captcha?identifier="+$("#username").val());
+        var url = "{{ contest_url('captcha') }}";
+        $("#captcha-img").attr('src',url+"?identifier="+$("#username").val());
         $("#captcha-show").show();
         $("#captcha-input").show();
     };
