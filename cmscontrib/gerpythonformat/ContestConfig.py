@@ -406,8 +406,9 @@ class ContestConfig(CommonConfig):
             return
 
         team = team or self.current_team
-        if team is not None:
-            primary_statements = primary_statements or team.primary_statements
+        if not isinstance(team, MyTeam):
+            team = self.teams[team]
+        primary_statements = primary_statements or team.primary_statements
 
         if username in self.users:
             raise Exception(
@@ -416,8 +417,7 @@ class ContestConfig(CommonConfig):
             if self.defaultgroup is None:
                 raise Exception("You have to specify a group")
             group = self.defaultgroup
-        if team is not None and not isinstance(team, MyTeam):
-            team = self.teams[team]
+
         print_msg("Adding user {} to group {}".format(username, group.name),
                   headerdepth=10)
         self.users[username] = user = \
