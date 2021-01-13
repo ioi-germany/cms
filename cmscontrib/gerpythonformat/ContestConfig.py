@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -31,6 +31,7 @@ from cmscommon.crypto import build_password
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK
 
+import copy
 import os
 import shutil
 from datetime import datetime, timedelta
@@ -49,9 +50,24 @@ class MyGroup(object):
 
 
 class MyTeam(object):
-    def __init__(self, code, name):
+    def __init__(self, code, name, primary_statements):
         self.code = code
         self.name = name
+        self.primary_statements = copy.deepcopy(primary_statements)
+
+
+class TeamContext(object):
+    def __init__(self, contest, team):
+        self.contest = contest
+        self.team = team
+
+    def __enter__(self):
+        self.prev_team = self.contest._current_team
+        self.contest._current_team = self.team
+        return self.team
+
+    def __exit__(self, *args):
+        self.contest._current_team = self.prev_team
 
 
 class MyUser(object):
@@ -119,6 +135,7 @@ class ContestConfig(CommonConfig):
         self.groups = {}
         self.defaultgroup = None
         self.teams = {}
+        self._current_team = MyTeam("", "unaffiliated", [])
         self.users = {}
 
         # Export variables
@@ -132,6 +149,7 @@ class ContestConfig(CommonConfig):
         self.exported["score_max"] = SCORE_MODE_MAX
         self.exported["score_max_subtask"] = SCORE_MODE_MAX_SUBTASK
         self.exported["score_max_tokened_last"] = SCORE_MODE_MAX_TOKENED_LAST
+        self.exported["current_team"] = self.current_team
 
         # Default submission limits
         self.submission_limits(None, None)
@@ -324,7 +342,7 @@ class ContestConfig(CommonConfig):
         return r
 
     @exported_function
-    def team(self, code, name):
+    def team(self, code, name, primary_statements=[]):
         """
         Add a team (currently only used to generate a RWS directory).
 
@@ -337,13 +355,17 @@ class ContestConfig(CommonConfig):
         """
         if code in self.teams:
             raise Exception("Team {} specified multiple times".format(code))
-        self.teams[code] = team = MyTeam(code, name)
-        return team
+        self.teams[code] = team = MyTeam(code, name, primary_statements)
+        return TeamContext(self, team)
+
+    @property
+    def current_team(self):
+        return self._current_team
 
     @exported_function
     def user(self, username, password, firstname, lastname, group=None,
              ip=None, hidden=False, unrestricted=False, timezone=None,
-             primary_statements=[], team=None):
+             primary_statements=None, team=None):
         """
         Add a user participating in this contest.
 
@@ -382,6 +404,10 @@ class ContestConfig(CommonConfig):
         """
         if self.minimal:
             return
+
+        team = team or self.current_team
+        if team is not None:
+            primary_statements = primary_statements or team.primary_statements
 
         if username in self.users:
             raise Exception(

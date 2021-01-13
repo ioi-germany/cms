@@ -262,7 +262,7 @@ class LgTemplate(PlainTemplate):
         teams = {}
 
         for u in self.contest.users.values():
-            team_name = u.team or MyTeam("En", "unaffiliated")
+            team_name = u.team
 
             if team_name not in teams:
                 teams[team_name] = []
