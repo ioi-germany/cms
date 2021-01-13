@@ -243,7 +243,7 @@ class LgTemplate(PlainTemplate):
             return "".join("\\mycleardoublepage\\includepdf[pages=-]{%s}" % s
                            for s in L) + "\\mycleardoublepage"
 
-        cs = "\n".join("\\printoverviewpage{%s}{%s, %s}{%s}{%s}" %
+        cs = "\n".join("\\printoverviewpage{%s}{%s, %s}{%s} %s" %
                            (u.username, u.lastname, u.firstname, u.password,
                             statements(u)) for u in users)
         return cs
