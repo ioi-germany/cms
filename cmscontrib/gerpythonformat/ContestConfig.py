@@ -135,7 +135,8 @@ class ContestConfig(CommonConfig):
         self.groups = {}
         self.defaultgroup = None
         self.teams = {}
-        self._current_team = MyTeam("", "unaffiliated", [])
+        self._current_team = MyTeam("unaffiliated", "unaffiliated", [])
+        self.teams["unaffiliated"] = self._current_team
         self.users = {}
 
         # Export variables
