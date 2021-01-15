@@ -31,8 +31,10 @@ from functools import wraps
 from urllib.parse import quote, urlencode
 
 try:
+    import tornado4.web as tornado_web
     from tornado4.web import RequestHandler
 except ImportError:
+    import tornado.web as tornado_web
     from tornado.web import RequestHandler
 
 from cms.db import Session
@@ -174,6 +176,11 @@ class CommonRequestHandler(RequestHandler):
         self.r_params = None
         self.contest = None
         self.url = None
+
+    #Used for captchas
+    #Returns a string's signature using secret_key
+    def signature(self, text):
+        return tornado_web._create_signature_v2(self.application.settings["cookie_secret"], text).decode('utf-8')
 
     def prepare(self):
         """This method is executed at the beginning of each request.

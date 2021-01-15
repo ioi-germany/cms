@@ -72,7 +72,6 @@ class MainHandler(ContestHandler):
     def get(self):
         self.render("overview.html", **self.r_params)
 
-
 class CaptchaHandler(ContestHandler):
     """Captcha handler.
 
@@ -116,7 +115,12 @@ class CaptchaHandler(ContestHandler):
         #We don't use a reference to the running contest, so the answer
         #to a captcha in one contest could be used for the same action in
         #another. Won't fix
-        cookie = captcha_clear + "_" + identifier
+        #identifier should be signed so it can't be tempered with, which is taken
+        #care of by set_secure_cookie.
+        #captcha_clear should additionally not be accessible for the user,
+        #so we only include its signature and compare that later to the signature
+        #of the user's input
+        cookie = self.signature(captcha_clear) + "_" + identifier
         cookie_name = "captcha"
         self.set_secure_cookie(cookie_name, cookie, expires_days=None)
 
@@ -149,9 +153,9 @@ class RegistrationHandler(ContestHandler):
                 email = None
             if self.contest.registration_requires_captcha:
                 captcha_input = self.get_argument("captcha")
+                captcha_input_signature = self.signature(captcha_input)
                 captcha_cookie = self.get_secure_cookie("captcha").decode('utf-8')
-                captcha_secret_clear = captcha_cookie[:self.CAPTCHA_LENGTH]
-                captcha_secret_username = captcha_cookie[self.CAPTCHA_LENGTH+1:]
+                captcha_clear_signature, captcha_username = captcha_cookie.split('_',1)
 
             if not 1 <= len(first_name) <= self.MAX_INPUT_LENGTH:
                 raise ValueError()
@@ -167,9 +171,9 @@ class RegistrationHandler(ContestHandler):
             if self.contest.registration_requires_captcha:
                 if not re.match(r"^[0-9]+$", captcha_input):
                     raise ValueError()
-                if not captcha_input == captcha_secret_clear:
+                if not captcha_input_signature == captcha_clear_signature:
                     raise ValueError()
-                if not username == captcha_secret_username:
+                if not username == captcha_username:
                     raise ValueError()
         except (tornado_web.MissingArgumentError, ValueError):
             raise tornado_web.HTTPError(400)
