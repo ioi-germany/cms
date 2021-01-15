@@ -1069,6 +1069,24 @@ class TaskConfig(CommonConfig, Scope):
         return self.subtask_stack[-1].group(*args, **kwargs)
 
     @exported_function
+    def subsume_subtask(self, subtask_name, *args, **kwargs):
+        """
+        Add a subtask's testcases to the "current" group.
+
+        You usually use this function in the following way:
+        ::
+
+            with subtask("Subtask 2", "big"):
+                with group(50):
+                    subsume_subtask("small")
+                    ...
+
+        """
+        for g in getattr(self.task, subtask_name).groups:
+            for t in g.cases:
+                self.add_testcase(t, *args, **kwargs)
+
+    @exported_function
     def checker(self, *args, **kwargs):
         """
         Register a test case checker for the "current" task, subtask or group.
