@@ -223,30 +223,28 @@ class LgTemplate(PlainTemplate):
                             def_latex("contestname", self.contest._description))
 
     def credentials_supplement(self, users, attach_statements):
-        def statements(u):
+        def for_user(u):
+            return "\n".join(documents(u, l) for l in u.primary_statements)
+
+        def documents(u, l):
+            return "\\def\TemplateLanguage{%s}" % l + \
+                   "\\input{translation.tex}" + \
+                   "\\printoverviewpage{%s}{%s, %s}{%s}" % \
+                       (u.username, u.lastname, u.firstname, u.password) + \
+                   statements(u, l)
+
+        def statements(u, l):
             if not attach_statements:
                 return ""
 
-            L = []
+            return "".join("\\mycleardoublepage\\includepdf[pages=-]{%s}" %
+                               t._statements[l].file_
+                           for t in sorted(self.contest.tasks.values(),
+                                           key=lambda x: x.name)
+                           if l in t._statements) + \
+                   "\\mycleardoublepage"
 
-            for t in sorted(self.contest.tasks.values(), key=lambda x: x.name):
-                try:
-                    languages = u.primary_statements[t.name]
-                except TypeError:
-                    languages = u.primary_statements
-
-                if not isinstance(languages, list):
-                    languages = [languages]
-
-                L += [t._statements[l].file_ for l in languages]
-
-            return "".join("\\mycleardoublepage\\includepdf[pages=-]{%s}" % s
-                           for s in L) + "\\mycleardoublepage"
-
-        cs = "\n".join("\\printoverviewpage{%s}{%s, %s}{%s} %s" %
-                           (u.username, u.lastname, u.firstname, u.password,
-                            statements(u)) for u in users)
-        return cs
+        return "\n".join(for_user(u) for u in users)
 
     def language_supplement(self, code):
         return "\\def\\TemplateLanguage{%s}" % code

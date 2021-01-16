@@ -150,7 +150,6 @@ class ContestConfig(CommonConfig):
         self.exported["score_max"] = SCORE_MODE_MAX
         self.exported["score_max_subtask"] = SCORE_MODE_MAX_SUBTASK
         self.exported["score_max_tokened_last"] = SCORE_MODE_MAX_TOKENED_LAST
-        self.exported["current_team"] = self.current_team
 
         # Default submission limits
         self.submission_limits(None, None)
@@ -351,6 +350,10 @@ class ContestConfig(CommonConfig):
 
         name (unicode): a longer name (displayed in RWS)
 
+        primary_statements (string[]): list of standard task languages for this
+                                       team (can be overwritten for individual
+                                       users)
+
         return (MyTeam): object representing the created team
 
         """
@@ -358,10 +361,6 @@ class ContestConfig(CommonConfig):
             raise Exception("Team {} specified multiple times".format(code))
         self.teams[code] = team = MyTeam(code, name, primary_statements)
         return TeamContext(self, team)
-
-    @property
-    def current_team(self):
-        return self._current_team
 
     @exported_function
     def user(self, username, password, firstname, lastname, group=None,
@@ -394,9 +393,10 @@ class ContestConfig(CommonConfig):
         timezone (unicode): time zone for this user (if different from contest
                             time zone)
 
-        primary_statements (string[] or {string: string[]}): either a list of
-            languages (it is assumed that all tasks have a translation for
-            this language) or a dictionary mapping task names to language names
+        primary_statements (string[] or None): the list of standard task
+                                               languages for this user (if None,
+                                               the languages for the
+                                               corresponding team will be used)
 
         team (string or MyTeam): (name of) the team the user belongs to
 
@@ -406,7 +406,7 @@ class ContestConfig(CommonConfig):
         if self.minimal:
             return
 
-        team = team or self.current_team
+        team = team or self._current_team
         if not isinstance(team, MyTeam):
             team = self.teams[team]
         primary_statements = primary_statements or team.primary_statements
@@ -424,7 +424,7 @@ class ContestConfig(CommonConfig):
         self.users[username] = user = \
             MyUser(username, password, group,
                    firstname, lastname,
-                   ip, hidden, unrestricted, timezone, primary_statements,
+                   ip, hidden, unrestricted, timezone, primary_statements[:],
                    team)
         return user
 
