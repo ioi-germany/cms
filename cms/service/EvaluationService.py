@@ -82,7 +82,7 @@ class EvaluationExecutor(Executor):
 
         # As evaluate operations are split by testcases, there are too
         # many entries in the queue to display, so we just take only one
-        # operation of each (type, object_id, dataset_id)
+        # operation of each (type, object_id, dataset_id, priority)
         # tuple.
         self.queue_status_cumulative = dict()
 
@@ -1025,7 +1025,11 @@ class EvaluationService(TriggeredService):
 
         As evaluate operations are split by testcases, there are too
         many entries in the queue to display, so we collect entries with the
-        same (type, object_id, dataset_id) tuple.
+        same (type, object_id, dataset_id, priority) tuple.
+        Generally, we will see only one evaluate operation for each submission
+        in the queue status.
+
+
 
         The entries are then ordered by priority and timestamp (the
         same criteria used to look at what to complete next).
