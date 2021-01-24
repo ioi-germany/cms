@@ -83,7 +83,6 @@ class PlainTemplate(Template):
                                        input_latex("header.tex")))
         task.supply_latex("taskname", task.simple_query("name"))
         task.supply_latex("contestname", self.get_contestname)
-
         task.supply_latex("timelimit", task.latex_timelimit)
         task.supply_latex("memlimit", task.latex_memorylimit)
         task.supply_latex("inputwidth",

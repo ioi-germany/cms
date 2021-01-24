@@ -36,11 +36,10 @@ import shutil
 
 class LgTemplate(PlainTemplate):
     def __init__(self, contest, short_name):
-        self.short_name = short_name
         super(LgTemplate, self).__init__(contest)
+        self.short_name = short_name
 
         self.contest.export_function(self.make_overview_sheets)
-
         self.contest.supplement_file("contestoverview", "contest-overview.tex")
         self.contest.supplement_file("credentials", "overview-instructions.tex")
         self.contest.supplement_file("lang", "language.tex")
