@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -86,6 +86,7 @@ class GerMake:
                 tdb = t._makedbobject(cdb, file_cacher)
                 t._make_test_submissions(test_pdb, tdb, self.local_test)
 
+        contestconfig.finish()
 
 def main():
     """Parse arguments and launch process."""

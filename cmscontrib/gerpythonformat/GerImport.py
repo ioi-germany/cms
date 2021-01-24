@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -174,7 +174,7 @@ class GerImport(Service):
                 # there might otherwise at one point be two tasks with the same
                 # number.
                 for t in cdb1.tasks:
-                    t.num += len(contestconfig.tasks) + len(cdb1.tasks)
+                        t.num += len(contestconfig.tasks) + len(cdb1.tasks)
 
                 tdbs = [t._makedbobject(cdb, self.file_cacher)
                         for t in contestconfig.tasks.values()]
@@ -278,6 +278,7 @@ class GerImport(Service):
                 logger.info("Import finished (new contest id: %s).",
                             cdb.id if cdb1 is None else cdb1.id)
 
+        contestconfig.finish()
 
 def main():
     """Parse arguments and launch process."""

@@ -22,7 +22,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from cmscontrib.gerpythonformat.Messenger import print_msg
+from cmscontrib.gerpythonformat.Messenger import print_msg, box, yellow
 from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
 from cmscontrib.gerpythonformat.TaskConfig import TaskConfig
 from cmscontrib.gerpythonformat.LocationStack import chdir
@@ -178,6 +178,18 @@ class ContestConfig(CommonConfig):
 
         super(ContestConfig, self)._readconfig(filename)
         self._initialize_ranking()
+
+    def finish(self):
+        asy_cnt = self.asy_warnings + sum(t.asy_warnings
+                                  for t in self.tasks.values())
+
+        if asy_cnt != 0:
+            box(" WARNING ", yellow("You compiled %d Asymptote file(s)."
+                                        % asy_cnt) + "\n" +
+                yellow("However, Asymptote support will be removed") + "\n" +
+                yellow("from our task format in the near future") + "\n" +
+                yellow("Please consider using TikZ for pictures."),
+                double=True)
 
     def _token_feedback(self, gen_initial, gen_number,
                         gen_interval=timedelta(minutes=30), gen_max=None,
@@ -469,6 +481,7 @@ class ContestConfig(CommonConfig):
                 taskconfig._readconfig("config.py")
                 taskconfig._printresult()
                 self.tasks[s] = taskconfig
+
             if minimal:
                 print_msg("Statement for task {} generated successfully".
                           format(s), success=True)
