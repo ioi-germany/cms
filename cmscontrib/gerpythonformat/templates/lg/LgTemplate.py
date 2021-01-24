@@ -35,14 +35,23 @@ import shutil
 
 
 class LgTemplate(PlainTemplate):
-    def __init__(self, contest):
+    def __init__(self, contest, short_name):
+        self.short_name = short_name
         super(LgTemplate, self).__init__(contest)
-        self.contest = contest
+
         self.contest.export_function(self.make_overview_sheets)
 
         self.contest.supplement_file("contestoverview", "contest-overview.tex")
         self.contest.supplement_file("credentials", "overview-instructions.tex")
         self.contest.supplement_file("lang", "language.tex")
+
+    def get_contestname(self):
+        # we do not simply use self.short_name or self.contest._description
+        # as we might want to allow the empty string as self.short_name
+        if self.short_name is not None:
+            return self.short_name
+        else:
+            return self.contest._description
 
     def ontask(self, task):
         """ Some additional supplies for the latex format
@@ -220,7 +229,7 @@ class LgTemplate(PlainTemplate):
         self.contest.supply("contestoverview", def_latex("printscoring",
                                                          score_info))
         self.contest.supply("contestoverview",
-                            def_latex("contestname", self.contest._description))
+                            def_latex("contestname", self.get_contestname))
 
     def credentials_supplement(self, users, attach_statements):
         def for_user(u):
