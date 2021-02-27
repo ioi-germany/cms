@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2018 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,7 @@ from __future__ import unicode_literals
 from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header
 from cmscontrib.gerpythonformat.Executable import CPPProgram, InternalPython, ExternalScript, \
     ExternalPython, asy_keyword_list
-from cms.rules.Rule import LaTeXRule, CommandRule, ZipRule
+from cms.rules.Rule import LaTeXRule, SafeLaTeXRule, CommandRule, ZipRule
 from cmscontrib.gerpythonformat.Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
 import inspect
 import io
@@ -277,7 +277,7 @@ class CommonConfig(object):
         return CPPProgram(self.rules, self, *args, **kwargs)
 
     @exported_function
-    def compilelatex(self, basename):
+    def compilelatex(self, basename, safe=True):
         """
         Use latexmk to compile basename.tex to basename.pdf .
 
@@ -299,12 +299,17 @@ class CommonConfig(object):
         if self.relevant_language is not None and not basename.endswith(self.relevant_language):
             return output
 
-        with header("Compile {} to {} using LuaLaTeX"
-                    .format(self.short_path(source), self.short_path(output)),
+        with header("{}ompiling {} to {} using LuaLaTeX"
+                    .format("Safely c" if safe else "C",
+                            self.short_path(source), self.short_path(output)),
                     depth=10):
             self._build_supplements("latex")
 
-            r = LaTeXRule(self.rules, source).ensure()
+            if safe:
+                r = SafeLaTeXRule(self.rules, source, output, self.wdir).ensure()
+            else:
+                r = LaTeXRule(self.rules, source).ensure()
+
             print_block(r.out)
             print_block(r.err)
             if r.code != 0:
