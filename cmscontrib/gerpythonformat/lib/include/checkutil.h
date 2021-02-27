@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -31,7 +31,21 @@
 #include <cstdio>
 #include <iostream>
 #include <sstream>
+#include <type_traits>
 using namespace std;
+
+/* Check whether the header "constraints.h" has been included BEFORE this file
+ * The templating is necessary to exploit C++'s SFINAE
+ */
+ template<typename... Ts> constexpr bool constraints_loaded() {
+     #ifdef __constraints
+         return true;
+     #else
+         return false;
+     #endif
+ }
+
+ #define CONSTRAINT_ERROR_MSG "You have to include the constraints header before including checkutil.h or checkframework.h if you want to use the constraints system"
 
 /* We save constraints as strings, thereby allowing for numbers that do not fit
  * one of the usual integer types
@@ -40,6 +54,8 @@ map<string, pair<my_optional<string>, my_optional<string>>> _integral_constraint
 
 /* Queries for automatic constraints */
 template<typename T> pair<my_optional<T>, my_optional<T>> get_constraint(const string &name) {
+    static_assert(constraints_loaded<T>(), CONSTRAINT_ERROR_MSG);
+
     auto iter = _integral_constraints.find(name);
 
     if(iter != _integral_constraints.end()) {
@@ -48,7 +64,7 @@ template<typename T> pair<my_optional<T>, my_optional<T>> get_constraint(const s
         return make_pair(make_optional(from_string_or_fail<T>)(result.first),
                          make_optional(from_string_or_fail<T>)(result.second));
     }
-    
+
     else {
         cerr << "auto-check failed: name '" + name + "' not found" << endl;
         exit(42);
@@ -69,12 +85,12 @@ template<typename T> pair<T, T> GET_CONSTRAINT(const string &name) {
 
 template<typename T> T get_constraint_value(const string &name) {
     pair<T, T> constraint = GET_CONSTRAINT<T>(name);
-    
+
     if(constraint.first != constraint.second) {
         cerr << "asking for constraint value although lower != upper -- why?" << endl;
         exit(42);
     }
-    
+
     return constraint.first;
 }
 
@@ -90,12 +106,17 @@ void add_special_case(string s) {
     _special_cases.insert(s);
 }
 
-bool is_special_case(string s) {
+#define SPECIAL_CASE_TYPE_ERROR_MSG "You may only call is_special_case or ought_to_be with parameters convertible to strings"
+
+template<typename T> bool is_special_case(const T &s) {
+    static_assert(constraints_loaded<T>(), CONSTRAINT_ERROR_MSG);
+    static_assert(is_convertible<T, string>(), SPECIAL_CASE_TYPE_ERROR_MSG);
+
     return _special_cases.find(s) != _special_cases.end();
 }
 
-bool ought_to_be(string s) {
-    return is_special_case(s);
+template<typename T> bool ought_to_be(const T &t) {
+    return is_special_case(t);
 }
 
 /* Replaces all whitespace escapes by their respective codes
