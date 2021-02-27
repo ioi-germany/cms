@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2018 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2018-2021 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,6 +29,11 @@ import json
 import os
 import subprocess
 import time
+
+from cms import config
+from cmscontrib.gerpythonformat.LaTeXSandbox import LaTeXSandbox
+from cms.db.filecacher import FileCacher
+from cmscontrib.gerpythonformat import copyifnecessary, copyrecursivelyifnecessary
 
 from six import iteritems
 
@@ -537,6 +542,43 @@ class LaTeXRule(CommandRule):
         # Latexmk seems to output latin_1 instead of utf8.
         self.result.log['out'] = readfile(".out", "latin_1")
         self.result.log['err'] = readfile(".err", "latin_1")
+
+
+# TODO: actually implement lazy building
+class SafeLaTeXRule:
+    def __init__(self, rulesdir, source, output, wdir,
+                 extra=["-lualatex=lualatex --interaction=nonstopmode "
+                        "--shell-restricted --nosocket %O %S"]):
+        self.source = source
+        self.output = output
+        self.rulesdir = rulesdir
+        self.wdir = wdir
+        self.file_cacher = FileCacher()
+        self.sandbox = LaTeXSandbox(self.file_cacher, name="LaTeX")
+        self.command = ["/usr/bin/latexmk", "-g", "-pdflua"] + \
+                        extra + [source]
+
+    def ensure(self):
+        copyrecursivelyifnecessary(self.wdir, self.sandbox.get_home_path())
+        self.sandbox.allow_writing_all()
+
+        self.sandbox.execute_without_std(self.command, wait=True)
+
+        r = RuleResult(self.rulesdir)
+        r.code = self.sandbox.failed()
+        r.out = self.sandbox.get_stdout()
+        r.err = self.sandbox.get_stderr()
+
+        if r.code:
+            r.err += "\n\n" + ("#" * 40) + "\n" + \
+                     "SANDBOX: " + self.sandbox.get_root_path() + "\n" + \
+                     "MESSAGE: " + self.sandbox.get_human_exit_description()
+        else:
+            copyifnecessary(os.path.join(self.sandbox.get_home_path(),
+                                         self.output),
+                            os.path.join(self.wdir, self.output))
+            self.sandbox.cleanup(not config.keep_sandbox)
+        return r
 
 
 class JobRule(Rule):
