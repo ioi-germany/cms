@@ -3,6 +3,7 @@
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2015 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2016 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -31,6 +32,19 @@ from cmscommon.binary import hex_to_bin
 from cmscommon.datetime import make_timestamp
 
 
+class ExtraSecureCookie(SecureCookie):
+    def save_cookie(self, response, key, expires=None, httponly=True,
+        samesite="Strict"):
+        """We redefine save_cookie so we can set the samesite attribute.
+
+        """
+        if self.should_save:
+            data = self.serialize(expires)
+            response.set_cookie(key, data, expires=expires, max_age=None,
+                path="/", domain=None, secure=None, httponly=httponly,
+                samesite=samesite)
+
+
 class UTF8JSON:
     @staticmethod
     def dumps(d):
@@ -41,7 +55,7 @@ class UTF8JSON:
         return json.loads(e.decode('utf-8'))
 
 
-class JSONSecureCookie(SecureCookie):
+class JSONSecureCookie(ExtraSecureCookie):
     serialization_method = UTF8JSON
 
 
@@ -146,7 +160,8 @@ class AWSAuthMiddleware:
             """
             response = Response(status=status, headers=headers)
             self._cookie.save_cookie(
-                response, AWSAuthMiddleware.COOKIE, httponly=True)
+                response, AWSAuthMiddleware.COOKIE, httponly=True,
+                samesite="Strict")
             return start_response(
                 status, response.headers.to_wsgi_list(), exc_info)
 
