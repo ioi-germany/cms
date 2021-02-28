@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2017-2020 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2020 Manuel Gundlach <manuel.gundlach@gmail.com>
+# Copyright © 2020-2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -555,11 +555,11 @@ class TelegramBot:
 
             if full:
                 Q = q.question
-                
+
                 if Q.id not in self.q_notifications:
                     self.q_notifications[Q.id] = []
                 self.q_notifications[Q.id].append(msg)
-                
+
                 try:
                     msg.edit_text(**self._question_notification_params(q,
                                                                        False))
@@ -595,8 +595,8 @@ class TelegramBot:
     def _notify_question_ignore(self, q, ignore):
         msg = self.q_notifications[q.question.id][-1]
 
-        notification = italic("This question has been "
-                              "{}ignored.\n\n".format("" if ignore else "un"))
+        notification = "This question has been " \
+                       "{}ignored.\n\n".format("" if ignore else "un")
 
         reply = self.issue_reply(msg,
                                  text=escape(notification),
@@ -715,7 +715,7 @@ class TelegramBot:
 
     def help(self, bot, update):
         HELP_TEXT = \
-            escape("A bot allowing to access clarification requests and " 
+            escape("A bot allowing to access clarification requests and "
                    "announcements of a CMS contest via Telegram.\n\n") + \
             bold("/start") + " 〈" + italic("pwd") + "〉" + \
             escape(" — tries to bind the bot to the current chat when used "
