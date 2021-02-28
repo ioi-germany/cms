@@ -8,6 +8,7 @@
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2016 William Di Luigi <williamdiluigi@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -174,6 +175,12 @@ class CommonRequestHandler(RequestHandler):
         self.r_params = None
         self.contest = None
         self.url = None
+
+    def clear_cookie(self, cookie_name):
+        self.set_cookie(cookie_name, "", expires_days=None, samesite="Strict")
+
+    def set_secure_cookie(self, cookie_name, value, **kwargs):
+        super().set_secure_cookie(cookie_name, value, samesite="Strict", **kwargs)
 
     def prepare(self):
         """This method is executed at the beginning of each request.
