@@ -23,7 +23,7 @@
 #pragma once
 
 #include <computil.h>
-#include <my_optional.h>
+#include <optionaladapter.h>
 #include <map>
 #include <set>
 #include <string>
@@ -49,19 +49,19 @@ using namespace std;
 /* We save constraints as strings, thereby allowing for numbers that do not fit
  * one of the usual integer types
  */
-map<string, pair<my_optional<string>, my_optional<string>>> _integral_constraints;
+map<string, pair<optional<string>, optional<string>>> _integral_constraints;
 
 /* Queries for automatic constraints */
-template<typename T> pair<my_optional<T>, my_optional<T>> get_constraint(const string &name) {
+template<typename T> pair<optional<T>, optional<T>> get_constraint(const string &name) {
     static_assert(constraints_loaded<T>(), CONSTRAINT_ERROR_MSG);
 
     auto iter = _integral_constraints.find(name);
 
     if(iter != _integral_constraints.end()) {
-        pair<my_optional<string>, my_optional<string>> result = iter->second;
+        pair<optional<string>, optional<string>> result = iter->second;
 
-        return make_pair(make_optional(from_string_or_fail<T>)(result.first),
-                         make_optional(from_string_or_fail<T>)(result.second));
+        return make_pair(optional_adapter(from_string_or_fail<T>)(result.first),
+                         optional_adapter(from_string_or_fail<T>)(result.second));
     }
 
     else {
@@ -94,7 +94,7 @@ template<typename T> T get_constraint_value(const string &name) {
 }
 
 /* Register an automatic constraint */
-void put_integral_constraint(const string &name, const my_optional<string> &min, const my_optional<string> &max) {
+void put_integral_constraint(const string &name, const optional<string> &min, const optional<string> &max) {
     _integral_constraints[name] = make_pair(min, max);
 }
 
@@ -137,7 +137,7 @@ string nice_whitespace(const string &s) {
     return r;
 }
 
-template<typename T> void check_bounds(const string &name, T t, my_optional<T> min, my_optional<T> max) {
+template<typename T> void check_bounds(const string &name, T t, optional<T> min, optional<T> max) {
         if (min.has_value() and t < *min) {
             cerr << name << " = " << t << " < " << *min << endl;
             exit(1);
@@ -198,7 +198,7 @@ public:
         return t;
     }
 
-    template<typename T> T parse_and_check(const string &name, my_optional<T> min, my_optional<T> max, const string &expected_whitespace = "") {
+    template<typename T> T parse_and_check(const string &name, optional<T> min, optional<T> max, const string &expected_whitespace = "") {
         T t = parse_and_check<T> (expected_whitespace);
 
         check_bounds(name, t, min, max);
@@ -207,7 +207,7 @@ public:
     }
 
     template<typename T> T parse_and_auto_check(const string &name, const string &expected_whitespace = "") {
-        pair<my_optional<T>, my_optional<T>> constraint = get_constraint<T>(name);
+        pair<optional<T>, optional<T>> constraint = get_constraint<T>(name);
         return parse_and_check<T>(name, constraint.first, constraint.second, expected_whitespace);
     }
 
