@@ -717,7 +717,7 @@ class TaskConfig(CommonConfig, Scope):
         if self.current_group is None:
             return ""
         constraints = self.current_group._collect_constraints()
-        s = "#define __constraints\n"
+        s = "#define CONSTRAINTS_INCLUDED\n"
         s += '#include <checkutil.h>\n'
         s += "void load_constraints() {\n"
         for var, ran in iteritems(constraints):

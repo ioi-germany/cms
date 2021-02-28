@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,10 +19,8 @@
 
 /* Function to print the typename of a given variable
  * In case there isn't support for ABI functions, a fallback is provided
- * (give -D TYPE_NAME_FALLBACK on compilation)
  */
-#ifndef __typenaming_h
-#define __typenaming_h
+#pragma once
 
 #include <typeinfo>
 #include <string>
@@ -38,6 +36,4 @@ template<typename T> string get_type(T t) {
 template<typename T> string get_type(T t) {
     return string(typeid(t).name());
 }
-#endif
-
 #endif

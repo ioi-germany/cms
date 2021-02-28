@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,8 +20,7 @@
 /* Various useful method for converting string tokens to other objects
  *
  */
-#ifndef __stringreading_h
-#define __stringreading_h
+#pragma once
 
 #include <cmath>
 #include <string>
@@ -76,5 +75,3 @@ template<typename T> T from_string_or_fail(const string &s) {
     }
     return t;
 }
-
-#endif

@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __computil_h
-#define __computil_h
+#pragma once
 
 #include <bigintegers.h>
 #include <filereading.h>
@@ -46,5 +45,3 @@ public:
 private:
     type_map my_map;
 };
-
-#endif

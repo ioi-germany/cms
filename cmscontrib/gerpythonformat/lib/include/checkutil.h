@@ -20,8 +20,7 @@
 /* Standard functions for checkers
  */
 
-#ifndef __checkutil_h
-#define __checkutil_h
+#pragma once
 
 #include <computil.h>
 #include <my_optional.h>
@@ -38,7 +37,7 @@ using namespace std;
  * The templating is necessary to exploit C++'s SFINAE
  */
  template<typename... Ts> constexpr bool constraints_loaded() {
-     #ifdef __constraints
+     #ifdef CONSTRAINTS_INCLUDED
          return true;
      #else
          return false;
@@ -238,5 +237,3 @@ private:
         return "";
     }
 };
-
-#endif

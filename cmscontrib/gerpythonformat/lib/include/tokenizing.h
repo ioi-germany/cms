@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __tokenizing_h
-#define __tokenizing_h
+#pragma once
 
 #include <vector>
 #include <string>
@@ -90,5 +89,3 @@ vector<string> tokenize(const string &s, const type_map &tm) {
         r.push_back(token);
     return r;
 }
-
-#endif
