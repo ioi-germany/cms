@@ -7,6 +7,7 @@
 # Copyright © 2012-2016 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -57,6 +58,7 @@ class AdminWebServer(WebService):
             "rpc_enabled": True,
             "rpc_auth": self.is_rpc_authorized,
             "xsrf_cookies": True,
+            "xsrf_cookie_kwargs": {"samesite": "Strict"},
         }
         super().__init__(
             config.admin_listen_port,

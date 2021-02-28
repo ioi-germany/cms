@@ -9,6 +9,7 @@
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2015-2016 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -73,6 +74,7 @@ class ContestWebServer(WebService):
             "is_proxy_used": config.is_proxy_used,
             "num_proxies_used": config.num_proxies_used,
             "xsrf_cookies": True,
+            "xsrf_cookie_kwargs": {"samesite": "Strict"},
         }
 
         try:
