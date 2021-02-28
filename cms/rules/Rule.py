@@ -456,7 +456,7 @@ def readmakefile(filename, result, readoutput):
 
 class GCCRule(CommandRule):
     def __init__(self, rulesdir, sources, output, libdirs=[]):
-        """Compiles sources using g++ -O2 -std=gnu++11 -Wall.
+        """Compiles sources using g++ -O2 -std=gnu++17 -Wall.
         The dependencies are automatically detected.
 
         rulesdir (string): directory used for persistent data
@@ -468,7 +468,7 @@ class GCCRule(CommandRule):
         libdirs (list): additional directories to be searched for header files
 
         """
-        command = ["g++", "-O2", "-std=gnu++0x", "-Wall", "-o", output,
+        command = ["g++", "-O2", "-std=gnu++17", "-Wall", "-o", output,
                    "-MMD", "-MF", ".deps", "-static"]
         for l in libdirs:
             command += ["-I", l]

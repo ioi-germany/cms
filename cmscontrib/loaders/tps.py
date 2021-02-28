@@ -229,7 +229,7 @@ class TpsTaskLoader(TaskLoader):
             logger.info("Checker found, compiling")
             checker_exe = os.path.join(checker_dir, "checker")
             ret = subprocess.call([
-                "g++", "-x", "c++", "-std=gnu++14", "-O2", "-static",
+                "g++", "-x", "c++", "-std=gnu++17", "-O2", "-static",
                 "-o", checker_exe, checker_src
             ])
             if ret != 0:
