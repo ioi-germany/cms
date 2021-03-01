@@ -52,7 +52,7 @@ $(document).ready(function () {
                 <div class="container">
                     <a class="brand" href="{{ contest_url() }}">{{ contest.description }}</a>
 {% if available_translations|length > 1 %}
-                    <p class="navbar-text pull-right">
+                    <p class="navbar-form pull-right">
                         <select id="lang" class="form-control btn btn-info" onchange="utils.switch_lang()">
                             <option value=""{% if cookie_translation is none %} selected{% endif %}>{% trans lang=automatic_translation.name %}Automatic ({{ lang }}){% endtrans %}</option>
                         {% for lang_code, t in available_translations|dictsort(by="key") %}
