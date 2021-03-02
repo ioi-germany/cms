@@ -38,6 +38,7 @@ $(document).ready(function () {
     utils.update_unread_count(0{% if page == "communication" %}, 0{% endif %});
     utils.update_notifications(true);
     setInterval(function() { utils.update_notifications(); }, 30000);
+    utils.display_notification_request();
     $('#main').css('top', $('#navigation_bar').outerHeight());
 });
     {% endif %}
@@ -127,6 +128,12 @@ $(document).ready(function () {
 {% else %}
         <div id="notifications" class="notifications"></div>
         <!-- Some hidden divs to provide translations of strings used by JS -->
+        <div style="display: none" id="translation_allow_notifications">
+            {% trans %}Allow notifications{% endtrans %}
+        </div>
+        <div style="display: none" id="translation_click_to_allow_notifications">
+            {% trans %}Click to allow desktop notifications{% endtrans %}
+        </div>
         <div style="display: none" id="translation_new_message">
             {% trans %}New message{% endtrans %}
         </div>
