@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2018 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2018-2021 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,6 +29,7 @@ import json
 import os
 import subprocess
 import time
+import shlex
 
 from six import iteritems
 
@@ -468,11 +469,16 @@ class GCCRule(CommandRule):
         libdirs (list): additional directories to be searched for header files
 
         """
-        command = ["g++", "-O2", "-std=gnu++17", "-Wall", "-o", output,
-                   "-MMD", "-MF", ".deps", "-static"]
+        gcc_command = ["g++", "-O2", "-std=gnu++17", "-Wall", "-o", output,
+                       "-MMD", "-MF", ".deps", "-static"]
         for l in libdirs:
-            command += ["-I", l]
-        command += sources
+            gcc_command += ["-I", l]
+        gcc_command += sources
+
+        # We use script to trick g++ into thinking it were writing to the shell
+        # This leads to nicer output using ANSI color codes
+        command = ["script", "-eqc", shlex.join(gcc_command), "/dev/null"]
+
         super(GCCRule, self).__init__(rulesdir, command, dependonexe=False)
         self.sources = sources
         self.output = output
