@@ -208,12 +208,12 @@ class TaskTranslateInfo:
     @staticmethod
     def gertranslate_entries():
         return ["code", "title",
-                "keywords", "remarks", "download", "tex"] +\
-               ["download-"+l for l in TaskTranslateInfo.languages] +\
+                "keywords", "remarks", "pdf", "tex"] +\
+               ["pdf-"+l for l in TaskTranslateInfo.languages] +\
                ["tex-"+l for l in TaskTranslateInfo.languages] +\
                ["upload-"+l for l in TaskTranslateInfo.languages] +\
                ["mark-"+l for l in TaskTranslateInfo.languages] +\
-               ["download-ALL"]
+               ["pdf-ALL"]
 
     @staticmethod
     def gertranslate_desc():
@@ -222,10 +222,10 @@ class TaskTranslateInfo:
                 "title": "Title",
                 "keywords": "Keywords",
                 "remarks": "Remarks",
-                "download": "PDF [O]",
+                "pdf": "PDF [O]",
                 "tex": "TeX [O]",
-                "download-ALL": "PDF [ALL]"},
-                **{"download-"+l: "PDF ["+l+"]" for l in TaskTranslateInfo.languages},
+                "pdf-ALL": "PDF [ALL]"},
+                **{"pdf-"+l: "PDF ["+l+"]" for l in TaskTranslateInfo.languages},
                 **{"tex-"+l: "TeX ["+l+"]" for l in TaskTranslateInfo.languages},
                 **{"upload-"+l: "Upload TeX ["+l+"]" for l in TaskTranslateInfo.languages},
                 **{"mark-"+l: "Finalize ["+l+"]" for l in TaskTranslateInfo.languages}

@@ -94,7 +94,7 @@ class Repository:
                     gitout = check_output(["git", "add",
                                            file_path])
                 except:
-                    logger.error("Couldn't add file to git repository: " +
+                    logger.error("Couldn't add file to git staging area: " +
                                  "{}".format(gitout))
                 else:
                     try:

@@ -54,7 +54,7 @@ class TaskCompileHandler(RequestHandler):
         self.write({"handle": handle})
 
 
-class DownloadHandler(RequestHandler):
+class PDFHandler(RequestHandler):
     def share(self, statement, code):
         self.set_header("Content-Type", "application/pdf")
         self.set_header(
@@ -144,7 +144,7 @@ class GerTranslateWebServer:
                     (r"/list", ListHandler),
                     (r"/info", InfoHandler),
                     (r"/compile", TaskCompileHandler),
-                    (r"/download/(.*)", DownloadHandler),
+                    (r"/pdf/(.*)", PDFHandler),
                     (r"/tex/(.*)", TeXHandler),
                     (r"/upload/(.*)", UploadHandler),
                     (r"/mark/(.*)", MarkHandler)]

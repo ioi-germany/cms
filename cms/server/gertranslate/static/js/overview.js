@@ -1,5 +1,5 @@
 function update_availability(t, entry){
-    if(entry.startsWith("download"))    var key = "download";
+    if(entry.startsWith("pdf"))    var key = "pdf";
     else if(entry.startsWith("tex"))    var key = "tex";
     else return;
 
@@ -18,7 +18,7 @@ function update_availability(t, entry){
 
 function inner_cell(t, entry)
 {
-    if(entry.startsWith("download"))    var key = "download";
+    if(entry.startsWith("pdf"))    var key = "pdf";
     else if(entry.startsWith("tex"))    var key = "tex";
     else if(entry.startsWith("upload"))    var key = "upload";
     else if(entry.startsWith("mark"))    var key = "mark";
@@ -31,13 +31,13 @@ function inner_cell(t, entry)
     var repository_code = t.code + "/" + mark_lan;
 
 
-    if(entry.startsWith("download"))
+    if(entry.startsWith("pdf"))
     {
         if(!t["compile"])
             return '';
 
         var r = '<div class="download-icon';
-        r += '" id = "download-' + extended_code + '" data-code = "' + repository_code + '"></div>';
+        r += '" id = "pdf-' + extended_code + '" data-code = "' + repository_code + '"></div>';
         return r;
     }
 
@@ -87,7 +87,7 @@ function cell(t, entry)
 {
     var id = "cell-" + t.code + "-" + entry;
 
-    if(entry.startsWith("download") || entry.startsWith("tex"))
+    if(entry.startsWith("pdf") || entry.startsWith("tex"))
     {
         return '<td id = "' + id + '" class="download">' + inner_cell(t, entry) +'</td>';
     }
@@ -162,7 +162,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
 
         table_body += '<tr id="overview-heading" class="odd">';
         for(var j = 0; j < entries.length; ++j)
-            if(entries[j].startsWith("download") || entries[j].startsWith("tex") || entries[j].startsWith("mark"))
+            if(entries[j].startsWith("pdf") || entries[j].startsWith("tex") || entries[j].startsWith("mark"))
                 table_body += '<td id="overview-heading-' + entries[j] + '" class="th download-heading">' + desc[entries[j]] + '</td>'; // table-bordered doesn't work with th, so we emulate it
             else
                 table_body += '<td id="overview-heading-' + entries[j] + '" class="th">' + desc[entries[j]] + '</td>'; // table-bordered doesn't work with th, so we emulate it
@@ -188,7 +188,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
             $(build_row(new_tasks[new_tasks_idx], lan_mode)).insertAfter("#" + last_entry);
 
             for(var j = 0; j < entries.length; ++j)
-                if(entries[j].startsWith("download") || entries[j].startsWith("tex"))
+                if(entries[j].startsWith("pdf") || entries[j].startsWith("tex"))
                     update_availability(__info[new_tasks[new_tasks_idx]], entries[j]);
 
             init_download_icon(new_tasks[new_tasks_idx]);
@@ -280,8 +280,8 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
             cell.classList.remove('marked');
             cell.classList.remove('translated');
             cell.classList.remove('untouched');
-            if(!lan_mode && entries[j].startsWith("download") && entries[j]!="download" && entries[j]!="download-ALL"){
-                var entry_lan = entries[j].substring(9);
+            if(!lan_mode && entries[j].startsWith("pdf") && entries[j]!="pdf" && entries[j]!="pdf-ALL"){
+                var entry_lan = entries[j].substring(4);
                 if(__info[__tasks[i]]["locked"].indexOf(entry_lan)>-1)
                     cell.classList.add('marked');
                 else if(__info[__tasks[i]]["translated"].indexOf(entry_lan)>-1)
@@ -322,7 +322,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
         {
             var cell = window.document.getElementById("cell-" + updated_tasks[i] + "-" + entries[j]);
 
-            if(entries[j].startsWith("download") || entries[j].startsWith("tex"))
+            if(entries[j].startsWith("pdf") || entries[j].startsWith("tex"))
                 update_availability(__info[updated_tasks[i]], entries[j]);
             else
                 cell.innerHTML = inner_cell(__info[updated_tasks[i]], entries[j]);
