@@ -281,8 +281,8 @@ class TaskMarker:
 
         logger.info(str(_repository_lock_file_code) + " is created.")
 
-        with open(lock_file, "wb") as target_file:
-            pass
+        with open(lock_file, "w") as target_file:
+            target_file.write("The translation in this language is locked.")
         self.repository.commit(str(_repository_lock_file_code))
 
 
