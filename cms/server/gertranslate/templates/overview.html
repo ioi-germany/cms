@@ -28,6 +28,7 @@
             var languages = {% raw json.dumps(TaskTranslateInfo.language_list()) %};
             var lan = "en";//TODO Should "en" remain the primary?
             var show_col = {};
+            var criteria = {};//TODO remove this (superfluous)
             var lan_mode = false;
 
             function open_col_select()
