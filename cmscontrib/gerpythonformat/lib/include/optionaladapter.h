@@ -1,7 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
- * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
+ * Copyright © 2019-2021 Tobias Lenz <t_lenz94@web.de>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -19,29 +18,27 @@
 
 #pragma once
 
-#include <bigintegers.h>
-#include <filereading.h>
-#include <tokenizing.h>
-#include <stringreading.h>
+#include<string>
 
-/* "Top level" comparators */
-inline bool strictly_equal(const string &s, const string &t) {
-    return s == t;
-}
+using namespace std;
 
-class token_equal {
-public:
-    token_equal() {
-        my_map = whitespace_omitting();
+optional<string> none;
+
+template<typename F> class optional_adapter_wrapper {
+ public:
+
+    F f;
+    optional_adapter_wrapper(F _f) : f(_f) {}
+
+    template<typename P> auto operator()(optional<P> param) -> optional<decltype(f(*param))> {
+        if(not param.has_value())
+            return optional<decltype(f(*param))>();
+
+        else
+            return optional<decltype(f(*param))>(f(*param));
     }
-    token_equal(const type_map &map) {
-        my_map = map;
-    }
-
-    bool operator()(const string &s, const string &t) {
-        return tokenize(s, my_map) == tokenize(t, my_map);
-    }
-
-private:
-    type_map my_map;
 };
+
+template<typename F> optional_adapter_wrapper<F> optional_adapter(F f) {
+    return optional_adapter_wrapper<F>(f);
+}

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2018 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header
+from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \
+    header, box, yellow
 from cmscontrib.gerpythonformat.Executable import CPPProgram, InternalPython, ExternalScript, \
     ExternalPython, asy_keyword_list
 from cms.rules.Rule import LaTeXRule, CommandRule, ZipRule
@@ -104,6 +105,8 @@ class CommonConfig(object):
 
         self.exported["timedelta"] = timedelta
 
+        self.asy_warnings = 0
+
     # Run the configuration file
 
     def _readconfig(self, filename):
@@ -118,6 +121,13 @@ class CommonConfig(object):
         with open(os.path.abspath(filename), "rb") as f:
             code = compile(f.read(), os.path.abspath(filename), 'exec')
             exec(code, self.exported)
+
+    def export_function(self, f, name=None):
+        """
+        Make the function or method f available to configuration files under
+        the given name (or under its original name, if no other name is given)
+        """
+        self.exported[name or f.__name__] = f
 
     # Supplements
 
@@ -351,6 +361,12 @@ class CommonConfig(object):
         with header("Compile {} to {} using Asymptote"
                     .format(self.short_path(source), self.short_path(output)),
                     depth=10):
+
+            box(" WARNING ", yellow("Asymptote support will be removed from "
+                                    "our task format in the near future.") +
+                "\n" + yellow("Please consider using TikZ for pictures."))
+            self.asy_warnings += 1
+
             self._build_supplements("asy")
 
             # Asymptote does not tell us the dependencies, so we have to guess

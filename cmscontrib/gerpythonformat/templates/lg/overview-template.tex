@@ -1,0 +1,116 @@
+\input{language.tex}
+\documentclass[a4paper, 11pt]{scrartcl}
+\usepackage{a4wide}
+\usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
+\usepackage[lining,scaled=.9]{FiraMono}
+\usepackage[mathrm=sym]{unicode-math}
+\usepackage[Scale=.9]{firamath-otf}
+\usepackage{luatexbase}
+\usepackage{microtype}
+\usepackage{tikz}
+\usepackage{fancyhdr}
+\usepackage{tabularx}
+\usepackage{colortbl}
+\usepackage{luacode}
+\usepackage{pdfpages}
+\usetikzlibrary{calc}
+
+\renewcommand{\headrulewidth}{0pt}
+
+\newlength{\headh}
+\setlength{\headh}{36pt}
+\newlength{\myoddoffset}
+\setlength{\myoddoffset}{\marginparwidth + \marginparsep + \marginparsep}
+\fancyheadoffset[roh,reh]{\myoddoffset}
+
+\def\logo{
+\begin{tikzpicture}
+    \begin{scope}[yshift=.75cm]
+        \node[white!40!black, rotate=16.125, anchor=west, align=left] at (15:2.25cm)
+        {\mbox{}\\[.6ex]{\bfseries\contestname\quad}\\\bfseries\tOverviewSheet\quad\\[-.8ex]};
+    \end{scope}
+
+    \path (current bounding box.north east);
+    \pgfgetlastxy{\XCoord}{\YCoord};
+    \pgfmathsetmacro{\bndx}{max(215, \XCoord)};
+    \pgfmathsetmacro{\bndy}{max(200, \YCoord)};
+
+    \clip (0,0) rectangle (\bndx pt,\bndy pt);
+    \node[anchor=south west] (pic) at (0, 0) {\includegraphics[scale=.55]{logo.eps}};
+\end{tikzpicture}
+}
+
+\makeatletter
+\def\mycleardoublepage{\ifodd\c@page\else\null\vfill\eject\fi}
+\makeatother
+
+\newif\ifshowwindow
+\showwindowfalse
+\parindent=0pt
+
+\AtBeginDocument{
+\addtolength{\topmargin}{-1cm}
+\headheight=72pt%
+\headsep=16pt%
+\vspace{2mm}%
+}
+
+
+\input{translation.tex}
+\input{contest-overview.tex}
+
+\def\printoverviewpage#1#2#3{%
+\pagestyle{fancy}
+
+% Print login information
+% The dimensions are chosen in such a way that in a standard window envelope
+% precisely the contestant name and login name will be visible
+\begin{tikzpicture}[remember picture, overlay]
+  \ifshowwindow
+    % red: area guaranteed to be visible
+    % blue: area actually visible
+    \node[xshift=20mm,yshift=-45mm] at (current page.north west)
+    {
+      \begin{tikzpicture}[remember picture, overlay,yscale=-1]
+        \draw[red,line width=2pt] (0,0) rectangle(85mm, 40mm);
+      \end{tikzpicture}
+    };
+  \node[xshift=20mm,yshift=-45mm] at (current page.north west)
+  {
+    \begin{tikzpicture}[remember picture, overlay,yscale=-1]
+      \draw[blue,line width=2pt] (0,0) rectangle(90mm, 45mm);
+    \end{tikzpicture}
+  };
+  \fi
+
+  \node[xshift=1.125in,yshift=-67.5mm, right, inner sep=0pt, outer sep=0pt] at (current page.north west)
+    {
+      \vbox
+      {
+        \par\smallskip%
+        \begin{tabularx}{\textwidth}{p{75mm}@{\hskip0pt}p{.52cm}@{\hskip0pt}X}
+          \hline
+          \multicolumn{1}{|c}{\sffamily\tContestant} && \multicolumn{1}{c|}{\sffamily\tPassword\kern4pt} \\
+          \hline\noalign{\smallskip}
+          \cellcolor[gray]{.9}\medskip{\centering{\Huge\ttfamily\bfseries #1}\par\medskip\centering{#2}\par}\medskip&&\cellcolor[gray]{.9}\medskip\vbox{\vss\begin{center}\Large\ttfamily #3\end{center}\par\vss}\par\medskip\\
+          \noalign{\smallskip}
+        \end{tabularx}
+      }
+    };
+  \end{tikzpicture}
+
+  \vspace{33mm}
+
+  \tGeneralRemarks
+  \printtaskoverview
+  \printscoring
+  \vfill\eject
+  \pagestyle{empty}
+}
+
+\begin{document}
+\rhead{\vbox to \headh{\vbox to 0pt{\vskip-2in{\logo}}\quad\null}}
+\lhead{}
+\cfoot{}
+\input{overview-instructions.tex}
+\end{document}

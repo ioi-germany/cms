@@ -1,23 +1,17 @@
-dist: trusty
-sudo: required
+dist: focal
 
 language: python
 python:
+  - 3.8
   - 3.6
 
-# Use the PostgreSQL version that is provided in Ubuntu 16.04.
-# We need at least version 9.4 as that is the one that introduced the
-# JSONB type. By default Ubuntu 14.04 comes with version 9.3.
 addons:
-  postgresql: "9.5"
-
   apt:
     packages:
       - build-essential
-      - php5-cli
+      - php7.4-cli
       - haskell-platform
       - fp-compiler
-      - postgresql-client
       - python2.7
       - cppreference-doc-en-html
       - cgroup-lite
@@ -28,6 +22,12 @@ addons:
       - libyaml-dev
       - rustc
       - mono-mcs
+  postgresql: "13"  # Default version is broken on focal in Travis
+
+# Note: We need at least PostgreSQL version 9.4 as
+# that is the one that introduced the JSONB type.
+services:
+  - postgresql
 
 install:
   - pip install -r requirements.txt

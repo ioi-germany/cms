@@ -45,7 +45,28 @@ $(document).ready(function() {
         e.preventDefault();
     });
 });
+
+var utils = new CMS.CWSUtils("{{ url() }}", "{{ contest_url() }}", "{{ contest.name }}",
+                             0, 0, 0, 0, 0);
 </script>
+
+        <div id="navigation_bar" class="navbar navbar-fixed-top">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="brand" href="{{ contest_url() }}">{{ contest.description }}</a>
+{% if available_translations|length > 1 %}
+                    <p class="navbar-text pull-right">
+                        <select id="lang" class="form-control btn btn-info" onchange="utils.switch_lang()">
+                            <option value=""{% if cookie_translation is none %} selected{% endif %}>{% trans lang=automatic_translation.name %}Automatic ({{ lang }}){% endtrans %}</option>
+                        {% for lang_code, t in available_translations|dictsort(by="key") %}
+                            <option value="{{ lang_code }}"{% if t == cookie_translation %} selected{% endif %}>{{ t.name }}</option>
+                        {% endfor %}
+                        </select>
+                    </p>
+{% endif %}
+                </div>
+            </div>
+        </div>
 
 <div class="login_container">
     <div class="login_box hero-unit" style="margin-top: -300px;">

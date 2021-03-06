@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -212,6 +212,8 @@ class MySubtask(Scope):
     def _level(self):
         return 1
 
+    def max_score(self):
+        return sum(g.points for g in self.groups)
 
 class MyGroup(Scope):
     """
@@ -650,6 +652,10 @@ class TaskConfig(CommonConfig, Scope):
         # Only compile statement (and hopefully everything necessary for this)
         self.minimal = minimal
 
+    @exported_function
+    def max_score(self):
+        return sum(t.max_score() for t in self.subtasks if not t.sample)
+
     @property
     def unique_name(self):
         """Helper method for unit tests
@@ -714,7 +720,7 @@ class TaskConfig(CommonConfig, Scope):
         if self.current_group is None:
             return ""
         constraints = self.current_group._collect_constraints()
-        s = "#define __constraints\n"
+        s = "#define CONSTRAINTS_INCLUDED\n"
         s += '#include <checkutil.h>\n'
         s += "void load_constraints() {\n"
         for var, ran in iteritems(constraints):
@@ -1064,6 +1070,24 @@ class TaskConfig(CommonConfig, Scope):
         if len(self.subtask_stack) == 0:
             raise Exception("group() called outside subtask")
         return self.subtask_stack[-1].group(*args, **kwargs)
+
+    @exported_function
+    def subsume_subtask(self, subtask_name, *args, **kwargs):
+        """
+        Add a subtask's testcases to the "current" group.
+
+        You usually use this function in the following way:
+        ::
+
+            with subtask("Subtask 2", "big"):
+                with group(50):
+                    subsume_subtask("small")
+                    ...
+
+        """
+        for g in getattr(self.task, subtask_name).groups:
+            for t in g.cases:
+                self.add_testcase(t, *args, **kwargs)
 
     @exported_function
     def checker(self, *args, **kwargs):
