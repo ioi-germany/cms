@@ -44,7 +44,7 @@ class GerMake:
         self.no_latex = no_latex
         self.clean = clean
 
-    def make(self):
+    def prepare(self):
         # Unset stack size limit
         INFTY = int(.75 * virtual_memory().total)
         resource.setrlimit(resource.RLIMIT_STACK, (INFTY, INFTY))
@@ -62,6 +62,8 @@ class GerMake:
         # when copying recursively.
         copyrecursivelyifnecessary(self.odir, self.wdir, set(["build"]))
         self.wdir = os.path.abspath(self.wdir)
+
+    def build(self):
         file_cacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
         with chdir(self.wdir):
             contestconfig = ContestConfig(
@@ -69,9 +71,11 @@ class GerMake:
                 os.path.basename(self.odir),
                 ignore_latex=self.no_latex,
                 onlytask=self.task)
+
             contestconfig._readconfig("contest-config.py")
             if self.task is not None and len(contestconfig.tasks) == 0:
                 raise Exception("Task {} not found".format(self.task))
+
             cdb = contestconfig._makecontest()
             test_udb = contestconfig._makeuser(
                 contestconfig._mytestuser.username)
@@ -87,6 +91,10 @@ class GerMake:
                 t._make_test_submissions(test_pdb, tdb, self.local_test)
 
         contestconfig.finish()
+
+    def make(self):
+        self.prepare()
+        self.build()
 
 def main():
     """Parse arguments and launch process."""

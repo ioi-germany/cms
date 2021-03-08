@@ -74,9 +74,12 @@ class GerMakeTask:
     def build(self):
         file_cacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
         with chdir(self.wdir):
-            contestconfig = \
-                ContestConfig(os.path.join(self.wdir, ".rules"),
-                                "hidden contest", relevant_language=(self.language if self.language!="ALL" else None), minimal=self.minimal)
+            contestconfig = ContestConfig(
+                os.path.join(self.wdir, ".rules"),
+                "hidden contest",
+                relevant_language=(self.language if self.language!="ALL" else None),
+                minimal=self.minimal)
+
             copyifnecessary(os.path.join(contestconfig._get_ready_dir(),
                                             "contest-template.py"),
                             os.path.join(self.wdir, "c.py"))
