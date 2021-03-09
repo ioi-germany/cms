@@ -207,11 +207,11 @@ class LgTemplate(PlainTemplate):
         tbody_string = "\n".join(trow(l) for l in tbody)
 
         task_overview = "\\subsection*{\\tTasks}" + thead_string + \
-                        tbody_string + "\\end{tabular}"
+                            tbody_string + "\\end{tabular}"
 
-        if not show_max_score_col:
+        if not show_max_score_col and len(task_list) > 0:
             task_overview += "\\par\\medskip\\tMaxScoreGeneral{$%d$}" % \
-                                 task_list[0].max_score()
+                                     task_list[0].max_score()
 
         self.contest.supply("contestoverview", def_latex("printtaskoverview",
                                                          task_overview))
@@ -219,10 +219,12 @@ class LgTemplate(PlainTemplate):
         # Scoring information
         if len(score_list) == 1:
             score_info = score_list[0] + "general"
-        else:
+        elif len(score_list) > 1:
             score_info = "\\tScoringIntroduction\n\\begin{enumerate}" + \
                          "\n".join("\\item " + scm for scm in score_list) + \
                          "\\end{enumerate}"
+        else:
+            score_info = ""
         score_info = "\\subsection*{\\tScoring}\n" + score_info
 
         self.contest.supply("contestoverview", def_latex("printscoring",
