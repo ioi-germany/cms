@@ -4,7 +4,7 @@
 # Programming contest management system
 # Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2020 Manuel Gundlach <manuel.gundlach@gmail.com>
+# Copyright © 2020-2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -77,12 +77,14 @@ class LgTemplate(PlainTemplate):
                     os.path.join(task.wdir, "taskheader.tex"))
         task.supply("latex", def_latex("taskheader",
                                        input_latex("taskheader.tex")))
-        # Register translation.tex as \translationheader
+
+        # Provide translation-{de,en}.tex
         shutil.copy(os.path.join(os.path.dirname(__file__),
-                                     "translation.tex"),
-                        os.path.join(task.wdir, "translation.tex"))
-        task.supply("latex", def_latex("translationheader",
-                                       input_latex("translation.tex")))
+                                     "translation-de.tex"),
+                        os.path.join(task.wdir, "translation-de.tex"))
+        shutil.copy(os.path.join(os.path.dirname(__file__),
+                                     "translation-en.tex"),
+                        os.path.join(task.wdir, "translation-en.tex"))
 
         # Provide common asy files
         shutil.copyfile(os.path.join(os.path.dirname(__file__), "graphics.cfg"),
@@ -238,7 +240,6 @@ class LgTemplate(PlainTemplate):
 
         def documents(u, l):
             return "\\def\TemplateLanguage{%s}" % l + \
-                   "\\input{translation.tex}" + \
                    "\\printoverviewpage{%s}{%s, %s}{%s}" % \
                        (u.username, u.lastname, u.firstname, u.password) + \
                    statements(u, l)
@@ -304,11 +305,17 @@ class LgTemplate(PlainTemplate):
                 shutil.copy(os.path.join(os.path.dirname(__file__),
                                              "overview-template.tex"),
                             filename)
+                # Provide translation-{de,en}.tex
                 shutil.copy(os.path.join(os.path.dirname(__file__),
-                                         "translation.tex"),
-                                         "translation.tex")
+                                            "translation-de.tex"),
+                                            "translation-de.tex")
+                shutil.copy(os.path.join(os.path.dirname(__file__),
+                                            "translation-en.tex"),
+                                            "translation-en.tex")
 
                 lang_code = str.lower(team.code)
+                if lang_code == "unaffiliated":
+                    lang_code = "en"
                 user_list = users
                 self.contest._build_supplements_for_key("credentials")
                 self.contest._build_supplements_for_key("lang")
