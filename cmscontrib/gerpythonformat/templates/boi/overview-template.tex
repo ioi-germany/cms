@@ -17,8 +17,6 @@
 
 \renewcommand{\headrulewidth}{0pt}
 
-\input ../general/translation-\ifcsdef{TemplateLanguage}{\TemplateLanguage}{de}.tex
-
 \newlength{\headh}
 \setlength{\headh}{36pt}
 \newlength{\myoddoffset}
@@ -59,6 +57,7 @@
 }
 
 
+\input ../general/translation-\ifcsdef{TemplateLanguage}{\TemplateLanguage}{de}.tex
 \input{contest-overview.tex}
 
 \def\printoverviewpage#1#2#3{%
