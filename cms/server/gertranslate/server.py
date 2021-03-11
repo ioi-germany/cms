@@ -31,7 +31,7 @@ from tornado.web import RequestHandler, Application
 
 from cms import config
 from cms.io.TaskTranslateInfo import TaskTranslateInfo
-from cms.io.TaskAccess import TaskAccess
+from cms.io.TaskAccess import TaskAccess, unpack_code
 from cms.io.Repository import Repository
 
 
@@ -58,7 +58,7 @@ class PDFHandler(RequestHandler):
     def share(self, statement, code):
         self.set_header("Content-Type", "application/pdf")
         #TODO Do this less ugly.
-        srcname = TaskTranslateInfo.tasks[code.split("/")[1]]["filename"]
+        srcname = TaskTranslateInfo.tasks[unpack_code(code)[1]]["filename"]
         prefix = "statement-" if srcname == "statement" else ""
         self.set_header(
             "Content-Disposition",
@@ -83,7 +83,7 @@ class TeXHandler(RequestHandler):
     def share(self, statement, code):
         self.set_header("Content-Type", "text")
         #TODO Do this less ugly.
-        srcname = TaskTranslateInfo.tasks[code.split("/")[1]]["filename"]
+        srcname = TaskTranslateInfo.tasks[unpack_code(code)[1]]["filename"]
         code = code[1:] if code[0]=='/' else code
         if srcname == "statement":
             srcname += "-"

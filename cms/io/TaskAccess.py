@@ -43,32 +43,32 @@ from cmscontrib.gerpythonformat import copyifnecessary
 logger = logging.getLogger(__name__)
 
 def unpack_code(code):
-        if code.count("/")>=2:
-            contest,task,language = code.split("/")
-        else:
-            contest,task,language = code.split("/"),None
+    if code.count("/")>=2:
+        contest,task,language = code.split("/")
+    else:
+        contest,task,language = [""] + code.split("/")
 
-        if task not in TaskTranslateInfo.tasks:
-            raise KeyError("No such task")
-        if language not in TaskTranslateInfo.languages and language != "ALL":
-            raise KeyError("No such language")
+    if task not in TaskTranslateInfo.tasks:
+        raise KeyError("No such task")
+    if language not in TaskTranslateInfo.languages and language != "ALL":
+        raise KeyError("No such language")
 
-        return contest,task,language
+    return contest,task,language
 
 def repository_code(contest,task,language):
-        srcname = TaskTranslateInfo.tasks[task]["filename"]
-        p = Path(contest,task) if contest else Path(task)
-        if language is not None:
-            return p / (srcname+"-"+language+".tex")
-        else:
-            return p / srcname+".tex"
+    srcname = TaskTranslateInfo.tasks[task]["filename"]
+    p = Path(contest,task) if contest else Path(task)
+    if language is not None:
+        return p / (srcname+"-"+language+".tex")
+    else:
+        return p / srcname+".tex"
 
 def repository_lock_file_code(contest,task,language):
-        p = Path(contest,task) if contest else Path(task)
-        if language is not None:
-            return p / (language+".lock")
-        else:
-            return p / "O.lock"
+    p = Path(contest,task) if contest else Path(task)
+    if language is not None:
+        return p / (language+".lock")
+    else:
+        return p / "O.lock"
 
 class TaskCompileJob:
     def __init__(self, repository, contest, name, balancer, language=None):
@@ -257,9 +257,9 @@ class TaskTeXYielder:
 
         contest,task,language = unpack_code(self.name)
         _repository_code = repository_code(contest,task,language)
-        tex_file =  Path(self.repository.path) / _repository_code
+        tex_file = Path(self.repository.path) / _repository_code
 
-        logger.info(str(_repository_code) + " was accessed.")
+        logger.info(str(_repository_code) + " is accessed.")
 
         if tex_file is None:
             #TODO Handle the error (you should probably implement a info function
@@ -287,7 +287,7 @@ class TaskTeXReceiver:
         tex_file = Path(self.repository.path) / _repository_code
 
         _repository_lock_file_code = repository_lock_file_code(contest,task,language)
-        lock_file =  Path(self.repository.path) / _repository_lock_file_code
+        lock_file = Path(self.repository.path) / _repository_lock_file_code
         if lock_file.is_file():
             #TODO Handle error
             error = "Translation already locked; currently, you can't change"\
@@ -316,7 +316,7 @@ class TaskMarker:
     def mark(self):
         contest,task,language = unpack_code(self.name)
         _repository_lock_file_code = repository_lock_file_code(contest,task,language)
-        lock_file =  Path(self.repository.path) / _repository_lock_file_code
+        lock_file = Path(self.repository.path) / _repository_lock_file_code
 
         logger.info(str(_repository_lock_file_code) + " is created.")
 
