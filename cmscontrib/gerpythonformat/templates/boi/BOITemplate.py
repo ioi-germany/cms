@@ -4,7 +4,7 @@
 # Programming contest management system
 # Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2020 Manuel Gundlach <manuel.gundlach@gmail.com>
+# Copyright © 2020-2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -255,7 +255,11 @@ class BOITemplate(PlainTemplate):
         teams = {}
 
         for u in self.contest.users.values():
+            #TODO Rename team_name to team (as this actually seems to be a team object)
             team_name = u.team
+
+            if self.contest.relevant_language and self.contest.relevant_language not in team_name.primary_statements:
+                continue
 
             if team_name not in teams:
                 teams[team_name] = []
@@ -294,6 +298,7 @@ class BOITemplate(PlainTemplate):
                 lang_code = str.lower(team.code)
                 if lang_code == "unaffiliated":
                     lang_code = "en"
+
                 user_list = users
                 self.contest._build_supplements_for_key("credentials")
                 self.contest._build_supplements_for_key("lang")

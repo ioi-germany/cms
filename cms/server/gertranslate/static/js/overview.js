@@ -28,7 +28,7 @@ function inner_cell(t, entry)
     var extended_code = t.code + (entry.length>l?entry.substring(l):"");
 //     The current implementation assumes "en" to be the primary language, so lan==null yields statement-en
     var mark_lan=(entry.length>l?entry.substring(l+1):"en");
-    var repository_code = t.code + "/" + mark_lan;
+    var repository_code = t.contest + "/" + t.code + "/" + mark_lan;
 
 
     if(entry.startsWith("pdf"))
@@ -43,6 +43,8 @@ function inner_cell(t, entry)
 
     if(entry.startsWith("tex"))
     {
+        if(t["code"].endsWith("overview"))
+            return '';
         var r = '<div class="download-icon';
         r += '" id = "tex-' + extended_code + '" data-code = "' + repository_code + '"></div>';
         return r;
@@ -52,6 +54,8 @@ function inner_cell(t, entry)
     {
         if(t["locked"].indexOf(mark_lan)>-1)
             return '&mdash;';
+        if(t["code"].endsWith("overview"))
+            return '';
         else
             return '<form enctype="multipart/form-data" action="/upload/' + repository_code + '" method = "post" id = "form-' + extended_code + '" target="dummyframe"><input type="file" name="file" style="width: 250px"/><input type="reset" value="Upload" onclick=\'document.forms["form-' + extended_code + '"].submit();\'/></form>';//TODO Use upload icon and implement this like the rest//TODO Use different id from mark
     }
@@ -62,6 +66,8 @@ function inner_cell(t, entry)
             return '✓';
         if(!(t["translated"].indexOf(mark_lan)>-1))
             return '&mdash;';
+        if(t["code"].endsWith("overview"))
+            return '';
         else
             return '<form id = "form-' + extended_code + '" target="dummyframe"> <input type="button" value="Finalize" onclick=\'window.document.getElementById("mark-task-name").innerHTML = window.document.getElementById("mark-task-name-h").innerHTML = "' + t.code + '";window.document.getElementById("mark-task-lan").innerHTML = "' + mark_lan + '";window.document.getElementById("do-mark").dataset.code = "' + repository_code + '";open_modal("mark")\'/></form>';//TODO Use other button and implement this like the rest//TODO Use put?
     }
@@ -154,7 +160,7 @@ function build_row(task_code, lan_mode=false)
 
 function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, init, lan_mode)
 {
-    new_tasks = new_tasks.sort();
+    new_tasks = new_tasks.sort(function(a,b){ if(__info[a]['contest']<__info[b]['contest'])return -1;if(__info[a]['contest']>__info[b]['contest'])return +1;return 0; if(a<b)return -1;if(a>b)return +1;return 0; });
 
     if(init)
     {
@@ -219,7 +225,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
         }
     }
 
-    __tasks = __tasks.concat(new_tasks).sort();
+    __tasks = __tasks.concat(new_tasks).sort(function(a,b){ if(__info[a]['contest']<__info[b]['contest'])return -1;if(__info[a]['contest']>__info[b]['contest'])return +1;return 0; if(a<b)return -1;if(a>b)return +1;return 0; });
 
     var num_interesting_columns = 0;
     for(var j = 1; j < entries.length - 1; ++j)

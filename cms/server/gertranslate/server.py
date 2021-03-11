@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2016-2018 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2020 Manuel Gundlach <manuel.gundlach@gmail.com>
+# Copyright © 2020-2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -57,9 +57,12 @@ class TaskCompileHandler(RequestHandler):
 class PDFHandler(RequestHandler):
     def share(self, statement, code):
         self.set_header("Content-Type", "application/pdf")
+        #TODO Do this less ugly.
+        srcname = TaskTranslateInfo.tasks[code.split("/")[1]]["filename"]
+        prefix = "statement-" if srcname == "statement" else ""
         self.set_header(
             "Content-Disposition",
-            "attachment;filename=\"statement-{}.pdf\"".format(code))
+            "attachment;filename=\"{}{}.pdf\"".format(prefix,code.replace('/','-')))
         self.write(statement)
         self.flush()
 
@@ -80,15 +83,15 @@ class TeXHandler(RequestHandler):
     def share(self, statement, code):
         self.set_header("Content-Type", "text")
         #TODO Do this less ugly.
-        logger.error(code)
-        srcname = TaskTranslateInfo.tasks[code.split("/")[0]]["filename"]
+        srcname = TaskTranslateInfo.tasks[code.split("/")[1]]["filename"]
+        code = code[1:] if code[0]=='/' else code
         if srcname == "statement":
             srcname += "-"
         else:
             srcname = ""
         self.set_header(
             "Content-Disposition",
-            "attachment;filename=\""+srcname+"{}.tex\"".format(code))#FIXME This contains a /, which seems to automatically be converted to a _, but fix this.
+            "attachment;filename=\""+srcname+"{}.tex\"".format(code.replace('/','-')))
         self.write(statement)
         self.flush()
 
