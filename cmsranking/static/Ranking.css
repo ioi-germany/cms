@@ -36,14 +36,14 @@ abbr {
 
 #LogoPanel {
     position: absolute;
-    top: 24px;
-    left: 0;
+    top: 72px;
+    left: 24px;
     width: 220px;
+    display: none;
 }
 
 #LogoPanel img {
     width: 100%;
-    display: none;
 }
 
 #UpperPanel {
@@ -191,6 +191,8 @@ abbr {
     line-height: 1.4em;
     color: #444444;
     cursor: pointer;
+/*     Modification: Don't show timeview mode */
+    display: none;
 }
 
 #TimeView.pre_cont #TimeView_selector_elapsed,
@@ -239,6 +241,13 @@ abbr {
     position: relative;
     height: 100%;
     width: 100%;
+}
+
+#PoweredBy {
+    color: #999;
+    text-align: center;
+    font-size: 12px;
+    padding-top: 5px;
 }
 
 
