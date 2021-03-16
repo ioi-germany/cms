@@ -200,7 +200,13 @@ class TaskTranslateInfo:
                 with repository:
                     # Remove tasks that are no longer available
                     for t in tasks.keys():
-                        info_path = directory / t
+                        if t.endswith("-overview"):
+                            p = t[:-9]
+                        elif tasks[t]["contest"] == "":
+                            p = t
+                        else:
+                            p = Path(tasks[t]["contest"]) / t
+                        info_path = directory / p
 
                         if not info_path.exists():
                             del tasks[t]
