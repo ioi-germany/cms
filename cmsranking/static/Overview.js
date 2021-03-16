@@ -90,6 +90,13 @@ var Overview = new function () {
             set.animate({"opacity": 0}, 1000);
         });
 
+        //Always show HEADERS on mobile devices
+        var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if(isMobile){
+            set.attr({"opacity": 1});
+            $elem.off("mouseleave");
+        }
+
 
         // Load initial data.
         $.each(DataStore.users, function (u_id, user) {

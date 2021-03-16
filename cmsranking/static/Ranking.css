@@ -1193,3 +1193,179 @@ abbr {
     cursor: pointer;
     text-decoration: underline;
 }
+
+
+/******************************************************************************\
+|                                                                              |
+|                                  Mobile Layout                               |
+|                                  -------------                               |
+\******************************************************************************/
+
+
+@media only screen and (max-width: 991px) {
+    body {
+        font: .7em/1.2em sans-serif;
+        background-image: none;
+        background-attachment: none;
+    }
+
+    #SidePanel {
+        left: 0px;
+        top: initial;
+        bottom: 0px;
+        width: 20vh;
+        transform-origin: bottom left;
+        transform: rotate(-90deg) translate(3.5vw,98.5vw);
+        height: 97vw;
+    }
+
+    #PoweredBy {
+        font-size: .7em;
+        transform-origin: bottom left;
+        width: 100px;
+        transform: rotate(+90deg) translate(-115%,1.8vh);
+    }
+
+    #InnerFrame {
+        width: 100vw;
+        left: 0;
+        margin: 0 0 23vh 0;
+        padding: 0 0 0 0;
+    }
+
+    #TimeView {
+        top: initial;
+        left: initial;
+        width: 100px;
+        height: 2em;
+        margin: .5em;
+    }
+
+    #TimeView_time {
+        line-height: initial;
+        font-size: 1.2em;
+        margin: 2px 2px 2 2px;
+    }
+
+    #TimeView + #SidePanel {
+        top: initial;
+    }
+
+    #Overview {
+        height: 97vw;
+    }
+
+    #TeamSearch_input {
+        right: 95px;
+    }
+
+    #TeamSearch {
+        width: initial;
+        margin: 48px 48px 48px 48px;
+    }
+
+    #TeamSearch_body div.item {
+        width: 50%;
+    }
+
+    #Scoreboard {
+        table-layout: auto;
+        margin: 3em 0 10em 0;
+    }
+
+    #Scoreboard_head th {
+        position: sticky;
+        top: 3em;
+        z-index: 1;
+    }
+
+    #Scoreboard_head .l_name {
+        z-index: 2;
+    }
+
+    #Scoreboard_body tr:hover td.f_name,
+    #Scoreboard_body tr:hover td.l_name,
+    #Scoreboard_body tr:hover td {
+        background-color: #EAEAEC;
+    }
+
+    #Scoreboard .sel {
+        display: none;
+    }
+
+    .l_name {
+        position: sticky;
+        left: 0;
+        background-color: #F6F6F6;
+    }
+
+    .global {
+        position: sticky;
+        right: 0;
+    }
+
+    #Scoreboard .score.contest{
+        display: none;
+    }
+
+    #UserDetail {
+        margin: 48px 48px 48px 48px;
+        width: initial;
+    }
+
+    #UserDetail_f_name,
+    #UserDetail_l_name,
+    #UserDetail_team,
+    #UserDetail_flag {
+        position: initial;
+        right: initial;
+    }
+
+    #UserDetail_f_name {
+        top: initial;
+    }
+
+    #UserDetail_l_name {
+        top: initial;
+    }
+
+    #UserDetail_team {
+        bottom: initial;
+    }
+
+    #UserDetail_flag {
+        bottom: initial;
+    }
+
+    #UserDetail_navigator {
+        width: initial;
+        margin-left: initial;
+    }
+
+    #UserDetail_navigator table {
+        table-layout: auto;
+    }
+
+    #UserDetail_face {
+        position: initial;
+        top: initial;
+        left: initial;
+        float: right;
+        max-width: 40%;
+        max-height: 120px;
+    }
+
+    #ConnectionStatus_box {
+        right: 8px;
+    }
+
+    @media (orientation:landscape) {
+        #SidePanel {
+            display: none;
+        }
+
+        #InnerFrame {
+            margin: 0 0 0 0;
+        }
+    }
+}
