@@ -57,7 +57,7 @@ function inner_cell(t, entry)
         if(t["code"].endsWith("overview"))
             return '';
         else
-            return '<form enctype="multipart/form-data" action="/upload/' + repository_code + '" method = "post" id = "form-' + extended_code + '" target="dummyframe"><input type="file" name="file" style="width: 250px"/><input type="reset" value="Upload" onclick=\'document.forms["form-' + extended_code + '"].submit();\'/></form>';//TODO Use upload icon and implement this like the rest//TODO Use different id from mark
+            return '<form enctype="multipart/form-data" action="upload/' + repository_code + '" method = "post" id = "form-' + extended_code + '" target="dummyframe"><input type="file" name="file" style="width: 250px"/><input type="reset" value="Upload" onclick=\'document.forms["form-' + extended_code + '"].submit();\'/></form>';//TODO Use upload icon and implement this like the rest//TODO Use different id from mark
     }
 
     if(entry.startsWith("mark"))
