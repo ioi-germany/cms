@@ -46,10 +46,11 @@ logger = logging.getLogger(__name__)
 
 
 class GerImport(Service):
-    def __init__(self, odir, no_test, clean, force):
+    def __init__(self, odir, no_test, clean, preserve_participations, force):
         self.odir = odir
         self.no_test = no_test
         self.clean = clean
+        self.preserve_participations = preserve_participations
         self.force = force
 
         Service.__init__(self)
@@ -155,15 +156,17 @@ class GerImport(Service):
                 pdb1s = _update_list_with_key(cdb1.participations,
                                               pdbs,
                                               lambda p : p.user.username,
-                                              preserve_old=True,
+                                              preserve_old= \
+                                                  self.preserve_participations,
                                               update_value_fn=update_participation)
                 pdbs = {p.user.username : p for p in pdbs}
 
                 for username, u in iteritems(pdb1s):
-                    u.user = udb1s[username]
-                    u.group = cdb1.get_group(
-                        contestconfig.users[username].group.name)
-                    u.team = user_team1(username)
+                    if username in contestconfig.users:
+                        u.user = udb1s[username]
+                        u.group = cdb1.get_group(
+                            contestconfig.users[username].group.name)
+                        u.team = user_team1(username)
 
                 # The test user participation.
                 test_pdb = pdbs[contestconfig._mytestuser.username]
@@ -267,7 +270,13 @@ class GerImport(Service):
 
                 # Delete marked objects
                 for v in _to_delete:
-                    session.delete(v)
+                    # Participation objects don't have to be explicitly
+                    # deleted, they are a part of cdb / cdb1.
+                    # TODO We might want to move the handling of
+                    # participations to ContestConfig + importing as
+                    # for groups.
+                    if not isinstance(v, Participation):
+                        session.delete(v)
 
                 session.commit()
 
@@ -303,6 +312,10 @@ def main():
     parser.add_argument("-c", "--clean", action="store_true",
                         help="clean the build directory (forcing a complete "
                         "rebuild)")
+    parser.add_argument("-p", "--preserve-participations", action="store_true",
+                        help="don't delete old participations; without this "
+                        "flag, all users already in the database that aren't "
+                        "to be re-imported are deleted.")
     parser.add_argument("-f", "--force", action="store_true",
                         help="force deletion of tasks and participations with "
                         "submissions")
@@ -312,6 +325,7 @@ def main():
     GerImport(os.path.abspath(args.import_directory),
               args.no_test,
               args.clean,
+              args.preserve_participations,
               args.force).make()
 
 
