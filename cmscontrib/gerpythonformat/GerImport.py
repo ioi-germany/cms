@@ -199,6 +199,13 @@ class GerImport(Service):
                                               creator_fn=task_creator)
                 tdbs = {t.name : t for t in tdbs}
 
+                if not self.no_test:
+                    ans = input("Replace test submissions? (This might cause "
+                        "serious issues during a contest!) [y/N] ") \
+                            .strip().lower()
+                    if ans not in ["y", "yes"]:
+                        self.no_test = True
+
                 sdb1ss = {}
                 if not self.no_test:
                     logger.warning("Replacing test submissions")
@@ -291,7 +298,7 @@ def main():
                         type=utf8_decoder)
     parser.add_argument("-nt", "--no-test", action="store_true",
                         help="don't change test submissions; without this "
-                        "flag, all test submissions are deleted and the re-"
+                        "flag, all test submissions are deleted and then re-"
                         "added.")
     parser.add_argument("-c", "--clean", action="store_true",
                         help="clean the build directory (forcing a complete "
