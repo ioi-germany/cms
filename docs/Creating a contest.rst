@@ -16,6 +16,10 @@ Creating a contest from the filesystem
 
 CMS philosophy is that, unless you want, it should not change how you develop tasks, or how you store contests, tasks and user information.
 
+.. warning::
+
+  With the German import format, the generic commands ``cmsImportContest``, ``cmsImportTask``, ``cmsImportUser``, etc. do not work. Please see :ref:`here <GermanFormat>`.
+
 To achieve this goal, CMS has tools to import a contest from a custom filesystem description. There are commands which read a filesystem description and use it to create contests, tasks, or users. Specifically: the ``cmsImportContest``, ``cmsImportTasl``, ``cmsImportUser`` commands (by default) will analyze the directory given as first argument and detect if it can be loaded (respectively) as a new contest, task, user. Run the commands with a ``-h`` or ``--help`` flag in order to better understand how they can be used.
 
 In order to make these tools compatible with your filesystem format, you have to write a Python module that converts your filesystem description to the internal CMS representation of the contest. You have to extend the classes ``ContestLoader``, ``TaskLoader``, ``UserLoader`` defined in :gh_blob:`cmscontrib/loaders/base_loader.py`, implementing missing methods as required by the docstrings (or use one of the existing loaders in :file:`cmscontrib/loaders/` as a template). If you do not use complex task types, or many different configurations, loaders can be very simple.
