@@ -1050,7 +1050,7 @@ class TaskConfig(CommonConfig, Scope):
         return subtask
 
     @exported_function
-    def group(self, *args, **kwargs):
+    def group(self, *args, name=None, **kwargs):
         """
         Add a group to the "current" subtask.
 
@@ -1066,7 +1066,20 @@ class TaskConfig(CommonConfig, Scope):
         """
         if len(self.subtask_stack) == 0:
             raise Exception("group() called outside subtask")
-        return self.subtask_stack[-1].group(*args, **kwargs)
+
+        g = self.subtask_stack[-1].group(*args, **kwargs)
+
+        if name is not None:
+            if hasattr(self.subtask_stack[-1], name):
+                raise Exception("The task already has an attribute "
+                                "called '{}'".format(name))
+            setattr(self.subtask_stack[-1], name, g)
+
+        return g
+
+    def _subsume_group(self, g, *args, **kwargs):
+        for t in g.cases:
+            self.add_testcase(t, *args, **kwargs)
 
     @exported_function
     def subsume_subtask(self, subtask_name, *args, **kwargs):
@@ -1083,8 +1096,25 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         for g in getattr(self.task, subtask_name).groups:
-            for t in g.cases:
-                self.add_testcase(t, *args, **kwargs)
+            self._subsume_group(g)
+
+    @exported_function
+    def subsume_group(self, group_name, *args, subtask_name=None, **kwargs):
+        """
+        Add a group's testcases to the current group.
+        """
+        st = self.subtask_stack[-1] if subtask_name is None \
+             else getattr(self.task, subtask_name)
+
+        self._subsume_group(getattr(st, group_name), *args, **kwargs)
+
+    @exported_function
+    def subsume_previous_group(self, *args, **kwargs):
+        """
+        Add the testcases of the previous group (of the same subtask) to the
+        current group.
+        """
+        self._subsume_group(self.subtask_stack[-1].groups[-2])
 
     @exported_function
     def checker(self, *args, **kwargs):
