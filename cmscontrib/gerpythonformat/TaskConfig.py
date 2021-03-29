@@ -37,7 +37,7 @@ from cms.db import Task, Statement, Testcase, Dataset, \
     Attachment, Spoiler, Manager, Submission, File, \
     SubmissionResult
 from cms.grading.tasktypes import get_task_type, Communication
-from cms.grading.languagemanager import filename_to_language
+from cms.grading.languagemanager import filename_to_language, get_language
 from cms.grading.Job import CompilationJob, EvaluationJob
 from cms.rules.Rule import JobRule, ZipRule
 from cms.service.esoperations import ESOperation
@@ -830,6 +830,13 @@ class TaskConfig(CommonConfig, Scope):
         """
         self.spoilers[publicname] = os.path.abspath(localname)
 
+    def std_extensions(self):
+        _EXTENSIONS = ["cpp", "pas", "java", "py"]
+
+        return [e for e in _EXTENSIONS
+                  if any("." + e in get_language(lang).source_extensions
+                         for lang in self.upstream._languages)]
+
     """
     **Task types**
     """
@@ -858,7 +865,7 @@ class TaskConfig(CommonConfig, Scope):
         grader_param = "alone"
         if library:
             grader_param = "grader"
-            for end in ["c", "cpp", "pas", "java"]:
+            for end in self.std_extensions():
                 self.managers["grader." + end] = \
                     os.path.join(self.wdir, "interface." + end)
             if os.path.exists(os.path.join(self.wdir, "lib.h")):
@@ -905,7 +912,7 @@ class TaskConfig(CommonConfig, Scope):
         """
         self.tasktype = "Communication"
         if stub:
-            for end in ["c", "cpp", "pas", "java"]:
+            for end in self.std_extensions():
                 self.managers["stub." + end] = \
                     os.path.join(self.wdir, "interface." + end)
             if os.path.exists(os.path.join(self.wdir, "lib.h")):
