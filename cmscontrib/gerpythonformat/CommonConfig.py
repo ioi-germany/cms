@@ -23,7 +23,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \
-    header, box, yellow
+    header, box, yellow, highlight_latex
 from cmscontrib.gerpythonformat.Executable import CPPProgram, InternalPython, ExternalScript, \
     ExternalPython, asy_keyword_list
 from cms.rules.Rule import LaTeXRule, CommandRule, ZipRule
@@ -311,8 +311,8 @@ class CommonConfig(object):
             self._build_supplements("latex")
 
             r = LaTeXRule(self.rules, source).ensure()
-            print_block(r.out)
-            print_block(r.err)
+            print_block(highlight_latex(r.out))
+            print_block(highlight_latex(r.err))
             if r.code != 0:
                 raise Exception("Compilation failed")
 
