@@ -1071,7 +1071,7 @@ class TaskConfig(CommonConfig, Scope):
 
         if name is not None:
             if hasattr(self.subtask_stack[-1], name):
-                raise Exception("The task already has an attribute "
+                raise Exception("This subtask already has an attribute "
                                 "called '{}'".format(name))
             setattr(self.subtask_stack[-1], name, g)
 
