@@ -6,15 +6,15 @@ Zugriff auf den Wettbewerbsserver
 =================================
 Um Zugriff auf den Wettbewerbsserver zu bekommen, musst du einem Coach deinen öffentlichen SSH-Schlüssel schicken.
 
-Den SSH-Schlüssel kann dieser unter ``~/.ssh/authorized_keys`` und ``~cmsserveruser/.ssh/authorized_keys`` hinzufügen.
+Den SSH-Schlüssel kann dieser unter ``/root/.ssh/authorized_keys`` und ``/home/cms/.ssh/authorized_keys`` hinzufügen.
 
-Du solltest dich jetzt per ``ssh cmsserveruser@contest.ioi-training.de`` auf dem
+Du solltest dich jetzt per ``ssh cms@contest.informatik-olympiade.de`` auf dem
 Server einloggen können.
-Wenn du dann ``tmux a`` ausführst, kannst du die dort laufenden shells
+Wenn du dann ``tmux a`` ausführst, kannst du etwaige dort laufende shells
 bewundern. (``Strg-b``, dann eine Ziffer wechelt den Tab; mit ``Strg-b``, dann ``d``
 kommst du wieder raus)
 
-Mit ``git clone cmsserveruser@contest.ioi-training.de:aioi.git`` kannst du das
+Mit ``git clone cms@contest.informatik-olympiade.de:aioi.git`` kannst du das
 Aufgabenrepository auf deinen Rechner bekommen. (Siehe z.B. die git-
 Dokumentation unter `<https://git-scm.com/book/en/v2>`_.)
 
@@ -23,11 +23,19 @@ den deutschen Fork des CMS. (Wenn du einen Github-Account hast, kannst du einem 
 auch mal deinen Usernamen schicken, damit du auch selbst Änderungen am CMS
 hochladen kannst.)
 
-Dann bitte die Dokumentation `hier <https://contest.ioi-training.de/docs/>`_ (das heißt, hier) lesen und die Installationshinweise befolgen.
-Wichtig ist insbesondere `die Beschreibung des deutschen Aufgabenformates <https://contest.ioi-training.de/docs/External%20contest%20formats.html#german-import-format>`_.
+Dann bitte die Dokumentation `hier <https://contest.informatik-olympiade.de/docs/>`_ (das heißt, hier) lesen und die Installationshinweise befolgen.
+Wichtig ist insbesondere `die Beschreibung des deutschen Aufgabenformates <https://contest.informatik-olympiade.de/docs/External%20contest%20formats.html#german-import-format>`_.
 Führe testweise einfach mal ``cmsGerMake .`` zum Beispiel im Ordner ``contests/ioi2017_training1`` aus.
 
+Richte auf jeden Fall auf dem eigenen Computer :ref:`eine Firewall ein <installation_security>`!
 
+.. warning::
+
+  CMS funktioniert nur mit manchen Versionen von Python und manchen Versionen bestimmter Python-Pakete. Damit sich keine falschen Versionen einschleichen, führen wir es (jedenfalls auf dem Server) in einer virtuellen Umgebung (``venv``) aus. Auf dem Server muss dazu das Kommando ``prep`` in jeder neu geöffneten shell ausgeführt werden, bevor ein CMS-Kommando verwendet wird; mit ``deactivate`` verlässt man ``venv`` wieder (üblicherweise nicht nötig).
+
+  Auf anderen Rechnern sind auch häufig inkompatible Versionen installiert. Dann muss man dort auch ein ``venv`` einrichten; siehe auch :ref:`hier <installation_venv>` für Details zu ``venv``. U.U. scheitert sonst die Installation der in ``requirements.txt`` festgelegten Python-Pakete oder es treten Fehler beim Ausführen von CMS auf.
+
+Um auf dem Server mit dem Aufgabenrepository zu arbeiten (z.B. einen Contest zu kompilieren oder zu importieren), verwenden wir dort den Ordner ``aioi_repo`` (dieser folgt ``aioi.git``, mit ``git pull`` bekommt man also den "aktuellen Stand").
 
 Webseiten des Wettbewerbssystems
 ================================
@@ -35,13 +43,32 @@ Die Zugangsdaten für die folgenden Webseiten erhältst du von einem der Coaches
 
 Hier sind die internen Interfaces des Wettbewerbssystems (Zugangsdaten A):
 
-- `<https://contest.ioi-training.de/admin/>`_
-- `<https://contest.ioi-training.de/taskoverview/>`_
-- `<https://contest.ioi-training.de/ranking/Ranking.html>`_
+- `<https://contest.informatik-olympiade.de/admin/>`_
+- `<https://contest.informatik-olympiade.de/taskoverview/>`_
+- `<https://contest.informatik-olympiade.de/ranking/Ranking.html>`_
 
 Das Teilnehmerinterface kann mit einem Testaccount (Zugangsdaten B) unter der folgenden Adresse aufgerufen werden:
 
-- `<https://contest.ioi-training.de/>`_
+- `<https://contest.informatik-olympiade.de/>`_
+
+Technische Informationen
+========================
+Auf unserem Server ist das CMS grundsätzlich in systemd-Services integriert, die ``enabled`` sind. Das bedeutet insbesondere, dass das CMS bei jedem Start des Servers automatisch gestartet wird (der Log-Service immer zuerst).
+
+====================  ===========
+systemd-Service       CMS-Service
+====================  ===========
+``cms-log``           ``cmsLogService``
+``cms-resource``      ``cmsResourceService -a $CONTEST_ID``
+``cms-ranking``       ``cmsRankingWebServer``
+``cms-taskoverview``  ``cmsTaskOverviewWebServer``
+====================  ===========
+
+Gestoppt bzw. (neu) gestartet wird ein Service mit ``sudo systemctl [stop|restart] cms-[log|resource|ranking|taskoverview]``. (Tab Completion funktioniert.)
+Den Status und Logs bekommt man mit ``sudo systemctl status cms-[log|resource|ranking|taskoverview] -ocat``.
+
+Welcher Contest auf dem Server läuft, wird durch ``CONTEST_ID`` in ``/home/cms/resource-service.conf`` definiert. Sollen alle importierten Contests laufen, muss in der Datei ``CONTEST_ID=ALL`` stehen. Will man nur einen einzelnen starten, muss dort statt ``ALL`` die ID des Contests stehen. (Wenn man die ID nicht weiß: Manuell ``prep`` und ``cmsResourceService -a`` ausführen, mit ``Strg+C`` abbrechen, aus der angezeigten Liste der importierten Contests ablesen. Nicht mit der Zeilennummer verwechseln!)
+Sobald man die ``resource-service.conf`` geändert hat: Service mit ``sudo systemctl restart cms-resource`` neustarten.
 
 
 Telegram-Bot
@@ -482,6 +509,16 @@ Auch ``graphpicture`` erzeugt auf oberster Ebene ein ``tikzpicture`` und sollte 
 Weitere Beispiele
 -----------------
 Puh, das ist vermutlich ziemlich viel auf einmal! Aber kein Grund zu verzagen: als IOI-Coach kannst du in unserem Aufgabenrepo im Ordner ``samples`` eine Beispiel-TeX-Datei mit zugehörigem PDF-Output finden, die zahlreiche Beispielgraphen aus unseren Aufgaben enthält. Darüber hinaus verwenden immer mehr unserer Graphenaufgaben das Graphdrawing-System. In fast allen Fällen solltest du bereits durch einfache Anpassungen an so einem Beispiel zum gewünschten Ergebnis kommen.
+
+
+Übersichtszettel
+================
+Auf Wunsch erzeugt unser System auch automatisch *Übersichtszettel* für jeden Teilnehmer in einem gegebenen Wettbewerb. Diese enthalten allgemeine Informationen, eine Übersicht der Wettbewerbsaufgaben sowie die Anmeldedaten des Teilnehmers. Dieses Feature ist vor allem für Olympiaden gedacht, bei der jeder Teilnehmer einen Umschlag mit ausgedruckten Aufgabenstellungen bekommt; das Layout ist so gewählt, dass bei Verwendung einer DIN C4-Versandtasche genau der Nutzer- und tatsächliche Name im Fenster sichtbar wären, nicht aber Passwort oder wettbewerbsspezifische Informationen.
+
+Um die Übersichtszettel zu erzeugen, kann man den Befehl ``make_overview_sheets()`` in ``contest-config.py`` verwenden. **Wichtig: der Befehl sollte erst möglichst am Ende der Konfigurationsdatei verwendet werden, definitiv aber erst nachdem alle Aufgaben und alle Nutzer erstellt wurden.**
+
+Die Übersichtszettel werden in einem eigenen Ordner ``overview`` innerhalb des ``build``-Ordners angelegt. Auf Wunsch (Schlüsselwertargument ``attach_statements`` auf ``True`` setzen) können hinter jedem Übersichtszettel auch die "primären Statements" für den entsprechenden Nutzer eingebunden werden. Auf diese Weise kann man einfach die entsprechenden PDF ausdrucken und ohne Umsortieren direkt den Teamleitern zur Kontrolle geben und/oder sie in Umschläge stecken (das Template geht in diesem Fall von beidseitigem Druck aus und fügt wo nötig leere Seiten ein).
+
 
 Task Translation Interface
 ==========================

@@ -38,6 +38,7 @@ $(document).ready(function () {
     utils.update_unread_count(0{% if page == "communication" %}, 0{% endif %});
     utils.update_notifications(true);
     setInterval(function() { utils.update_notifications(); }, 30000);
+    utils.display_notification_request();
     $('#main').css('top', $('#navigation_bar').outerHeight());
 });
     {% endif %}
@@ -52,7 +53,7 @@ $(document).ready(function () {
                 <div class="container">
                     <a class="brand" href="{{ contest_url() }}">{{ contest.description }}</a>
 {% if available_translations|length > 1 %}
-                    <p class="navbar-text pull-right">
+                    <p class="navbar-form pull-right">
                         <select id="lang" class="form-control btn btn-info" onchange="utils.switch_lang()">
                             <option value=""{% if cookie_translation is none %} selected{% endif %}>{% trans lang=automatic_translation.name %}Automatic ({{ lang }}){% endtrans %}</option>
                         {% for lang_code, t in available_translations|dictsort(by="key") %}
@@ -127,6 +128,12 @@ $(document).ready(function () {
 {% else %}
         <div id="notifications" class="notifications"></div>
         <!-- Some hidden divs to provide translations of strings used by JS -->
+        <div style="display: none" id="translation_allow_notifications">
+            {% trans %}Allow notifications{% endtrans %}
+        </div>
+        <div style="display: none" id="translation_click_to_allow_notifications">
+            {% trans %}Click to allow desktop notifications{% endtrans %}
+        </div>
         <div style="display: none" id="translation_new_message">
             {% trans %}New message{% endtrans %}
         </div>
@@ -209,7 +216,7 @@ $(document).ready(function () {
                         </ul>
                     </div>
                     <span class="license_notice">
-                    <a href="https://github.com/cms-dev/cms" rel="author noreferrer" target="_blank">{% trans %}Contest Management System{% endtrans %}</a>
+                    <a href="https://github.com/ioi-germany/cms" rel="author noreferrer" target="_blank">{% trans %}Contest Management System{% endtrans %}</a>
                     {% trans %}is released under the{% endtrans %}
                     <a href="https://www.gnu.org/licenses/agpl" rel="license noreferrer" target="_blank">{% trans %}GNU Affero General Public License{% endtrans %}</a>.
                     </span>

@@ -52,8 +52,52 @@ Some of the services can be replicated on several machine: these are ResourceSer
 
 In addition to services, CMS includes many command line tools. They help with importing, exporting and managing of contest data, and with testing.
 
-
 Security considerations
 =======================
 
 With the exception of RWS, there are no cryptographic or authentication schemes between the various services or between the services and the database. Thus, it is mandatory to keep the services on a dedicated network, properly isolating it via firewalls from contestants or other people's computers. This sort of operations, like also preventing contestants from communicating and cheating, is responsibility of the administrator and is not managed by CMS itself.
+
+.. _installation_security:
+
+A basic firewall
+----------------
+One hassle-free way of setting up a firewall is by using ``nftables``. Once installed, you should put the necessary rules into ``/etc/nftables.conf``, and then run ``systemctl start nftables`` and ``systemctl enable nftables``. On a home computer, usually you can just use the following configuration. It basically blocks all ingoing connections. If the computer should be accessible via ``ssh``, ``http`` or ``https`` ports (e.g., because it's a server), uncomment the ``tcp dport {ssh, http, https} accept`` line and only keep the respective keywords. If you experience any issues, e.g. because your computer is running a remote printing server, just add the port numbers that have to remain open to that line.
+
+.. sourcecode:: text
+
+    #!/usr/bin/nft -f
+    # ipv4/ipv6 Simple & Safe Firewall
+    # you can find examples in /usr/share/nftables/
+
+    table inet filter {
+        chain input {
+            type filter hook input priority 0;
+
+            # allow established/related connections
+            ct state {established, related} accept
+
+            # early drop of invalid connections
+            ct state invalid drop
+
+            # allow from loopback
+            iifname lo accept
+
+            # allow icmp
+            ip protocol icmp accept
+            meta l4proto ipv6-icmp accept
+
+            # allow ssh, http, https
+            # tcp dport {ssh, http, https} accept
+
+            # everything else
+            reject with icmpx type port-unreachable
+        }
+        chain forward {
+            type filter hook forward priority 0;
+            drop
+        }
+        chain output {
+            type filter hook output priority 0;
+        }
+    }
+

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -63,32 +63,30 @@ class GerMake:
         copyrecursivelyifnecessary(self.odir, self.wdir, set(["build"]))
         self.wdir = os.path.abspath(self.wdir)
         file_cacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
-        try:
-            with chdir(self.wdir):
-                contestconfig = ContestConfig(
-                    os.path.join(self.wdir, ".rules"),
-                    os.path.basename(self.odir),
-                    ignore_latex=self.no_latex,
-                    onlytask=self.task)
-                contestconfig._readconfig("contest-config.py")
-                if self.task is not None and len(contestconfig.tasks) == 0:
-                    raise Exception("Task {} not found".format(self.task))
-                cdb = contestconfig._makecontest()
-                test_udb = contestconfig._makeuser(
-                    contestconfig._mytestuser.username)
-                test_gdb = contestconfig._makegroup(
-                    contestconfig._mytestuser.group.name, cdb)
-                # We're not putting the test user on any team for testing
-                # (shouldn't be needed).
-                test_pdb = contestconfig._makeparticipation(
-                    contestconfig._mytestuser.username, cdb,
-                    test_udb, test_gdb, None)
-                for t in contestconfig.tasks.values():
-                    tdb = t._makedbobject(cdb, file_cacher)
-                    t._make_test_submissions(test_pdb, tdb, self.local_test)
-        finally:
-            file_cacher.destroy_cache()
+        with chdir(self.wdir):
+            contestconfig = ContestConfig(
+                os.path.join(self.wdir, ".rules"),
+                os.path.basename(self.odir),
+                ignore_latex=self.no_latex,
+                onlytask=self.task)
+            contestconfig._readconfig("contest-config.py")
+            if self.task is not None and len(contestconfig.tasks) == 0:
+                raise Exception("Task {} not found".format(self.task))
+            cdb = contestconfig._makecontest()
+            test_udb = contestconfig._makeuser(
+                contestconfig._mytestuser.username)
+            test_gdb = contestconfig._makegroup(
+                contestconfig._mytestuser.group.name, cdb)
+            # We're not putting the test user on any team for testing
+            # (shouldn't be needed).
+            test_pdb = contestconfig._makeparticipation(
+                contestconfig._mytestuser.username, cdb,
+                test_udb, test_gdb, None)
+            for t in contestconfig.tasks.values():
+                tdb = t._makedbobject(cdb, file_cacher)
+                t._make_test_submissions(test_pdb, tdb, self.local_test)
 
+        contestconfig.finish()
 
 def main():
     """Parse arguments and launch process."""

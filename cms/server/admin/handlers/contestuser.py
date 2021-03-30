@@ -31,7 +31,10 @@
 
 import logging
 
-import tornado.web
+try:
+    import tornado4.web as tornado_web
+except ImportError:
+    import tornado.web as tornado_web
 
 from cms.db import Contest, Group, Message, Participation, Submission, User, \
     Team
@@ -102,7 +105,7 @@ class RemoveParticipationHandler(BaseHandler):
                             .first()
         # Check that the participation is valid.
         if participation is None:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
 
         submission_query = self.sql_session.query(Submission)\
             .filter(Submission.participation == participation)
@@ -182,7 +185,7 @@ class ParticipationHandler(BaseHandler):
 
         # Check that the participation is valid.
         if participation is None:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
 
         submission_query = self.sql_session.query(Submission)\
             .filter(Submission.participation == participation)
@@ -207,7 +210,7 @@ class ParticipationHandler(BaseHandler):
 
         # Check that the participation is valid.
         if participation is None:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
 
         try:
             attrs = participation.get_attrs()
@@ -262,7 +265,7 @@ class MessageHandler(BaseHandler):
 
         # check that the participation is valid
         if participation is None:
-            raise tornado.web.HTTPError(404)
+            raise tornado_web.HTTPError(404)
 
         message = Message(make_datetime(),
                           self.get_argument("message_subject", ""),

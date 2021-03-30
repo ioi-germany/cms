@@ -1,4 +1,5 @@
 \basicheader
+\usepackage{ifthen,etoolbox}
 \usepackage[ngerman]{babel}
 \usepackage{colortbl}
 \usepackage{longtable}
@@ -28,7 +29,7 @@
 \begin{tikzpicture}
     \begin{scope}[yshift=.75cm]
         \node[white!40!black, rotate=16.125, anchor=west, align=left] at (15:2.25cm)
-        {\mbox{}\\[.6ex]{\bfseries\contestname\quad}\\Aufgabe:\enspace\bfseries\taskname\quad\\[-.8ex]};
+        {\mbox{}\\[.6ex]{\bfseries\contestname\quad}\\\tTask:\enspace\bfseries\taskname\quad\\[-.8ex]};
     \end{scope}
 
     \path (current bounding box.north east);
@@ -72,6 +73,7 @@
 \tTime: \timelimit\\
 \tMemory: \memlimit}
 
+% Feedback Section
 \def\feedbackheading{\sheading{\tFeedback}}
 \def\nofeedback{\feedbackheading \tNofeedback}
 \def\partialfeedback{\feedbackheading \tPartialfeedback}
@@ -89,7 +91,16 @@
 \let\dummyfeedack=\relax
 \def\showfeedback{\csname\feedback feedback\endcsname}
 
-\def\standardpart{\showcases\showlimits\showfeedback}
+% Scoring Section
+\def\scoringheading{\sheading{\tScoring}}
+\def\IOIXIIIscoring{\scoringheading \tScoringFromIOIXIII}
+\def\IOIXVIIscoring{\scoringheading \tScoringFromIOIXVII}
+\def\IOIXscoring   {\scoringheading \tScoringFromIOIX}
+\def\showscoring{\csname\scoring scoring\endcsname}
+
+% ---
+
+\def\standardpart{\showcases\showlimits\showfeedback\showscoring}
 \makeatother
 
 \def\flushsubtasks{\global\stcount=\numsubtasks}

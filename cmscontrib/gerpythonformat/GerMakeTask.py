@@ -73,37 +73,32 @@ class GerMakeTask:
 
     def build(self):
         file_cacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
+        with chdir(self.wdir):
+            contestconfig = \
+                ContestConfig(os.path.join(self.wdir, ".rules"),
+                                "hidden contest", relevant_language=(self.language if self.language!="ALL" else None), minimal=self.minimal)
+            copyifnecessary(os.path.join(contestconfig._get_ready_dir(),
+                                            "contest-template.py"),
+                            os.path.join(self.wdir, "c.py"))
+            contestconfig._readconfig("c.py")
+            contestconfig._task(
+                self.task, contestconfig.full_feedback, None, self.minimal)
 
-        try:
-            with chdir(self.wdir):
-                contestconfig = \
-                    ContestConfig(os.path.join(self.wdir, ".rules"),
-                                  "hidden contest", relevant_language=(self.language if self.language!="ALL" else None), minimal=self.minimal)
-                copyifnecessary(os.path.join(contestconfig._get_ready_dir(),
-                                             "contest-template.py"),
-                                os.path.join(self.wdir, "c.py"))
-                contestconfig._readconfig("c.py")
-                contestconfig._task(
-                    self.task, contestconfig.full_feedback, None, self.minimal)
-
-                if not self.minimal:
-                    cdb = contestconfig._makecontest()
-                    test_udb = contestconfig._makeuser(
-                        contestconfig._mytestuser.username)
-                    test_gdb = contestconfig._makegroup(
-                        contestconfig._mytestuser.group.name, cdb)
-                    # We're not putting the test user on any team for testing
-                    # (shouldn't be needed).
-                    test_pdb = contestconfig._makeparticipation(
-                        contestconfig._mytestuser.username, cdb,
-                        test_udb, test_gdb, None)
-                    for t in contestconfig.tasks.values():
-                        tdb = t._makedbobject(cdb, file_cacher)
-                        t._make_test_submissions(
-                            test_pdb, tdb, self.local_test)
-
-        finally:
-            file_cacher.destroy_cache()
+            if not self.minimal:
+                cdb = contestconfig._makecontest()
+                test_udb = contestconfig._makeuser(
+                    contestconfig._mytestuser.username)
+                test_gdb = contestconfig._makegroup(
+                    contestconfig._mytestuser.group.name, cdb)
+                # We're not putting the test user on any team for testing
+                # (shouldn't be needed).
+                test_pdb = contestconfig._makeparticipation(
+                    contestconfig._mytestuser.username, cdb,
+                    test_udb, test_gdb, None)
+                for t in contestconfig.tasks.values():
+                    tdb = t._makedbobject(cdb, file_cacher)
+                    t._make_test_submissions(
+                        test_pdb, tdb, self.local_test)
 
         statements = list(contestconfig.tasks.values())[
             0]._statements

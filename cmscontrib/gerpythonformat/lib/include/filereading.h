@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,8 +20,7 @@
 /* Various useful method for file reading
  *
  */
-#ifndef __filereading_h
-#define __filereading_h
+#pragma once
 
 #include <string>
 #include <cstdio>
@@ -121,6 +120,3 @@ template<> double read_or_fail(FILE *f) {
 bool rest_empty(FILE *f) {
     return tokenize(peek_rest(f), whitespace_omitting()).empty();
 }
-
-#endif
-
