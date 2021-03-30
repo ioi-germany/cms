@@ -29,16 +29,11 @@ class LaTeXSandbox(IsolateSandbox):
     def __init__(self, *args, **kwargs):
         IsolateSandbox.__init__(self, *args, **kwargs)
 
-        # TODO: we should introduce a special config parameter for the local
-        # folder
-        copyrecursivelyifnecessary(os.path.expanduser("~/.texlive2019"),
+        copyrecursivelyifnecessary(os.path.join(os.path.expanduser("~"),
+                                                config.latex_distro),
                                    os.path.join(self.get_home_path(),
-                                                ".texlive2019"), mode=0o777)
-        os.mkdir(os.path.join(self.get_home_path(), ".local"))
-        os.mkdir(os.path.join(self.get_home_path(), ".local/share"))
-        copyrecursivelyifnecessary(os.path.expanduser("~/.local/share/fonts"),
-                                   os.path.join(self.get_home_path(),
-                                                ".local/share/fonts"))
+                                                config.latex_distro),
+                                   mode=0o777)
 
         self.preserve_env = True
         self.max_processes = config.latex_compilation_sandbox_max_processes
@@ -49,13 +44,12 @@ class LaTeXSandbox(IsolateSandbox):
         self.stdout_file = "LaTeX_out.txt"
         self.stderr_file = "LaTeX_err.txt"
         self.add_mapped_directory("/usr/share/texmf")
-        self.add_mapped_directory("/usr/share/texlive")
         self.add_mapped_directory("/etc/texmf")
         self.add_mapped_directory("/var/lib/texmf")
-        self.add_mapped_directory("/usr/bin/lualatex")
-        self.add_mapped_directory("/usr/bin/epstopdf")
         self.add_mapped_directory(os.path.expanduser("~/texmf"))
-        self.add_mapped_directory(os.path.expanduser("~/.local/share/fonts"))
+
+        for d in config.latex_additional_dirs:
+            self.add_mapped_directory(os.path.expanduser(d))
 
     def maybe_add_mapped_directory(self, src, dest=None, options=None):
         """

@@ -27,6 +27,7 @@ import json
 import logging
 import os
 import sys
+from datetime import datetime
 from collections import namedtuple
 
 from .log import set_detailed_logs
@@ -120,6 +121,19 @@ class Config:
         self.latex_compilation_sandbox_max_time_s = 60.0
         self.latex_compilation_sandbox_max_memory_kib = \
             self.compilation_sandbox_max_memory_kib
+
+        # Where should the LaTeX sandbox look for packages, fonts, etc.?
+        now = datetime.now().year
+        self.latex_distro = None
+        for s in [str(y) for y in range(now - 10, now + 1)] + [""]:
+            if os.path.exists(os.path.join(os.path.expanduser("~"),
+                                           ".texlive" + s)):
+                self.latex_distro = ".texlive" + s
+
+        self.latex_additional_dirs = \
+            [d for d in [os.path.expanduser("~/.local/share/fonts")]
+                if os.path.exists(d)]
+
         # Max processes, CPU time (s), memory (KiB) for trusted runs.
         self.trusted_sandbox_max_processes = 1000
         self.trusted_sandbox_max_time_s = 10.0
