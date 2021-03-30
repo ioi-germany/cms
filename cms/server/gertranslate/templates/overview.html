@@ -36,33 +36,43 @@
                 open_modal('col-select');
             }
 
+            function set_language(language)
+            {
+                if (language == "ALL")
+                {
+                    lan_mode = false;
+                    for(var i = 0; i < entries.length; ++i){
+                        if((entries[i].startsWith("pdf")||entries[i].startsWith("tex")) && entries[i].includes("-"))
+                            show_col[entries[i]] = true;
+                        if(entries[i].startsWith("upload")||entries[i].startsWith("mark"))
+                            show_col[entries[i]] = false;
+                    }
+                } else {
+                    lan_mode = true;
+                    lan = language;
+                    for(var i = 0; i < entries.length; ++i)
+                        if((entries[i].startsWith("pdf")||entries[i].startsWith("tex")||entries[i].startsWith("upload")||entries[i].startsWith("mark")) && entries[i].includes("-"))
+                            show_col[entries[i]] = entries[i].endsWith(language);
+                }
+            }
+
             function apply_col_select()
             {
                 close_modal('col-select');
 
                 if(window.document.getElementById("col+ALL").checked){
-                    lan_mode = false;
-                    for(var i = 0; i < entries.length; ++i){
-                        if((entries[i].startsWith("pdf")||entries[i].startsWith("tex")) && entries[i].includes("-"))
-                          show_col[entries[i]] = true;
-                        if(entries[i].startsWith("upload")||entries[i].startsWith("mark"))
-                          show_col[entries[i]] = false;
-                    }
+                    set_language("ALL");
+                    localStorage.translation_language = "ALL";
                 }else{
-                    lan_mode = true;
-                    for(var i = 0; i < languages.length; ++i)
+                    for(var i = 0; i < languages.length; ++i) {
                         if(window.document.getElementById("col-" + languages[i]).checked){
-                            lan = languages[i];
+                            set_language(languages[i]);
+                            localStorage.translation_language = languages[i];
                             break;
                         }
-
-                    for(var i = 0; i < entries.length; ++i)
-                        if((entries[i].startsWith("pdf")||entries[i].startsWith("tex")||entries[i].startsWith("upload")||entries[i].startsWith("mark")) && entries[i].includes("-"))
-                          show_col[entries[i]] = entries[i].endsWith(lan);
+                    }
                 }
-
                 update();
-
             }
 
             //TODO move this to mark.js
@@ -89,10 +99,13 @@
                     if((entries[i].startsWith("pdf")||entries[i].startsWith("tex")||entries[i].startsWith("upload")||entries[i].startsWith("mark")) && entries[i].includes("-"))
                         show_col[entries[i]] = false;
 
-                close_modal('error');
-                close_modal('mark');
-//                 We want col-select to be shown initially, so we open it.
-                open_modal('col-select');
+                // Check whether the language was already set (and whether the saved language exists).
+                if (localStorage.translation_language && (localStorage.translation_language == "ALL" || languages.indexOf(localStorage.translation_language) != -1)) {
+                    set_language(localStorage.translation_language);
+                } else {
+//                  We want col-select to be shown initially, so we open it.
+                    open_modal('col-select');
+                }
 
                 window.setInterval(function() { if(!is_modal_opened()) update(); }, 5000);
             }
@@ -123,7 +136,7 @@
             </div>
         </div>
 
-        <div class="modal wide" id="error-dialog">
+        <div class="modal wide hide" id="error-dialog">
             <div class="modal-header">
                 <button type="button" class="close" onClick="close_modal('error')">&#xD7;</button>
                 <h3>An error has occured...</h3>
@@ -145,7 +158,7 @@
             </div>
         </div>
 
-        <div class="modal wide" id="col-select-dialog">
+        <div class="modal wide hide" id="col-select-dialog">
             <div class="modal-header unselectable">
                 <button type="button" class="close" onClick="close_modal('col-select')">&#xD7;</button>
                 <h3>Select Language</h3>
@@ -199,7 +212,7 @@
             </div>
         </div>
 
-        <div class="modal wide" id="mark-dialog">
+        <div class="modal wide hide" id="mark-dialog">
             <div class="modal-header">
                 <button type="button" class="close" onClick="close_modal('mark')">&#xD7;</button>
                 <h3>Would you like to finalize your translation of <span id="mark-task-name-h">???</span>?</h3>
