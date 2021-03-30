@@ -73,11 +73,13 @@ class CommonConfig(object):
     querying system.
     """
 
-    def __init__(self, rules, ignore_latex=False, relevant_language=None):
+    def __init__(self, rules, ignore_latex=False, relevant_language=None,
+                 safe_latex=True):
         self.upstream = None
         self.rules = rules
         self.ignore_latex = ignore_latex
         self.relevant_language = relevant_language
+        self.safe_latex = safe_latex
 
         # how to exchange data with upstream
         self.inheriting = False
@@ -287,7 +289,7 @@ class CommonConfig(object):
         return CPPProgram(self.rules, self, *args, **kwargs)
 
     @exported_function
-    def compilelatex(self, basename, safe=True):
+    def compilelatex(self, basename, safe=None):
         """
         Use latexmk to compile basename.tex to basename.pdf .
 
@@ -308,6 +310,9 @@ class CommonConfig(object):
 
         if self.relevant_language is not None and not basename.endswith(self.relevant_language):
             return output
+
+        if safe is None:
+            safe = self.safe_latex
 
         with header("{}ompiling {} to {} using LuaLaTeX"
                     .format("Safely c" if safe else "C",
