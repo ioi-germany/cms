@@ -41,9 +41,9 @@ class BOITemplate(LgTemplate):
         """
         super(BOITemplate, self).ontask(task)
 
-        # Provide access to the BOI logo TODO
-        #shutil.copy(os.path.join(os.path.dirname(__file__), "logo.eps"),
-                    #os.path.join(task.wdir, "logo.eps"))
+        #Provide access to the BOI logo
+        shutil.copy(os.path.join(os.path.dirname(__file__), "header.pdf"),
+                    os.path.join(task.wdir, "header.pdf"))
 
         # Register contestheader.tex as \taskheader
         shutil.copy(os.path.join(os.path.dirname(__file__),
@@ -78,9 +78,8 @@ class BOITemplate(LgTemplate):
             self.supply_overview()
             self.contest._build_supplements_for_key("contestoverview")
 
-            #TODO
-            #shutil.copy(os.path.join(os.path.dirname(__file__), "logo.eps"),
-                        #os.path.join(os.getcwd(), "logo.eps"))
+            shutil.copy(os.path.join(os.path.dirname(__file__), "header.pdf"),
+                        os.path.join(os.getcwd(), "header.pdf"))
 
             lang_code = ""
             user_list = []
