@@ -73,27 +73,7 @@
 \def\showlimits{\sheading{\tLimits}%
 \tTime: \timelimit\\
 \tMemory: \memlimit}
-
-% Feedback Section
-\def\feedbackheading{\sheading{\tFeedback}}
-\def\nofeedback{\feedbackheading \tNofeedback}
-\def\partialfeedback{\feedbackheading \tPartialfeedback}
-\def\fullfeedback{\feedbackheading\def\feedbackmode{\ifrestricted\emph{restricted feedback}\else\emph{full feedback}\fi} \tFullfeedbackGeneral\
-\ifrestricted
-\tRestrictedfeedbackPrecise
-\else
-\tFullfeedbackPrecise
-\fi}
-\def\tokenfeedback{\feedbackheading \tTokenFeedback
-
-\ifrestricted
-\tTokenRestrictedFeedback
-\fi}
-\let\dummyfeedack=\relax
-\def\showfeedback{\csname\feedback feedback\endcsname}
 % ---
-
-\def\standardpart{\showcases\showlimits\showfeedback}
 \makeatother
 
 \def\flushsubtasks{\global\stcount=\numsubtasks}

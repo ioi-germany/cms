@@ -23,6 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from cms import FEEDBACK_LEVEL_RESTRICTED
 from cmscontrib.gerpythonformat.templates.lg.LgTemplate \
     import LgTemplate
 from cmscontrib.gerpythonformat.LocationStack import chdir
@@ -63,6 +64,9 @@ class BOITemplate(LgTemplate):
                                   resp. PDF right after their overview sheet
         """
         teams = {}
+
+        assert(all(t._feedback_level == FEEDBACK_LEVEL_RESTRICTED
+                   for t in self.contest.tasks.values()))
 
         for u in self.contest.users.values():
             team_name = u.team
