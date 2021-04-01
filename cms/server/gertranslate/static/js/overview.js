@@ -57,7 +57,7 @@ function inner_cell(t, entry)
         if(t["code"].endsWith("overview"))
             return '';
         else
-            return '<form enctype="multipart/form-data" action="upload/' + repository_code + '" method = "post" id = "form-' + extended_code + '" target="dummyframe"><input type="file" name="file" style="width: 250px"/><input type="reset" value="Upload" onclick=\'document.forms["form-' + extended_code + '"].submit();\'/></form>';//TODO Use upload icon and implement this like the rest//TODO Use different id from mark
+            return '<form enctype="multipart/form-data" action="upload/' + repository_code + '" method = "post" id = "form-upload-' + extended_code + '" target="dummyframe"><input type="file" name="file" style="width: 250px"/><input type="reset" value="Upload" onclick=\'document.forms["form-upload-' + extended_code + '"].submit();\'/></form>';//TODO Use upload icon and implement this like the rest//TODO Use different id from mark
     }
 
     if(entry.startsWith("mark"))
@@ -69,7 +69,7 @@ function inner_cell(t, entry)
         if(t["code"].endsWith("overview"))
             return '';
         else
-            return '<form id = "form-' + extended_code + '" target="dummyframe"> <input type="button" value="Finalize" onclick=\'window.document.getElementById("mark-task-name").innerHTML = window.document.getElementById("mark-task-name-h").innerHTML = "' + t.code + '";window.document.getElementById("mark-task-lan").innerHTML = "' + mark_lan + '";window.document.getElementById("do-mark").dataset.code = "' + repository_code + '";open_modal("mark")\'/></form>';//TODO Use other button and implement this like the rest//TODO Use put?
+            return '<form id = "form-finalize-' + extended_code + '" target="dummyframe"> <input type="button" value="Finalize" onclick=\'window.document.getElementById("mark-task-name").innerHTML = window.document.getElementById("mark-task-name-h").innerHTML = "' + t.code + '";window.document.getElementById("mark-task-lan").innerHTML = "' + mark_lan + '";window.document.getElementById("do-mark").dataset.code = "' + repository_code + '";open_modal("mark")\'/></form>';//TODO Use other button and implement this like the rest//TODO Use put?
     }
 
     if(entry == "keywords")

@@ -136,21 +136,28 @@
             </div>
         </div>
 
-        <div class="modal wide hide" id="error-dialog">
+        <div class="modal full-height flexbox hide" id="error-dialog">
             <div class="modal-header">
                 <button type="button" class="close" onClick="close_modal('error')">&#xD7;</button>
                 <h3>An error has occured...</h3>
             </div>
-            <div class="modal-body">
+            <div class="modal-body flexbox content">
                 <p>
                 I'm sorry, but I couldn't compile the LuaLaTeX for <span id="task-name" class="task-name">???</span>. Maybe the information below helps:
                 </p>
 
-                <h6> Error message received from server </h6>
-                <pre class="short"><code id="error-msg"></code></pre>
-
-                <h6> Compilation log </h6>
-                <pre class="short"><code id="error-log"></code></pre>
+                <div class="tabbed flexbox content">
+                    <input type="radio" name="tabbed_1" id="tabbed_1_B" hidden aria-hidden="true" checked>
+                    <input type="radio" name="tabbed_1" id="tabbed_1_A" hidden aria-hidden="true">
+                    <ul hidden aria-hidden="true">
+                        <li><label for="tabbed_1_B">Compilation log</label>
+                        <li><label for="tabbed_1_A">Error message received from server</label>
+                    </ul>
+                    <div class="flexbox content">
+                        <pre class="short content"><code id="error-log"></code></pre>
+                        <pre class="short content"><code id="error-msg"></code></pre>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
             <button class="btn btn-primary" style="float:left;" id="retry-compilation" onClick="retry_compilation()">Retry</button>

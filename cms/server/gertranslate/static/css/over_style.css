@@ -312,3 +312,90 @@ div.json-info {
 div.json-info.no-errors {
     display:none;
 }
+
+
+/* A dialog occupying the entire height of the window. */
+.modal.full-height {
+    top: 20px;
+    height: calc(100% - 40px);
+    left: 20px;
+    width: calc(100% - 40px);
+    margin-top: 0;
+    margin-left: 0;
+}
+
+/* Puts children into a vertical flexbox. */
+.flexbox {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+/* We might want to hide the flexbox if it's a dialog. */
+.flexbox.hide {
+    display: none;
+}
+
+/* Child of a flexbox that tries to occupy all remaining space. */
+.content {
+    flex: 1 1 auto;
+    max-height: initial;
+}
+
+
+.tabbed > input {
+    display: block;
+    position: absolute;
+    left: -100%;
+}
+
+.tabbed > ul {
+    position:relative;
+    z-index:999;
+    list-style:none;
+    display:flex;
+    margin: 0;
+    margin-bottom:-1px;
+}
+
+.tabbed > ul label {
+    display:inline-block;
+    margin-bottom: 0;
+    padding:0.25em 1em;
+    background:hsl(220, 100%, 85%);
+    border:1px solid black;
+    border-right-width:0;
+    user-select:none;
+}
+
+.tabbed > ul li:first-child label {
+    border-radius:0.5em 0 0 0;
+}
+
+.tabbed > ul li:last-child label {
+    border-right-width:1px;
+    border-radius:0 0.5em 0 0;
+}
+
+.tabbed > input:nth-child(1):checked ~ ul li:nth-child(1) label,
+.tabbed > input:nth-child(2):checked ~ ul li:nth-child(2) label {
+    background:hsl(220, 100%, 95%);
+    border-bottom-color:hsl(220, 100%, 95%);
+}
+
+.tabbed > div {
+    border:1px solid black;
+}
+
+.tabbed > div > * {
+    max-height: none;
+    display: none;
+    margin: 0;
+    overflow-x: auto;
+    overflow-y: scroll;
+}
+
+.tabbed > input:nth-child(1):checked ~ div > :nth-child(1),
+.tabbed > input:nth-child(2):checked ~ div > :nth-child(2) {
+    display: block;
+}
