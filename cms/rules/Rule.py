@@ -470,16 +470,13 @@ class GCCRule(CommandRule):
 
         """
         gcc_command = ["g++", "-O2", "-std=gnu++17", "-Wall", "-o", output,
-                       "-MMD", "-MF", ".deps", "-static"]
+                       "-MMD", "-MF", ".deps", "-static",
+                       "-fdiagnostics-color=always"]
         for l in libdirs:
             gcc_command += ["-I", l]
         gcc_command += sources
 
-        # We use script to trick g++ into thinking it were writing to the shell
-        # This leads to nicer output using ANSI color codes
-        command = ["script", "-eqc", shlex.join(gcc_command), "/dev/null"]
-
-        super(GCCRule, self).__init__(rulesdir, command, dependonexe=False)
+        super(GCCRule, self).__init__(rulesdir, gcc_command, dependonexe=False)
         self.sources = sources
         self.output = output
         self.libdirs = libdirs
