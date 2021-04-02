@@ -300,6 +300,10 @@ class ContestConfig(CommonConfig):
         self._languages = languages
 
     @exported_function
+    def allow_usual_languages(self):
+        self.languages(self._usual_languages())
+
+    @exported_function
     def user_group(self, s, start, stop, analysis_start=None, analysis_stop=None, per_user_time=None):
         """
         Create a user group.

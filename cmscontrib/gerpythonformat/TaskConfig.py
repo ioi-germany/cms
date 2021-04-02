@@ -837,6 +837,14 @@ class TaskConfig(CommonConfig, Scope):
                   if any("." + e in get_language(lang).source_extensions
                          for lang in self.upstream._languages)]
 
+    def std_language(self, filename):
+        ext = os.path.splitext(filename)[1]
+        possible_languages = [l for l in self._usual_languages()
+                                 if ext in get_language(l).source_extensions]
+
+        assert(len(possible_languages) == 1)
+        return possible_languages[0]
+
     """
     **Task types**
     """
@@ -910,6 +918,8 @@ class TaskConfig(CommonConfig, Scope):
         Submissions are linked together with interface.{c,cpp,pas}.
         num_processes:        e.g. set to 2 for a Two-Step task
         """
+        print(self.upstream._languages)
+
         self.tasktype = "Communication"
         if stub:
             for end in self.std_extensions():
@@ -1635,7 +1645,7 @@ class TaskConfig(CommonConfig, Scope):
             else:
                 our_filename = user_filename
             if our_filename.find(".%l") != -1:
-                lang = filename_to_language(user_filename).name
+                lang = self.std_language(user_filename)
                 if lang is None:
                     raise Exception("Cannot recognize submission's language.")
                 elif submission_lang is not None and \

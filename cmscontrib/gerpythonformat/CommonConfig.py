@@ -27,6 +27,11 @@ from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \
 from cmscontrib.gerpythonformat.Executable import CPPProgram, InternalPython, ExternalScript, \
     ExternalPython, asy_keyword_list
 from cms.rules.Rule import LaTeXRule, CommandRule, ZipRule
+from cms.grading.languages.c11_gcc import C11Gcc
+from cms.grading.languages.cpp17_gpp import Cpp17Gpp
+from cms.grading.languages.java_jdk import JavaJDK
+from cms.grading.languages.pascal_fpc import PascalFpc
+from cms.grading.languages.python3_cpython import Python3CPython
 from cmscontrib.gerpythonformat.Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
 import inspect
 import io
@@ -537,3 +542,7 @@ class CommonConfig(object):
         """
         self.max_user_test_number = max_number
         self.min_user_test_interval = min_interval
+
+    def _usual_languages(self):
+        return [C11Gcc().name, Cpp17Gpp().name, JavaJDK().name,
+                PascalFpc().name, Python3CPython().name]
