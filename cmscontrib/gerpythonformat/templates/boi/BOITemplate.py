@@ -24,6 +24,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from cms import FEEDBACK_LEVEL_RESTRICTED
+from cmscommon.constants import SCORE_MODE_MAX_SUBTASK
 from cmscontrib.gerpythonformat.templates.lg.LgTemplate \
     import LgTemplate
 from cmscontrib.gerpythonformat.LocationStack import chdir
@@ -66,6 +67,8 @@ class BOITemplate(LgTemplate):
         teams = {}
 
         assert(all(t._feedback_level == FEEDBACK_LEVEL_RESTRICTED
+                   for t in self.contest.tasks.values()))
+        assert(all(t.score_mode() == SCORE_MODE_MAX_SUBTASK
                    for t in self.contest.tasks.values()))
 
         for u in self.contest.users.values():
