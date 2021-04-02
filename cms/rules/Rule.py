@@ -36,6 +36,7 @@ from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyifnecessary, copyrecursivelyifnecessary
 
 from six import iteritems
+from copy import copy
 
 def compute_file_hash(filename):
     """Return the sha256 sum of the given file.
@@ -548,7 +549,8 @@ class LaTeXRule(CommandRule):
 class SafeLaTeXRule:
     def __init__(self, rulesdir, source, output, wdir,
                  extra=["-lualatex=lualatex --interaction=nonstopmode "
-                        "--shell-restricted --nosocket %O %S"]):
+                        "--shell-restricted --nosocket %O %S"],
+                 ignore=set(), ignore_ext=set(), do_copy=set()):
         self.source = source
         self.output = output
         self.rulesdir = rulesdir
@@ -557,9 +559,13 @@ class SafeLaTeXRule:
         self.sandbox = LaTeXSandbox(self.file_cacher, name="LaTeX")
         self.command = ["/usr/bin/latexmk", "-g", "-pdflua"] + \
                         extra + [source]
+        self.ignore = copy(ignore)
+        self.ignore_ext = copy(ignore_ext)
+        self.do_copy = copy(do_copy)
 
     def ensure(self):
-        copyrecursivelyifnecessary(self.wdir, self.sandbox.get_home_path())
+        copyrecursivelyifnecessary(self.wdir, self.sandbox.get_home_path(),
+                                   self.ignore, self.ignore_ext, self.do_copy)
         self.sandbox.allow_writing_all()
 
         self.sandbox.execute_without_std(self.command, wait=True)

@@ -44,7 +44,10 @@ def copyifnecessary(source, destination, mode=None):
         os.chmod(destination, mode)
 
 
-def copyrecursivelyifnecessary(source, destination, ignore=set(), mode=None):
+
+
+def copyrecursivelyifnecessary(source, destination, ignore=set(),
+                               ignore_ext=set(), do_copy=set(), mode=None):
     """Copy the directory or file source to destination recursively.
     Files are only touched if their contents differ.
 
@@ -62,10 +65,11 @@ def copyrecursivelyifnecessary(source, destination, ignore=set(), mode=None):
             os.chmod(destination, mode)
         names = os.listdir(source)
         for name in names:
-            if name in ignore:
+            if name in ignore or (os.path.splitext(name)[1] in ignore_ext and
+                                  name not in do_copy):
                 continue
             copyrecursivelyifnecessary(os.path.join(source, name),
                                        os.path.join(destination, name),
-                                       ignore, mode)
+                                       ignore, ignore_ext, do_copy, mode)
     else:
         raise Exception("Node {} cannot be copied (wrong type)".format(source))

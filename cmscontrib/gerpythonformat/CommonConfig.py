@@ -289,7 +289,8 @@ class CommonConfig(object):
         return CPPProgram(self.rules, self, *args, **kwargs)
 
     @exported_function
-    def compilelatex(self, basename, safe=None):
+    def compilelatex(self, basename, safe=True, ignore=set(),
+                     ignore_ext=set((".py", ".cpp")), do_copy=set()):
         """
         Use latexmk to compile basename.tex to basename.pdf .
 
@@ -298,6 +299,17 @@ class CommonConfig(object):
         translation sessions.
 
         basename (string): base of the tex and pdf file names
+
+        safe (boolean): should we use a sandbox for the compilation?
+
+        ignore (set of strings): files and directories in .build that shouldn't
+                                 be readable by the sandbox
+
+        ignore_ext (set of strings): file extensions that shouldn't be
+                                     readable by the sandbox
+
+        do_copy (set of strings): files that should be readable to the sandbox
+                                  although their extensions belong to ignore_ext
 
         return (string): file name of the generated pdf file
 
@@ -321,7 +333,9 @@ class CommonConfig(object):
             self._build_supplements("latex")
 
             if safe:
-                r = SafeLaTeXRule(self.rules, source, output, self.wdir).ensure()
+                r = SafeLaTeXRule(self.rules, source, output, self.wdir,
+                                  ignore=ignore, ignore_ext=ignore_ext,
+                                  do_copy=do_copy).ensure()
             else:
                 r = LaTeXRule(self.rules, source).ensure()
 
