@@ -444,7 +444,7 @@ class ContestConfig(CommonConfig):
                    team)
         return user
 
-    def _task(self, s, feedback, score_mode, minimal):
+    def _task(self, s, feedback, score_mode, minimal, standalone_task=False):
         """
         Add a task to this contest (full version, not accessible from
         config.py).
@@ -479,7 +479,8 @@ class ContestConfig(CommonConfig):
                             s, len(self.tasks),
                             feedback, score_mode,
                             ignore_latex=self.ignore_latex,
-                            minimal=minimal) as taskconfig:
+                            minimal=minimal,
+                            standalone_task=standalone_task) as taskconfig:
                 for f in self.ontasks:
                     f(taskconfig)
                 taskconfig._readconfig("config.py")

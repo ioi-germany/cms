@@ -569,7 +569,7 @@ class TaskConfig(CommonConfig, Scope):
     """
 
     def __init__(self, upstream, rules, name, num, feedback, score_mode,
-                 ignore_latex=False, minimal=False):
+                 ignore_latex=False, minimal=False, standalone_task=False):
         super(TaskConfig, self).__init__(rules, ignore_latex)
         self.no_tokens()
         Scope.__init__(self)
@@ -648,6 +648,9 @@ class TaskConfig(CommonConfig, Scope):
 
         # Only compile statement (and hopefully everything necessary for this)
         self.minimal = minimal
+
+        # Is this task only part of a dummy contest?
+        self.standalone_task = standalone_task
 
     @exported_function
     def max_score(self):
@@ -865,7 +868,7 @@ class TaskConfig(CommonConfig, Scope):
         library (bool): whether to use a library for linking contestant
                         solutions;
                         submissions are linked together with
-                        interface.{c,cpp,pas} and, if existent, lib.h
+                        interface.{c,cpp,pas,py,...} and, if existent, lib.h
                         and lib.pas.
 
         """
@@ -874,8 +877,9 @@ class TaskConfig(CommonConfig, Scope):
         if library:
             grader_param = "grader"
             for end in self.std_extensions():
-                self.managers["grader." + end] = \
-                    os.path.join(self.wdir, "interface." + end)
+                p = os.path.join(self.wdir, "interface." + end)
+                if not self.standalone_task or os.path.exists(p):
+                    self.managers["grader." + end] = p
             if os.path.exists(os.path.join(self.wdir, "lib.h")):
                 self.managers["%s.h" % self.name] = \
                     os.path.join(self.wdir, "lib.h")
@@ -915,16 +919,15 @@ class TaskConfig(CommonConfig, Scope):
                               (must at least implement get_path() to get
                               the file name of the executable)
 
-        Submissions are linked together with interface.{c,cpp,pas}.
+        Submissions are linked together with interface.{c,cpp,pas,py,...}.
         num_processes:        e.g. set to 2 for a Two-Step task
         """
-        print(self.upstream._languages)
-
         self.tasktype = "Communication"
         if stub:
             for end in self.std_extensions():
-                self.managers["stub." + end] = \
-                    os.path.join(self.wdir, "interface." + end)
+                p = os.path.join(self.wdir, "interface." + end)
+                if not self.standalone_task or os.path.exists(p):
+                    self.managers["stub." + end] = p
             if os.path.exists(os.path.join(self.wdir, "lib.h")):
                 self.managers["%s.h" % self.name] = \
                     os.path.join(self.wdir, "lib.h")
