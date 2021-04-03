@@ -31,7 +31,7 @@ from cms.grading.languages.c11_gcc import C11Gcc
 from cms.grading.languages.cpp17_gpp import Cpp17Gpp
 from cms.grading.languages.java_jdk import JavaJDK
 from cms.grading.languages.pascal_fpc import PascalFpc
-from cms.grading.languages.python3_cpython import Python3CPython
+from cms.grading.languages.python3_pypy import Python3PyPy
 from cmscontrib.gerpythonformat.Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
 import inspect
 import io
@@ -545,4 +545,4 @@ class CommonConfig(object):
 
     def _usual_languages(self):
         return [C11Gcc().name, Cpp17Gpp().name, JavaJDK().name,
-                PascalFpc().name, Python3CPython().name]
+                PascalFpc().name, Python3PyPy().name]
