@@ -565,8 +565,12 @@ class SafeLaTeXRule:
 
     def ensure(self):
         copyrecursivelyifnecessary(self.wdir, self.sandbox.get_home_path(),
-                                   self.ignore, self.ignore_ext, self.do_copy)
+                                   self.ignore, self.ignore_ext, self.do_copy,
+                                   mode=0o777)
         self.sandbox.allow_writing_all()
+
+        relpath = os.path.relpath(os.getcwd(), self.wdir)
+        self.sandbox.chdir = os.path.join(self.sandbox.chdir, relpath)
 
         self.sandbox.execute_without_std(self.command, wait=True)
 
@@ -581,8 +585,8 @@ class SafeLaTeXRule:
                      "MESSAGE: " + self.sandbox.get_human_exit_description()
         else:
             copyifnecessary(os.path.join(self.sandbox.get_home_path(),
-                                         self.output),
-                            os.path.join(self.wdir, self.output))
+                                         relpath, self.output),
+                            os.path.join(self.wdir, relpath, self.output))
             self.sandbox.cleanup(not config.keep_sandbox)
         return r
 
