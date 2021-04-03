@@ -56,11 +56,14 @@ def escape(s):
     return "".join("\\" + c if ord(c) > 32 and ord(c) < 127 else c for c in s)
 
 
+_session = Session()
+
+
 class WithDatabaseAccess(object):
     """ Base class for database access
     """
-    def __init__(self, sql_session=None):
-        self.sql_session = sql_session or Session()
+    def __init__(self, sql_session):
+        self.sql_session = sql_session
 
     def _commit(self):
         self.sql_session.commit()
@@ -133,7 +136,7 @@ class MyQuestion(WithDatabaseAccess):
 
 class ListOfDatabaseEntries(object):
     def __init__(self, contest_id):
-        self.sql_session = Session()
+        self.sql_session = _session
         self.contest_id = contest_id
 
     def _new_session(self):
@@ -262,7 +265,7 @@ class MyContest(WithDatabaseAccess):
     """ Encapsulates access to the contest currently running
     """
     def __init__(self, contest_id):
-        super(MyContest, self).__init__()
+        super(MyContest, self).__init__(_session)
 
         self.contest_id = contest_id
         self.contest = Contest.get_from_id(contest_id, self.sql_session)
