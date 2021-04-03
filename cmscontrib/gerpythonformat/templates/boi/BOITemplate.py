@@ -25,12 +25,14 @@ from __future__ import unicode_literals
 
 from cms import FEEDBACK_LEVEL_RESTRICTED
 from cmscommon.constants import SCORE_MODE_MAX_SUBTASK
+from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 from cmscontrib.gerpythonformat.templates.lg.LgTemplate \
     import LgTemplate
 from cmscontrib.gerpythonformat.LocationStack import chdir
 from cmscontrib.gerpythonformat.Supplement import def_latex, input_latex
 import os
 import shutil
+import filecmp
 
 
 # This is the template for BOI 2021 (an only slightly modified lg template)
@@ -46,6 +48,10 @@ class BOITemplate(LgTemplate):
         #Provide access to the BOI logo
         shutil.copy(os.path.join(os.path.dirname(__file__), "header.pdf"),
                     os.path.join(task.wdir, "header.pdf"))
+
+        # Copy translation headers
+        copyrecursivelyifnecessary(os.path.join(task.wdir, "..", "general"),
+                                   os.path.join(task.wdir, "general"))
 
         # Register contestheader.tex as \taskheader
         shutil.copy(os.path.join(os.path.dirname(__file__),
@@ -80,6 +86,10 @@ class BOITemplate(LgTemplate):
 
         if not os.path.exists("overview"):
             os.mkdir("overview")
+
+        copyrecursivelyifnecessary(os.path.join(self.contest.wdir, "general"),
+                                   os.path.join(self.contest.wdir, "overview",
+                                                "general"))
 
         with chdir("overview"):
             self.supply_overview()
