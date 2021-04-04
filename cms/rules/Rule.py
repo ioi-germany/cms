@@ -545,25 +545,32 @@ class LaTeXRule(CommandRule):
         self.result.log['err'] = readfile(".err", "latin_1")
 
 
-# TODO: actually implement lazy building
-class SafeLaTeXRule:
+class SafeLaTeXRule(Rule):
     def __init__(self, rulesdir, source, output, wdir,
                  extra=["-lualatex=lualatex --interaction=nonstopmode "
                         "--shell-restricted --nosocket %O %S"],
                  ignore=set(), ignore_ext=set(), do_copy=set()):
+        super(SafeLaTeXRule, self).__init__(rulesdir)
+
         self.source = source
         self.output = output
-        self.rulesdir = rulesdir
         self.wdir = wdir
         self.file_cacher = FileCacher()
         self.sandbox = LaTeXSandbox(self.file_cacher, name="LaTeX")
-        self.command = ["/usr/bin/latexmk", "-g", "-pdflua"] + \
-                        extra + [source]
+        self.extra = extra
+        self.command = ["/usr/bin/latexmk", "-g", "-pdflua", "-deps",
+                        "-deps-out=.deps"] + self.extra + [source]
         self.ignore = copy(ignore)
         self.ignore_ext = copy(ignore_ext)
         self.do_copy = copy(do_copy)
 
-    def ensure(self):
+    def mission(self):
+        return {'cwd': os.getcwd(),
+                'type': 'safe-latex',
+                'source': self.source,
+                'extra': self.extra}
+
+    def run(self):
         copyrecursivelyifnecessary(self.wdir, self.sandbox.get_home_path(),
                                    self.ignore, self.ignore_ext, self.do_copy,
                                    mode=0o777)
@@ -574,22 +581,30 @@ class SafeLaTeXRule:
 
         self.sandbox.execute_without_std(self.command, wait=True)
 
-        r = RuleResult(self.rulesdir)
-        r.code = self.sandbox.failed()
-        r.out = self.sandbox.get_stdout()
-        r.err = self.sandbox.get_stderr()
+        self.result.log['code'] = self.sandbox.failed()
+        self.result.log['out'] = self.sandbox.get_stdout()
+        self.result.log['err'] = self.sandbox.get_stderr()
 
-        if r.code:
-            r.err += "\n\n" + ("#" * 40) + "\n" + \
-                     "SANDBOX: " + self.sandbox.get_root_path() + "\n" + \
-                     "MESSAGE: " + self.sandbox.get_human_exit_description()
+        self.result.add_dependency(self.source)
+
+        if self.result.log['code']:
+            self.result.err += "\n\n" + ("#" * 40) + "\n" + \
+                "SANDBOX: " + self.sandbox.get_root_path() + "\n" + \
+                 "\nMESSAGE: " + self.sandbox.get_human_exit_description()
         else:
             copyifnecessary(os.path.join(self.sandbox.get_home_path(),
                                          relpath, self.output),
                             os.path.join(self.wdir, relpath, self.output))
+            self.result.add_output(self.output)
+            readmakefile(os.path.join(self.sandbox.get_home_path(), relpath,
+                                      ".deps"),
+                         self.result, True)
             self.sandbox.cleanup(not config.keep_sandbox)
-        return r
 
+    def finish(self):
+        self.result.code = self.result.log['code']
+        self.result.out = self.result.log['out']
+        self.result.err = self.result.log['err']
 
 class JobRule(Rule):
     def __init__(self, rulesdir, job, file_cacher):
