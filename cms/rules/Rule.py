@@ -570,6 +570,11 @@ class SafeLaTeXRule(Rule):
                 'extra': self.extra}
 
     def run(self):
+        # Delete the dependencies file before running latex to ensure
+        # that we don't read a left-over dependencies file in the end
+        # (if latex fails to write the dependencies file).
+        deletefile(".deps")
+
         sandbox = LaTeXSandbox(self.file_cacher, name="LaTeX")
         copyrecursivelyifnecessary(self.wdir, sandbox.get_home_path(),
                                    self.ignore, self.ignore_ext, self.do_copy,
