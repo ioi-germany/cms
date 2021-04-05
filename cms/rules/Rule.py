@@ -588,7 +588,7 @@ class SafeLaTeXRule(Rule):
         self.result.add_dependency(self.source)
 
         if self.result.log['code']:
-            self.result.err += "\n\n" + ("#" * 40) + "\n" + \
+            self.result.log['err'] += "\n\n" + ("#" * 40) + "\n" + \
                 "SANDBOX: " + self.sandbox.get_root_path() + "\n" + \
                  "\nMESSAGE: " + self.sandbox.get_human_exit_description()
         else:
