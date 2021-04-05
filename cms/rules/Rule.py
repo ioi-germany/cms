@@ -556,7 +556,6 @@ class SafeLaTeXRule(Rule):
         self.output = output
         self.wdir = wdir
         self.file_cacher = FileCacher()
-        self.sandbox = LaTeXSandbox(self.file_cacher, name="LaTeX")
         self.extra = extra
         self.command = ["/usr/bin/latexmk", "-g", "-pdflua", "-deps",
                         "-deps-out=.deps"] + self.extra + [source]
@@ -571,35 +570,36 @@ class SafeLaTeXRule(Rule):
                 'extra': self.extra}
 
     def run(self):
-        copyrecursivelyifnecessary(self.wdir, self.sandbox.get_home_path(),
+        sandbox = LaTeXSandbox(self.file_cacher, name="LaTeX")
+        copyrecursivelyifnecessary(self.wdir, sandbox.get_home_path(),
                                    self.ignore, self.ignore_ext, self.do_copy,
                                    mode=0o777)
-        self.sandbox.allow_writing_all()
+        sandbox.allow_writing_all()
 
         relpath = os.path.relpath(os.getcwd(), self.wdir)
-        self.sandbox.chdir = os.path.join(self.sandbox.chdir, relpath)
+        sandbox.chdir = os.path.join(sandbox.chdir, relpath)
 
-        self.sandbox.execute_without_std(self.command, wait=True)
+        sandbox.execute_without_std(self.command, wait=True)
 
-        self.result.log['code'] = self.sandbox.failed()
-        self.result.log['out'] = self.sandbox.get_stdout()
-        self.result.log['err'] = self.sandbox.get_stderr()
+        self.result.log['code'] = sandbox.failed()
+        self.result.log['out'] = sandbox.get_stdout()
+        self.result.log['err'] = sandbox.get_stderr()
 
         self.result.add_dependency(self.source)
 
         if self.result.log['code']:
             self.result.log['err'] += "\n\n" + ("#" * 40) + "\n" + \
-                "SANDBOX: " + self.sandbox.get_root_path() + "\n" + \
-                 "\nMESSAGE: " + self.sandbox.get_human_exit_description()
+                "SANDBOX: " + sandbox.get_root_path() + "\n" + \
+                 "\nMESSAGE: " + sandbox.get_human_exit_description()
         else:
-            copyifnecessary(os.path.join(self.sandbox.get_home_path(),
+            copyifnecessary(os.path.join(sandbox.get_home_path(),
                                          relpath, self.output),
                             os.path.join(self.wdir, relpath, self.output))
             self.result.add_output(self.output)
-            readmakefile(os.path.join(self.sandbox.get_home_path(), relpath,
+            readmakefile(os.path.join(sandbox.get_home_path(), relpath,
                                       ".deps"),
                          self.result, True)
-            self.sandbox.cleanup(not config.keep_sandbox)
+            sandbox.cleanup(not config.keep_sandbox)
 
     def finish(self):
         self.result.code = self.result.log['code']
