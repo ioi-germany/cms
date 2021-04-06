@@ -570,19 +570,22 @@ class SafeLaTeXRule(Rule):
                 'extra': self.extra}
 
     def run(self):
-        # Delete the dependencies file before running latex to ensure
-        # that we don't read a left-over dependencies file in the end
-        # (if latex fails to write the dependencies file).
-        deletefile(".deps")
-
         sandbox = LaTeXSandbox(self.file_cacher, name="LaTeX")
         copyrecursivelyifnecessary(self.wdir, sandbox.get_home_path(),
                                    self.ignore, self.ignore_ext, self.do_copy,
                                    mode=0o777)
+
         sandbox.allow_writing_all()
 
         relpath = os.path.relpath(os.getcwd(), self.wdir)
         sandbox.chdir = os.path.join(sandbox.chdir, relpath)
+
+        depsfile = os.path.join(sandbox.get_home_path(), relpath, ".deps")
+
+        # Delete the dependencies file before running latex to ensure
+        # that we don't read a left-over dependencies file in the end
+        # (if latex fails to write the dependencies file).
+        deletefile(depsfile)
 
         sandbox.execute_without_std(self.command, wait=True)
 
@@ -601,9 +604,7 @@ class SafeLaTeXRule(Rule):
                                          relpath, self.output),
                             os.path.join(self.wdir, relpath, self.output))
             self.result.add_output(self.output)
-            readmakefile(os.path.join(sandbox.get_home_path(), relpath,
-                                      ".deps"),
-                         self.result, True)
+            readmakefile(depsfile, self.result, True)
             sandbox.cleanup(not config.keep_sandbox)
 
     def finish(self):
