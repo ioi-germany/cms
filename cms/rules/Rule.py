@@ -606,6 +606,17 @@ class SafeLaTeXRule(Rule):
                             os.path.join(self.wdir, relpath, self.output))
             self.result.add_output(self.output)
             readmakefile(depsfile, self.result, True)
+
+            def convert(path):
+                if path.startswith(os.path.join(config.latex_distro, "")):
+                    return os.path.join(os.path.expanduser("~"), path)
+                else:
+                    return path
+
+            self.result.dependencies = \
+               {convert(path): hash
+                for path, hash in self.result.dependencies.items()}
+
             sandbox.cleanup(not config.keep_sandbox)
 
     def finish(self):

@@ -358,10 +358,8 @@ class CommonConfig(object):
                                                os.path.dirname(basefile))
                     if not os.path.exists(basefiledir):
                         os.makedirs(basefiledir)
-                    try:
-                        shutil.copy(depabs, os.path.join(kit_directory, basefile))
-                    except FileNotFoundError:
-                        pass
+
+                    shutil.copy(depabs, os.path.join(kit_directory, basefile))
 
         return output
 
