@@ -48,6 +48,8 @@ def unpack_code(code):
     else:
         contest,task,language = [""] + code.split("/")
 
+    if contest != "" and contest not in TaskTranslateInfo.contests:
+        raise KeyError("No such contest")
     if task not in TaskTranslateInfo.tasks:
         raise KeyError("No such task")
     if language not in TaskTranslateInfo.languages and language != "ALL":

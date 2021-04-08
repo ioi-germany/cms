@@ -130,11 +130,12 @@ class SingleTaskTranslateInfo:
 class TaskTranslateInfo:
     manager = Manager()
     tasks = manager.dict()
-    languages = manager.list()
+    contests = manager.dict()
+    languages = manager.dict()
 
     @staticmethod
     def init(repository):
-        def load_single(d, tasks, is_contest):
+        def load_single(d, tasks, contests, is_contest):
             if not d.is_dir() \
                 or d.name.startswith('.') \
                 or d.is_symlink() \
@@ -151,6 +152,7 @@ class TaskTranslateInfo:
                         code = d.parts[-1]
                     else:
                         contest = d.parts[-1]
+                        contests[contest] = contest
                         code = d.parts[-1] + "-overview"
                 else:
                     contest = d.parts[-2]
@@ -169,29 +171,30 @@ class TaskTranslateInfo:
 
             return not d.name.endswith('general')
 
-        def load(directory, tasks, languages):
+        def load(directory, tasks, contests, languages):
             # Load list of relevant languages
             languages_path = directory / "languages.json"
             if not languages_path.exists():
                 logger.error("The languages.json file is missing.")
                 return
             try:
-                #TODO Handle this less awkwardly
-                languages[:] = list()
-                languages.extend( json.loads(open(languages_path).read())["languages"] )
+                #TODO Languages are never deleted (and neither are contests)
+                language_list = json.loads(open(languages_path).read())["languages"]
+                for l in language_list:
+                    languages[l] = l
+
             except:
                 logger.error("The languages.json file is corrupt.")
                 return
-            languages.sort()
 
             # Load all available contests (and general)
             for d in directory.iterdir():
-                if load_single(d, tasks, is_contest=True):
+                if load_single(d, tasks, contests, is_contest=True):
                     # Load all available tasks
                     for e in d.iterdir():
-                        load_single(e, tasks, is_contest=False)
+                        load_single(e, tasks, contests, is_contest=False)
 
-        def main_loop(repository, tasks, languages, waiting_time):
+        def main_loop(repository, tasks, contests, languages, waiting_time):
             directory = Path(repository.path)
 
             while True:
@@ -211,7 +214,7 @@ class TaskTranslateInfo:
                         if not info_path.exists():
                             del tasks[t]
 
-                    load(directory, tasks, languages)
+                    load(directory, tasks, contests, languages)
 
                 logger.info("finished iteration of TaskTranslateInfo.main_loop in {}ms".
                             format(int(1000 * (time() - start))))
@@ -221,10 +224,10 @@ class TaskTranslateInfo:
         # Load data once on start-up (otherwise tasks might get removed when
         # the server is restarted)
         with repository:
-            load(Path(repository.path), TaskTranslateInfo.tasks, TaskTranslateInfo.languages)
+            load(Path(repository.path), TaskTranslateInfo.tasks, TaskTranslateInfo.contests, TaskTranslateInfo.languages)
 
         TaskTranslateInfo.info_process = Process(target=main_loop,
-                                        args=(repository, TaskTranslateInfo.tasks, TaskTranslateInfo.languages,
+                                        args=(repository, TaskTranslateInfo.tasks, TaskTranslateInfo.contests, TaskTranslateInfo.languages,
                                               .5 * (1 + sqrt(5))))
         TaskTranslateInfo.info_process.daemon = True
         TaskTranslateInfo.info_process.start()
@@ -244,7 +247,7 @@ class TaskTranslateInfo:
 
     @staticmethod
     def language_list():
-        return deepcopy(TaskTranslateInfo.languages)
+        return deepcopy(TaskTranslateInfo.languages.keys())
 
     @staticmethod
     def gertranslate_entries():
@@ -275,4 +278,4 @@ class TaskTranslateInfo:
 
     @staticmethod
     def languages_desc():
-        return {l: Locale(l).language_name+" ["+l+"]" for l in TaskTranslateInfo.languages}
+        return {l: Locale(l).get_language_name('en')+" ["+l+"]" for l in TaskTranslateInfo.languages}
