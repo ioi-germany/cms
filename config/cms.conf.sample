@@ -15,6 +15,14 @@
     "cmsuser": "cmsuser",
 
 
+
+    "_section": "GerMake",
+
+    "_help": "Whether we should *not* cache hashes."
+    "always_recompute_hash": true,
+
+
+
     "_section": "AsyncLibrary",
 
     "core_services":

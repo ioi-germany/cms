@@ -27,11 +27,14 @@ import imp
 import io
 import json
 import os
+import stat
 import subprocess
 import time
 import shlex
 
 from six import iteritems
+
+from cms import config
 
 def compute_file_hash(filename):
     """Return the sha256 sum of the given file.
@@ -189,38 +192,60 @@ class RuleResult(object):
 
     def hash_of_file(self, filename):
         """Return the hash of the given file.
-        FIXME This hash is supposed to be looked up in the
-        "database" first (given the path and ctime) and only if nothing
-        is found, it is computed (and then the result is saved to the
-        "database").
         """
-        return compute_file_hash(filename)
+        filename = os.path.abspath(filename)
+
+        try:
+            sta = os.lstat(filename)
+        except FileNotFoundError:
+            # Not a file
+            return None
+
+        if stat.S_ISLNK(sta.st_mode):
+            # Symbolic link
+            target = os.readlink(filename)
+            abstarget = os.path.join(os.path.dirname(filename), target)
+            return ["link", target, self.hash_of_file(abstarget)]
+
+        assert stat.S_ISREG(sta.st_mode)
+
+        if config.always_recompute_hash:
+            return compute_file_hash(filename)
 
         # TODO Check that the following works reliably on all systems.
         # For example, getctime sometimes only has a precision of 1 second.
-        # It also always returns a floating point number and has therefore
-        # rounding errors!
 
-        #filename = os.path.abspath(filename)
-        #hasher = hashlib.sha256()
-        #hasher.update(json.dumps({'type': 'filehash',
-                                  #'file': filename,
-                                  #'ctime': os.path.getctime(filename)},
-                                 #sort_keys=True).encode('utf-8'))
-        #hashfile = os.path.join(self.rulesdir, hasher.hexdigest())
-        #if os.path.exists(hashfile):
-            #return readfile(hashfile)
-        #else:
-            #time_before_hash = time.time()
-            #hash_ = compute_file_hash(filename)
-            ## Only remember this hash if the file's ctime is at least 10 seconds ago.
-            ## Thus, if the file changes after hashing, its ctime has to change, too.
-            ## (Even if ctime has only low resolution!)
-            ## See also https://mirrors.edge.kernel.org/pub/software/scm/git/docs/technical/racy-git.html.
-            #if os.path.getctime(filename)+10 < time_before_hash:
-                #with io.open(hashfile, 'w', encoding='utf-8') as f:
-                    #f.write(hash_)
-            #return hash_
+        hasher = hashlib.sha256()
+        hasher.update(json.dumps({'type': 'filehash',
+                                  'file': filename},
+                                 sort_keys=True).encode('utf-8'))
+        hashfile = os.path.join(self.rulesdir, hasher.hexdigest())
+        if os.path.exists(hashfile):
+            with io.open(hashfile, "r") as f:
+                stahash = os.fstat(f.fileno())
+                res = json.load(f)
+                # Check that the ctime is the same as when we last computed
+                # the hash.
+                # Also check that the ctime is more than 3 seconds before
+                # the hashfile's ctime.
+                if res['type'] == 'filehash' and \
+                        res['file'] == filename and \
+                        res['ctime'] == sta.st_ctime_ns and \
+                        sta.st_ctime_ns + 3000000000 < stahash.st_ctime_ns:
+                    return res['hash']
+
+        ## Only remember this hash if the file's ctime is at least 10 seconds ago.
+        ## Thus, if the file changes after hashing, its ctime has to change, too.
+        ## (Even if ctime has only low resolution!)
+        ## See also https://mirrors.edge.kernel.org/pub/software/scm/git/docs/technical/racy-git.html.
+        time_before_hash = time.time()
+        #print("Reading {} to compute hash".format(filename))
+        hash_ = compute_file_hash(filename)
+        if os.path.getctime(filename)+10 < time_before_hash:
+            with io.open(hashfile, 'w', encoding='utf-8') as f:
+                json.dump({'type': 'filehash', 'file': filename, 'ctime': sta.st_ctime_ns, 'hash': hash_}, f)
+
+        return hash_
 
     def add_dependency(self, filename):
         """Add a file using its current hash value.
@@ -241,19 +266,11 @@ class RuleResult(object):
     def uptodate(self):
         """Whether the saved hash values all agree with the current files.
         """
-        for fn, h in iteritems(self.dependencies):
-            if h is None:
-                if os.path.isfile(fn):
-                    return False
-            else:
-                if not os.path.isfile(fn) or h != self.hash_of_file(fn):
-                    return False
-        for fn, h in iteritems(self.outputs):
-            if h is None:
-                if os.path.isfile(fn):
-                    return False
-            else:
-                if not os.path.isfile(fn) or h != self.hash_of_file(fn):
+        for di in (self.dependencies, self.outputs):
+            for filename, oldhash in iteritems(di):
+                newhash = self.hash_of_file(filename)
+                if oldhash != newhash:
+                    #print("Out of date: {}, old hash {}, new hash {}".format(filename, oldhash, newhash))
                     return False
         return True
 

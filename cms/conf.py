@@ -97,6 +97,9 @@ class Config:
         self.file_log_debug = False
         self.stream_log_detailed = False
 
+        # GerMake
+        self.always_recompute_hash = True
+
         # Database.
         self.database = "postgresql+psycopg2://cmsuser@localhost/cms"
         self.database_debug = False
