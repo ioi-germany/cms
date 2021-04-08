@@ -74,3 +74,7 @@ class LaTeXSandbox(IsolateSandbox):
 
     def get_stderr(self):
         return self.get_file_contents(self.stderr_file)
+
+    def get_log_file_contents(self):
+        return self.get_file_contents("%s.%d" % (self.info_basename,
+                                                 self.exec_num))

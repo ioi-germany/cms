@@ -598,7 +598,8 @@ class SafeLaTeXRule(Rule):
         if self.result.log['code']:
             self.result.log['err'] += "\n\n" + ("#" * 40) + "\n" + \
                 "SANDBOX: " + sandbox.get_root_path() + "\n" + \
-                 "\nMESSAGE: " + sandbox.get_human_exit_description()
+                 "MESSAGE: " + sandbox.get_human_exit_description() + "\n" + \
+                 "LOG FILE:\n" + sandbox.get_log_file_contents()
         else:
             copyifnecessary(os.path.join(sandbox.get_home_path(),
                                          relpath, self.output),
