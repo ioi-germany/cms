@@ -294,18 +294,21 @@ class TaskTeXReceiver:
             #TODO Handle error
             error = "Translation already locked; currently, you can't change"\
             "this translation. Please contact an administrator."
-            return
-
-        logger.info(str(_repository_code) + " is written to.")
-
-        if f is None:
-            #TODO Handle the error (via result?)
-            error = "No file received"
 
         else:
-            with open(tex_file, "wb") as target_file:
-                target_file.write(f)
-            self.repository.commit(str(_repository_code))
+            logger.info(str(_repository_code) + " is written to.")
+
+            if f is None:
+                #TODO Handle the error (via result?)
+                error = "No file received"
+
+            elif len(f)>1048576: #1MB
+                error = "File too big"
+
+            else:
+                with open(tex_file, "wb") as target_file:
+                    target_file.write(f)
+                self.repository.commit(str(_repository_code))
 
         return result
 
