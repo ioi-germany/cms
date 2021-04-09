@@ -134,6 +134,21 @@ class InfoHandler(RequestHandler):
         self.flush()
 
 
+class LogHandler(RequestHandler):
+    def get(self, code):
+        try:
+            gitlog = TaskAccess.getGitLog(code)
+
+            if gitlog is None:
+                raise ValueError
+        except:
+            logger.error("could not download statement log for {}".format(code))
+            self.render("error.html")#TODO
+        else:
+            self.write(gitlog)
+            self.flush()
+
+
 class GerTranslateWebServer:
     """Service running a web server that lets you download task statements
     and upload translations
@@ -150,7 +165,8 @@ class GerTranslateWebServer:
                     (r"/pdf/(.*)", PDFHandler),
                     (r"/tex/(.*)", TeXHandler),
                     (r"/upload/(.*)", UploadHandler),
-                    (r"/mark/(.*)", MarkHandler)]
+                    (r"/mark/(.*)", MarkHandler),
+                    (r"/log/(.*)", LogHandler)]
 
         params = {"template_path": resource_filename("cms.server",
                                                      "gertranslate/templates"),

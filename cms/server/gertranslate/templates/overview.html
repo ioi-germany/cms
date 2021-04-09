@@ -13,6 +13,7 @@
         <link rel="stylesheet" href="static/css/cws_style.css">
         <link rel="stylesheet" href="static/css/over_style.css">
         <link rel="stylesheet" href="static/css/download.css">
+        <link rel="stylesheet" href="static/css/git-log.css">
         <link rel="stylesheet" href="static/css/tags.css">
         <link rel="stylesheet" href="static/css/checkbox.css">
 
@@ -44,14 +45,14 @@
                     for(var i = 0; i < entries.length; ++i){
                         if((entries[i].startsWith("pdf")||entries[i].startsWith("tex")) && entries[i].includes("-"))
                             show_col[entries[i]] = true;
-                        if(entries[i].startsWith("upload")||entries[i].startsWith("mark"))
+                        if(entries[i].startsWith("upload")||entries[i].startsWith("mark")||entries[i].startsWith("log"))
                             show_col[entries[i]] = false;
                     }
                 } else {
                     lan_mode = true;
                     lan = language;
                     for(var i = 0; i < entries.length; ++i)
-                        if((entries[i].startsWith("pdf")||entries[i].startsWith("tex")||entries[i].startsWith("upload")||entries[i].startsWith("mark")) && entries[i].includes("-"))
+                        if((entries[i].startsWith("pdf")||entries[i].startsWith("tex")||entries[i].startsWith("log")||entries[i].startsWith("upload")||entries[i].startsWith("mark")) && entries[i].includes("-"))
                             show_col[entries[i]] = entries[i].endsWith(language);
                 }
             }
@@ -163,6 +164,32 @@
 <!--                    Retry doesn't seem helpful, so I just remove it for now-->
 <!--                <button class="btn btn-primary" style="float:left;" id="retry-compilation" onClick="retry_compilation()">Retry</button>-->
                 <button class="btn btn-secondary" onClick="close_modal('error')">Exit</button>
+            </div>
+        </div>
+
+        <div class="modal full-height flexbox hide" id="log-dialog">
+            <div class="modal-header">
+                <button type="button" class="close" onClick="close_modal('log')">&#xD7;</button>
+                <h3>Log</h3>
+            </div>
+            <div class="modal-body flexbox content">
+                <p>
+                This is the log of <span id="log-task-name" class="task-name">???</span>:
+                </p>
+
+                <div class="tabbed flexbox content">
+                    <input type="radio" name="tabbed_1" id="tabbed_1_B" hidden aria-hidden="true" checked>
+                    <ul hidden aria-hidden="true">
+                        <li><label for="tabbed_1_B">Log</label>
+                    </ul>
+                    <div class="flexbox content">
+<!--                         TODO Add diff highlighting (perhaps using diff2html?)-->
+                        <pre class="short content"><code id="git-log"></code></pre>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onClick="close_modal('log')">Exit</button>
             </div>
         </div>
 

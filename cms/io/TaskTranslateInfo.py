@@ -255,6 +255,7 @@ class TaskTranslateInfo:
                 "keywords", "remarks", "pdf", "tex"] +\
                ["pdf-"+l for l in TaskTranslateInfo.languages] +\
                ["tex-"+l for l in TaskTranslateInfo.languages] +\
+               ["log-"+l for l in TaskTranslateInfo.languages] +\
                ["upload-"+l for l in TaskTranslateInfo.languages] +\
                ["mark-"+l for l in TaskTranslateInfo.languages] +\
                ["pdf-ALL"]
@@ -269,9 +270,11 @@ class TaskTranslateInfo:
                 "remarks": "Remarks",
                 "pdf": "PDF [en]",
                 "tex": "TeX [en]",
+                "log": "Log [en]",
                 "pdf-ALL": "PDF [ALL]"},
                 **{"pdf-"+l: "PDF ["+l+"]" for l in TaskTranslateInfo.languages},
                 **{"tex-"+l: "TeX ["+l+"]" for l in TaskTranslateInfo.languages},
+                **{"log-"+l: "Log ["+l+"]" for l in TaskTranslateInfo.languages},
                 **{"upload-"+l: "Upload TeX ["+l+"]" for l in TaskTranslateInfo.languages},
                 **{"mark-"+l: "Finalize ["+l+"]" for l in TaskTranslateInfo.languages}
                }

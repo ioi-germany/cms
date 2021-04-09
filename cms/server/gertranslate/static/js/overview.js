@@ -22,6 +22,7 @@ function inner_cell(t, entry)
     else if(entry.startsWith("tex"))    var key = "tex";
     else if(entry.startsWith("upload"))    var key = "upload";
     else if(entry.startsWith("mark"))    var key = "mark";
+    else if(entry.startsWith("log"))    var key = "log";
     else var key = "";
 
     var l = key.length;
@@ -72,6 +73,17 @@ function inner_cell(t, entry)
             return '<form id = "form-finalize-' + extended_code + '" target="dummyframe"> <input type="button" value="Finalize" onclick=\'window.document.getElementById("mark-task-name").innerHTML = window.document.getElementById("mark-task-name-h").innerHTML = "' + t.code + '";window.document.getElementById("mark-task-lan").innerHTML = "' + mark_lan + '";window.document.getElementById("do-mark").dataset.code = "' + repository_code + '";open_modal("mark")\'/></form>';//TODO Use other button and implement this like the rest//TODO Use put?
     }
 
+    if(entry.startsWith("log"))
+    {
+        if(!(t["translated"].indexOf(mark_lan)>-1))
+            return '&mdash;';
+        if(t["code"].endsWith("overview"))
+            return '';
+        var r = '<div class="git-log-icon';
+        r += '" id = "log-' + extended_code + '" data-code = "' + repository_code + '"></div>';
+        return r;
+    }
+
     if(entry == "keywords")
     {
         var r = '<ul class="embedded">';
@@ -106,6 +118,11 @@ function cell(t, entry)
     if(entry.startsWith("mark"))
     {
         return '<td id = "' + id + '" class="download">' + inner_cell(t, entry) +'</td>';
+    }
+
+    if(entry.startsWith("log"))
+    {
+        return '<td id = "' + id + '" class="git-log">' + inner_cell(t, entry) +'</td>';
     }
 
     else
@@ -168,7 +185,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
 
         table_body += '<tr id="overview-heading" class="odd">';
         for(var j = 0; j < entries.length; ++j)
-            if(entries[j].startsWith("pdf") || entries[j].startsWith("tex") || entries[j].startsWith("mark"))
+            if(entries[j].startsWith("pdf") || entries[j].startsWith("tex") || entries[j].startsWith("mark") || entries[j].startsWith("log"))
                 table_body += '<td id="overview-heading-' + entries[j] + '" class="th download-heading">' + desc[entries[j]] + '</td>'; // table-bordered doesn't work with th, so we emulate it
             else
                 table_body += '<td id="overview-heading-' + entries[j] + '" class="th">' + desc[entries[j]] + '</td>'; // table-bordered doesn't work with th, so we emulate it
@@ -197,14 +214,15 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
                 if(entries[j].startsWith("pdf") || entries[j].startsWith("tex"))
                     update_availability(__info[new_tasks[new_tasks_idx]], entries[j]);
 
-            init_download_icon(new_tasks[new_tasks_idx]);
-            init_download_icon(new_tasks[new_tasks_idx],false);
+            init_download_icon(new_tasks[new_tasks_idx],"pdf");
+            init_download_icon(new_tasks[new_tasks_idx],"tex");
             for(var i = 0; i < languages.length; ++i){
-                init_download_icon(new_tasks[new_tasks_idx],true,languages[i]);
-                init_download_icon(new_tasks[new_tasks_idx],false,languages[i]);
+                init_download_icon(new_tasks[new_tasks_idx],"pdf",languages[i]);
+                init_download_icon(new_tasks[new_tasks_idx],"tex",languages[i]);
+                init_download_icon(new_tasks[new_tasks_idx],"log",languages[i]);
                 init_upload_icon(new_tasks[new_tasks_idx],languages[i]);
             }
-            init_download_icon(new_tasks[new_tasks_idx],true,"ALL");
+            init_download_icon(new_tasks[new_tasks_idx],"pdf","ALL");
             last_entry = "row-" + new_tasks[new_tasks_idx];
 
             if(!init)

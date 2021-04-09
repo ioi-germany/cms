@@ -67,14 +67,38 @@ function _compile(p, code)
 
 function _yield(p, code)
 {
+    p.classList.remove("error");
+    p.classList.add("done");
+
+    window.document.getElementById("fr-download-helper").src = __url_root + "/tex/" + code;
+}
+
+function _getlog(p, code)
+{
     p.classList.remove("done");
     p.classList.remove("error");
     p.classList.add("loading");
 
-    p.classList.remove("loading");
-    p.classList.add("done");
+    function download(r)
+    {
+        if(r.error)
+        {
+            p.classList.remove("loading");
+            p.classList.add("error");
+        }
 
-    window.document.getElementById("fr-download-helper").src = __url_root + "/tex/" + code;
+        else
+        {
+            p.classList.remove("loading");
+            p.classList.add("done");
+
+            window.document.getElementById("git-log").textContent = r.log;
+            window.document.getElementById("log-task-name").innerHTML = code;
+            open_modal("log");
+        }
+    }
+
+    $.get(__url_root + "/log/" + code, {}, download);
 }
 
 function _download_mouse_click(e)
@@ -97,6 +121,9 @@ function _download_mouse_click(e)
 
         _compile(p, code);
     }
+    else if(p.id.startsWith("log")){
+        _getlog(p,code);
+    }
     else{
         _yield(p,code);
     }
@@ -115,9 +142,9 @@ function _download_mouse_click(e)
 
 var __mouse_up_initialized = false;
 
-function init_download_icon(task, pdf=true, lan=null)
+function init_download_icon(task, type="pdf", lan=null)
 {
-    var extended_code = (pdf?"pdf-":"tex-") + task + (lan!=null?("-"+lan):"");
+    var extended_code = type+"-" + task + (lan!=null?("-"+lan):"");
     var d = window.document.getElementById( extended_code );
 
     if(d==null) return;

@@ -327,6 +327,32 @@ class TaskMarker:
         self.repository.commit(str(_repository_lock_file_code))
 
 
+class TaskGitLog:
+    def __init__(self, repository, name):
+        self.repository = repository
+        self.name = name
+
+    def get(self):
+        result = None#TODO
+
+        contest,task,language = unpack_code(self.name)
+        _repository_code = repository_code(contest,task,language)
+        tex_file = Path(self.repository.path) / _repository_code
+
+        logger.info("Git log for " + str(_repository_code) + " is accessed.")
+
+        if tex_file is None:
+            #TODO Handle the error (you should probably implement a info function
+            #like above, then implement a query function in TaskAccess
+            #and handle the result in download.js
+            error = "No statement TeX found"
+
+        else:
+            result = self.repository.getlog(str(tex_file))
+
+        return result
+
+
 class TaskAccess:
     jobs = {}
     repository = None
@@ -376,3 +402,7 @@ class TaskAccess:
     @staticmethod
     def mark(name):
         return TaskMarker(TaskAccess.repository, name).mark()
+
+    @staticmethod
+    def getGitLog(name):
+        return {"log": TaskGitLog(TaskAccess.repository, name).get()}
