@@ -127,8 +127,8 @@ class LgTemplate(PlainTemplate):
         """ Fancy testcase table
         """
         head = r"""\hline""" \
-               r"""\multicolumn{1}{|c}{\sffamily Input} && """ \
-               r"""\multicolumn{1}{c|}{\sffamily Output} \\ """ \
+               r"""\multicolumn{1}{|c}{\sffamily\tInput} && """ \
+               r"""\multicolumn{1}{c|}{\sffamily\tOutput} \\ """ \
                r"""\hline"""
 
         self.supply_case_table(

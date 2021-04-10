@@ -74,7 +74,8 @@ On Ubuntu 20.04, one will need to run the following script to satisfy all depend
 
     # Optional
     sudo apt-get install nginx-full python2.7 php7.4-cli php7.4-fpm \
-        phppgadmin texlive-latex-base a2ps haskell-platform rustc mono-mcs
+        phppgadmin texlive-latex-base a2ps haskell-platform rustc mono-mcs \
+        pypy3
 
 The above commands provide a very essential Pascal environment. Consider installing the following packages for additional units: `fp-units-base`, `fp-units-fcl`, `fp-units-misc`, `fp-units-math` and `fp-units-rtl`.
 
@@ -97,7 +98,7 @@ On Arch Linux, unofficial AUR packages can be found: `cms <http://aur.archlinux.
 
     # Optional
     sudo pacman -S --needed nginx python2 php php-fpm phppgadmin texlive-core \
-        a2ps ghc rust mono
+        a2ps ghc rust mono pypy3
 
 Preparation steps
 =================

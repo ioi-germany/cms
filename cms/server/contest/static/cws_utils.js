@@ -124,7 +124,7 @@ CMS.CWSUtils.prototype.display_notification_request = function() {
         $("#notifications").prepend(alert);
 
         alert.on('closed.bs.alert', function(){
-            document.cookie = "notification-permission=declined; path=/; SameSite=Strict";
+            document.cookie = "notification-permission=made-choice; path=/; SameSite=Strict";
         });
 
     }

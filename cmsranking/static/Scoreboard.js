@@ -88,6 +88,23 @@ var Scoreboard = new function () {
         $("tr td[data-sort_key=" + self.sort_key + "]", self.thead_el).addClass("sort_key");
         $("tr td[data-sort_key=" + self.sort_key + "]", self.tbody_el).addClass("sort_key");
 
+        // Create callbacks for selection (on mobile devices)
+        var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if(isMobile){
+            var tr_pressTimer;
+            var tr_pressed;
+            self.tbody_el.on("touchend", "tr", function () {
+                clearTimeout(tr_pressTimer);
+            }).on("touchmove", "tr", function () {
+                clearTimeout(tr_pressTimer);
+            }).on("touchstart", "tr", function () {
+                tr_pressed = $(this);
+                tr_pressTimer = setTimeout(function () {
+                    DataStore.toggle_selected(tr_pressed.data("user"));
+                }, 500);
+            });
+        }
+
         // Create callbacks for selection
         self.tbody_el.on("click", "td.sel", function () {
             DataStore.toggle_selected($(this).parent().data("user"));

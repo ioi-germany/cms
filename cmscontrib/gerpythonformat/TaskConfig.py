@@ -37,7 +37,7 @@ from cms.db import Task, Statement, Testcase, Dataset, \
     Attachment, Spoiler, Manager, Submission, File, \
     SubmissionResult
 from cms.grading.tasktypes import get_task_type, Communication
-from cms.grading.languagemanager import filename_to_language
+from cms.grading.languagemanager import filename_to_language, get_language
 from cms.grading.Job import CompilationJob, EvaluationJob
 from cms.rules.Rule import JobRule, ZipRule
 from cms.service.esoperations import ESOperation
@@ -570,7 +570,7 @@ class TaskConfig(CommonConfig, Scope):
 
     def __init__(self, upstream, rules, name, num, feedback, score_mode,
                  ignore_latex=False, relevant_language=None, minimal=False,
-                 safe_latex=None):
+                 safe_latex=None, standalone_task=False):
         super(TaskConfig, self).__init__(rules, ignore_latex=ignore_latex,
                                          safe_latex=safe_latex)
         self.no_tokens()
@@ -655,6 +655,9 @@ class TaskConfig(CommonConfig, Scope):
 
         # Only compile statement (and hopefully everything necessary for this)
         self.minimal = minimal
+
+        # Is this task only part of a dummy contest?
+        self.standalone_task = standalone_task
 
     @exported_function
     def max_score(self):
@@ -837,6 +840,21 @@ class TaskConfig(CommonConfig, Scope):
         """
         self.spoilers[publicname] = os.path.abspath(localname)
 
+    def std_extensions(self):
+        _EXTENSIONS = ["cpp", "pas", "java", "py"]
+
+        return [e for e in _EXTENSIONS
+                  if any("." + e in get_language(lang).source_extensions
+                         for lang in self.upstream._languages)]
+
+    def std_language(self, filename):
+        ext = os.path.splitext(filename)[1]
+        possible_languages = [l for l in self._usual_languages()
+                                 if ext in get_language(l).source_extensions]
+
+        assert(len(possible_languages) == 1)
+        return possible_languages[0]
+
     """
     **Task types**
     """
@@ -857,7 +875,7 @@ class TaskConfig(CommonConfig, Scope):
         library (bool): whether to use a library for linking contestant
                         solutions;
                         submissions are linked together with
-                        interface.{c,cpp,pas} and, if existent, lib.h
+                        interface.{c,cpp,pas,py,...} and, if existent, lib.h
                         and lib.pas.
 
         """
@@ -865,9 +883,10 @@ class TaskConfig(CommonConfig, Scope):
         grader_param = "alone"
         if library:
             grader_param = "grader"
-            for end in ["c", "cpp", "pas", "java"]:
-                self.managers["grader." + end] = \
-                    os.path.join(self.wdir, "interface." + end)
+            for end in self.std_extensions():
+                p = os.path.join(self.wdir, "interface." + end)
+                if not self.standalone_task or os.path.exists(p):
+                    self.managers["grader." + end] = p
             if os.path.exists(os.path.join(self.wdir, "lib.h")):
                 self.managers["%s.h" % self.name] = \
                     os.path.join(self.wdir, "lib.h")
@@ -907,14 +926,15 @@ class TaskConfig(CommonConfig, Scope):
                               (must at least implement get_path() to get
                               the file name of the executable)
 
-        Submissions are linked together with interface.{c,cpp,pas}.
+        Submissions are linked together with interface.{c,cpp,pas,py,...}.
         num_processes:        e.g. set to 2 for a Two-Step task
         """
         self.tasktype = "Communication"
         if stub:
-            for end in ["c", "cpp", "pas", "java"]:
-                self.managers["stub." + end] = \
-                    os.path.join(self.wdir, "interface." + end)
+            for end in self.std_extensions():
+                p = os.path.join(self.wdir, "interface." + end)
+                if not self.standalone_task or os.path.exists(p):
+                    self.managers["stub." + end] = p
             if os.path.exists(os.path.join(self.wdir, "lib.h")):
                 self.managers["%s.h" % self.name] = \
                     os.path.join(self.wdir, "lib.h")
@@ -1057,7 +1077,7 @@ class TaskConfig(CommonConfig, Scope):
         return subtask
 
     @exported_function
-    def group(self, *args, **kwargs):
+    def group(self, *args, name=None, **kwargs):
         """
         Add a group to the "current" subtask.
 
@@ -1073,7 +1093,20 @@ class TaskConfig(CommonConfig, Scope):
         """
         if len(self.subtask_stack) == 0:
             raise Exception("group() called outside subtask")
-        return self.subtask_stack[-1].group(*args, **kwargs)
+
+        g = self.subtask_stack[-1].group(*args, **kwargs)
+
+        if name is not None:
+            if hasattr(self.subtask_stack[-1], name):
+                raise Exception("This subtask already has an attribute "
+                                "called '{}'".format(name))
+            setattr(self.subtask_stack[-1], name, g)
+
+        return g
+
+    def _subsume_group(self, g, *args, **kwargs):
+        for t in g.cases:
+            self.add_testcase(t, *args, **kwargs)
 
     @exported_function
     def subsume_subtask(self, subtask_name, *args, **kwargs):
@@ -1090,8 +1123,25 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         for g in getattr(self.task, subtask_name).groups:
-            for t in g.cases:
-                self.add_testcase(t, *args, **kwargs)
+            self._subsume_group(g)
+
+    @exported_function
+    def subsume_group(self, group_name, *args, subtask_name=None, **kwargs):
+        """
+        Add a group's testcases to the current group.
+        """
+        st = self.subtask_stack[-1] if subtask_name is None \
+             else getattr(self.task, subtask_name)
+
+        self._subsume_group(getattr(st, group_name), *args, **kwargs)
+
+    @exported_function
+    def subsume_previous_group(self, *args, **kwargs):
+        """
+        Add the testcases of the previous group (of the same subtask) to the
+        current group.
+        """
+        self._subsume_group(self.subtask_stack[-1].groups[-2])
 
     @exported_function
     def checker(self, *args, **kwargs):
@@ -1605,7 +1655,7 @@ class TaskConfig(CommonConfig, Scope):
             else:
                 our_filename = user_filename
             if our_filename.find(".%l") != -1:
-                lang = filename_to_language(user_filename).name
+                lang = self.std_language(user_filename)
                 if lang is None:
                     raise Exception("Cannot recognize submission's language.")
                 elif submission_lang is not None and \
