@@ -112,7 +112,7 @@ function _download_mouse_click(e)
             window.document.getElementById("error-msg").textContent = __pdf_result[code].msg;
             window.document.getElementById("error-log").textContent = __pdf_result[code].log;
             window.document.getElementById("task-name").innerHTML = code;
-//             window.document.getElementById("retry-compilation").dataset.code = code;
+            window.document.getElementById("retry-compilation").dataset.code = code;
             open_modal("error");
             return;
         }
@@ -129,16 +129,16 @@ function _download_mouse_click(e)
     }
 }
 
-// function retry_compilation()
-// {
-//     var code = window.document.getElementById("retry-compilation").dataset.code;
-//     delete __pdf_result[code];
-//
-//     var p = window.document.getElementById("pdf-" + code);
-//
-//     _compile(p, code);
-//     close_modal("error");
-// }
+function retry_compilation()
+{
+    var code = window.document.getElementById("retry-compilation").dataset.code;
+    delete __pdf_result[code];
+
+    var p = window.document.getElementById("pdf-" + code);
+
+    _compile(p, code);
+    close_modal("error");
+}
 
 var __mouse_up_initialized = false;
 
