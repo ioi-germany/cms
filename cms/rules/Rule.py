@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2018 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2018-2021 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -30,7 +30,13 @@ import os
 import subprocess
 import time
 
+from cms import config
+from cmscontrib.gerpythonformat.LaTeXSandbox import LaTeXSandbox
+from cms.db.filecacher import FileCacher
+from cmscontrib.gerpythonformat import copyifnecessary, copyrecursivelyifnecessary
+
 from six import iteritems
+from copy import copy
 
 def compute_file_hash(filename):
     """Return the sha256 sum of the given file.
@@ -538,6 +544,85 @@ class LaTeXRule(CommandRule):
         self.result.log['out'] = readfile(".out", "latin_1")
         self.result.log['err'] = readfile(".err", "latin_1")
 
+
+class SafeLaTeXRule(Rule):
+    def __init__(self, rulesdir, source, output, wdir,
+                 extra=["-lualatex=lualatex --interaction=nonstopmode "
+                        "--shell-restricted --nosocket %O %S"],
+                 ignore=set(), ignore_ext=set(), do_copy=set()):
+        super(SafeLaTeXRule, self).__init__(rulesdir)
+
+        self.source = source
+        self.output = output
+        self.wdir = wdir
+        self.file_cacher = FileCacher()
+        self.extra = extra
+        self.command = ["/usr/bin/latexmk", "-g", "-pdflua", "-deps",
+                        "-deps-out=.deps"] + self.extra + [source]
+        self.ignore = copy(ignore)
+        self.ignore_ext = copy(ignore_ext)
+        self.do_copy = copy(do_copy)
+
+    def mission(self):
+        return {'cwd': os.getcwd(),
+                'type': 'safe-latex',
+                'source': self.source,
+                'extra': self.extra}
+
+    def run(self):
+        sandbox = LaTeXSandbox(self.file_cacher, name="LaTeX")
+        copyrecursivelyifnecessary(self.wdir, sandbox.get_home_path(),
+                                   self.ignore, self.ignore_ext, self.do_copy,
+                                   mode=0o777)
+
+        sandbox.allow_writing_all()
+
+        relpath = os.path.relpath(os.getcwd(), self.wdir)
+        sandbox.chdir = os.path.join(sandbox.chdir, relpath)
+
+        depsfile = os.path.join(sandbox.get_home_path(), relpath, ".deps")
+
+        # Delete the dependencies file before running latex to ensure
+        # that we don't read a left-over dependencies file in the end
+        # (if latex fails to write the dependencies file).
+        deletefile(depsfile)
+
+        sandbox.execute_without_std(self.command, wait=True)
+
+        self.result.log['code'] = sandbox.failed()
+        self.result.log['out'] = sandbox.get_stdout()
+        self.result.log['err'] = sandbox.get_stderr()
+
+        self.result.add_dependency(self.source)
+
+        if self.result.log['code']:
+            self.result.log['err'] += "\n\n" + ("#" * 40) + "\n" + \
+                "SANDBOX: " + sandbox.get_root_path() + "\n" + \
+                 "MESSAGE: " + sandbox.get_human_exit_description() + "\n" + \
+                 "LOG FILE:\n" + sandbox.get_log_file_contents()
+        else:
+            copyifnecessary(os.path.join(sandbox.get_home_path(),
+                                         relpath, self.output),
+                            os.path.join(self.wdir, relpath, self.output))
+            self.result.add_output(self.output)
+            readmakefile(depsfile, self.result, True)
+
+            def convert(path):
+                if path.startswith(os.path.join(config.latex_distro, "")):
+                    return os.path.join(os.path.expanduser("~"), path)
+                else:
+                    return path
+
+            self.result.dependencies = \
+               {convert(path): hash
+                for path, hash in self.result.dependencies.items()}
+
+            sandbox.cleanup(not config.keep_sandbox)
+
+    def finish(self):
+        self.result.code = self.result.log['code']
+        self.result.out = self.result.log['out']
+        self.result.err = self.result.log['err']
 
 class JobRule(Rule):
     def __init__(self, rulesdir, job, file_cacher):

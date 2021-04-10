@@ -569,8 +569,10 @@ class TaskConfig(CommonConfig, Scope):
     """
 
     def __init__(self, upstream, rules, name, num, feedback, score_mode,
-                 ignore_latex=False, relevant_language=None, minimal=False):
-        super(TaskConfig, self).__init__(rules, ignore_latex)
+                 ignore_latex=False, relevant_language=None, minimal=False,
+                 safe_latex=None):
+        super(TaskConfig, self).__init__(rules, ignore_latex=ignore_latex,
+                                         safe_latex=safe_latex)
         self.no_tokens()
         Scope.__init__(self)
 
@@ -582,6 +584,8 @@ class TaskConfig(CommonConfig, Scope):
 
         self.upstream = upstream
         self.contest = upstream
+        if self.safe_latex is None:
+            self.safe_latex = upstream.safe_latex
 
         self.wdir = os.getcwd()
 

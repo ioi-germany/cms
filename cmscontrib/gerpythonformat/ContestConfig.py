@@ -106,7 +106,7 @@ class ContestConfig(CommonConfig):
 
 
     def __init__(self, rules, name, ignore_latex=False, relevant_language=None, onlytask=None,
-                 minimal=False):
+                 minimal=False, safe_latex=False):
         """
         Initialize.
 
@@ -118,7 +118,9 @@ class ContestConfig(CommonConfig):
                            this name is ignored
 
         """
-        super(ContestConfig, self).__init__(rules, ignore_latex=ignore_latex, relevant_language=relevant_language)
+        super(ContestConfig, self).__init__(rules, ignore_latex=ignore_latex,
+                                            relevant_language=relevant_language,
+                                            safe_latex=safe_latex)
         self.infinite_tokens()
 
         self.onlytask = onlytask
