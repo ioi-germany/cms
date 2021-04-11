@@ -127,7 +127,7 @@ class Repository:
                     gitout = check_output(["git", "log",
                                            '--pretty=format:Date:   %ci%n%n    %s%n',
                                            "-p",
-                                           "--word-diff",
+                                           "--word-diff=color",
                                            file_path])
                 except:
                     logger.error("Couldn't get log: " +

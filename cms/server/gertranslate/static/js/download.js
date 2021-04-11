@@ -92,7 +92,7 @@ function _getlog(p, code)
             p.classList.remove("loading");
             p.classList.add("done");
 
-            window.document.getElementById("git-log").textContent = r.log;
+            window.document.getElementById("git-log").srcdoc = r.log;
             window.document.getElementById("log-task-name").innerHTML = code;
             open_modal("log");
         }
