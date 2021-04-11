@@ -1,6 +1,7 @@
 function update_availability(t, entry){
     if(entry.startsWith("pdf"))    var key = "pdf";
     else if(entry.startsWith("tex"))    var key = "tex";
+    else if(entry.startsWith("log"))    var key = "log";
     else return;
 
     var l = key.length;
@@ -75,8 +76,6 @@ function inner_cell(t, entry)
 
     if(entry.startsWith("log"))
     {
-        if(!(t["translated"].indexOf(mark_lan)>-1))
-            return '&mdash;';
         if(t["code"].endsWith("overview"))
             return '';
         var r = '<div class="git-log-icon';
@@ -211,7 +210,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
             $(build_row(new_tasks[new_tasks_idx], lan_mode)).insertAfter("#" + last_entry);
 
             for(var j = 0; j < entries.length; ++j)
-                if(entries[j].startsWith("pdf") || entries[j].startsWith("tex"))
+                if(entries[j].startsWith("pdf") || entries[j].startsWith("tex") || entries[j].startsWith("log"))
                     update_availability(__info[new_tasks[new_tasks_idx]], entries[j]);
 
             init_download_icon(new_tasks[new_tasks_idx],"pdf");
@@ -346,7 +345,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
         {
             var cell = window.document.getElementById("cell-" + updated_tasks[i] + "-" + entries[j]);
 
-            if(entries[j].startsWith("pdf") || entries[j].startsWith("tex"))
+            if(entries[j].startsWith("pdf") || entries[j].startsWith("tex") || entries[j].startsWith("log"))
                 update_availability(__info[updated_tasks[i]], entries[j]);
             else
                 cell.innerHTML = inner_cell(__info[updated_tasks[i]], entries[j]);
