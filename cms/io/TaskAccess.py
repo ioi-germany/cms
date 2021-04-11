@@ -32,10 +32,10 @@ from sys import exc_info
 from traceback import format_exception
 from multiprocessing import Process, Manager
 from six import StringIO
+from ansi2html import Ansi2HTMLConverter
 
 from cms.io.TaskTranslateInfo import TaskTranslateInfo
 
-from cmscontrib.gerpythonformat.Messenger import disable_colors
 from cmscontrib.gerpythonformat.GerMake import GerMake
 from cmscontrib.gerpythonformat import copyifnecessary
 
@@ -105,8 +105,7 @@ class TaskCompileJob:
             # to redirect all output from GerMakeTask to a string
             sys.stdout = StringIO()
 
-            # Remove color codes for the log file
-            disable_colors()
+            C = Ansi2HTMLConverter()
 
             with balancer:
                 try:
@@ -181,10 +180,11 @@ class TaskCompileJob:
 
                 except Exception:
                     status["error"] = True
-                    status["msg"] = "\n".join(format_exception(*exc_info()))
+                    status["msg"] = \
+                        C.convert("\n".join(format_exception(*exc_info())))
 
             sys.stdout.flush()
-            status["log"] = sys.stdout.getvalue()
+            status["log"] = C.convert(sys.stdout.getvalue())
             status["done"] = True
 
         self.compilation_process = Process(target=do, args=(self.status,
@@ -408,4 +408,5 @@ class TaskAccess:
 
     @staticmethod
     def getGitLog(name):
-        return {"log": TaskGitLog(TaskAccess.repository, name).get()}
+        C = Ansi2HTMLConverter()
+        return {"log": C.convert(TaskGitLog(TaskAccess.repository, name).get())}

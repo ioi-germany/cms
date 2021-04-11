@@ -109,8 +109,8 @@ function _download_mouse_click(e)
     if(p.id.startsWith("pdf")){
         if(code in __pdf_result && __pdf_result[code].error)
         {
-            window.document.getElementById("error-msg").textContent = __pdf_result[code].msg;
-            window.document.getElementById("error-log").textContent = __pdf_result[code].log;
+            window.document.getElementById("error-msg").srcdoc = __pdf_result[code].msg;
+            window.document.getElementById("error-log").srcdoc = __pdf_result[code].log;
             window.document.getElementById("task-name").innerHTML = code;
             window.document.getElementById("retry-compilation").dataset.code = code;
             open_modal("error");
