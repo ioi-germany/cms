@@ -328,7 +328,6 @@ div.json-info.no-errors {
 .flexbox {
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
 }
 
 /* We might want to hide the flexbox if it's a dialog. */
@@ -387,12 +386,11 @@ div.json-info.no-errors {
     border:1px solid black;
 }
 
-.tabbed > div > * {
-    max-height: none;
+.tabbed > div > iframe {
     display: none;
     margin: 0;
-    overflow-x: auto;
-    overflow-y: scroll;
+    height: 100%;
+    width: calc(100% - 4px);
 }
 
 .tabbed > input:nth-child(1):checked ~ div > :nth-child(1),
