@@ -3,6 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2016 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2020 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -33,8 +34,9 @@ logger = logging.getLogger(__name__)
 
 
 class Repository:
-    """ Class to synchronize all accesses to our task repository (from TaskInfo
-        and TaskFetch and all the pulls necessary)
+    """ Class to synchronize all accesses to our task repository (from
+        TaskInfo/TaskTranslateInfo and TaskFetch/TaskAccess and all
+        the pulls necessary)
 
         You have to use one repository object for all of these!
     """
@@ -66,3 +68,47 @@ class Repository:
                 else:
                     logger.info("Finished synchronization: " +
                                 "{}".format(gitout))
+
+                gitout = ""
+
+                try:
+                    gitout = check_output(["git", "push"])
+                except:
+                    logger.error("Couldn't push to repository: " +
+                                 "{}".format(gitout))
+                else:
+                    logger.info("Finished pushing: " +
+                                "{}".format(gitout))
+
+    #For GerTranslate
+    #TODO Show errors in web overview
+    def commit(self, file_path):
+        #TODO Only do this if it's a git repository
+        #if self.auto_sync:
+            logger.info("Committing {} in {}".format(file_path,self.path))
+
+            with chdir(self.path):
+                gitout = ""
+
+                try:
+                    gitout = check_output(["git", "add",
+                                           file_path])
+                except:
+                    logger.error("Couldn't add file to git repository: " +
+                                 "{}".format(gitout))
+                else:
+                    try:
+                        #NOTE file_path is relative to self.path, which isn't
+                        #necessarily the root of the git repo. So the commit message
+                        #might be confusing.
+                        gitout = check_output(["git", "commit",
+                                            "-o", file_path,
+                                            "-m","Changes to "+file_path+", uploaded via GerTranslate web interface",
+                                            #TODO Provide meaningful commit message and author
+                                            "--author","\"GerTranslate <GerTranslate@localhost>\""])
+                    except:
+                        logger.error("Couldn't commit in repository: " +
+                                    "{}".format(gitout))
+                    else:
+                        logger.info("Committed: " +
+                                    "{}".format(gitout))

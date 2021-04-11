@@ -38,7 +38,7 @@ from psutil import virtual_memory
 
 class GerMakeTask:
     def __init__(self, odir, task, minimal, no_test,
-                 submission, no_latex, clean):
+                 submission, no_latex, language, clean):
         self.odir = odir
         self.task = task
         self.minimal = minimal
@@ -46,6 +46,7 @@ class GerMakeTask:
         if self.local_test and submission is not None:
             self.local_test = submission
         self.no_latex = no_latex
+        self.language = language
         self.clean = clean
 
     def prepare(self):
@@ -72,11 +73,10 @@ class GerMakeTask:
 
     def build(self):
         file_cacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
-
         with chdir(self.wdir):
             contestconfig = \
                 ContestConfig(os.path.join(self.wdir, ".rules"),
-                                "hidden contest", minimal=self.minimal)
+                                "hidden contest", relevant_language=(self.language if self.language!="ALL" else None), minimal=self.minimal)
             copyifnecessary(os.path.join(contestconfig._get_ready_dir(),
                                             "contest-template.py"),
                             os.path.join(self.wdir, "c.py"))
@@ -100,8 +100,19 @@ class GerMakeTask:
                     t._make_test_submissions(
                         test_pdb, tdb, self.local_test)
 
-        primary_statements = [s for s in list(list(contestconfig.tasks.values())[
-            0]._statements.values()) if s.primary]
+        statements = list(contestconfig.tasks.values())[
+            0]._statements
+
+        if self.language == "ALL":
+            return [os.path.abspath(s.file_) for s in list(statements.values())]
+
+        if self.language is not None:
+            if self.language in statements:
+                return os.path.abspath(statements[self.language].file_)
+            else:
+                return None
+
+        primary_statements = [s for s in list(statements.values()) if s.primary]
         if len(primary_statements) == 0:
             return None
         elif len(primary_statements) == 1:
@@ -124,7 +135,7 @@ def main():
                         help="directory where config.py is located",
                         type=utf8_decoder)
     parser.add_argument("-m", "--minimal", action="store_true",
-                        help="attempt to only compile statement (and "
+                        help="attempt to only compile statement(s) (and "
                         "everything required for this, e.g. sample cases)")
     testgroup = parser.add_mutually_exclusive_group()
     testgroup.add_argument("-nt", "--no-test", action="store_true",
@@ -134,7 +145,10 @@ def main():
                            "contain this string",
                            type=utf8_decoder)
     parser.add_argument("-nl", "--no-latex", action="store_true",
-                        help="do not compile latex documents")
+                        help="do not compile latex documents [not implemented]")
+    parser.add_argument("-l", "--language",
+                        help="only compile latex files that end in this string",
+                        type=utf8_decoder)
     parser.add_argument("-c", "--clean", action="store_true",
                         help="clean the build directory (forcing a complete "
                         "rebuild)")
@@ -150,6 +164,7 @@ def main():
                 args.no_test,
                 args.submission,
                 args.no_latex,
+                args.language,
                 args.clean).make()
 
 

@@ -26,7 +26,7 @@ from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \
     header, box, yellow, highlight_latex
 from cmscontrib.gerpythonformat.Executable import CPPProgram, InternalPython, ExternalScript, \
     ExternalPython, asy_keyword_list
-from cms.rules.Rule import LaTeXRule, CommandRule, ZipRule
+from cms.rules.Rule import LaTeXRule, SafeLaTeXRule, CommandRule, ZipRule
 from cms.grading.languages.c11_gcc import C11Gcc
 from cms.grading.languages.cpp17_gpp import Cpp17Gpp
 from cms.grading.languages.java_jdk import JavaJDK
@@ -78,10 +78,13 @@ class CommonConfig(object):
     querying system.
     """
 
-    def __init__(self, rules, ignore_latex=False):
+    def __init__(self, rules, ignore_latex=False, relevant_language=None,
+                 safe_latex=True):
         self.upstream = None
         self.rules = rules
         self.ignore_latex = ignore_latex
+        self.relevant_language = relevant_language
+        self.safe_latex = safe_latex
 
         # how to exchange data with upstream
         self.inheriting = False
@@ -291,7 +294,8 @@ class CommonConfig(object):
         return CPPProgram(self.rules, self, *args, **kwargs)
 
     @exported_function
-    def compilelatex(self, basename):
+    def compilelatex(self, basename, safe=True, ignore=set(),
+                     ignore_ext=set((".py", ".cpp")), do_copy=set()):
         """
         Use latexmk to compile basename.tex to basename.pdf .
 
@@ -300,6 +304,17 @@ class CommonConfig(object):
         translation sessions.
 
         basename (string): base of the tex and pdf file names
+
+        safe (boolean): should we use a sandbox for the compilation?
+
+        ignore (set of strings): files and directories in .build that shouldn't
+                                 be readable by the sandbox
+
+        ignore_ext (set of strings): file extensions that shouldn't be
+                                     readable by the sandbox
+
+        do_copy (set of strings): files that should be readable to the sandbox
+                                  although their extensions belong to ignore_ext
 
         return (string): file name of the generated pdf file
 
@@ -310,14 +325,28 @@ class CommonConfig(object):
         if self.ignore_latex:
             return output
 
-        with header("Compile {} to {} using LuaLaTeX"
-                    .format(self.short_path(source), self.short_path(output)),
+        if self.relevant_language is not None and not basename.endswith(self.relevant_language):
+            return output
+
+        if safe is None:
+            safe = self.safe_latex
+
+        with header("{}ompiling {} to {} using LuaLaTeX"
+                    .format("Safely c" if safe else "C",
+                            self.short_path(source), self.short_path(output)),
                     depth=10):
             self._build_supplements("latex")
 
-            r = LaTeXRule(self.rules, source).ensure()
+            if safe:
+                r = SafeLaTeXRule(self.rules, source, output, self.wdir,
+                                  ignore=ignore, ignore_ext=ignore_ext,
+                                  do_copy=do_copy).ensure()
+            else:
+                r = LaTeXRule(self.rules, source).ensure()
+
             print_block(highlight_latex(r.out))
             print_block(highlight_latex(r.err))
+
             if r.code != 0:
                 raise Exception("Compilation failed")
 
@@ -335,6 +364,7 @@ class CommonConfig(object):
                                                os.path.dirname(basefile))
                     if not os.path.exists(basefiledir):
                         os.makedirs(basefiledir)
+
                     shutil.copy(depabs, os.path.join(kit_directory, basefile))
 
         return output

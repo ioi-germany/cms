@@ -249,7 +249,8 @@ class LgTemplate(PlainTemplate):
                 return ""
 
             return "".join("\\mycleardoublepage\\includepdf[pages=-]{%s}" %
-                               t._statements[l].file_
+                               os.path.relpath(t._statements[l].file_,
+                                               os.getcwd())
                            for t in sorted(self.contest.tasks.values(),
                                            key=lambda x: x.name)
                            if l in t._statements) + \
