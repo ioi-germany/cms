@@ -36,6 +36,7 @@ from cms import config
 from cmscontrib.gerpythonformat.LaTeXSandbox import LaTeXSandbox
 from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyifnecessary, copyrecursivelyifnecessary
+from cmscontrib.gerpythonformat.LocationStack import chdir
 
 from six import iteritems
 from copy import copy
@@ -618,14 +619,16 @@ class SafeLaTeXRule(Rule):
         if self.result.log['code']:
             self.result.log['err'] += "\n\n" + ("#" * 40) + "\n" + \
                 "SANDBOX: " + sandbox.get_root_path() + "\n" + \
-                 "MESSAGE: " + sandbox.get_human_exit_description() + "\n" + \
-                 "LOG FILE:\n" + sandbox.get_log_file_contents()
+                "MESSAGE: " + sandbox.get_human_exit_description() + "\n" + \
+                "LOG FILE:\n" + sandbox.get_log_file_contents()
         else:
             copyifnecessary(os.path.join(sandbox.get_home_path(),
                                          relpath, self.output),
                             os.path.join(self.wdir, relpath, self.output))
             self.result.add_output(self.output)
-            readmakefile(depsfile, self.result, True)
+
+            with chdir(sandbox.get_home_path()):
+                readmakefile(os.path.join(relpath, ".deps"), self.result, True)
 
             def convert(path):
                 if path.startswith(os.path.join(config.latex_distro, "")):
