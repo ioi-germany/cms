@@ -1,6 +1,5 @@
 \basicheader
 \usepackage{ifthen,etoolbox}
-\usepackage[ngerman]{babel}
 \usepackage{colortbl}
 \usepackage{longtable}
 
@@ -21,6 +20,44 @@
 
 \input general/protected.tex
 \input general/translation-\TemplateLanguage.tex
+
+\ifthenelse{\equal{\TemplateLanguage}{da}}{
+    \usepackage[danish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{de}}{
+    \usepackage[ngerman]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{en}}{
+    \usepackage[english]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{et}}{
+    \usepackage[estonian]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{fi}}{
+    \usepackage[finnish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{he}}{
+    \usepackage[hebrew]{babel}
+%     FIXME
+}{
+\ifthenelse{\equal{\TemplateLanguage}{lt}}{
+    \usepackage[lithuanian]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{lv}}{
+    \usepackage[latvian]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{nb}}{
+    \usepackage[norsk]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{pl}}{
+    \usepackage[polish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{sv}}{
+    \usepackage[swedish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{uk}}{
+    \usepackage[ukrainian]{babel}
+}{}}}}}}}}}}}}
 
 \chead{\vspace{-12pt}\textbf{\Large BOI 2021}\\ \tBOIPlace\\ \tBOIDates}
 \lhead{\vspace{-12pt}\hbox to 0pt{\hskip-.43in\includegraphics[scale=.65]{header.pdf}}\vspace{-6ex}}
