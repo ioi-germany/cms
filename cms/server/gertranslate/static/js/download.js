@@ -112,6 +112,7 @@ function _download_mouse_click(e)
             window.document.getElementById("error-msg").srcdoc = __pdf_result[code].msg;
             window.document.getElementById("error-log").srcdoc = __pdf_result[code].log;
             window.document.getElementById("task-name").innerHTML = code;
+            window.document.getElementById("retry-compilation").dataset.id = p.id;
             window.document.getElementById("retry-compilation").dataset.code = code;
             open_modal("error");
             return;
@@ -134,7 +135,8 @@ function retry_compilation()
     var code = window.document.getElementById("retry-compilation").dataset.code;
     delete __pdf_result[code];
 
-    var p = window.document.getElementById("pdf-" + code);
+    var id = window.document.getElementById("retry-compilation").dataset.id;
+    var p = window.document.getElementById(id);
 
     _compile(p, code);
     close_modal("error");
