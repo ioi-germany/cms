@@ -23,10 +23,15 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \
-    header, box, yellow
+    header, box, yellow, highlight_latex
 from cmscontrib.gerpythonformat.Executable import CPPProgram, InternalPython, ExternalScript, \
     ExternalPython, asy_keyword_list
 from cms.rules.Rule import LaTeXRule, SafeLaTeXRule, CommandRule, ZipRule
+from cms.grading.languages.c11_gcc import C11Gcc
+from cms.grading.languages.cpp17_gpp import Cpp17Gpp
+from cms.grading.languages.java_jdk import JavaJDK
+from cms.grading.languages.pascal_fpc import PascalFpc
+from cms.grading.languages.python3_pypy import Python3PyPy
 from cmscontrib.gerpythonformat.Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
 import inspect
 import io
@@ -339,8 +344,9 @@ class CommonConfig(object):
             else:
                 r = LaTeXRule(self.rules, source).ensure()
 
-            print_block(r.out)
-            print_block(r.err)
+            print_block(highlight_latex(r.out))
+            print_block(highlight_latex(r.err))
+
             if r.code != 0:
                 raise Exception("Compilation failed")
 
@@ -566,3 +572,7 @@ class CommonConfig(object):
         """
         self.max_user_test_number = max_number
         self.min_user_test_interval = min_interval
+
+    def _usual_languages(self):
+        return [C11Gcc().name, Cpp17Gpp().name, JavaJDK().name,
+                PascalFpc().name, Python3PyPy().name]

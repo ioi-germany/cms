@@ -19,33 +19,17 @@
 
 \input graphdrawing.tex
 
-\input translation-\ifcsdef{TemplateLanguage}{\TemplateLanguage}{de}.tex
+\input general/protected.tex
+\input general/translation-\TemplateLanguage.tex
 
-\newlength{\myoddoffset}
-\setlength{\myoddoffset}{\marginparwidth + \marginparsep + \marginparsep}
-\fancyheadoffset[roh,reh]{\myoddoffset}
+\chead{\vspace{-12pt}\textbf{\Large BOI 2021}\\ \tBOIPlace\\ \tBOIDates}
+\lhead{\vspace{-12pt}\hbox to 0pt{\hskip-.43in\includegraphics[scale=.65]{header.pdf}}\vspace{-6ex}}
+\rhead{\vspace{-12pt}\textbf{\contestname}\\\tTask:\enspace\textbf{\taskname}\\ \tLang:\enspace\textbf{\TemplateLanguage}}
 
-\def\logo{
-\begin{tikzpicture}
-    \begin{scope}[yshift=.75cm]
-        \node[white!40!black, rotate=16.125, anchor=west, align=left] at (15:2.25cm)
-        {\mbox{}\\[.6ex]{\bfseries\contestname\quad}\\\tTask:\enspace\bfseries\taskname\quad\\[-.8ex]};
-    \end{scope}
+\cfoot{\textbf{\thepage}/\pageref{LastPage}}
 
-    \path (current bounding box.north east);
-    \pgfgetlastxy{\XCoord}{\YCoord};
-    \pgfmathsetmacro{\bndx}{max(215, \XCoord)};
-    \pgfmathsetmacro{\bndy}{max(200, \YCoord)};
-
-    \clip (0,0) rectangle (\bndx pt,\bndy pt);
-    \node[anchor=south west] (pic) at (0, 0) {\includegraphics[scale=.55]{logo.eps}};
-\end{tikzpicture}
-}
-
-%\rhead{\vbox to \headh{\vbox to 0pt{\vskip-2in\hbox to 0pt{\hskip\hsize\hskip-1.5in\includegraphics{\barpdf}}}\quad\null}}
-\rhead{\vbox to \headh{\vbox to 0pt{\vskip-2in{\logo}}\quad\null}}
-
-\lhead{}
+\addtolength{\topmargin}{-15pt}
+\AtBeginDocument{\addtolength{\headsep}{15pt}}
 
 \makeatletter
 \def\sthelper#1#2{{\sffamily\bfseries \tSubtask\ #1 ($\symbf{#2}$ \ifnum#2=1\tPoint\else\tPoints\fi).\enspace}}
@@ -58,6 +42,7 @@
 \def\currconstraintupper#1{\scopedconstraintupper{\the\stcount}{#1}}
 \def\currconstraintlower#1{\scopedconstraintlower{\the\stcount}{#1}}
 \def\currconstraintvalue#1{\scopedconstraintvalue{\the\stcount}{#1}}
+
 
 \begingroup
 \catcode`\ǁ=4
@@ -74,6 +59,7 @@
 \noalign{\smallskip}%
 }{\end{tabular}\endgroup\par\medskip}
 
+
 \def\myc@ption#1#2#3{\noalign{\bfseries\large #3}}
 \def\showcases{\removelastskip\par\bigskip\begingroup%
 % This is evil: we hijack LT@makecaption to force longtable to place the heading
@@ -87,35 +73,7 @@
 \def\showlimits{\sheading{\tLimits}%
 \tTime: \timelimit\\
 \tMemory: \memlimit}
-
-% Feedback Section
-\def\feedbackheading{\sheading{\tFeedback}}
-\def\nofeedback{\feedbackheading \tNofeedback}
-\def\partialfeedback{\feedbackheading \tPartialfeedback}
-\def\fullfeedback{\feedbackheading\def\feedbackmode{\ifrestricted\emph{restricted feedback}\else\emph{full feedback}\fi} \tFullfeedbackGeneral\
-\ifrestricted
-\tRestrictedfeedbackPrecise
-\else
-\tFullfeedbackPrecise
-\fi}
-\def\tokenfeedback{\feedbackheading \tTokenFeedback
-
-\ifrestricted
-\tTokenRestrictedFeedback
-\fi}
-\let\dummyfeedack=\relax
-\def\showfeedback{\csname\feedback feedback\endcsname}
-
-% Scoring Section
-\def\scoringheading{\sheading{\tScoring}}
-\def\IOIXIIIscoring{\scoringheading \tScoringFromIOIXIII}
-\def\IOIXVIIscoring{\scoringheading \tScoringFromIOIXVII}
-\def\IOIXscoring   {\scoringheading \tScoringFromIOIX}
-\def\showscoring{\csname\scoring scoring\endcsname}
-
 % ---
-
-\def\standardpart{\showcases\showlimits\showfeedback\showscoring}
 \makeatother
 
 \def\flushsubtasks{\global\stcount=\numsubtasks}

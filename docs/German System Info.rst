@@ -206,7 +206,7 @@ In den meisten Fällen benutzt man die Constraints automatisch mit den Methoden 
 
 Neben den Standardtypen ist dabei auch ``big_int`` (für beliebig lange ganze Zahlen) als Wert für ``Typ`` zulässig.
 
-Es gibt alternativ auch die Möglichkeit, irgendeine Zahl (z.B. eine, die sich per Rechnung aus der Eingabe ergibt), anhand der Constraints zu überprüfen. Dazu verwendet man ``auto_check_bounds<Typ>(Name, zu prüfender Wert)``. Schließlich besteht die Möglichkeit, die Schranken eines Constraints selbst abzufragen. Die grundlegende Funktion dazu ist ``get_constraint<Typ>(Name)``, welche ein Paar von ``my_optional<Typ>`` zurückgibt, wobei ``my_optional`` eine sehr primitive Implementierung von C++17-``optional`` ist. Das prüft auch direkt, ob die Schranken in den Typ ``Typ`` passen. Möchte man nur eine der beiden Schranken, kann man ``get_constraint_lower<Typ>(Name)`` bzw. ``get_constraint_upper<Typ>(Name)`` verwenden. Diese geben einfach ein Element vom Typ ``Typ`` zurück und prüfen auch gleich, ob die entsprechende Schranke nicht doch leer ist. Sind obere und untere Schranke auch noch identisch, steht schließlich der Befehl ``get_constraint_value<Typ>(Name)`` zur Verfügung.
+Es gibt alternativ auch die Möglichkeit, irgendeine Zahl (z.B. eine, die sich per Rechnung aus der Eingabe ergibt), anhand der Constraints zu überprüfen. Dazu verwendet man ``auto_check_bounds<Typ>(Name, zu prüfender Wert)``. Schließlich besteht die Möglichkeit, die Schranken eines Constraints selbst abzufragen. Die grundlegende Funktion dazu ist ``get_constraint<Typ>(Name)``, welche ein Paar von ``optional<Typ>`` zurückgibt. Das prüft auch direkt, ob die Schranken in den Typ ``Typ`` passen. Möchte man nur eine der beiden Schranken, kann man ``get_constraint_lower<Typ>(Name)`` bzw. ``get_constraint_upper<Typ>(Name)`` verwenden. Diese geben einfach ein Element vom Typ ``Typ`` zurück und prüfen auch gleich, ob die entsprechende Schranke nicht doch leer ist. Sind obere und untere Schranke auch noch identisch, steht schließlich der Befehl ``get_constraint_value<Typ>(Name)`` zur Verfügung.
 
 
 Constraints im Statement
@@ -518,6 +518,7 @@ Auf Wunsch erzeugt unser System auch automatisch *Übersichtszettel* für jeden 
 Um die Übersichtszettel zu erzeugen, kann man den Befehl ``make_overview_sheets()`` in ``contest-config.py`` verwenden. **Wichtig: der Befehl sollte erst möglichst am Ende der Konfigurationsdatei verwendet werden, definitiv aber erst nachdem alle Aufgaben und alle Nutzer erstellt wurden.**
 
 Die Übersichtszettel werden in einem eigenen Ordner ``overview`` innerhalb des ``build``-Ordners angelegt. Auf Wunsch (Schlüsselwertargument ``attach_statements`` auf ``True`` setzen) können hinter jedem Übersichtszettel auch die "primären Statements" für den entsprechenden Nutzer eingebunden werden. Auf diese Weise kann man einfach die entsprechenden PDF ausdrucken und ohne Umsortieren direkt den Teamleitern zur Kontrolle geben und/oder sie in Umschläge stecken (das Template geht in diesem Fall von beidseitigem Druck aus und fügt wo nötig leere Seiten ein).
+
 
 
 Task Translation Interface

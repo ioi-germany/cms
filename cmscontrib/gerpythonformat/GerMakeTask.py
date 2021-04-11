@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2016 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -81,8 +81,8 @@ class GerMakeTask:
                                             "contest-template.py"),
                             os.path.join(self.wdir, "c.py"))
             contestconfig._readconfig("c.py")
-            contestconfig._task(
-                self.task, contestconfig.full_feedback, None, self.minimal)
+            contestconfig._task(self.task, contestconfig.full_feedback, None,
+                                self.minimal, standalone_task=True)
 
             if not self.minimal:
                 cdb = contestconfig._makecontest()

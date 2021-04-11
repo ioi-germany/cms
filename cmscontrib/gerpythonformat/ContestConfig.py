@@ -302,6 +302,10 @@ class ContestConfig(CommonConfig):
         self._languages = languages
 
     @exported_function
+    def allow_usual_languages(self):
+        self.languages(self._usual_languages())
+
+    @exported_function
     def user_group(self, s, start, stop, analysis_start=None, analysis_stop=None, per_user_time=None):
         """
         Create a user group.
@@ -442,7 +446,7 @@ class ContestConfig(CommonConfig):
                    team)
         return user
 
-    def _task(self, s, feedback, score_mode, minimal):
+    def _task(self, s, feedback, score_mode, minimal, standalone_task=False):
         """
         Add a task to this contest (full version, not accessible from
         config.py).
@@ -478,7 +482,9 @@ class ContestConfig(CommonConfig):
                             feedback, score_mode,
                             ignore_latex=self.ignore_latex,
                             relevant_language=self.relevant_language,
-                            minimal=minimal) as taskconfig:
+                            minimal=minimal,
+                            standalone_task=standalone_task) as taskconfig:
+
                 for f in self.ontasks:
                     f(taskconfig)
                 taskconfig._readconfig("config.py")
