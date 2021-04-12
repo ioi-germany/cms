@@ -294,7 +294,7 @@ class CommonConfig(object):
         return CPPProgram(self.rules, self, *args, **kwargs)
 
     @exported_function
-    def compilelatex(self, basename, safe=True, ignore=set(),
+    def compilelatex(self, basename, safe=None, ignore=set(),
                      ignore_ext=set((".py", ".cpp")), do_copy=set()):
         """
         Use latexmk to compile basename.tex to basename.pdf .
@@ -346,6 +346,7 @@ class CommonConfig(object):
 
             print_block(highlight_latex(r.out))
             print_block(highlight_latex(r.err))
+
             if r.code != 0:
                 raise Exception("Compilation failed")
 

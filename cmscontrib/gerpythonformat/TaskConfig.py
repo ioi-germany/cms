@@ -572,6 +572,7 @@ class TaskConfig(CommonConfig, Scope):
                  ignore_latex=False, relevant_language=None, minimal=False,
                  safe_latex=None, standalone_task=False):
         super(TaskConfig, self).__init__(rules, ignore_latex=ignore_latex,
+                                         relevant_language=relevant_language,
                                          safe_latex=safe_latex)
         self.no_tokens()
         Scope.__init__(self)
@@ -1745,10 +1746,13 @@ class TaskConfig(CommonConfig, Scope):
             if submission_result.compilation_stderr is not None:
                 print_block(submission_result.compilation_stderr)
             # Evaluate
-            for testcase_codename in sorted(iterkeys(ddb.testcases)):
+            nr_of_testcases = len(ddb.testcases)
+            for nr, codename in enumerate(sorted(iterkeys(ddb.testcases))):
+                print("\033[2K\033[1GEvaluating {} / {}"
+                      .format(nr, nr_of_testcases), end='', flush=True)
                 evaluation_operation = ESOperation(ESOperation.EVALUATION,
                                                    -1, -1,
-                                                   testcase_codename)
+                                                   codename)
                 evaluation_job = EvaluationJob.from_submission(
                     evaluation_operation,
                     sdb,
@@ -1757,6 +1761,7 @@ class TaskConfig(CommonConfig, Scope):
                 evaluation_job = self._run_job(evaluation_job)
                 evaluation_job.to_submission(submission_result)
             submission_result.set_evaluation_outcome()
+            print("\033[2K\033[1G", end='', flush=True)
 
         # Judge unit test
         score_type = ddb.score_type_object

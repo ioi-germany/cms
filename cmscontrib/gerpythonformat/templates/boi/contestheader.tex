@@ -1,12 +1,14 @@
 \basicheader
 \usepackage{ifthen,etoolbox}
-\usepackage[ngerman]{babel}
 \usepackage{colortbl}
 \usepackage{longtable}
 
 \setlength{\LTpost}{\medskipamount}
 
+\ifthenelse{\equal{\TemplateLanguage}{he}}{
+}{
 \usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
+}
 \usepackage[lining,scaled=.9]{FiraMono}
 \usepackage[mathrm=sym]{unicode-math}
 \usepackage[Scale=.9]{firamath-otf}
@@ -22,9 +24,59 @@
 \input general/protected.tex
 \input general/translation-\TemplateLanguage.tex
 
+\ifthenelse{\equal{\TemplateLanguage}{da}}{
+    \usepackage[danish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{de}}{
+    \usepackage[ngerman]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{en}}{
+    \usepackage[english]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{et}}{
+    \usepackage[estonian]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{fi}}{
+    \usepackage[finnish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{he}}{
+\usepackage[nil,bidi=basic]{babel}
+\addtokomafont{disposition}{\rmfamily}
+\setmainfont{FiraGO}[Numbers=Lowercase, Scale=.9]
+\setsansfont{FiraGO}[Numbers=Lowercase, Scale=.9]
+\babelfont{rm}[Numbers=Lowercase, Scale=.9]{FiraGO}
+\babelfont[hebrew]{rm}[Numbers=Lowercase, Scale=.9]{FiraGO}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{lt}}{
+    \usepackage[lithuanian]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{lv}}{
+    \usepackage[latvian]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{nb}}{
+    \usepackage[norsk]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{pl}}{
+    \usepackage[polish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{sv}}{
+    \usepackage[swedish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{uk}}{
+    \usepackage[ukrainian]{babel}
+}{}}}}}}}}}}}}
+
+\newcommand{\setlang}[1]{\ifthenelse{\equal{\TemplateLanguage}{he}}{\begin{otherlanguage}{hebrew}#1\end{otherlanguage}}{#1}}
+
 \chead{\vspace{-12pt}\textbf{\Large BOI 2021}\\ \tBOIPlace\\ \tBOIDates}
 \lhead{\vspace{-12pt}\hbox to 0pt{\hskip-.43in\includegraphics[scale=.65]{header.pdf}}\vspace{-6ex}}
 \rhead{\vspace{-12pt}\textbf{\contestname}\\\tTask:\enspace\textbf{\taskname}\\ \tLang:\enspace\textbf{\TemplateLanguage}}
+
+\ifthenelse{\equal{\TemplateLanguage}{he}}{
+\chead{\vspace{-12pt}\begin{otherlanguage}{hebrew}\textbf{\Large BOI 2021}\\ {\tBOIPlace}\\ {\tBOIDates}\end{otherlanguage}}
+\rhead{\vspace{-12pt}\hbox to 0pt{\hskip-.43in\includegraphics[scale=.65]{header.pdf}}\vspace{-6ex}}
+\lhead{\vspace{-12pt}\begin{otherlanguage}{hebrew}\textbf{\contestname}\\\tTask:\enspace\textbf{\taskname}\\ \tLang:\enspace\textbf{\TemplateLanguage}\end{otherlanguage}}
+}{}
 
 \cfoot{\textbf{\thepage}/\pageref{LastPage}}
 

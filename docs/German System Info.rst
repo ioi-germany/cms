@@ -520,6 +520,7 @@ Um die Übersichtszettel zu erzeugen, kann man den Befehl ``make_overview_sheets
 Die Übersichtszettel werden in einem eigenen Ordner ``overview`` innerhalb des ``build``-Ordners angelegt. Auf Wunsch (Schlüsselwertargument ``attach_statements`` auf ``True`` setzen) können hinter jedem Übersichtszettel auch die "primären Statements" für den entsprechenden Nutzer eingebunden werden. Auf diese Weise kann man einfach die entsprechenden PDF ausdrucken und ohne Umsortieren direkt den Teamleitern zur Kontrolle geben und/oder sie in Umschläge stecken (das Template geht in diesem Fall von beidseitigem Druck aus und fügt wo nötig leere Seiten ein).
 
 
+
 Task Translation Interface
 ==========================
 This is a web server and client to manage task translation by multiple users. For a given set of tasks, users can download task statements in form of TeX (and PDF) files, then upload the translated TeX files. They can then download and check the compiled PDF statement.

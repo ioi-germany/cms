@@ -484,6 +484,7 @@ class ContestConfig(CommonConfig):
                             relevant_language=self.relevant_language,
                             minimal=minimal,
                             standalone_task=standalone_task) as taskconfig:
+
                 for f in self.ontasks:
                     f(taskconfig)
                 taskconfig._readconfig("config.py")
