@@ -47,12 +47,6 @@
 \babelfont{rm}[Numbers=Lowercase, Scale=.9]{FiraGO}
 \babelfont[hebrew]{rm}[Numbers=Lowercase, Scale=.9]{FiraGO}
 }{
-\ifthenelse{\equal{\TemplateLanguage}{lt}}{
-    \usepackage[lithuanian]{babel}
-}{
-\ifthenelse{\equal{\TemplateLanguage}{lv}}{
-    \usepackage[latvian]{babel}
-}{
 \ifthenelse{\equal{\TemplateLanguage}{nb}}{
     \usepackage[norsk]{babel}
 }{
@@ -64,7 +58,7 @@
 }{
 \ifthenelse{\equal{\TemplateLanguage}{uk}}{
     \usepackage[ukrainian]{babel}
-}{}}}}}}}}}}}}
+}{}}}}}}}}}}
 
 \newcommand{\setlang}[1]{\ifthenelse{\equal{\TemplateLanguage}{he}}{\begin{otherlanguage}{hebrew}#1\end{otherlanguage}}{#1}}
 
