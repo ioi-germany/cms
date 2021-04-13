@@ -51,7 +51,7 @@ function _compile(p, code)
                         p.classList.remove("loading");
                         p.classList.add("done");
 
-                        window.document.getElementById("fr-download-helper").src = __url_root + "/download/" + code;
+                        window.document.getElementById("fr-download-helper").src = __url_root + "/pdf/" + code;
                     }
                 }
             }
@@ -67,14 +67,38 @@ function _compile(p, code)
 
 function _yield(p, code)
 {
+    p.classList.remove("error");
+    p.classList.add("done");
+
+    window.document.getElementById("fr-download-helper").src = __url_root + "/tex/" + code;
+}
+
+function _getlog(p, code)
+{
     p.classList.remove("done");
     p.classList.remove("error");
     p.classList.add("loading");
 
-    p.classList.remove("loading");
-    p.classList.add("done");
+    function download(r)
+    {
+        if(r.error)
+        {
+            p.classList.remove("loading");
+            p.classList.add("error");
+        }
 
-    window.document.getElementById("fr-download-helper").src = __url_root + "/tex/" + code;
+        else
+        {
+            p.classList.remove("loading");
+            p.classList.add("done");
+
+            window.document.getElementById("git-log").srcdoc = r.log;
+            window.document.getElementById("log-task-name").innerHTML = code;
+            open_modal("log");
+        }
+    }
+
+    $.get(__url_root + "/log/" + code, {}, download);
 }
 
 function _download_mouse_click(e)
@@ -82,12 +106,13 @@ function _download_mouse_click(e)
     var p = e.target;
 
     var code = p.dataset.code;
-    if(p.id.startsWith("download")){
+    if(p.id.startsWith("pdf")){
         if(code in __pdf_result && __pdf_result[code].error)
         {
-            window.document.getElementById("error-msg").textContent = __pdf_result[code].msg;
-            window.document.getElementById("error-log").textContent = __pdf_result[code].log;
+            window.document.getElementById("error-msg").srcdoc = __pdf_result[code].msg;
+            window.document.getElementById("error-log").srcdoc = __pdf_result[code].log;
             window.document.getElementById("task-name").innerHTML = code;
+            window.document.getElementById("retry-compilation").dataset.id = p.id;
             window.document.getElementById("retry-compilation").dataset.code = code;
             open_modal("error");
             return;
@@ -96,6 +121,9 @@ function _download_mouse_click(e)
         if(code in __pdf_jobs)  return;
 
         _compile(p, code);
+    }
+    else if(p.id.startsWith("log")){
+        _getlog(p,code);
     }
     else{
         _yield(p,code);
@@ -107,7 +135,8 @@ function retry_compilation()
     var code = window.document.getElementById("retry-compilation").dataset.code;
     delete __pdf_result[code];
 
-    var p = window.document.getElementById("download-" + code);
+    var id = window.document.getElementById("retry-compilation").dataset.id;
+    var p = window.document.getElementById(id);
 
     _compile(p, code);
     close_modal("error");
@@ -115,9 +144,9 @@ function retry_compilation()
 
 var __mouse_up_initialized = false;
 
-function init_download_icon(task, pdf=true, lan=null)
+function init_download_icon(task, type="pdf", lan=null)
 {
-    var extended_code = (pdf?"download-":"tex-") + task + (lan!=null?("-"+lan):"");
+    var extended_code = type+"-" + task + (lan!=null?("-"+lan):"");
     var d = window.document.getElementById( extended_code );
 
     if(d==null) return;

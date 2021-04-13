@@ -96,7 +96,11 @@ class BOITemplate(LgTemplate):
                    for t in self.contest.tasks.values()))
 
         for u in self.contest.users.values():
+            #TODO Rename team_name to team (as this actually seems to be a team object)
             team_name = u.team
+
+            if self.contest.relevant_language and self.contest.relevant_language not in team_name.primary_statements:
+                continue
 
             if team_name not in teams:
                 teams[team_name] = []

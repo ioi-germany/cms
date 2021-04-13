@@ -4,6 +4,7 @@
 # Programming contest management system
 # Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -35,16 +36,20 @@ import shutil
 from psutil import virtual_memory
 
 class GerMake:
-    def __init__(self, odir, task, no_test, submission, no_latex, clean):
+    def __init__(self, odir, task, minimal, no_test,
+                 submission, no_latex, safe_latex, language, clean):
         self.odir = odir
         self.task = task
+        self.minimal = minimal
         self.local_test = not no_test
         if self.local_test and submission is not None:
             self.local_test = submission
         self.no_latex = no_latex
+        self.safe_latex = safe_latex
+        self.language = language
         self.clean = clean
 
-    def make(self):
+    def prepare(self):
         # Unset stack size limit
         INFTY = int(.75 * virtual_memory().total)
         resource.setrlimit(resource.RLIMIT_STACK, (INFTY, INFTY))
@@ -62,31 +67,62 @@ class GerMake:
         # when copying recursively.
         copyrecursivelyifnecessary(self.odir, self.wdir, set(["build"]))
         self.wdir = os.path.abspath(self.wdir)
+
+    def build(self):
         file_cacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
         with chdir(self.wdir):
             contestconfig = ContestConfig(
                 os.path.join(self.wdir, ".rules"),
                 os.path.basename(self.odir),
+                relevant_language=(self.language if self.language!="ALL" else None),
                 ignore_latex=self.no_latex,
-                onlytask=self.task)
+                onlytask=self.task,
+                safe_latex=self.safe_latex)
+
             contestconfig._readconfig("contest-config.py")
             if self.task is not None and len(contestconfig.tasks) == 0:
                 raise Exception("Task {} not found".format(self.task))
-            cdb = contestconfig._makecontest()
-            test_udb = contestconfig._makeuser(
-                contestconfig._mytestuser.username)
-            test_gdb = contestconfig._makegroup(
-                contestconfig._mytestuser.group.name, cdb)
-            # We're not putting the test user on any team for testing
-            # (shouldn't be needed).
-            test_pdb = contestconfig._makeparticipation(
-                contestconfig._mytestuser.username, cdb,
-                test_udb, test_gdb, None)
-            for t in contestconfig.tasks.values():
-                tdb = t._makedbobject(cdb, file_cacher)
-                t._make_test_submissions(test_pdb, tdb, self.local_test)
+
+            if not self.minimal:
+                cdb = contestconfig._makecontest()
+                test_udb = contestconfig._makeuser(
+                    contestconfig._mytestuser.username)
+                test_gdb = contestconfig._makegroup(
+                    contestconfig._mytestuser.group.name, cdb)
+                # We're not putting the test user on any team for testing
+                # (shouldn't be needed).
+                test_pdb = contestconfig._makeparticipation(
+                    contestconfig._mytestuser.username, cdb,
+                    test_udb, test_gdb, None)
+                for t in contestconfig.tasks.values():
+                    tdb = t._makedbobject(cdb, file_cacher)
+                    t._make_test_submissions(test_pdb, tdb, self.local_test)
 
         contestconfig.finish()
+
+        statements = list(contestconfig.tasks.values())[
+            0]._statements
+
+        if self.language == "ALL":
+            return [os.path.abspath(s.file_) for s in list(statements.values())]
+
+        if self.language is not None:
+            if self.language in statements:
+                return os.path.abspath(statements[self.language].file_)
+            else:
+                return None
+
+        primary_statements = [s for s in list(statements.values()) if s.primary]
+        if len(primary_statements) == 0:
+            return None
+        elif len(primary_statements) == 1:
+            return os.path.abspath(primary_statements[0].file_)
+        else:
+            raise Exception("More than one primary statement")
+
+    def make(self):
+        self.prepare()
+        self.build()
 
 def main():
     """Parse arguments and launch process."""
@@ -97,6 +133,9 @@ def main():
     parser.add_argument("import_directory",
                         help="source directory",
                         type=utf8_decoder)
+    parser.add_argument("-m", "--minimal", action="store_true",
+                        help="attempt to only compile statement(s) (and "
+                        "everything required for this, e.g. sample cases)")
     parser.add_argument("-t", "--task", action="store",
                         help="omit all tasks except this one",
                         type=utf8_decoder)
@@ -109,6 +148,11 @@ def main():
                            type=utf8_decoder)
     parser.add_argument("-nl", "--no-latex", action="store_true",
                         help="do not compile latex documents")
+    parser.add_argument("-sl", "--safe-latex", action="store_true",
+                        help="Safely compile latex documents in a sandbox")
+    parser.add_argument("-l", "--language",
+                        help="only compile latex files that end in this string",
+                        type=utf8_decoder)
     parser.add_argument("-c", "--clean", action="store_true",
                         help="clean the build directory (forcing a complete "
                         "rebuild)")
@@ -117,9 +161,12 @@ def main():
 
     GerMake(os.path.abspath(args.import_directory),
             args.task,
+            args.minimal,
             args.no_test,
             args.submission,
             args.no_latex,
+            args.safe_latex,
+            args.language,
             args.clean).make()
 
 

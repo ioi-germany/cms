@@ -1,0 +1,55 @@
+td.git-log {
+    position:relative;
+}
+
+div.git-log-icon {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background-image:url("./../img/git-log.png");
+    background-repeat:no-repeat;
+    background-position:center;
+    position:absolute;
+    top:0px;
+    bottom:0px;
+    left:0px;
+    right:0px;
+    margin:auto;
+    cursor:pointer;
+}
+
+/*div.git-log-icon:hover {
+    background-image:url("./../img/git-log-hover.png");
+}
+
+div.git-log-icon.down {
+    background-image:url("./../img/git-log-pressed.png");
+}
+
+@keyframes git-log-completed {
+    0% {
+        background-size: 15px 20px;
+        opacity:1;
+    }
+    66.6666667% {
+        background-size: 30px 40px;
+        opacity:.2;
+    }
+    100% {
+        background-size: 45px 60px;
+        opacity:0;
+    }
+}
+
+div.git-log-icon.done::before {
+    content:"";
+    width:100px;
+    height:100px;
+    background-image:url("./../img/git-log-flat.png");
+    background-repeat:no-repeat;
+    background-position:center;
+    animation-name:git-log-completed;
+    animation-duration:1s;
+    animation-timing-function:linear;
+    animation-fill-mode:forwards;
+}*/

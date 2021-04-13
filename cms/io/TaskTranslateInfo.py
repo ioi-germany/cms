@@ -4,7 +4,7 @@
 # Programming contest management system
 # Copyright © 2016-2017 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2016 Simon Bürger <simon.buerger@rwth-aachen.de>
-# Copyright © 2020 Manuel Gundlach <manuel.gundlach@gmail.com>
+# Copyright © 2020-2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -55,8 +55,9 @@ class DateEntry:
 
 
 class SingleTaskTranslateInfo:
-    def __init__(self, code, path):
+    def __init__(self, code, path, contest=""):
         info = {"code":           code,
+                "contest":        contest,
                 "title":          "???",
                 "keywords":       [],
                 "remarks":        "",
@@ -65,35 +66,53 @@ class SingleTaskTranslateInfo:
                 "compile":        True,
                 "filename":       None}
 
-        if not path.exists():
-            i = {"error": "The info.json file is missing."}
+        if code.endswith("overview"):
+            i = {"title": "Overview Sheet",
+                 "remarks": "This is a collection of overview sheets automatically generated as soon as general is translated."}
         else:
-            try:
-                i = json.loads(path.open().read())
-            except:
-                i = {"error": "The info.json file is corrupt."}
+            if not path.exists():
+                i = {"error": "The info.json file is missing."}
             else:
-                missing = []
-                for e in ["title"]:
-                    if e not in i:
-                        missing.append(e)
+                try:
+                    i = json.loads(path.open().read())
+                except:
+                    i = {"error": "The info.json file is corrupt."}
+                else:
+                    missing = []
+                    for e in ["title"]:
+                        if e not in i:
+                            missing.append(e)
 
-                if len(missing) > 0:
-                    i["error"] = "Some important entries are missing: " + \
-                                 ", ".join(missing) + "."
+                    if len(missing) > 0:
+                        i["error"] = "Some important entries are missing: " + \
+                                    ", ".join(missing) + "."
 
         info.update(i)
 
-        info["locked"] = [l.name[:-5] for l in path.parent.iterdir() if l.is_file() and l.name.endswith(".lock")]
-        if info["filename"]==None:
-            info["filename"] = "statement"
-        info["translated"] = [l.name[len(info["filename"])+1:-4] for l in path.parent.iterdir() if l.is_file() and l.name.endswith(".tex") and l.name.startswith(info["filename"]+"-")]
+        if code.endswith("overview"):
+            info["locked"] = [l.name[:-5]
+                              for l in (path.parent / "general").iterdir()
+                              if l.is_file() and l.name.endswith(".lock")]
+            info["translated"] = [l.name[len("translation")+1:-4]
+                                  for l in (path.parent / "general").iterdir()
+                                  if l.is_file() and l.name.endswith(".tex") and l.name.startswith("translation")]
+            info["filename"] = "overview-sheet"
+        else:
+            info["locked"] = [l.name[:-5]
+                              for l in path.parent.iterdir()
+                              if l.is_file() and l.name.endswith(".lock")]
+            if info["filename"]==None:
+                info["filename"] = "statement"
+            info["translated"] = [l.name[len(info["filename"])+1:-4]
+                                  for l in path.parent.iterdir()
+                                  if l.is_file() and l.name.endswith(".tex") and l.name.startswith(info["filename"]+"-")]
 
         for key, value in iteritems(info):
             setattr(self, key, value)
 
     def to_dict(self):
         result = {"code":           self.code,
+                  "contest":        self.contest,
                   "title":          self.title,
                   "keywords":       self.keywords,
                   "remarks":        self.remarks,
@@ -111,52 +130,71 @@ class SingleTaskTranslateInfo:
 class TaskTranslateInfo:
     manager = Manager()
     tasks = manager.dict()
-    languages = manager.list()
+    contests = manager.dict()
+    languages = manager.dict()
 
     @staticmethod
     def init(repository):
-        def load(directory, tasks, languages):
+        def load_single(d, tasks, contests, is_contest):
+            if not d.is_dir() \
+                or d.name.startswith('.') \
+                or d.is_symlink() \
+                or d.name=="build":
+                return False
+
+            # We catch all exceptions since the main loop must go on
+            try:
+                info_path = d / "info.json"
+
+                if is_contest:
+                    if d.name.endswith('general'):
+                        contest = ""
+                        code = d.parts[-1]
+                    else:
+                        contest = d.parts[-1]
+                        contests[contest] = contest
+                        code = d.parts[-1] + "-overview"
+                else:
+                    contest = d.parts[-2]
+                    code = d.parts[-1]
+                info = SingleTaskTranslateInfo(code, info_path, contest).to_dict()
+
+                old = tasks.get(code, {"timestamp": 0})
+                info["timestamp"] = old["timestamp"]
+
+                if old != info:
+                    info["timestamp"] = time()
+                    tasks[code] = info
+
+            except:
+                logger.info("\n".join(format_exception(*exc_info())))
+
+            return not d.name.endswith('general')
+
+        def load(directory, tasks, contests, languages):
             # Load list of relevant languages
             languages_path = directory / "languages.json"
             if not languages_path.exists():
                 logger.error("The languages.json file is missing.")
                 return
             try:
-                #TODO Handle this less awkwardly
-                languages[:] = list()
-                languages.extend( json.loads(open(languages_path).read())["languages"] )
+                #TODO Languages are never deleted (and neither are contests)
+                language_list = json.loads(open(languages_path).read())["languages"]
+                for l in language_list:
+                    languages[l] = l
+
             except:
                 logger.error("The languages.json file is corrupt.")
                 return
-            languages.sort()
 
-            # Load all available tasks
+            # Load all available contests (and general)
             for d in directory.iterdir():
-                if not d.is_dir():
-                    continue
+                if load_single(d, tasks, contests, is_contest=True):
+                    # Load all available tasks
+                    for e in d.iterdir():
+                        load_single(e, tasks, contests, is_contest=False)
 
-                #NOTE Remember to have this in taskoverview, too
-                if d.name.startswith('.'):
-                    continue
-
-                # We catch all exceptions since the main loop must go on
-                try:
-                    info_path = d / "info.json"
-
-                    code = d.parts[-1]
-                    info = SingleTaskTranslateInfo(code, info_path).to_dict()
-
-                    old = tasks.get(code, {"timestamp": 0})
-                    info["timestamp"] = old["timestamp"]
-
-                    if old != info:
-                        info["timestamp"] = time()
-                        tasks[code] = info
-
-                except:
-                    logger.info("\n".join(format_exception(*exc_info())))
-
-        def main_loop(repository, tasks, languages, waiting_time):
+        def main_loop(repository, tasks, contests, languages, waiting_time):
             directory = Path(repository.path)
 
             while True:
@@ -165,12 +203,18 @@ class TaskTranslateInfo:
                 with repository:
                     # Remove tasks that are no longer available
                     for t in tasks.keys():
-                        info_path = directory / t
+                        if t.endswith("-overview"):
+                            p = t[:-9]
+                        elif tasks[t]["contest"] == "":
+                            p = t
+                        else:
+                            p = Path(tasks[t]["contest"]) / t
+                        info_path = directory / p
 
                         if not info_path.exists():
                             del tasks[t]
 
-                    load(directory, tasks, languages)
+                    load(directory, tasks, contests, languages)
 
                 logger.info("finished iteration of TaskTranslateInfo.main_loop in {}ms".
                             format(int(1000 * (time() - start))))
@@ -180,10 +224,10 @@ class TaskTranslateInfo:
         # Load data once on start-up (otherwise tasks might get removed when
         # the server is restarted)
         with repository:
-            load(Path(repository.path), TaskTranslateInfo.tasks, TaskTranslateInfo.languages)
+            load(Path(repository.path), TaskTranslateInfo.tasks, TaskTranslateInfo.contests, TaskTranslateInfo.languages)
 
         TaskTranslateInfo.info_process = Process(target=main_loop,
-                                        args=(repository, TaskTranslateInfo.tasks, TaskTranslateInfo.languages,
+                                        args=(repository, TaskTranslateInfo.tasks, TaskTranslateInfo.contests, TaskTranslateInfo.languages,
                                               .5 * (1 + sqrt(5))))
         TaskTranslateInfo.info_process.daemon = True
         TaskTranslateInfo.info_process.start()
@@ -192,7 +236,7 @@ class TaskTranslateInfo:
     def task_list():
         data = deepcopy(TaskTranslateInfo.tasks)
 
-        return [{"task": data[t]["code"], "timestamp": data[t]["timestamp"]}
+        return [{"task": data[t]["code"], "contest": data[t]["contest"], "timestamp": data[t]["timestamp"]}
                 for t in data]
 
     @staticmethod
@@ -203,34 +247,38 @@ class TaskTranslateInfo:
 
     @staticmethod
     def language_list():
-        return deepcopy(TaskTranslateInfo.languages)
+        return deepcopy(TaskTranslateInfo.languages.keys())
 
     @staticmethod
     def gertranslate_entries():
-        return ["code", "title",
-                "keywords", "remarks", "download", "tex"] +\
-               ["download-"+l for l in TaskTranslateInfo.languages] +\
+        return ["contest", "code", "title",
+                "keywords", "remarks", "pdf", "tex"] +\
+               ["pdf-"+l for l in TaskTranslateInfo.languages] +\
                ["tex-"+l for l in TaskTranslateInfo.languages] +\
+               ["log-"+l for l in TaskTranslateInfo.languages] +\
                ["upload-"+l for l in TaskTranslateInfo.languages] +\
                ["mark-"+l for l in TaskTranslateInfo.languages] +\
-               ["download-ALL"]
+               ["pdf-ALL"]
 
     @staticmethod
     def gertranslate_desc():
         return {
-                **{"code": "Code",
+                **{"contest": "Contest",
+                "code": "Code",
                 "title": "Title",
                 "keywords": "Keywords",
                 "remarks": "Remarks",
-                "download": "PDF [O]",
-                "tex": "TeX [O]",
-                "download-ALL": "PDF [ALL]"},
-                **{"download-"+l: "PDF ["+l+"]" for l in TaskTranslateInfo.languages},
+                "pdf": "PDF [en]",
+                "tex": "TeX [en]",
+                "log": "Log [en]",
+                "pdf-ALL": "PDF [ALL]"},
+                **{"pdf-"+l: "PDF ["+l+"]" for l in TaskTranslateInfo.languages},
                 **{"tex-"+l: "TeX ["+l+"]" for l in TaskTranslateInfo.languages},
+                **{"log-"+l: "Log ["+l+"]" for l in TaskTranslateInfo.languages},
                 **{"upload-"+l: "Upload TeX ["+l+"]" for l in TaskTranslateInfo.languages},
                 **{"mark-"+l: "Finalize ["+l+"]" for l in TaskTranslateInfo.languages}
                }
 
     @staticmethod
     def languages_desc():
-        return {l: Locale(l).language_name+" ["+l+"]" for l in TaskTranslateInfo.languages}
+        return {l: Locale(l).get_language_name('en')+" ["+l+"]" for l in TaskTranslateInfo.languages}

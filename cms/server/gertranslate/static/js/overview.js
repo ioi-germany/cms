@@ -1,6 +1,7 @@
 function update_availability(t, entry){
-    if(entry.startsWith("download"))    var key = "download";
+    if(entry.startsWith("pdf"))    var key = "pdf";
     else if(entry.startsWith("tex"))    var key = "tex";
+    else if(entry.startsWith("log"))    var key = "log";
     else return;
 
     var l = key.length;
@@ -18,31 +19,34 @@ function update_availability(t, entry){
 
 function inner_cell(t, entry)
 {
-    if(entry.startsWith("download"))    var key = "download";
+    if(entry.startsWith("pdf"))    var key = "pdf";
     else if(entry.startsWith("tex"))    var key = "tex";
     else if(entry.startsWith("upload"))    var key = "upload";
     else if(entry.startsWith("mark"))    var key = "mark";
+    else if(entry.startsWith("log"))    var key = "log";
     else var key = "";
 
     var l = key.length;
     var extended_code = t.code + (entry.length>l?entry.substring(l):"");
 //     The current implementation assumes "en" to be the primary language, so lan==null yields statement-en
     var mark_lan=(entry.length>l?entry.substring(l+1):"en");
-    var repository_code = t.code + "/" + mark_lan;
+    var repository_code = t.contest + "/" + t.code + "/" + mark_lan;
 
 
-    if(entry.startsWith("download"))
+    if(entry.startsWith("pdf"))
     {
         if(!t["compile"])
             return '';
 
         var r = '<div class="download-icon';
-        r += '" id = "download-' + extended_code + '" data-code = "' + repository_code + '"></div>';
+        r += '" id = "pdf-' + extended_code + '" data-code = "' + repository_code + '"></div>';
         return r;
     }
 
     if(entry.startsWith("tex"))
     {
+        if(t["code"].endsWith("overview"))
+            return '';
         var r = '<div class="download-icon';
         r += '" id = "tex-' + extended_code + '" data-code = "' + repository_code + '"></div>';
         return r;
@@ -52,8 +56,10 @@ function inner_cell(t, entry)
     {
         if(t["locked"].indexOf(mark_lan)>-1)
             return '&mdash;';
+        if(t["code"].endsWith("overview"))
+            return '';
         else
-            return '<form enctype="multipart/form-data" action="/upload/' + repository_code + '" method = "post" id = "form-' + extended_code + '" target="dummyframe"><input type="file" name="file" style="width: 250px"/><input type="reset" value="Upload" onclick=\'document.forms["form-' + extended_code + '"].submit();\'/></form>';//TODO Use upload icon and implement this like the rest//TODO Use different id from mark
+            return '<form enctype="multipart/form-data" action="upload/' + repository_code + '" method = "post" id = "form-upload-' + extended_code + '" target="dummyframe"><input type="file" name="file" style="width: 250px"/><input type="reset" value="Upload" onclick=\'document.forms["form-upload-' + extended_code + '"].submit();\'/></form>';//TODO Use upload icon and implement this like the rest//TODO Use different id from mark
     }
 
     if(entry.startsWith("mark"))
@@ -62,8 +68,19 @@ function inner_cell(t, entry)
             return '✓';
         if(!(t["translated"].indexOf(mark_lan)>-1))
             return '&mdash;';
+        if(t["code"].endsWith("overview"))
+            return '';
         else
-            return '<form id = "form-' + extended_code + '" target="dummyframe"> <input type="button" value="Finalize" onclick=\'window.document.getElementById("mark-task-name").innerHTML = window.document.getElementById("mark-task-name-h").innerHTML = "' + t.code + '";window.document.getElementById("mark-task-lan").innerHTML = "' + mark_lan + '";window.document.getElementById("do-mark").dataset.code = "' + repository_code + '";open_modal("mark")\'/></form>';//TODO Use other button and implement this like the rest//TODO Use put?
+            return '<form id = "form-finalize-' + extended_code + '" target="dummyframe"> <input type="button" value="Finalize" onclick=\'window.document.getElementById("mark-task-name").innerHTML = window.document.getElementById("mark-task-name-h").innerHTML = "' + t.code + '";window.document.getElementById("mark-task-lan").innerHTML = "' + mark_lan + '";window.document.getElementById("do-mark").dataset.code = "' + repository_code + '";open_modal("mark")\'/></form>';//TODO Use other button and implement this like the rest//TODO Use put?
+    }
+
+    if(entry.startsWith("log"))
+    {
+        if(t["code"].endsWith("overview"))
+            return '';
+        var r = '<div class="git-log-icon';
+        r += '" id = "log-' + extended_code + '" data-code = "' + repository_code + '"></div>';
+        return r;
     }
 
     if(entry == "keywords")
@@ -87,7 +104,7 @@ function cell(t, entry)
 {
     var id = "cell-" + t.code + "-" + entry;
 
-    if(entry.startsWith("download") || entry.startsWith("tex"))
+    if(entry.startsWith("pdf") || entry.startsWith("tex"))
     {
         return '<td id = "' + id + '" class="download">' + inner_cell(t, entry) +'</td>';
     }
@@ -100,6 +117,11 @@ function cell(t, entry)
     if(entry.startsWith("mark"))
     {
         return '<td id = "' + id + '" class="download">' + inner_cell(t, entry) +'</td>';
+    }
+
+    if(entry.startsWith("log"))
+    {
+        return '<td id = "' + id + '" class="git-log">' + inner_cell(t, entry) +'</td>';
     }
 
     else
@@ -154,7 +176,7 @@ function build_row(task_code, lan_mode=false)
 
 function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, init, lan_mode)
 {
-    new_tasks = new_tasks.sort();
+    new_tasks = new_tasks.sort(function(a,b){ if(__info[a]['contest']<__info[b]['contest'])return -1;if(__info[a]['contest']>__info[b]['contest'])return +1;return 0; if(a<b)return -1;if(a>b)return +1;return 0; });
 
     if(init)
     {
@@ -162,7 +184,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
 
         table_body += '<tr id="overview-heading" class="odd">';
         for(var j = 0; j < entries.length; ++j)
-            if(entries[j].startsWith("download") || entries[j].startsWith("tex") || entries[j].startsWith("mark"))
+            if(entries[j].startsWith("pdf") || entries[j].startsWith("tex") || entries[j].startsWith("mark") || entries[j].startsWith("log"))
                 table_body += '<td id="overview-heading-' + entries[j] + '" class="th download-heading">' + desc[entries[j]] + '</td>'; // table-bordered doesn't work with th, so we emulate it
             else
                 table_body += '<td id="overview-heading-' + entries[j] + '" class="th">' + desc[entries[j]] + '</td>'; // table-bordered doesn't work with th, so we emulate it
@@ -188,17 +210,18 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
             $(build_row(new_tasks[new_tasks_idx], lan_mode)).insertAfter("#" + last_entry);
 
             for(var j = 0; j < entries.length; ++j)
-                if(entries[j].startsWith("download") || entries[j].startsWith("tex"))
+                if(entries[j].startsWith("pdf") || entries[j].startsWith("tex") || entries[j].startsWith("log"))
                     update_availability(__info[new_tasks[new_tasks_idx]], entries[j]);
 
-            init_download_icon(new_tasks[new_tasks_idx]);
-            init_download_icon(new_tasks[new_tasks_idx],false);
+            init_download_icon(new_tasks[new_tasks_idx],"pdf");
+            init_download_icon(new_tasks[new_tasks_idx],"tex");
             for(var i = 0; i < languages.length; ++i){
-                init_download_icon(new_tasks[new_tasks_idx],true,languages[i]);
-                init_download_icon(new_tasks[new_tasks_idx],false,languages[i]);
+                init_download_icon(new_tasks[new_tasks_idx],"pdf",languages[i]);
+                init_download_icon(new_tasks[new_tasks_idx],"tex",languages[i]);
+                init_download_icon(new_tasks[new_tasks_idx],"log",languages[i]);
                 init_upload_icon(new_tasks[new_tasks_idx],languages[i]);
             }
-            init_download_icon(new_tasks[new_tasks_idx],true,"ALL");
+            init_download_icon(new_tasks[new_tasks_idx],"pdf","ALL");
             last_entry = "row-" + new_tasks[new_tasks_idx];
 
             if(!init)
@@ -219,7 +242,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
         }
     }
 
-    __tasks = __tasks.concat(new_tasks).sort();
+    __tasks = __tasks.concat(new_tasks).sort(function(a,b){ if(__info[a]['contest']<__info[b]['contest'])return -1;if(__info[a]['contest']>__info[b]['contest'])return +1;return 0; if(a<b)return -1;if(a>b)return +1;return 0; });
 
     var num_interesting_columns = 0;
     for(var j = 1; j < entries.length - 1; ++j)
@@ -280,8 +303,8 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
             cell.classList.remove('marked');
             cell.classList.remove('translated');
             cell.classList.remove('untouched');
-            if(!lan_mode && entries[j].startsWith("download") && entries[j]!="download" && entries[j]!="download-ALL"){
-                var entry_lan = entries[j].substring(9);
+            if(!lan_mode && entries[j].startsWith("pdf") && entries[j]!="pdf" && entries[j]!="pdf-ALL"){
+                var entry_lan = entries[j].substring(4);
                 if(__info[__tasks[i]]["locked"].indexOf(entry_lan)>-1)
                     cell.classList.add('marked');
                 else if(__info[__tasks[i]]["translated"].indexOf(entry_lan)>-1)
@@ -322,7 +345,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
         {
             var cell = window.document.getElementById("cell-" + updated_tasks[i] + "-" + entries[j]);
 
-            if(entries[j].startsWith("download") || entries[j].startsWith("tex"))
+            if(entries[j].startsWith("pdf") || entries[j].startsWith("tex") || entries[j].startsWith("log"))
                 update_availability(__info[updated_tasks[i]], entries[j]);
             else
                 cell.innerHTML = inner_cell(__info[updated_tasks[i]], entries[j]);
