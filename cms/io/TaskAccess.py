@@ -143,6 +143,7 @@ class TaskCompileJob:
                                    no_test=True,
                                    submission=None,
                                    no_latex=False,
+                                   safe_latex=True,
                                    language=self.language,
                                    clean=False,
                                    minimal=True)

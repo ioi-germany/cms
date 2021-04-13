@@ -37,7 +37,7 @@ from psutil import virtual_memory
 
 class GerMake:
     def __init__(self, odir, task, minimal, no_test,
-                 submission, no_latex, language, clean):
+                 submission, no_latex, safe_latex, language, clean):
         self.odir = odir
         self.task = task
         self.minimal = minimal
@@ -45,6 +45,7 @@ class GerMake:
         if self.local_test and submission is not None:
             self.local_test = submission
         self.no_latex = no_latex
+        self.safe_latex = safe_latex
         self.language = language
         self.clean = clean
 
@@ -75,7 +76,8 @@ class GerMake:
                 os.path.basename(self.odir),
                 relevant_language=(self.language if self.language!="ALL" else None),
                 ignore_latex=self.no_latex,
-                onlytask=self.task)
+                onlytask=self.task,
+                safe_latex=self.safe_latex)
 
             contestconfig._readconfig("contest-config.py")
             if self.task is not None and len(contestconfig.tasks) == 0:
@@ -146,6 +148,8 @@ def main():
                            type=utf8_decoder)
     parser.add_argument("-nl", "--no-latex", action="store_true",
                         help="do not compile latex documents")
+    parser.add_argument("-sl", "--safe-latex", action="store_true",
+                        help="Safely compile latex documents in a sandbox")
     parser.add_argument("-l", "--language",
                         help="only compile latex files that end in this string",
                         type=utf8_decoder)
@@ -161,6 +165,7 @@ def main():
             args.no_test,
             args.submission,
             args.no_latex,
+            args.safe_latex,
             args.language,
             args.clean).make()
 
