@@ -32,7 +32,6 @@ from ansi2html import Ansi2HTMLConverter
 
 from cms.io.TaskInfo import TaskInfo
 
-from cmscontrib.gerpythonformat.Messenger import disable_colors
 from cmscontrib.gerpythonformat.GerMakeTask import GerMakeTask
 
 

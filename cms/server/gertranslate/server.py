@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2016-2018 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2020 Manuel Gundlach <manuel.gundlach@gmail.com>
+# Copyright © 2020-2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -31,7 +31,7 @@ from tornado.web import RequestHandler, Application
 
 from cms import config
 from cms.io.TaskTranslateInfo import TaskTranslateInfo
-from cms.io.TaskAccess import TaskAccess
+from cms.io.TaskAccess import TaskAccess, unpack_code
 from cms.io.Repository import Repository
 
 
@@ -54,12 +54,15 @@ class TaskCompileHandler(RequestHandler):
         self.write({"handle": handle})
 
 
-class DownloadHandler(RequestHandler):
+class PDFHandler(RequestHandler):
     def share(self, statement, code):
         self.set_header("Content-Type", "application/pdf")
+        #TODO Do this less ugly.
+        srcname = TaskTranslateInfo.tasks[unpack_code(code)[1]]["filename"]
+        prefix = "statement-" if srcname == "statement" else ""
         self.set_header(
             "Content-Disposition",
-            "attachment;filename=\"statement-{}.pdf\"".format(code))
+            "attachment;filename=\"{}{}.pdf\"".format(prefix,code.replace('/','-')))
         self.write(statement)
         self.flush()
 
@@ -80,15 +83,15 @@ class TeXHandler(RequestHandler):
     def share(self, statement, code):
         self.set_header("Content-Type", "text")
         #TODO Do this less ugly.
-        logger.error(code)
-        srcname = TaskTranslateInfo.tasks[code.split("/")[0]]["filename"]
+        srcname = TaskTranslateInfo.tasks[unpack_code(code)[1]]["filename"]
+        code = code[1:] if code[0]=='/' else code
         if srcname == "statement":
             srcname += "-"
         else:
             srcname = ""
         self.set_header(
             "Content-Disposition",
-            "attachment;filename=\""+srcname+"{}.tex\"".format(code))#FIXME This contains a /, which seems to automatically be converted to a _, but fix this.
+            "attachment;filename=\""+srcname+"{}.tex\"".format(code.replace('/','-')))
         self.write(statement)
         self.flush()
 
@@ -131,6 +134,21 @@ class InfoHandler(RequestHandler):
         self.flush()
 
 
+class LogHandler(RequestHandler):
+    def get(self, code):
+        try:
+            gitlog = TaskAccess.getGitLog(code)
+
+            if gitlog is None:
+                raise ValueError
+        except:
+            logger.error("could not download statement log for {}".format(code))
+            self.render("error.html")#TODO
+        else:
+            self.write(gitlog)
+            self.flush()
+
+
 class GerTranslateWebServer:
     """Service running a web server that lets you download task statements
     and upload translations
@@ -144,10 +162,11 @@ class GerTranslateWebServer:
                     (r"/list", ListHandler),
                     (r"/info", InfoHandler),
                     (r"/compile", TaskCompileHandler),
-                    (r"/download/(.*)", DownloadHandler),
+                    (r"/pdf/(.*)", PDFHandler),
                     (r"/tex/(.*)", TeXHandler),
                     (r"/upload/(.*)", UploadHandler),
-                    (r"/mark/(.*)", MarkHandler)]
+                    (r"/mark/(.*)", MarkHandler),
+                    (r"/log/(.*)", LogHandler)]
 
         params = {"template_path": resource_filename("cms.server",
                                                      "gertranslate/templates"),

@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2016 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2020 Manuel Gundlach <manuel.gundlach@gmail.com>
+# Copyright © 2020-2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -94,10 +94,11 @@ class Repository:
                     gitout = check_output(["git", "add",
                                            file_path])
                 except:
-                    logger.error("Couldn't add file to git repository: " +
+                    logger.error("Couldn't add file to git staging area: " +
                                  "{}".format(gitout))
                 else:
                     try:
+                        gitout = ""
                         #NOTE file_path is relative to self.path, which isn't
                         #necessarily the root of the git repo. So the commit message
                         #might be confusing.
@@ -112,3 +113,25 @@ class Repository:
                     else:
                         logger.info("Committed: " +
                                     "{}".format(gitout))
+
+    #For GerTranslate
+    #TODO Show errors in web overview
+    def getlog(self, file_path):
+        #TODO Only do this if it's a git repository
+        #if self.auto_sync:
+            with chdir(self.path):
+                gitout = ""
+
+                try:
+                    #TODO Remove diff info lines
+                    gitout = check_output(["git", "log",
+                                           '--pretty=format:Date:   %ci%n%n    %s%n',
+                                           "-p",
+                                           "--word-diff=color",
+                                           file_path])
+                except:
+                    logger.error("Couldn't get log: " +
+                                 "{}".format(gitout))
+                else:
+                    gitout = gitout.decode('utf-8')
+                    return gitout
