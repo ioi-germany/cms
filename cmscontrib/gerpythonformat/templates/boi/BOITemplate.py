@@ -33,6 +33,7 @@ from cmscontrib.gerpythonformat.Supplement import def_latex, input_latex
 import os
 import shutil
 import filecmp
+from PyPDF2 import PdfFileMerger
 
 
 # This is the template for BOI 2021 (an only slightly modified lg template)
@@ -61,6 +62,23 @@ class BOITemplate(LgTemplate):
                                        input_latex("taskheader.tex")))
 
         self.mktestcasetable(task)
+
+    def credentials_supplement(self, user, lang, attach_statements):
+        def statements():
+            if not attach_statements:
+                return ""
+
+            return "".join("\\mycleardoublepage\\includepdf[pages=-]{%s}" %
+                               os.path.relpath(t._statements[lang].file_,
+                                               os.getcwd())
+                           for t in sorted(self.contest.tasks.values(),
+                                           key=lambda x: x.name)
+                           if lang in t._statements) + \
+                   "\\mycleardoublepage"
+
+        return "\\printoverviewpage{%s}{%s, %s}{%s}" % \
+               (user.username, user.lastname, user.firstname, user.password) + \
+               statements()
 
     def make_overview_sheets(self, attach_statements=False):
         """
@@ -98,29 +116,45 @@ class BOITemplate(LgTemplate):
             shutil.copy(os.path.join(os.path.dirname(__file__), "header.pdf"),
                         os.path.join(os.getcwd(), "header.pdf"))
 
-            lang_code = ""
-            user_list = []
-
             def do_supply_language():
                 return self.language_supplement(lang_code)
 
             def do_supply_credentials():
-                return self.credentials_supplement(user_list, attach_statements)
+                return self.credentials_supplement(user, lang_code,
+                                                   attach_statements)
 
             self.contest.supply("lang", do_supply_language)
             self.contest.supply("credentials", do_supply_credentials)
 
             for team,users in teams.items():
-                filename = "overview-sheet-" + team.name + ".tex"
+                if not os.path.exists(team.code):
+                    os.mkdir(team.code)
 
-                shutil.copy(os.path.join(os.path.dirname(__file__),
-                                             "overview-template.tex"),
-                            filename)
+                outermerger = PdfFileMerger()
 
-                lang_code = str.lower(team.code)
-                if lang_code == "unaffiliated":
-                    lang_code = "en"
-                user_list = users
-                self.contest._build_supplements_for_key("credentials")
-                self.contest._build_supplements_for_key("lang")
-                self.contest.compile(filename)
+                with chdir(team.code):
+                    for user in users:
+                        innermerger = PdfFileMerger()
+
+                        for lang_code in user.primary_statements:
+                            def escape(s):
+                                return s.replace(' ', '-')
+                            filename = "overview-sheet-" + escape(user.username) + \
+                                       "-" + lang_code + ".tex"
+
+                            shutil.copy(os.path.join(os.path.dirname(__file__),
+                                                     "overview-template.tex"),
+                                        filename)
+
+                            self.contest._build_supplements_for_key("credentials")
+                            self.contest._build_supplements_for_key("lang")
+                            innermerger.append(self.contest.compile(filename))
+
+                        totalfilename = "overview-sheet-" + \
+                                        escape(user.username) + ".pdf"
+                        innermerger.write(totalfilename)
+                        innermerger.close()
+                        outermerger.append(totalfilename)
+
+                outermerger.write("overview-sheet-" + team.code)
+                outermerger.close()
