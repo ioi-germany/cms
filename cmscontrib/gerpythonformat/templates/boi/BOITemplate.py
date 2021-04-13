@@ -24,12 +24,14 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from cms import FEEDBACK_LEVEL_RESTRICTED
+from cms.rules.Rule import ZipRule
 from cmscommon.constants import SCORE_MODE_MAX_SUBTASK
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 from cmscontrib.gerpythonformat.templates.lg.LgTemplate \
     import LgTemplate
 from cmscontrib.gerpythonformat.LocationStack import chdir
 from cmscontrib.gerpythonformat.Supplement import def_latex, input_latex
+from cmscontrib.gerpythonformat.Messenger import print_msg
 import os
 import shutil
 import filecmp
@@ -80,7 +82,42 @@ class BOITemplate(LgTemplate):
                (user.username, user.lastname, user.firstname, user.password) + \
                statements()
 
-    def make_overview_sheets(self, attach_statements=False):
+    def _escape(self, s):
+        return s.replace(' ', '-')
+
+    def make_overview_sheets(self):
+        """
+        Print overview sheets in two versions (with tasks and all contestants
+        of any individual team in one file OR without tasks and all contestants
+        separately) and ZIP them together
+        """
+        self._make_overview_sheets(attach_statements=False)
+        self._make_overview_sheets(attach_statements=True)
+
+        def handout_for(t):
+            return "handout-" + t + ".pdf"
+
+        def overview_for(u):
+            return "overview-sheet-" + self._escape(u.username) + ".pdf"
+
+        zip_jobs = {}
+
+        for u in self.contest.users.values():
+            t = u.team.code
+
+            if t not in zip_jobs:
+                zip_jobs[t] = {handout_for(t) : handout_for(t)}
+            zip_jobs[t][overview_for(u)] = os.path.join(t, overview_for(u))
+
+        with chdir("overview"):
+            for team, job in zip_jobs.items():
+                print_msg("Creating zip file with overview sheets/handouts "
+                          "for team " + team)
+
+                r = ZipRule(os.path.join("..", ".rules"), team + "-all.zip",
+                            job).ensure()
+
+    def _make_overview_sheets(self, attach_statements):
         """
         Print an overview sheet, containing information about all tasks
 
@@ -94,6 +131,8 @@ class BOITemplate(LgTemplate):
                    for t in self.contest.tasks.values()))
         assert(all(t.score_mode() == SCORE_MODE_MAX_SUBTASK
                    for t in self.contest.tasks.values()))
+
+        prefix = "handout" if attach_statements else "overview-sheet"
 
         for u in self.contest.users.values():
             #TODO Rename team_name to team (as this actually seems to be a team object)
@@ -141,10 +180,9 @@ class BOITemplate(LgTemplate):
                         innermerger = PdfFileMerger()
 
                         for lang_code in user.primary_statements:
-                            def escape(s):
-                                return s.replace(' ', '-')
-                            filename = "overview-sheet-" + escape(user.username) + \
-                                       "-" + lang_code + ".tex"
+                            filename = prefix + "-" + \
+                                       self._escape(user.username) + "-" + \
+                                       lang_code + ".tex"
 
                             shutil.copy(os.path.join(os.path.dirname(__file__),
                                                      "overview-template.tex"),
@@ -154,11 +192,14 @@ class BOITemplate(LgTemplate):
                             self.contest._build_supplements_for_key("lang")
                             innermerger.append(self.contest.compile(filename))
 
-                        totalfilename = "overview-sheet-" + \
-                                        escape(user.username) + ".pdf"
+                        totalfilename = prefix + "-" + \
+                                        self._escape(user.username) + ".pdf"
                         innermerger.write(totalfilename)
                         innermerger.close()
                         outermerger.append(totalfilename)
 
-                outermerger.write("overview-sheet-" + team.code)
+                outermerger.write(prefix + "-" + team.code + ".pdf")
                 outermerger.close()
+
+        self.contest.supplements["lang"].parts.clear()
+        self.contest.supplements["credentials"].parts.clear()
