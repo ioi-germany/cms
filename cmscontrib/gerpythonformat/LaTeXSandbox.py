@@ -27,7 +27,9 @@ class LaTeXSandbox(IsolateSandbox):
     A sandbox for compiling statements with (Lua)LaTeX
     """
     def __init__(self, *args, **kwargs):
-        IsolateSandbox.__init__(self, *args, **kwargs)
+        bid = 1000 + (os.getpid() % 8999) # 8999 is prime
+
+        IsolateSandbox.__init__(self, *args, box_id=bid, **kwargs)
 
         copyrecursivelyifnecessary(os.path.join(os.path.expanduser("~"),
                                                 config.latex_distro),

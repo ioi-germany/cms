@@ -850,7 +850,7 @@ class IsolateSandbox(SandboxBase):
     # on the current directory.
     SECURE_COMMANDS = ["/bin/cp", "/bin/mv", "/usr/bin/zip", "/usr/bin/unzip"]
 
-    def __init__(self, file_cacher, name=None, temp_dir=None):
+    def __init__(self, file_cacher, name=None, temp_dir=None, box_id=None):
         """Initialization.
 
         For arguments documentation, see SandboxBase.__init__.
@@ -865,12 +865,13 @@ class IsolateSandbox(SandboxBase):
         # sequentially, with a wrap-around.
         # FIXME This is the only use of FileCacher.service, and it's an
         # improper use! Avoid it!
-        if file_cacher is not None and file_cacher.service is not None:
-            box_id = ((file_cacher.service.shard + 1) * 10
-                      + (IsolateSandbox.next_id % 10)) % 1000
-        else:
-            box_id = IsolateSandbox.next_id % 10
-        IsolateSandbox.next_id += 1
+        if box_id is None:
+            if file_cacher is not None and file_cacher.service is not None:
+                box_id = ((file_cacher.service.shard + 1) * 10
+                          + (IsolateSandbox.next_id % 10)) % 1000
+            else:
+                box_id = IsolateSandbox.next_id % 10
+            IsolateSandbox.next_id += 1
 
         # We create a directory "home" inside the outer temporary directory,
         # that will be bind-mounted to "/tmp" inside the sandbox (some
