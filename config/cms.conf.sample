@@ -18,7 +18,7 @@
 
     "_section": "GerMake",
 
-    "_help": "Whether we should *not* cache hashes."
+    "_help": "Whether we should *not* cache hashes.",
     "always_recompute_hash": true,
 
 
