@@ -559,6 +559,11 @@ class LaTeXRule(CommandRule):
         deletefile(".deps")
 
     def post_run(self):
+        # Don't save the result if LaTeX failed.
+        # (We don't reliably detect when a previously missing file was added,
+        # for example when a missing package was installed.)
+        if self.result.log['code']:
+            self.result.badfail = True
         self.result.add_dependency(self.source)  # Should not be necessary
         readmakefile(".deps", self.result, True)
         # Latexmk seems to output latin_1 instead of utf8.
@@ -608,7 +613,13 @@ class SafeLaTeXRule(Rule):
         # (if latex fails to write the dependencies file).
         deletefile(depsfile)
 
-        sandbox.execute_without_std(self.command, wait=True)
+        success = sandbox.execute_without_std(self.command, wait=True)
+
+        # Don't save the result if the sandbox or LaTeX failed.
+        # (We don't reliably detect when a previously missing file was added,
+        # for example when a missing package was installed.)
+        if not success or sandbox.failed():
+            self.result.badfail = True
 
         self.result.log['code'] = sandbox.failed()
         self.result.log['out'] = sandbox.get_stdout()
@@ -679,6 +690,9 @@ class JobRule(Rule):
         # Crazy workaround to clone the job
         jobresult = Job.import_from_dict_with_type(self.job.export_to_dict())
         task_type.execute_job(jobresult, self.file_cacher)
+        # Don't save the result if the sandbox failed.
+        if not jobresult.success:
+            self.result.badfail = True
         self.result.log['job'] = jobresult.export_to_dict()
 
     def finish(self):
