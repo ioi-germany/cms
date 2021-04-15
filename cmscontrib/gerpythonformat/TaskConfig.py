@@ -1878,4 +1878,6 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         r = JobRule(self.rules, job, self.file_cacher).ensure()
+        if not r.job.success:
+            raise Exception("Evaluation failure")
         return r.job
