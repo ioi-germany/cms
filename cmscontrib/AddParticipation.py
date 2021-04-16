@@ -4,6 +4,7 @@
 # Copyright © 2017 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2017 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -54,6 +55,8 @@ def add_participation(username, contest_id, ip, delay_time, extra_time,
 
     if hidden:
         logger.warning("The participation will be hidden")
+    if unofficial:
+        logger.warning("The participation will be unofficial")
     if unrestricted:
         logger.warning("The participation will be unrestricted")
 
@@ -101,6 +104,7 @@ def add_participation(username, contest_id, ip, delay_time, extra_time,
                 password=password,
                 team=team,
                 hidden=hidden,
+                unofficial=unofficial,
                 unrestricted=unrestricted)
 
             session.add(participation)
@@ -133,6 +137,8 @@ def main():
                         help="code of the team for this participation")
     parser.add_argument("--hidden", action="store_true",
                         help="if the participation is hidden")
+    parser.add_argument("--unofficial", action="store_true",
+                        help="if the participation is unofficial")
     parser.add_argument("--unrestricted", action="store_true",
                         help="if the participation is unrestricted")
     parser.add_argument("-g", "--group", action="store", type=utf8_decoder,
@@ -165,7 +171,8 @@ def main():
         args.plaintext_password or args.hashed_password,
         args.method or "plaintext",
         args.hashed_password is not None, args.team,
-        args.hidden, args.unrestricted, args.group)
+        args.hidden, args.unofficial, args.unrestricted,
+        args.group)
     return 0 if success is True else 1
 
 
