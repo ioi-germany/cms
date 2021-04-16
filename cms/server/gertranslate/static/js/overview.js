@@ -83,7 +83,7 @@ function inner_cell(t, entry)
         return r;
     }
 
-    if(entry == "keywords")
+    if(Array.isArray(t[entry])) // for keywords and some remarks
     {
         var r = '<ul class="embedded">';
         if(t[entry].length == 0) r += "&mdash;";

@@ -267,7 +267,7 @@ class TaskTranslateInfo:
                 "code": "Code",
                 "title": "Title",
                 "keywords": "Keywords",
-                "remarks": "Remarks",
+                "remarks": "Remarks / Changelog",
                 "pdf": "PDF [en]",
                 "tex": "TeX [en]",
                 "log": "Log [en]",
