@@ -257,18 +257,12 @@ class RuleResult(object):
     def add_dependency(self, filename):
         """Add a file using its current hash value.
         """
-        if os.path.isfile(filename):
-            self.dependencies[filename] = self.hash_of_file(filename)
-        else:
-            self.dependencies[filename] = None
+        self.dependencies[filename] = self.hash_of_file(filename)
 
     def add_output(self, filename):
         """Add a file using its current hash value.
         """
-        if os.path.isfile(filename):
-            self.outputs[filename] = self.hash_of_file(filename)
-        else:
-            self.outputs[filename] = None
+        self.outputs[filename] = self.hash_of_file(filename)
 
     def uptodate(self):
         """Whether the saved hash values all agree with the current files.
