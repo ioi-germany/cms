@@ -8,7 +8,9 @@ pycryptodomex>=3.6,<3.7  # https://github.com/Legrandin/pycryptodome/blob/master
 psutil>=5.5,<5.6  # https://github.com/giampaolo/psutil/blob/master/HISTORY.rst
 requests>=2.22,<2.23  # https://pypi.python.org/pypi/requests
 # Slightly higher version for Python 3.8 support
-gevent>=1.5,<1.6  # http://www.gevent.org/changelog.html
+# gevent>=1.5,<1.6  # http://www.gevent.org/changelog.html
+# We override this for Python 3.9 support
+gevent>=1.5  # http://www.gevent.org/changelog.html
 # Limit greenlet version for binary compatibility with gevent 1.5 wheels
 greenlet<0.4.17
 werkzeug>=0.16,<0.17  # https://github.com/pallets/werkzeug/blob/master/CHANGES
