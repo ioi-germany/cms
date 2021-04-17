@@ -111,6 +111,9 @@ class BOITemplate(LgTemplate):
 
         with chdir("overview"):
             for team, job in zip_jobs.items():
+                if self.contest.relevant_language and self.contest.relevant_language != team:
+                    continue
+
                 print_msg("Creating zip file with overview sheets/handouts "
                           "for team " + team)
 
