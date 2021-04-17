@@ -102,7 +102,7 @@ class TaskCompileJob:
 
         def do(status, repository, balancer):
             # stdout is process local in Python, so we can simply use this
-            # to redirect all output from GerMakeTask to a string
+            # to redirect all output from GerMake to a string
             sys.stdout = StringIO()
 
             C = Ansi2HTMLConverter()
