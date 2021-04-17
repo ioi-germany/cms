@@ -638,8 +638,10 @@ class SafeLaTeXRule(Rule):
                             os.path.join(self.wdir, relpath, self.output))
             self.result.add_output(self.output)
 
-            with chdir(sandbox.get_home_path()):
-                readmakefile(os.path.join(relpath, ".deps"), self.result, True)
+            # Change to the same working directory that lualatex used (which is
+            # inside the sandbox).
+            with chdir(os.path.join(sandbox.get_home_path(), relpath)):
+                readmakefile(".deps", self.result, True)
 
             def convert(path):
                 if path.startswith(os.path.join(config.latex_distro, "")):
