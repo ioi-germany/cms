@@ -71,6 +71,13 @@ class PlainTemplate(Template):
 
     def ontask(self, task):
         super(PlainTemplate, self).ontask(task)
+
+        def si(x, y):
+            return "\\SI{" + str(x) + "}{" + str(y) + "}"
+
+        task.latex_timelimit = lambda: si(task._timelimit, "s")
+        task.latex_memorylimit = lambda: si(task._memorylimit, "MiB")
+
         self.supply_cases(task)
         task.supplement_file("latex", "taskinfo.tex")
         shutil.copy(os.path.join(os.path.dirname(__file__), "header.tex"),

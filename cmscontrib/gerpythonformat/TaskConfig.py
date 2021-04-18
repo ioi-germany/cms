@@ -774,14 +774,6 @@ class TaskConfig(CommonConfig, Scope):
         """
         self._timelimit = s
 
-    def latex_timelimit(self):
-        """
-        Return the time limit in LaTeX format.
-
-        return (string): LaTeX string
-        """
-        return "${}\,\\textnormal{{s}}$".format(self._timelimit)
-
     @exported_function
     def memorylimit(self, s):
         """
@@ -791,14 +783,6 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         self._memorylimit = s
-
-    def latex_memorylimit(self):
-        """
-        Return the memory limit in LaTeX format.
-
-        return (string): LaTeX string
-        """
-        return "${}\,\\textnormal{{MiB}}$".format(self._memorylimit)
 
     @exported_function
     def statement(self, s, language="en", primary=None):
