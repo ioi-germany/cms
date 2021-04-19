@@ -9,6 +9,7 @@
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2017 Valentin Rosca <rosca.valentin2012@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -282,6 +283,7 @@ class AddParticipationHandler(BaseHandler):
 
         attrs = {}
         self.get_bool(attrs, "hidden")
+        self.get_bool(attrs, "unofficial")
         self.get_bool(attrs, "unrestricted")
 
         # Create the participation.
@@ -289,6 +291,7 @@ class AddParticipationHandler(BaseHandler):
                                       user=user,
                                       group=group,
                                       hidden=attrs["hidden"],
+                                      unofficial=attrs["unofficial"],
                                       unrestricted=attrs["unrestricted"])
         self.sql_session.add(participation)
 

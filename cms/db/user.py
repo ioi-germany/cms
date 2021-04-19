@@ -9,6 +9,7 @@
 # Copyright © 2015 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -293,6 +294,12 @@ class Participation(Base):
         nullable=False,
         default=False)
 
+    # An unofficial participation (e.g. can be hidden in public rankings).
+    unofficial = Column(
+        Boolean,
+        nullable=False,
+        default=False)
+
     # An unrestricted participation (e.g. contest time,
     # maximum number of submissions, minimum interval between submissions,
     # maximum number of user tests, minimum interval between user tests),
@@ -466,7 +473,7 @@ class Question(Base):
     reply_timestamp = Column(
         DateTime,
         nullable=True)
-    
+
     # Last time something about the answer changed
     last_action = Column(
         DateTime,

@@ -112,6 +112,13 @@ function update_additional_answer(element, invoker)
       </tr>
       <tr>
         <td>
+          <span class="info" title="Whether the contestant's results will be marked unofficial in the external ranking, so the user can choose to hide them."></span>
+          Unofficial participation
+        </td>
+        <td><input type="checkbox" name="unofficial" {% if participation.unofficial %}checked{% endif %}/></td>
+      </tr>
+      <tr>
+        <td>
           <span class="info" title="Whether the contestant is unrestricted by maximum number of submissions, user tests,
                                     and minimum interval between submissions, user tests, and contest time."></span>
           Unrestricted participation

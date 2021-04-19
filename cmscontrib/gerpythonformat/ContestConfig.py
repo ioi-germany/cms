@@ -4,6 +4,7 @@
 # Programming contest management system
 # Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -72,7 +73,7 @@ class TeamContext(object):
 
 class MyUser(object):
     def __init__(self, username, password, group, firstname, lastname,
-                 ip, hidden, unrestricted, timezone, primary_statements, team):
+                 ip, hidden, unofficial, unrestricted, timezone, primary_statements, team):
         self.username = username
         self.password = password
         self.group = group
@@ -80,6 +81,7 @@ class MyUser(object):
         self.lastname = lastname
         self.ip = ip
         self.hidden = hidden
+        self.unofficial = unofficial
         self.unrestricted = unrestricted
         self.timezone = timezone
         self.primary_statements = primary_statements
@@ -382,7 +384,7 @@ class ContestConfig(CommonConfig):
 
     @exported_function
     def user(self, username, password, firstname, lastname, group=None,
-             ip=None, hidden=False, unrestricted=False, timezone=None,
+             ip=None, hidden=False, unofficial=False, unrestricted=False, timezone=None,
              primary_statements=None, team=None):
         """
         Add a user participating in this contest.
@@ -404,6 +406,9 @@ class ContestConfig(CommonConfig):
 
         hidden (bool): whether this user is hidden (not shown on the official
                        scoreboard)
+
+        unofficial (bool): whether this user is unofficial (can be hidden on the
+                       official scoreboard)
 
         unrestricted (bool): whether this user is unrestricted (can submit at
                              any time)
@@ -442,7 +447,7 @@ class ContestConfig(CommonConfig):
         self.users[username] = user = \
             MyUser(username, password, group,
                    firstname, lastname,
-                   ip, hidden, unrestricted, timezone, primary_statements[:],
+                   ip, hidden, unofficial, unrestricted, timezone, primary_statements[:],
                    team)
         return user
 
@@ -620,6 +625,7 @@ class ContestConfig(CommonConfig):
 
         pdb.ip = user.ip
         pdb.hidden = user.hidden
+        pdb.unofficial = user.unofficial
         pdb.unrestricted = user.unrestricted
 
         pdb.team = teamdb

@@ -9,6 +9,7 @@
 # Copyright © 2015 Luca Versari <veluca93@gmail.com>
 # Copyright © 2015 William Di Luigi <williamdiluigi@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -351,6 +352,7 @@ class ProxyService(TriggeredService):
                         "f_name": user.first_name,
                         "l_name": user.last_name,
                         "team": team.code if team is not None else None,
+                        "unofficial": participation.unofficial,
                     }
                     if team is not None:
                         teams[encode_id(team.code)] = {
