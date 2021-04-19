@@ -1,5 +1,6 @@
 /* Programming contest management system
  * Copyright © 2012 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+ * Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -198,7 +199,7 @@ var Overview = new function () {
         // - d(0) = 0;        - d'(0) = 3/2;
         // - d(max_users) = 3/4 * width (excluding padding);
 
-        var max_users = DataStore.user_count;
+        var max_users = DataStore.official_user_count;
         var a = (3/4 * (self.width - self.PAD_R - self.PAD_L) - 3/2 * max_users) / (max_users * max_users);
         var b = 3/2;
         var c = 0;
@@ -224,7 +225,7 @@ var Overview = new function () {
             self.scores[i] = 0;
         }
 
-        var users = DataStore.users;
+        var users = Object.values(DataStore.users).filter(function(u){return !u["unofficial"];});
         var max_score = DataStore.global_max_score;
 
         for (var u_id in users) {
@@ -494,7 +495,7 @@ var Overview = new function () {
 
         for (var i in self.user_list) {
             var user = self.user_list[i];
-            var r_height = self.get_rank_height(user["rank"], DataStore.user_count);
+            var r_height = self.get_rank_height(user["rank"], DataStore.official_user_count);
 
             // 'b' (for begin) is the y coordinate of the top of the cluster
             // 'e' (for end) is the y coordinate of the bottom of the cluster
@@ -545,7 +546,7 @@ var Overview = new function () {
                 var user = c.list[j];
 
                 var s_height = self.get_score_height(user["global"], DataStore.global_max_score);
-                var r_height = self.get_rank_height(user["rank"], DataStore.user_count);
+                var r_height = self.get_rank_height(user["rank"], DataStore.official_user_count);
 
                 if (user["markers"]) {
                     // Update the existing marker

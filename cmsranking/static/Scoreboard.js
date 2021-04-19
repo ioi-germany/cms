@@ -1,5 +1,6 @@
 /* Programming contest management system
  * Copyright © 2012 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+ * Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -40,6 +41,7 @@ var Scoreboard = new function () {
         self.tcols_el = $('#Scoreboard_cols');
         self.thead_el = $('#Scoreboard_head');
         self.tbody_el = $('#Scoreboard_body');
+        self.hide_box_el = $('#HideUnofficialBox');
 
         self.generate();
 
@@ -113,6 +115,15 @@ var Scoreboard = new function () {
         // Create callbacks for UserPanel
         self.tbody_el.on("click", "td.f_name, td.l_name", function () {
             UserDetail.show($(this).parent().data("user"));
+        });
+
+        // Create callbacks for HideUnofficialBox
+        self.hide_box_el.on("change", "input[type=checkbox]", function () {
+            var status = $(this).prop("checked");
+            if(status)
+                self.tbody_el.addClass("hide_unofficial");
+            else
+                self.tbody_el.removeClass("hide_unofficial");
         });
 
         // Create callbacks for animation-end
@@ -249,7 +260,7 @@ var Scoreboard = new function () {
     self.make_row = function (user) {
         // See the comment in .make_cols() for the reason we use colspans.
         var result = " \
-<tr class=\"user" + (user["selected"] > 0 ? " selected color" + user["selected"] : "") + "\" data-user=\"" + user["key"] + "\"> \
+<tr class=\"user" + (user["selected"] > 0 ? " selected color" + user["selected"] : "") + (user["unofficial"] > 0 ? " unofficial" : "") + "\" data-user=\"" + user["key"] + "\"> \
     <td class=\"sel\"></td> \
     <td class=\"rank\">" + user["rank"] + "</td> \
     <td colspan=\"10\" class=\"f_name\">" + escapeHTML(user["f_name"]) + "</td> \

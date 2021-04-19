@@ -466,6 +466,19 @@ abbr {
     cursor: pointer;
 }
 
+#Scoreboard_body.hide_unofficial tr.unofficial {
+    display: none;
+}
+
+#Scoreboard_body tr.unofficial td.rank {
+    font-size: 0;
+}
+
+#Scoreboard_body tr.unofficial td.f_name,
+#Scoreboard_body tr.unofficial td.l_name {
+    color: gray;
+}
+
 #Scoreboard_body tr:hover td.f_name,
 #Scoreboard_body tr:hover td.l_name,
 #Scoreboard_body tr:hover td {
@@ -1195,6 +1208,17 @@ abbr {
 }
 
 
+/* Style for the 'hide unnofficial contestants' checkbox */
+
+#HideUnofficialBox {
+    display: block;
+    position: absolute;
+    top: 10px;
+    right: 320px;
+    text-align: right;
+}
+
+
 /******************************************************************************\
 |                                                                              |
 |                                  Mobile Layout                               |
@@ -1357,6 +1381,10 @@ abbr {
 
     #ConnectionStatus_box {
         right: 8px;
+    }
+
+    #HideUnofficialBox {
+        display: none;
     }
 
     @media (orientation:landscape) {
