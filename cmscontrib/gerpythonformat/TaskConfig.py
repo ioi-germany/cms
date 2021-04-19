@@ -440,8 +440,8 @@ class MySubmission(object):
         if strong_time_limit > 1 or weak_time_limit < 1 \
                 or strong_mem_limit > 1 or weak_mem_limit < 1:
             raise Exception(
-                "Weird limits for unit test; strong limits should be > 1 "
-                "and weak limits should be < 1")
+                "Weird limits for unit test; strong limits should be <= 1 "
+                "and weak limits should be >= 1")
         self.expected = expected
 
         keywords = {"arbitrary": ["arbitrary"],
