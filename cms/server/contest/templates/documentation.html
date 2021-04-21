@@ -23,6 +23,12 @@
 <p>{% trans %}The main Java class of the solution should have exactly the same name as the task.{% endtrans %}</p>
 {% endif %}
 
+{% if contest.languages|map("to_language")|map(attribute="source_extensions")|any("contains", ".py") %}
+<h3>Python</h3>
+
+<p><a href="{{ url("py-sl", "index.html") }}">{% trans %}Python Standard Library{% endtrans %}</a></p>
+{% endif %}
+
 <h2>{% trans %}Submission details for compilation{% endtrans %}</h2>
 
 <table class="table table-bordered">
