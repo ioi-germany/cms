@@ -2,6 +2,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2011-2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,6 +26,7 @@ class User(Entity):
     It consists of the following properties:
     - f_name (unicode): the first name of the user
     - l_name (unicode): the last name of the user
+    - unofficial (bool): whether the user competes unofficially
     - team (unicode): the id of the team the user belongs to
 
     """
@@ -35,6 +37,7 @@ class User(Entity):
         Entity.__init__(self)
         self.f_name = None
         self.l_name = None
+        self.unofficial = False
         self.team = None
 
     @staticmethod
@@ -51,6 +54,8 @@ class User(Entity):
                 "Field 'f_name' isn't a string"
             assert isinstance(data['l_name'], str), \
                 "Field 'l_name' isn't a string"
+            assert isinstance(data['unofficial'], bool), \
+                "Field 'unofficial' isn't a bool"
             assert data['team'] is None or \
                 isinstance(data['team'], str), \
                 "Field 'team' isn't a string (or null)"
@@ -63,6 +68,7 @@ class User(Entity):
         self.validate(data)
         self.f_name = data['f_name']
         self.l_name = data['l_name']
+        self.unofficial = data['unofficial']
         self.team = data['team']
 
     def get(self):

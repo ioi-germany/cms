@@ -850,7 +850,7 @@ class IsolateSandbox(SandboxBase):
     # on the current directory.
     SECURE_COMMANDS = ["/bin/cp", "/bin/mv", "/usr/bin/zip", "/usr/bin/unzip"]
 
-    def __init__(self, file_cacher, name=None, temp_dir=None):
+    def __init__(self, file_cacher, name=None, temp_dir=None, box_id=None):
         """Initialization.
 
         For arguments documentation, see SandboxBase.__init__.
@@ -865,12 +865,13 @@ class IsolateSandbox(SandboxBase):
         # sequentially, with a wrap-around.
         # FIXME This is the only use of FileCacher.service, and it's an
         # improper use! Avoid it!
-        if file_cacher is not None and file_cacher.service is not None:
-            box_id = ((file_cacher.service.shard + 1) * 10
-                      + (IsolateSandbox.next_id % 10)) % 1000
-        else:
-            box_id = IsolateSandbox.next_id % 10
-        IsolateSandbox.next_id += 1
+        if box_id is None:
+            if file_cacher is not None and file_cacher.service is not None:
+                box_id = ((file_cacher.service.shard + 1) * 10
+                          + (IsolateSandbox.next_id % 10)) % 1000
+            else:
+                box_id = IsolateSandbox.next_id % 10
+            IsolateSandbox.next_id += 1
 
         # We create a directory "home" inside the outer temporary directory,
         # that will be bind-mounted to "/tmp" inside the sandbox (some
@@ -935,6 +936,9 @@ class IsolateSandbox(SandboxBase):
         # /etc/mono/config to obtain the default DllMap, which includes, in
         # particular, the System.Native assembly.
         self.maybe_add_mapped_directory("/etc/mono", options="noexec")
+
+        # On Arch Linux, PyPy3 needs the following directory.
+        self.maybe_add_mapped_directory("/opt/pypy3")
 
         # Tell isolate to get the sandbox ready. We do our best to cleanup
         # after ourselves, but we might have missed something if a previous
@@ -1415,11 +1419,11 @@ class IsolateSandbox(SandboxBase):
             [self.box_exec]
             + (["--cg"] if self.cgroup else [])
             + ["--box-id=%d" % self.box_id, "--init"])
-        ret = subprocess.call(init_cmd)
-        if ret != 0:
+        try:
+            subprocess.check_call(init_cmd)
+        except subprocess.CalledProcessError as e:
             raise SandboxInterfaceException(
-                "Failed to initialize sandbox with command: %s "
-                "(error %d)" % (pretty_print_cmdline(init_cmd), ret))
+                "Failed to initialize sandbox") from e
 
     def cleanup(self, delete=False):
         """See Sandbox.cleanup()."""
@@ -1435,6 +1439,7 @@ class IsolateSandbox(SandboxBase):
             + ["--box-id=%d" % self.box_id]
 
         if delete:
+            # Ignore exit status as some files may be owned by our user
             subprocess.call(
                 exe + [
                     "--dir=%s=%s:rw" % (self._home_dest, self._home),
@@ -1443,8 +1448,9 @@ class IsolateSandbox(SandboxBase):
                 stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
         # Tell isolate to cleanup the sandbox.
-        subprocess.call(exe + ["--cleanup"],
-                        stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+        subprocess.check_call(
+            exe + ["--cleanup"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
         if delete:
             logger.debug("Deleting sandbox in %s.", self._outer_dir)

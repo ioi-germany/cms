@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -37,7 +37,7 @@ from cms.db import Task, Statement, Testcase, Dataset, \
     Attachment, Spoiler, Manager, Submission, File, \
     SubmissionResult
 from cms.grading.tasktypes import get_task_type, Communication
-from cms.grading.languagemanager import filename_to_language
+from cms.grading.languagemanager import filename_to_language, get_language
 from cms.grading.Job import CompilationJob, EvaluationJob
 from cms.rules.Rule import JobRule, ZipRule
 from cms.service.esoperations import ESOperation
@@ -78,9 +78,9 @@ class Scope(object):
 
     def _get_special_cases(self):
         res = []
-        
+
         if self.upscope is not None:
-            res += self.upscope._get_special_cases()        
+            res += self.upscope._get_special_cases()
         res += self.special_cases
         return res
 
@@ -212,6 +212,8 @@ class MySubtask(Scope):
     def _level(self):
         return 1
 
+    def max_score(self):
+        return sum(g.points for g in self.groups)
 
 class MyGroup(Scope):
     """
@@ -438,8 +440,8 @@ class MySubmission(object):
         if strong_time_limit > 1 or weak_time_limit < 1 \
                 or strong_mem_limit > 1 or weak_mem_limit < 1:
             raise Exception(
-                "Weird limits for unit test; strong limits should be > 1 "
-                "and weak limits should be < 1")
+                "Weird limits for unit test; strong limits should be <= 1 "
+                "and weak limits should be >= 1")
         self.expected = expected
 
         keywords = {"arbitrary": ["arbitrary"],
@@ -567,8 +569,11 @@ class TaskConfig(CommonConfig, Scope):
     """
 
     def __init__(self, upstream, rules, name, num, feedback, score_mode,
-                 ignore_latex=False, minimal=False):
-        super(TaskConfig, self).__init__(rules, ignore_latex)
+                 ignore_latex=False, relevant_language=None, minimal=False,
+                 safe_latex=None, standalone_task=False):
+        super(TaskConfig, self).__init__(rules, ignore_latex=ignore_latex,
+                                         relevant_language=relevant_language,
+                                         safe_latex=safe_latex)
         self.no_tokens()
         Scope.__init__(self)
 
@@ -580,6 +585,8 @@ class TaskConfig(CommonConfig, Scope):
 
         self.upstream = upstream
         self.contest = upstream
+        if self.safe_latex is None:
+            self.safe_latex = upstream.safe_latex
 
         self.wdir = os.getcwd()
 
@@ -644,8 +651,18 @@ class TaskConfig(CommonConfig, Scope):
         # Score mode
         self._score_mode = score_mode
 
+        # Only compile statements that end with given string
+        self.relevant_language = relevant_language
+
         # Only compile statement (and hopefully everything necessary for this)
         self.minimal = minimal
+
+        # Is this task only part of a dummy contest?
+        self.standalone_task = standalone_task
+
+    @exported_function
+    def max_score(self):
+        return sum(t.max_score() for t in self.subtasks if not t.sample)
 
     @property
     def unique_name(self):
@@ -692,7 +709,7 @@ class TaskConfig(CommonConfig, Scope):
     def get_constraint_value(self, name):
         l = self.get_constraint_lower(name)
         u = self.get_constraint_upper(name)
-        
+
         if l == u:
             return l
         else:
@@ -711,7 +728,7 @@ class TaskConfig(CommonConfig, Scope):
         if self.current_group is None:
             return ""
         constraints = self.current_group._collect_constraints()
-        s = "#define __constraints\n"
+        s = "#define CONSTRAINTS_INCLUDED\n"
         s += '#include <checkutil.h>\n'
         s += "void load_constraints() {\n"
         for var, ran in iteritems(constraints):
@@ -757,14 +774,6 @@ class TaskConfig(CommonConfig, Scope):
         """
         self._timelimit = s
 
-    def latex_timelimit(self):
-        """
-        Return the time limit in LaTeX format.
-
-        return (string): LaTeX string
-        """
-        return "${}\,$s".format(self._timelimit)
-
     @exported_function
     def memorylimit(self, s):
         """
@@ -774,14 +783,6 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         self._memorylimit = s
-
-    def latex_memorylimit(self):
-        """
-        Return the memory limit in LaTeX format.
-
-        return (string): LaTeX string
-        """
-        return "${}\,$MiB".format(self._memorylimit)
 
     @exported_function
     def statement(self, s, language="en", primary=None):
@@ -824,6 +825,21 @@ class TaskConfig(CommonConfig, Scope):
         """
         self.spoilers[publicname] = os.path.abspath(localname)
 
+    def std_extensions(self):
+        _EXTENSIONS = ["cpp", "pas", "java", "py"]
+
+        return [e for e in _EXTENSIONS
+                  if any("." + e in get_language(lang).source_extensions
+                         for lang in self.upstream._languages)]
+
+    def std_language(self, filename):
+        ext = os.path.splitext(filename)[1]
+        possible_languages = [l for l in self._usual_languages()
+                                 if ext in get_language(l).source_extensions]
+
+        assert(len(possible_languages) == 1)
+        return possible_languages[0]
+
     """
     **Task types**
     """
@@ -844,7 +860,7 @@ class TaskConfig(CommonConfig, Scope):
         library (bool): whether to use a library for linking contestant
                         solutions;
                         submissions are linked together with
-                        interface.{c,cpp,pas} and, if existent, lib.h
+                        interface.{c,cpp,pas,py,...} and, if existent, lib.h
                         and lib.pas.
 
         """
@@ -852,9 +868,10 @@ class TaskConfig(CommonConfig, Scope):
         grader_param = "alone"
         if library:
             grader_param = "grader"
-            for end in ["c", "cpp", "pas", "java"]:
-                self.managers["grader." + end] = \
-                    os.path.join(self.wdir, "interface." + end)
+            for end in self.std_extensions():
+                p = os.path.join(self.wdir, "interface." + end)
+                if not self.standalone_task or os.path.exists(p):
+                    self.managers["grader." + end] = p
             if os.path.exists(os.path.join(self.wdir, "lib.h")):
                 self.managers["%s.h" % self.name] = \
                     os.path.join(self.wdir, "lib.h")
@@ -894,14 +911,15 @@ class TaskConfig(CommonConfig, Scope):
                               (must at least implement get_path() to get
                               the file name of the executable)
 
-        Submissions are linked together with interface.{c,cpp,pas}.
+        Submissions are linked together with interface.{c,cpp,pas,py,...}.
         num_processes:        e.g. set to 2 for a Two-Step task
         """
         self.tasktype = "Communication"
         if stub:
-            for end in ["c", "cpp", "pas", "java"]:
-                self.managers["stub." + end] = \
-                    os.path.join(self.wdir, "interface." + end)
+            for end in self.std_extensions():
+                p = os.path.join(self.wdir, "interface." + end)
+                if not self.standalone_task or os.path.exists(p):
+                    self.managers["stub." + end] = p
             if os.path.exists(os.path.join(self.wdir, "lib.h")):
                 self.managers["%s.h" % self.name] = \
                     os.path.join(self.wdir, "lib.h")
@@ -1044,7 +1062,7 @@ class TaskConfig(CommonConfig, Scope):
         return subtask
 
     @exported_function
-    def group(self, *args, **kwargs):
+    def group(self, *args, name=None, **kwargs):
         """
         Add a group to the "current" subtask.
 
@@ -1060,7 +1078,55 @@ class TaskConfig(CommonConfig, Scope):
         """
         if len(self.subtask_stack) == 0:
             raise Exception("group() called outside subtask")
-        return self.subtask_stack[-1].group(*args, **kwargs)
+
+        g = self.subtask_stack[-1].group(*args, **kwargs)
+
+        if name is not None:
+            if hasattr(self.subtask_stack[-1], name):
+                raise Exception("This subtask already has an attribute "
+                                "called '{}'".format(name))
+            setattr(self.subtask_stack[-1], name, g)
+
+        return g
+
+    def _subsume_group(self, g, *args, **kwargs):
+        for t in g.cases:
+            self.add_testcase(t, *args, **kwargs)
+
+    @exported_function
+    def subsume_subtask(self, subtask_name, *args, **kwargs):
+        """
+        Add a subtask's testcases to the "current" group.
+
+        You usually use this function in the following way:
+        ::
+
+            with subtask("Subtask 2", "big"):
+                with group(50):
+                    subsume_subtask("small")
+                    ...
+
+        """
+        for g in getattr(self.task, subtask_name).groups:
+            self._subsume_group(g)
+
+    @exported_function
+    def subsume_group(self, group_name, *args, subtask_name=None, **kwargs):
+        """
+        Add a group's testcases to the current group.
+        """
+        st = self.subtask_stack[-1] if subtask_name is None \
+             else getattr(self.task, subtask_name)
+
+        self._subsume_group(getattr(st, group_name), *args, **kwargs)
+
+    @exported_function
+    def subsume_previous_group(self, *args, **kwargs):
+        """
+        Add the testcases of the previous group (of the same subtask) to the
+        current group.
+        """
+        self._subsume_group(self.subtask_stack[-1].groups[-2])
 
     @exported_function
     def checker(self, *args, **kwargs):
@@ -1130,7 +1196,7 @@ class TaskConfig(CommonConfig, Scope):
             print_msg("Skipping testcase (minimal mode)")
             self.group_stack[-1]._dummy_case(kwargs.get("name"))
             return
-        
+
         if len(self.group_stack) == 0:
             raise Exception("add_testcase() called outside group")
         return self.group_stack[-1].add_testcase(*args, **kwargs)
@@ -1574,7 +1640,7 @@ class TaskConfig(CommonConfig, Scope):
             else:
                 our_filename = user_filename
             if our_filename.find(".%l") != -1:
-                lang = filename_to_language(user_filename).name
+                lang = self.std_language(user_filename)
                 if lang is None:
                     raise Exception("Cannot recognize submission's language.")
                 elif submission_lang is not None and \
@@ -1664,10 +1730,13 @@ class TaskConfig(CommonConfig, Scope):
             if submission_result.compilation_stderr is not None:
                 print_block(submission_result.compilation_stderr)
             # Evaluate
-            for testcase_codename in sorted(iterkeys(ddb.testcases)):
+            nr_of_testcases = len(ddb.testcases)
+            for nr, codename in enumerate(sorted(iterkeys(ddb.testcases))):
+                print("\033[2K\033[1GEvaluating {} / {}"
+                      .format(nr, nr_of_testcases), end='', flush=True)
                 evaluation_operation = ESOperation(ESOperation.EVALUATION,
                                                    -1, -1,
-                                                   testcase_codename)
+                                                   codename)
                 evaluation_job = EvaluationJob.from_submission(
                     evaluation_operation,
                     sdb,
@@ -1676,6 +1745,7 @@ class TaskConfig(CommonConfig, Scope):
                 evaluation_job = self._run_job(evaluation_job)
                 evaluation_job.to_submission(submission_result)
             submission_result.set_evaluation_outcome()
+            print("\033[2K\033[1G", end='', flush=True)
 
         # Judge unit test
         score_type = ddb.score_type_object
@@ -1756,7 +1826,7 @@ class TaskConfig(CommonConfig, Scope):
             def print_score_info(prefix, name):
                 score = details[prefix + "_score"]
                 rounded_score = round(score, score_precision)
-                
+
                 if score != rounded_score:
                     score = "{} ({})".format(rounded_score, score)
 
@@ -1792,4 +1862,6 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         r = JobRule(self.rules, job, self.file_cacher).ensure()
+        if not r.job.success:
+            raise Exception("Evaluation failure")
         return r.job

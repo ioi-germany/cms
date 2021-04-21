@@ -1,0 +1,134 @@
+\basicheader
+\usepackage{ifthen,etoolbox}
+\usepackage{colortbl}
+\usepackage{longtable}
+
+\setlength{\LTpost}{\medskipamount}
+
+\ifthenelse{\equal{\TemplateLanguage}{he}}{
+\AtBeginDocument{\def\footnoterule{\vskip.25cm\hbox to \textwidth{\kern.6\textwidth\hrulefill}\vskip.25cm}}
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=0pt, rightmargin=1cm}
+\setlist[description]{leftmargin=0pt, rightmargin=0pt}
+}{
+\usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
+}
+\usepackage[lining,scaled=.9]{FiraMono}
+\usepackage[mathrm=sym]{unicode-math}
+\usepackage[Scale=.9]{firamath-otf}
+\usepackage{luatexbase}
+\usepackage{microtype}
+\usepackage[hang,symbol,multiple]{footmisc}
+\usepackage{tikz}
+\usepackage{siunitx}
+
+\renewcommand{\footnotemargin}{1em}
+
+\input graphdrawing.tex
+
+\input general/protected.tex
+\input general/translation-\TemplateLanguage.tex
+
+\ifthenelse{\equal{\TemplateLanguage}{da}}{
+    \usepackage[danish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{de}}{
+    \usepackage[ngerman]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{en}}{
+    \usepackage[english]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{et}}{
+    \usepackage[estonian]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{fi}}{
+    \usepackage[finnish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{he}}{
+\usepackage[nil,bidi=basic]{babel}
+\addtokomafont{disposition}{\rmfamily}
+\setmainfont{FiraGO}[Numbers=Lowercase, Scale=.9]
+\setsansfont{FiraGO}[Numbers=Lowercase, Scale=.9]
+\babelfont{rm}[Numbers=Lowercase, Scale=.9]{FiraGO}
+\babelfont[hebrew]{rm}[Numbers=Lowercase, Scale=.9]{FiraGO}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{nb}}{
+    \usepackage[norsk]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{pl}}{
+    \usepackage[polish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{sv}}{
+    \usepackage[swedish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{uk}}{
+    \usepackage[ukrainian]{babel}
+}{}}}}}}}}}}
+
+\newcommand{\setlang}[1]{\ifthenelse{\equal{\TemplateLanguage}{he}}{\begin{otherlanguage}{hebrew}#1\end{otherlanguage}}{#1}}
+
+\chead{\vspace{-12pt}\textbf{\Large BOI 2021}\\ \tBOIPlace\\ \tBOIDates}
+\lhead{\vspace{-12pt}\hbox to 0pt{\hskip-.43in\includegraphics[scale=.65]{header.pdf}}\vspace{-6ex}}
+\rhead{\vspace{-12pt}\textbf{\contestname}\\\tTask:\enspace\textbf{\taskname}\\ \tLang:\enspace\textbf{\TemplateLanguage}}
+
+\ifthenelse{\equal{\TemplateLanguage}{he}}{
+\chead{\vspace{-12pt}\begin{otherlanguage}{hebrew}\textbf{\Large BOI 2021}\\ {\tBOIPlace}\\ {\tBOIDates}\end{otherlanguage}}
+\rhead{\vspace{-12pt}\hbox to 0pt{\hskip-.43in\includegraphics[scale=.65]{header.pdf}}\vspace{-6ex}}
+\lhead{\vspace{-12pt}\begin{otherlanguage}{hebrew}\textbf{\contestname}\\\tTask:\enspace\textbf{\taskname}\\ \tLang:\enspace\textbf{\TemplateLanguage}\end{otherlanguage}}
+}{}
+
+\cfoot{\textbf{\thepage}/\pageref{LastPage}}
+
+\addtolength{\topmargin}{-15pt}
+\AtBeginDocument{\addtolength{\headsep}{15pt}}
+
+\makeatletter
+\def\sthelper#1#2{{\sffamily\bfseries \tSubtask{#1} (\ifnum#2=1\tPoint{$\symbf{#2}$}\else\tPoints{$\symbf{#2}$}\fi).\enspace}}
+\newcount\stcount
+\stcount=0
+\def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}
+\def\subtask{\count1=\stcount \advance\count1 by 1 \st{\subtaskpoints{\the\count1}}}
+\def\currconstraint#1{\scopedconstraint{\the\stcount}{#1}}
+\def\currconstraints{\@ifstar{\currconstraint{@ll*}}{\currconstraint{@ll}}}
+\def\currconstraintupper#1{\scopedconstraintupper{\the\stcount}{#1}}
+\def\currconstraintlower#1{\scopedconstraintlower{\the\stcount}{#1}}
+\def\currconstraintvalue#1{\scopedconstraintvalue{\the\stcount}{#1}}
+
+
+\begingroup
+\catcode`\ǁ=4
+\catcode`\& =\active%
+\gdef\@ctivateAMP{\def&{ǁǁ}}
+\endgroup
+\newenvironment{interactiontable}{\begingroup%
+\catcode`\& =\active%
+\@ctivateAMP%
+\par\medskip%
+\ifthenelse{\equal{\TemplateLanguage}{he}}{\begin{otherlanguage}{english}}{}
+\begin{tabular}{>{\cellcolor[gray]{.9}}p{3.5cm}@{\hskip0pt}p{.52cm}@{\hskip0pt}>{\cellcolor[gray]{.9}}p{3cm}@{\hskip0pt}p{.52cm}@{\hskip0pt}>{\cellcolor[gray]{.9}\sffamily\hangindent=1.25em\hangafter=1\raggedright\arraybackslash}p{7.55cm}}
+\hline
+\multicolumn{1}{|c}{\cellcolor{white}\sffamily\tProgram}&&\multicolumn{1}{c}{\sffamily \tReturn}&&\multicolumn{1}{c|}{\sffamily\tExplanation}\\\hline
+\noalign{\smallskip}%
+}{\end{tabular}
+\ifthenelse{\equal{\TemplateLanguage}{he}}{\end{otherlanguage}}{}\endgroup\par\medskip}
+
+
+\def\myc@ption#1#2#3{\noalign{\bfseries\large #3}}
+\def\showcases{\removelastskip\par\bigskip\begingroup%
+% This is evil: we hijack LT@makecaption to force longtable to place the heading
+% same page as the table...
+\let\LT@makecaption=\myc@ption
+\begingroup%
+\microtypesetup{activate=false}%
+\testcasetable%
+\endgroup%
+\endgroup}
+\def\showlimits{\sheading{\tLimits}%
+\tTime: \timelimit\\
+\tMemory: \memlimit}
+% ---
+\makeatother
+
+\def\flushsubtasks{\global\stcount=\numsubtasks}
+
+\AtEndDocument{\ifnum\stcount=\numsubtasks\else\PackageError{lg-template}{Not all subtasks are contained in the task statement!\MessageBreak You should call \protect\subtask\space (or \protect\st) precisely as often as there are subtasks, not counting the public one. If for some reason you do not want to do this, you can call \protect\flushsubtasks\space after all calls to \protect\subtask\space and \protect\st}{You should call \protect\subtask\space (or \protect\st) precisely as often as there are subtasks, not counting the public one. If for some reason you do not want to do this, you can call \protect\flushsubtasks\space after all calls to \protect\subtask\space and \protect\st}\fi}

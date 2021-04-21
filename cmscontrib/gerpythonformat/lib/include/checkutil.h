@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,35 +20,50 @@
 /* Standard functions for checkers
  */
 
-#ifndef __checkutil_h
-#define __checkutil_h
+#pragma once
 
 #include <computil.h>
-#include <my_optional.h>
+#include <optionaladapter.h>
 #include <map>
 #include <set>
 #include <string>
 #include <cstdio>
 #include <iostream>
 #include <sstream>
+#include <type_traits>
 using namespace std;
+
+/* Check whether the header "constraints.h" has been included BEFORE this file
+ * The templating is necessary to exploit C++'s SFINAE
+ */
+ template<typename... Ts> constexpr bool constraints_loaded() {
+     #ifdef CONSTRAINTS_INCLUDED
+         return true;
+     #else
+         return false;
+     #endif
+ }
+
+ #define CONSTRAINT_ERROR_MSG "You have to include the constraints header before including checkutil.h or checkframework.h if you want to use the constraints system"
 
 /* We save constraints as strings, thereby allowing for numbers that do not fit
  * one of the usual integer types
  */
-map<string, pair<my_optional<string>, my_optional<string>>> _integral_constraints;
+map<string, pair<optional<string>, optional<string>>> _integral_constraints;
 
 /* Queries for automatic constraints */
-template<typename T> pair<my_optional<T>, my_optional<T>> get_constraint(const string &name) {
+template<typename T> pair<optional<T>, optional<T>> get_constraint(const string &name) {
+    static_assert(constraints_loaded<T>(), CONSTRAINT_ERROR_MSG);
+
     auto iter = _integral_constraints.find(name);
 
     if(iter != _integral_constraints.end()) {
-        pair<my_optional<string>, my_optional<string>> result = iter->second;
+        pair<optional<string>, optional<string>> result = iter->second;
 
-        return make_pair(make_optional(from_string_or_fail<T>)(result.first),
-                         make_optional(from_string_or_fail<T>)(result.second));
+        return make_pair(optional_adapter(from_string_or_fail<T>)(result.first),
+                         optional_adapter(from_string_or_fail<T>)(result.second));
     }
-    
+
     else {
         cerr << "auto-check failed: name '" + name + "' not found" << endl;
         exit(42);
@@ -69,17 +84,17 @@ template<typename T> pair<T, T> GET_CONSTRAINT(const string &name) {
 
 template<typename T> T get_constraint_value(const string &name) {
     pair<T, T> constraint = GET_CONSTRAINT<T>(name);
-    
+
     if(constraint.first != constraint.second) {
         cerr << "asking for constraint value although lower != upper -- why?" << endl;
         exit(42);
     }
-    
+
     return constraint.first;
 }
 
 /* Register an automatic constraint */
-void put_integral_constraint(const string &name, const my_optional<string> &min, const my_optional<string> &max) {
+void put_integral_constraint(const string &name, const optional<string> &min, const optional<string> &max) {
     _integral_constraints[name] = make_pair(min, max);
 }
 
@@ -90,12 +105,17 @@ void add_special_case(string s) {
     _special_cases.insert(s);
 }
 
-bool is_special_case(string s) {
+#define SPECIAL_CASE_TYPE_ERROR_MSG "You may only call is_special_case or ought_to_be with parameters convertible to strings"
+
+template<typename T> bool is_special_case(const T &s) {
+    static_assert(constraints_loaded<T>(), CONSTRAINT_ERROR_MSG);
+    static_assert(is_convertible<T, string>(), SPECIAL_CASE_TYPE_ERROR_MSG);
+
     return _special_cases.find(s) != _special_cases.end();
 }
 
-bool ought_to_be(string s) {
-    return is_special_case(s);
+template<typename T> bool ought_to_be(const T &t) {
+    return is_special_case(t);
 }
 
 /* Replaces all whitespace escapes by their respective codes
@@ -117,7 +137,7 @@ string nice_whitespace(const string &s) {
     return r;
 }
 
-template<typename T> void check_bounds(const string &name, T t, my_optional<T> min, my_optional<T> max) {
+template<typename T> void check_bounds(const string &name, T t, optional<T> min, optional<T> max) {
         if (min.has_value() and t < *min) {
             cerr << name << " = " << t << " < " << *min << endl;
             exit(1);
@@ -178,7 +198,7 @@ public:
         return t;
     }
 
-    template<typename T> T parse_and_check(const string &name, my_optional<T> min, my_optional<T> max, const string &expected_whitespace = "") {
+    template<typename T> T parse_and_check(const string &name, optional<T> min, optional<T> max, const string &expected_whitespace = "") {
         T t = parse_and_check<T> (expected_whitespace);
 
         check_bounds(name, t, min, max);
@@ -187,7 +207,7 @@ public:
     }
 
     template<typename T> T parse_and_auto_check(const string &name, const string &expected_whitespace = "") {
-        pair<my_optional<T>, my_optional<T>> constraint = get_constraint<T>(name);
+        pair<optional<T>, optional<T>> constraint = get_constraint<T>(name);
         return parse_and_check<T>(name, constraint.first, constraint.second, expected_whitespace);
     }
 
@@ -217,5 +237,3 @@ private:
         return "";
     }
 };
-
-#endif

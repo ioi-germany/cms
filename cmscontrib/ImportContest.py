@@ -7,6 +7,7 @@
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014-2015 William Di Luigi <williamdiluigi@gmail.com>
 # Copyright © 2015-2016 Luca Chiodini <luca@chiodini.org>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -259,7 +260,8 @@ class ContestImporter:
         session (Session): session to use.
         contest (Contest): the contest in the DB.
         new_p (dict): dictionary with the participation data, including at
-            least "username"; may contain "team", "hidden", "ip", "password".
+            least "username"; may contain "team", "hidden", "unofficial",
+            "ip", "password".
 
         return (Participation): the participation in the DB.
 
@@ -305,8 +307,10 @@ class ContestImporter:
             args["team"] = team
         if "hidden" in new_p:
             args["hidden"] = new_p["hidden"]
+        if "unofficial" in new_p:
+            args["unofficial"] = new_p["unofficial"]
         if "ip" in new_p and new_p["ip"] is not None:
-            args["ip"] = [ipaddress.ip_network(new_p["ip"])]
+            args["ip"] = list(map(ipaddress.ip_network, new_p["ip"].split(",")))
         if "password" in new_p:
             args["password"] = new_p["password"]
         # Use the contest's main group

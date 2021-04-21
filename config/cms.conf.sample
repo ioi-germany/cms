@@ -15,6 +15,14 @@
     "cmsuser": "cmsuser",
 
 
+
+    "_section": "GerMake",
+
+    "_help": "Whether we should *not* cache hashes.",
+    "always_recompute_hash": true,
+
+
+
     "_section": "AsyncLibrary",
 
     "core_services":
@@ -122,6 +130,8 @@
 
     "_help": "STL documentation path in the system (exposed in CWS).",
     "stl_path": "/usr/share/cppreference/doc/html/",
+    "_help": "Python SL documentation path in the system (exposed in CWS).",
+    "py_sl_path": "/usr/share/pyreference/",
 
 
 

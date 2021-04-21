@@ -27,6 +27,7 @@ import json
 import logging
 import os
 import sys
+from datetime import datetime
 from collections import namedtuple
 
 from .log import set_detailed_logs
@@ -97,6 +98,9 @@ class Config:
         self.file_log_debug = False
         self.stream_log_detailed = False
 
+        # GerMake
+        self.always_recompute_hash = True
+
         # Database.
         self.database = "postgresql+psycopg2://cmsuser@localhost/cms"
         self.database_debug = False
@@ -114,6 +118,25 @@ class Config:
         self.compilation_sandbox_max_processes = 1000
         self.compilation_sandbox_max_time_s = 10.0
         self.compilation_sandbox_max_memory_kib = 512 * 1024  # 512 MiB
+        # Max processes, CPU time (s), memory (KiB) for LaTeX compilation runs
+        self.latex_compilation_sandbox_max_processes = \
+            self.compilation_sandbox_max_processes
+        self.latex_compilation_sandbox_max_time_s = 60.0
+        self.latex_compilation_sandbox_max_memory_kib = \
+            self.compilation_sandbox_max_memory_kib
+
+        # Where should the LaTeX sandbox look for packages, fonts, etc.?
+        now = datetime.now().year
+        self.latex_distro = None
+        for s in [str(y) for y in range(now - 10, now + 1)] + [""]:
+            if os.path.exists(os.path.join(os.path.expanduser("~"),
+                                           ".texlive" + s)):
+                self.latex_distro = ".texlive" + s
+
+        self.latex_additional_dirs = \
+            [d for d in [os.path.expanduser("~/.local/share/fonts")]
+                if os.path.exists(d)]
+
         # Max processes, CPU time (s), memory (KiB) for trusted runs.
         self.trusted_sandbox_max_processes = 1000
         self.trusted_sandbox_max_time_s = 10.0
@@ -137,6 +160,7 @@ class Config:
         self.max_submission_length = 100_000  # 100 KB
         self.max_input_length = 5_000_000  # 5 MB
         self.stl_path = "/usr/share/cppreference/doc/html/"
+        self.py_sl_path = "/usr/share/pyreference/"
         # Prefix of 'shared-mime-info'[1] installation. It can be found
         # out using `pkg-config --variable=prefix shared-mime-info`, but
         # it's almost universally the same (i.e. '/usr') so it's hardly

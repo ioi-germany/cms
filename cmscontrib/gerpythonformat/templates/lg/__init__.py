@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,6 +24,5 @@ from __future__ import unicode_literals
 from .LgTemplate import *
 
 
-def load(contest, short_name="~"):
-    contest.lg = short_name
-    LgTemplate(contest)
+def load(contest, short_name=None):
+    LgTemplate(contest, short_name)

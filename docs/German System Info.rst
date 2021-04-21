@@ -206,7 +206,7 @@ In den meisten Fällen benutzt man die Constraints automatisch mit den Methoden 
 
 Neben den Standardtypen ist dabei auch ``big_int`` (für beliebig lange ganze Zahlen) als Wert für ``Typ`` zulässig.
 
-Es gibt alternativ auch die Möglichkeit, irgendeine Zahl (z.B. eine, die sich per Rechnung aus der Eingabe ergibt), anhand der Constraints zu überprüfen. Dazu verwendet man ``auto_check_bounds<Typ>(Name, zu prüfender Wert)``. Schließlich besteht die Möglichkeit, die Schranken eines Constraints selbst abzufragen. Die grundlegende Funktion dazu ist ``get_constraint<Typ>(Name)``, welche ein Paar von ``my_optional<Typ>`` zurückgibt, wobei ``my_optional`` eine sehr primitive Implementierung von C++17-``optional`` ist. Das prüft auch direkt, ob die Schranken in den Typ ``Typ`` passen. Möchte man nur eine der beiden Schranken, kann man ``get_constraint_lower<Typ>(Name)`` bzw. ``get_constraint_upper<Typ>(Name)`` verwenden. Diese geben einfach ein Element vom Typ ``Typ`` zurück und prüfen auch gleich, ob die entsprechende Schranke nicht doch leer ist. Sind obere und untere Schranke auch noch identisch, steht schließlich der Befehl ``get_constraint_value<Typ>(Name)`` zur Verfügung.
+Es gibt alternativ auch die Möglichkeit, irgendeine Zahl (z.B. eine, die sich per Rechnung aus der Eingabe ergibt), anhand der Constraints zu überprüfen. Dazu verwendet man ``auto_check_bounds<Typ>(Name, zu prüfender Wert)``. Schließlich besteht die Möglichkeit, die Schranken eines Constraints selbst abzufragen. Die grundlegende Funktion dazu ist ``get_constraint<Typ>(Name)``, welche ein Paar von ``optional<Typ>`` zurückgibt. Das prüft auch direkt, ob die Schranken in den Typ ``Typ`` passen. Möchte man nur eine der beiden Schranken, kann man ``get_constraint_lower<Typ>(Name)`` bzw. ``get_constraint_upper<Typ>(Name)`` verwenden. Diese geben einfach ein Element vom Typ ``Typ`` zurück und prüfen auch gleich, ob die entsprechende Schranke nicht doch leer ist. Sind obere und untere Schranke auch noch identisch, steht schließlich der Befehl ``get_constraint_value<Typ>(Name)`` zur Verfügung.
 
 
 Constraints im Statement
@@ -509,3 +509,72 @@ Auch ``graphpicture`` erzeugt auf oberster Ebene ein ``tikzpicture`` und sollte 
 Weitere Beispiele
 -----------------
 Puh, das ist vermutlich ziemlich viel auf einmal! Aber kein Grund zu verzagen: als IOI-Coach kannst du in unserem Aufgabenrepo im Ordner ``samples`` eine Beispiel-TeX-Datei mit zugehörigem PDF-Output finden, die zahlreiche Beispielgraphen aus unseren Aufgaben enthält. Darüber hinaus verwenden immer mehr unserer Graphenaufgaben das Graphdrawing-System. In fast allen Fällen solltest du bereits durch einfache Anpassungen an so einem Beispiel zum gewünschten Ergebnis kommen.
+
+
+Übersichtszettel
+================
+Auf Wunsch erzeugt unser System auch automatisch *Übersichtszettel* für jeden Teilnehmer in einem gegebenen Wettbewerb. Diese enthalten allgemeine Informationen, eine Übersicht der Wettbewerbsaufgaben sowie die Anmeldedaten des Teilnehmers. Dieses Feature ist vor allem für Olympiaden gedacht, bei der jeder Teilnehmer einen Umschlag mit ausgedruckten Aufgabenstellungen bekommt; das Layout ist so gewählt, dass bei Verwendung einer DIN C4-Versandtasche genau der Nutzer- und tatsächliche Name im Fenster sichtbar wären, nicht aber Passwort oder wettbewerbsspezifische Informationen.
+
+Um die Übersichtszettel zu erzeugen, kann man den Befehl ``make_overview_sheets()`` in ``contest-config.py`` verwenden. **Wichtig: der Befehl sollte erst möglichst am Ende der Konfigurationsdatei verwendet werden, definitiv aber erst nachdem alle Aufgaben und alle Nutzer erstellt wurden.**
+
+Die Übersichtszettel werden in einem eigenen Ordner ``overview`` innerhalb des ``build``-Ordners angelegt. Auf Wunsch (Schlüsselwertargument ``attach_statements`` auf ``True`` setzen) können hinter jedem Übersichtszettel auch die "primären Statements" für den entsprechenden Nutzer eingebunden werden. Auf diese Weise kann man einfach die entsprechenden PDF ausdrucken und ohne Umsortieren direkt den Teamleitern zur Kontrolle geben und/oder sie in Umschläge stecken (das Template geht in diesem Fall von beidseitigem Druck aus und fügt wo nötig leere Seiten ein).
+
+
+
+Task Translation Interface
+==========================
+This is a web server and client to manage task translation by multiple users. For a given set of tasks, users can download task statements in form of TeX (and PDF) files, then upload the translated TeX files. They can then download and check the compiled PDF statement.
+
+.. warning::
+    This server accepts arbitrary TeX files and tries to compile them with ``pdflatex``. One can put malicious code in such a TeX file, **which everyone with access to the translation interface can use to run arbitrary code on the server**. Be sure to limit the interface to people you trust and who are allowed to access your server. You can run the task translation server on a separate machine / inside a virtual machine to limit access and *slightly* reduce potential damage. In a future implementation, the compilation will be done inside an ``isolate`` environment.
+
+The server's task repository is to be specified in ``cms.config``. In the repository, there must be a ``language.json`` file as well as a folder for each task that follows the :ref:`GermanFormat`.
+
+``language.json`` contains a ``languages`` key with a list of all languages you would like to have translations to, like this:
+
+.. sourcecode:: json
+
+    {
+        "languages": ["en", "hr", "cs", "de", "hu", "pl", "ro", "sk", "sl", "hy", "it", "uk", "br"]
+    }
+
+These should follow `ISO 639-1 <https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes>`_.
+Note that ``en`` always has to be in the list. The statement file for language ``la`` is going to be ``statement-la.tex``. ``statement-en.tex`` is assumed to be prepared by contest organizers and is always the primary statement. (These things are hardcoded in various places of the current implementation.) This means that using the following code in the task's ``config.py`` is a sensible way of retrieving the statements (note that ``language.json`` gets copied into the task folders once you run ``cmsGerTranslateWebServer``).
+
+.. sourcecode:: python
+
+    import json
+    from os.path import exists
+    languages = json.loads(open("languages.json").read())["languages"]
+    for l in languages:
+        filename = "statement-"+l
+        if exists(filename+".tex"):
+            statement(compilelatex(filename),language=l,primary=l=="en")
+
+Additionally, in every task folder, there must be an ``info.json`` file. It has to at least contain the keywords ``title``, ``keywords``, and ``remarks``, the values of which are shown to translators in an overview. An example would be
+
+.. sourcecode:: json
+
+    {
+        "title": "Summe",
+        "keywords": ["ad hoc", "trivial", "practice competition"],
+        "remarks": "Standard practice competition task: Print the sum of two numbers."
+    }
+
+The ``info.json`` file can also include the ``filename`` keyword, see below.
+
+Once you start ``cmsGerTranslateWebServer``, you can access the web interface, by default at `<localhost:8892>`_. When someone uploads a translation, it gets stored in the appropriate file in the repository and, if that's actually a git repository, is committed and pushed (if allowed in ``cms.config``).
+
+One can also mark a translation as finished via the web interface, which creates, commits, and pushes a ``la.lock`` file (where ``la`` is the language code) in the task folder. The server will then disallow any further attempts to change the translation, and visibly show the translation as finito in the task overview. This can only be reverted with actual access to the task repository, not via the web interface. It should make sense to have ``en.lock`` in every task folder from the beginning.
+
+You can also have folders that don't contain tasks, but other (``.tex``, but this is only a technicality) files that should be translated, but won't be compiled themselves. This can be useful if you'd like to have a file with some generic terms (like `Memory`, `Subtask`, or a feedback mode explanation) that gets included in the task statements. Use the ``compile`` keyword in ``info.json`` with value ``false`` to mark the file as not-a-statement. To specify the name of the file that should be translated, use the ``filename`` keyword. A value of ``general`` will mean the english version of the file is in ``general-en.tex``. E.g.:
+
+.. sourcecode:: json
+
+    {
+        "title": "General",
+        "keywords": [],
+        "remarks": "Please translate the expressions in this file first. They're automatically included in all your task statements.",
+        "compile": false,
+        "filename": "general"
+    }

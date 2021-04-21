@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,8 +20,7 @@
 /* Basic framework for checkers
  * just include this file and provide a check-function
  */
-#ifndef __checkframework_h
-#define __checkframework_h
+#pragma once
 
 #include <checkutil.h>
 #include <iostream>
@@ -52,10 +51,10 @@ int main(int argc, char **argv) {
     fin = stdin;
     fout = fopen(argv[1], "rb");
 
-#ifdef __constraints
+#ifdef CONSTRAINTS_INCLUDED
     load_constraints();
     cerr << "Constraints loaded." << endl;
-    
+
     if(not _special_cases.empty())
     {
         cerr << "This case should satisfy the following additional condition(s):";
@@ -69,5 +68,3 @@ int main(int argc, char **argv) {
 
     return 0; // everything OK
 }
-
-#endif

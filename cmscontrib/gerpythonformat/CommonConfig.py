@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2018 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,10 +22,16 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header
+from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \
+    header, box, yellow, highlight_latex
 from cmscontrib.gerpythonformat.Executable import CPPProgram, InternalPython, ExternalScript, \
     ExternalPython, asy_keyword_list
-from cms.rules.Rule import LaTeXRule, CommandRule, ZipRule
+from cms.rules.Rule import LaTeXRule, SafeLaTeXRule, CommandRule, ZipRule
+from cms.grading.languages.c11_gcc import C11Gcc
+from cms.grading.languages.cpp17_gpp import Cpp17Gpp
+from cms.grading.languages.java_jdk import JavaJDK
+from cms.grading.languages.pascal_fpc import PascalFpc
+from cms.grading.languages.python3_pypy import Python3PyPy
 from cmscontrib.gerpythonformat.Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
 import inspect
 import io
@@ -72,10 +78,13 @@ class CommonConfig(object):
     querying system.
     """
 
-    def __init__(self, rules, ignore_latex=False):
+    def __init__(self, rules, ignore_latex=False, relevant_language=None,
+                 safe_latex=True):
         self.upstream = None
         self.rules = rules
         self.ignore_latex = ignore_latex
+        self.relevant_language = relevant_language
+        self.safe_latex = safe_latex
 
         # how to exchange data with upstream
         self.inheriting = False
@@ -103,6 +112,8 @@ class CommonConfig(object):
 
         self.exported["timedelta"] = timedelta
 
+        self.asy_warnings = 0
+
     # Run the configuration file
 
     def _readconfig(self, filename):
@@ -117,6 +128,13 @@ class CommonConfig(object):
         with open(os.path.abspath(filename), "rb") as f:
             code = compile(f.read(), os.path.abspath(filename), 'exec')
             exec(code, self.exported)
+
+    def export_function(self, f, name=None):
+        """
+        Make the function or method f available to configuration files under
+        the given name (or under its original name, if no other name is given)
+        """
+        self.exported[name or f.__name__] = f
 
     # Supplements
 
@@ -276,7 +294,8 @@ class CommonConfig(object):
         return CPPProgram(self.rules, self, *args, **kwargs)
 
     @exported_function
-    def compilelatex(self, basename):
+    def compilelatex(self, basename, safe=None, ignore=set(),
+                     ignore_ext=set((".py", ".cpp")), do_copy=set()):
         """
         Use latexmk to compile basename.tex to basename.pdf .
 
@@ -285,6 +304,17 @@ class CommonConfig(object):
         translation sessions.
 
         basename (string): base of the tex and pdf file names
+
+        safe (boolean): should we use a sandbox for the compilation?
+
+        ignore (set of strings): files and directories in .build that shouldn't
+                                 be readable by the sandbox
+
+        ignore_ext (set of strings): file extensions that shouldn't be
+                                     readable by the sandbox
+
+        do_copy (set of strings): files that should be readable to the sandbox
+                                  although their extensions belong to ignore_ext
 
         return (string): file name of the generated pdf file
 
@@ -295,14 +325,28 @@ class CommonConfig(object):
         if self.ignore_latex:
             return output
 
-        with header("Compile {} to {} using LuaLaTeX"
-                    .format(self.short_path(source), self.short_path(output)),
+        if self.relevant_language is not None and not basename.endswith(self.relevant_language):
+            return output
+
+        if safe is None:
+            safe = self.safe_latex
+
+        with header("{}ompiling {} to {} using LuaLaTeX"
+                    .format("Safely c" if safe else "C",
+                            self.short_path(source), self.short_path(output)),
                     depth=10):
             self._build_supplements("latex")
 
-            r = LaTeXRule(self.rules, source).ensure()
-            print_block(r.out)
-            print_block(r.err)
+            if safe:
+                r = SafeLaTeXRule(self.rules, source, output, self.wdir,
+                                  ignore=ignore, ignore_ext=ignore_ext,
+                                  do_copy=do_copy).ensure()
+            else:
+                r = LaTeXRule(self.rules, source).ensure()
+
+            print_block(highlight_latex(r.out))
+            print_block(highlight_latex(r.err))
+
             if r.code != 0:
                 raise Exception("Compilation failed")
 
@@ -320,6 +364,7 @@ class CommonConfig(object):
                                                os.path.dirname(basefile))
                     if not os.path.exists(basefiledir):
                         os.makedirs(basefiledir)
+
                     shutil.copy(depabs, os.path.join(kit_directory, basefile))
 
         return output
@@ -347,6 +392,12 @@ class CommonConfig(object):
         with header("Compile {} to {} using Asymptote"
                     .format(self.short_path(source), self.short_path(output)),
                     depth=10):
+
+            box(" WARNING ", yellow("Asymptote support will be removed from "
+                                    "our task format in the near future.") +
+                "\n" + yellow("Please consider using TikZ for pictures."))
+            self.asy_warnings += 1
+
             self._build_supplements("asy")
 
             # Asymptote does not tell us the dependencies, so we have to guess
@@ -521,3 +572,7 @@ class CommonConfig(object):
         """
         self.max_user_test_number = max_number
         self.min_user_test_interval = min_interval
+
+    def _usual_languages(self):
+        return [C11Gcc().name, Cpp17Gpp().name, JavaJDK().name,
+                PascalFpc().name, Python3PyPy().name]

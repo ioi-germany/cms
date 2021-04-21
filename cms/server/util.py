@@ -8,6 +8,7 @@
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2016 William Di Luigi <williamdiluigi@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -181,6 +182,12 @@ class CommonRequestHandler(RequestHandler):
     #Returns a string's signature using secret_key
     def signature(self, text):
         return tornado_web._create_signature_v2(self.application.settings["cookie_secret"], text).decode('utf-8')
+
+    def clear_cookie(self, cookie_name):
+        self.set_cookie(cookie_name, "", expires_days=None, samesite="Strict")
+
+    def set_secure_cookie(self, cookie_name, value, **kwargs):
+        super().set_secure_cookie(cookie_name, value, samesite="Strict", **kwargs)
 
     def prepare(self):
         """This method is executed at the beginning of each request.

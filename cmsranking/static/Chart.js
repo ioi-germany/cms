@@ -34,6 +34,13 @@ var Chart = new function () {
         marks (list of float): the y values at which horizontal lines will be drawn
 */
 
+        //Adjust canvas on screens of small width
+        var isMobile = window.matchMedia("only screen and (max-width: 991px)");
+        if(isMobile){
+                canvas.width = window.innerWidth * .65;
+                canvas.height = canvas.width * .60;
+        }
+
         // width and height
         var wid = canvas.width;
         var hei = canvas.height;

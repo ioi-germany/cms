@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2016 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2016-2021 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -28,10 +28,10 @@ from sys import exc_info
 from traceback import format_exception
 from multiprocessing import Process, Manager
 from six import StringIO
+from ansi2html import Ansi2HTMLConverter
 
 from cms.io.TaskInfo import TaskInfo
 
-from cmscontrib.gerpythonformat.Messenger import disable_colors
 from cmscontrib.gerpythonformat.GerMakeTask import GerMakeTask
 
 
@@ -69,8 +69,7 @@ class TaskCompileJob:
             # to redirect all output from GerMakeTask to a string
             sys.stdout = StringIO()
 
-            # Remove color codes for the log file
-            disable_colors()
+            C = Ansi2HTMLConverter()
 
             with balancer:
                 try:
@@ -96,10 +95,11 @@ class TaskCompileJob:
 
                 except Exception:
                     status["error"] = True
-                    status["msg"] = "\n".join(format_exception(*exc_info()))
+                    status["msg"] = \
+                        C.convert("\n".join(format_exception(*exc_info())))
 
             sys.stdout.flush()
-            status["log"] = sys.stdout.getvalue()
+            status["log"] = C.convert(sys.stdout.getvalue())
             status["done"] = True
 
         self.compilation_process = Process(target=do, args=(self.status,

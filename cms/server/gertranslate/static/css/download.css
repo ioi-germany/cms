@@ -1,0 +1,123 @@
+td.download {
+    position:relative;
+}
+
+div.download-icon {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background-image:url("./../img/download.png");
+    background-repeat:no-repeat;
+    background-position:center;
+    position:absolute;
+    top:0px;
+    bottom:0px;
+    left:0px;
+    right:0px;
+    margin:auto;
+    cursor:pointer;
+}
+
+div.download-icon:hover {
+    background-image:url("./../img/download-hover.png");
+}
+
+div.download-icon.down {
+    background-image:url("./../img/download-pressed.png");
+}
+
+div.download-icon.loading, div.download-icon.down.loading {
+    background-image:none;
+    cursor:auto;
+}
+
+div.download-icon.error {
+    background-image:url("./../img/error.png");
+}
+
+div.download-icon.error:hover {
+    background-image:url("./../img/error-hover.png");
+}
+
+div.download-icon.down.error {
+    background-image:url("./../img/error-down.png");
+}
+
+/* Animated overlays */
+@keyframes rotating {
+    to {
+        transform:rotate(360deg);
+    }
+}
+
+div.download-icon.loading::before {
+    content:"";
+    width:20px;
+    height:20px;
+    background-image:url("./../img/loading.png");
+    background-repeat:no-repeat;
+    background-position:center;
+    animation-name:rotating;
+    animation-duration:1s;
+    animation-timing-function:steps(12, end);
+    animation-iteration-count:infinite;
+}
+
+@keyframes download-completed {
+    0% {
+        background-size: 15px 20px;
+        opacity:1;
+    }
+    66.6666667% {
+        background-size: 30px 40px;
+        opacity:.2;
+    }
+    100% {
+        background-size: 45px 60px;
+        opacity:0;
+    }
+}
+
+div.download-icon.done::before {
+    content:"";
+    width:100px;
+    height:100px;
+    background-image:url("./../img/download-flat.png");
+    background-repeat:no-repeat;
+    background-position:center;
+    animation-name:download-completed;
+    animation-duration:1s;
+    animation-timing-function:linear;
+    animation-fill-mode:forwards;
+}
+
+@keyframes download-error {
+    0% {
+        background-size:6px 20px;
+        opacity:1;
+    }
+
+    50% {
+        background-size:12px 40px;
+        opacity:.2;
+    }
+
+    100% {
+        background-size:18px 60px;
+        opacity:0;
+    }
+}
+
+div.download-icon.error:before {
+    content:"";
+    width:100px;
+    height:100px;
+    opacity:.5;
+    background-image:url("./../img/error-flat.png");
+    background-repeat:no-repeat;
+    background-position:center;
+    animation-name:download-error;
+    animation-duration:1s;
+    animation-timing-function:ease;
+    animation-fill-mode:forwards;
+}

@@ -9,6 +9,7 @@
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2015-2016 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -73,6 +74,7 @@ class ContestWebServer(WebService):
             "is_proxy_used": config.is_proxy_used,
             "num_proxies_used": config.num_proxies_used,
             "xsrf_cookies": True,
+            "xsrf_cookie_kwargs": {"samesite": "Strict"},
         }
 
         try:
@@ -103,7 +105,8 @@ class ContestWebServer(WebService):
             listen_address=listen_address)
 
         self.wsgi_app = SharedDataMiddleware(
-            self.wsgi_app, {"/stl": config.stl_path},
+            self.wsgi_app, {"/stl": config.stl_path,
+                            "/py-sl": config.py_sl_path},
             cache=True, cache_timeout=SECONDS_IN_A_YEAR,
             fallback_mimetype="application/octet-stream")
 

@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2018 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2018-2021 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -27,10 +27,21 @@ import imp
 import io
 import json
 import os
+import stat
 import subprocess
 import time
+import shlex
+
+from cms import config
+from cmscontrib.gerpythonformat.LaTeXSandbox import LaTeXSandbox
+from cms.db.filecacher import FileCacher
+from cmscontrib.gerpythonformat import copyifnecessary, copyrecursivelyifnecessary
+from cmscontrib.gerpythonformat.LocationStack import chdir
 
 from six import iteritems
+from copy import copy
+
+from cms import config
 
 def compute_file_hash(filename):
     """Return the sha256 sum of the given file.
@@ -188,71 +199,79 @@ class RuleResult(object):
 
     def hash_of_file(self, filename):
         """Return the hash of the given file.
-        FIXME This hash is supposed to be looked up in the
-        "database" first (given the path and ctime) and only if nothing
-        is found, it is computed (and then the result is saved to the
-        "database").
         """
-        return compute_file_hash(filename)
+        filename = os.path.abspath(filename)
+
+        try:
+            sta = os.lstat(filename)
+        except FileNotFoundError:
+            # Not a file
+            return None
+
+        if stat.S_ISLNK(sta.st_mode):
+            # Symbolic link
+            target = os.readlink(filename)
+            abstarget = os.path.join(os.path.dirname(filename), target)
+            return ["link", target, self.hash_of_file(abstarget)]
+
+        assert stat.S_ISREG(sta.st_mode)
+
+        if config.always_recompute_hash:
+            return compute_file_hash(filename)
 
         # TODO Check that the following works reliably on all systems.
         # For example, getctime sometimes only has a precision of 1 second.
-        # It also always returns a floating point number and has therefore
-        # rounding errors!
 
-        #filename = os.path.abspath(filename)
-        #hasher = hashlib.sha256()
-        #hasher.update(json.dumps({'type': 'filehash',
-                                  #'file': filename,
-                                  #'ctime': os.path.getctime(filename)},
-                                 #sort_keys=True).encode('utf-8'))
-        #hashfile = os.path.join(self.rulesdir, hasher.hexdigest())
-        #if os.path.exists(hashfile):
-            #return readfile(hashfile)
-        #else:
-            #time_before_hash = time.time()
-            #hash_ = compute_file_hash(filename)
-            ## Only remember this hash if the file's ctime is at least 10 seconds ago.
-            ## Thus, if the file changes after hashing, its ctime has to change, too.
-            ## (Even if ctime has only low resolution!)
-            ## See also https://mirrors.edge.kernel.org/pub/software/scm/git/docs/technical/racy-git.html.
-            #if os.path.getctime(filename)+10 < time_before_hash:
-                #with io.open(hashfile, 'w', encoding='utf-8') as f:
-                    #f.write(hash_)
-            #return hash_
+        hasher = hashlib.sha256()
+        hasher.update(json.dumps({'type': 'filehash',
+                                  'file': filename},
+                                 sort_keys=True).encode('utf-8'))
+        hashfile = os.path.join(self.rulesdir, hasher.hexdigest())
+        if os.path.exists(hashfile):
+            with io.open(hashfile, "r") as f:
+                stahash = os.fstat(f.fileno())
+                res = json.load(f)
+                # Check that the ctime is the same as when we last computed
+                # the hash.
+                # Also check that the ctime is more than 3 seconds before
+                # the hashfile's ctime.
+                if res['type'] == 'filehash' and \
+                        res['file'] == filename and \
+                        res['ctime'] == sta.st_ctime_ns and \
+                        sta.st_ctime_ns + 3000000000 < stahash.st_ctime_ns:
+                    return res['hash']
+
+        ## Only remember this hash if the file's ctime is at least 10 seconds ago.
+        ## Thus, if the file changes after hashing, its ctime has to change, too.
+        ## (Even if ctime has only low resolution!)
+        ## See also https://mirrors.edge.kernel.org/pub/software/scm/git/docs/technical/racy-git.html.
+        time_before_hash = time.time()
+        #print("Reading {} to compute hash".format(filename))
+        hash_ = compute_file_hash(filename)
+        if os.path.getctime(filename)+10 < time_before_hash:
+            with io.open(hashfile, 'w', encoding='utf-8') as f:
+                json.dump({'type': 'filehash', 'file': filename, 'ctime': sta.st_ctime_ns, 'hash': hash_}, f)
+
+        return hash_
 
     def add_dependency(self, filename):
         """Add a file using its current hash value.
         """
-        if os.path.isfile(filename):
-            self.dependencies[filename] = self.hash_of_file(filename)
-        else:
-            self.dependencies[filename] = None
+        self.dependencies[filename] = self.hash_of_file(filename)
 
     def add_output(self, filename):
         """Add a file using its current hash value.
         """
-        if os.path.isfile(filename):
-            self.outputs[filename] = self.hash_of_file(filename)
-        else:
-            self.outputs[filename] = None
+        self.outputs[filename] = self.hash_of_file(filename)
 
     def uptodate(self):
         """Whether the saved hash values all agree with the current files.
         """
-        for fn, h in iteritems(self.dependencies):
-            if h is None:
-                if os.path.isfile(fn):
-                    return False
-            else:
-                if not os.path.isfile(fn) or h != self.hash_of_file(fn):
-                    return False
-        for fn, h in iteritems(self.outputs):
-            if h is None:
-                if os.path.isfile(fn):
-                    return False
-            else:
-                if not os.path.isfile(fn) or h != self.hash_of_file(fn):
+        for di in (self.dependencies, self.outputs):
+            for filename, oldhash in iteritems(di):
+                newhash = self.hash_of_file(filename)
+                if oldhash != newhash:
+                    #print("Out of date: {}, old hash {}, new hash {}".format(filename, oldhash, newhash))
                     return False
         return True
 
@@ -456,7 +475,7 @@ def readmakefile(filename, result, readoutput):
 
 class GCCRule(CommandRule):
     def __init__(self, rulesdir, sources, output, libdirs=[]):
-        """Compiles sources using g++ -O2 -std=gnu++11 -Wall.
+        """Compiles sources using g++ -O2 -std=gnu++17 -Wall.
         The dependencies are automatically detected.
 
         rulesdir (string): directory used for persistent data
@@ -468,12 +487,14 @@ class GCCRule(CommandRule):
         libdirs (list): additional directories to be searched for header files
 
         """
-        command = ["g++", "-O2", "-std=gnu++0x", "-Wall", "-o", output,
-                   "-MMD", "-MF", ".deps", "-static"]
+        gcc_command = ["g++", "-O2", "-std=gnu++17", "-Wall", "-o", output,
+                       "-MMD", "-MF", ".deps", "-static",
+                       "-fdiagnostics-color=always"]
         for l in libdirs:
-            command += ["-I", l]
-        command += sources
-        super(GCCRule, self).__init__(rulesdir, command, dependonexe=False)
+            gcc_command += ["-I", l]
+        gcc_command += sources
+
+        super(GCCRule, self).__init__(rulesdir, gcc_command, dependonexe=False)
         self.sources = sources
         self.output = output
         self.libdirs = libdirs
@@ -532,12 +553,106 @@ class LaTeXRule(CommandRule):
         deletefile(".deps")
 
     def post_run(self):
+        # Don't save the result if LaTeX failed.
+        # (We don't reliably detect when a previously missing file was added,
+        # for example when a missing package was installed.)
+        if self.result.log['code']:
+            self.result.badfail = True
         self.result.add_dependency(self.source)  # Should not be necessary
         readmakefile(".deps", self.result, True)
         # Latexmk seems to output latin_1 instead of utf8.
         self.result.log['out'] = readfile(".out", "latin_1")
         self.result.log['err'] = readfile(".err", "latin_1")
 
+
+class SafeLaTeXRule(Rule):
+    def __init__(self, rulesdir, source, output, wdir,
+                 extra=["-lualatex=lualatex --interaction=nonstopmode "
+                        "--shell-restricted --nosocket %O %S"],
+                 ignore=set(), ignore_ext=set(), do_copy=set()):
+        super(SafeLaTeXRule, self).__init__(rulesdir)
+
+        self.source = source
+        self.output = output
+        self.wdir = wdir
+        self.file_cacher = FileCacher()
+        self.extra = extra
+        self.command = ["/usr/bin/latexmk", "-g", "-pdflua", "-deps",
+                        "-deps-out=.deps"] + self.extra + [source]
+        self.ignore = copy(ignore)
+        self.ignore_ext = copy(ignore_ext)
+        self.do_copy = copy(do_copy)
+
+    def mission(self):
+        return {'cwd': os.getcwd(),
+                'type': 'safe-latex',
+                'source': self.source,
+                'extra': self.extra}
+
+    def run(self):
+        sandbox = LaTeXSandbox(self.file_cacher, name="LaTeX")
+        copyrecursivelyifnecessary(self.wdir, sandbox.get_home_path(),
+                                   self.ignore, self.ignore_ext, self.do_copy,
+                                   mode=0o777)
+
+        sandbox.allow_writing_all()
+
+        relpath = os.path.relpath(os.getcwd(), self.wdir)
+        sandbox.chdir = os.path.join(sandbox.chdir, relpath)
+
+        depsfile = os.path.join(sandbox.get_home_path(), relpath, ".deps")
+
+        # Delete the dependencies file before running latex to ensure
+        # that we don't read a left-over dependencies file in the end
+        # (if latex fails to write the dependencies file).
+        deletefile(depsfile)
+
+        success = sandbox.execute_without_std(self.command, wait=True)
+
+        # Don't save the result if the sandbox or LaTeX failed.
+        # (We don't reliably detect when a previously missing file was added,
+        # for example when a missing package was installed.)
+        if not success or sandbox.failed():
+            self.result.badfail = True
+
+        self.result.log['code'] = sandbox.failed()
+        self.result.log['out'] = sandbox.get_stdout()
+        self.result.log['err'] = sandbox.get_stderr()
+
+        self.result.add_dependency(self.source)
+
+        if self.result.log['code']:
+            self.result.log['err'] += "\n\n" + ("#" * 40) + "\n" + \
+                "SANDBOX: " + sandbox.get_root_path() + "\n" + \
+                "MESSAGE: " + sandbox.get_human_exit_description() + "\n" + \
+                "LOG FILE:\n" + sandbox.get_log_file_contents()
+        else:
+            copyifnecessary(os.path.join(sandbox.get_home_path(),
+                                         relpath, self.output),
+                            os.path.join(self.wdir, relpath, self.output))
+            self.result.add_output(self.output)
+
+            # Change to the same working directory that lualatex used (which is
+            # inside the sandbox).
+            with chdir(os.path.join(sandbox.get_home_path(), relpath)):
+                readmakefile(".deps", self.result, True)
+
+            def convert(path):
+                if path.startswith(os.path.join(config.latex_distro, "")):
+                    return os.path.join(os.path.expanduser("~"), path)
+                else:
+                    return path
+
+            self.result.dependencies = \
+               {convert(path): hash
+                for path, hash in self.result.dependencies.items()}
+
+            sandbox.cleanup(not config.keep_sandbox)
+
+    def finish(self):
+        self.result.code = self.result.log['code']
+        self.result.out = self.result.log['out']
+        self.result.err = self.result.log['err']
 
 class JobRule(Rule):
     def __init__(self, rulesdir, job, file_cacher):
@@ -571,6 +686,9 @@ class JobRule(Rule):
         # Crazy workaround to clone the job
         jobresult = Job.import_from_dict_with_type(self.job.export_to_dict())
         task_type.execute_job(jobresult, self.file_cacher)
+        # Don't save the result if the sandbox failed.
+        if not jobresult.success:
+            self.result.badfail = True
         self.result.log['job'] = jobresult.export_to_dict()
 
     def finish(self):

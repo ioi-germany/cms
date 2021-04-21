@@ -1,0 +1,279 @@
+{% from cms.io.TaskTranslateInfo import TaskTranslateInfo %}
+{% import json %}
+{% from copy import deepcopy %}
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+        <title> Task Translator </title>
+
+        <link rel="stylesheet" href="static/css/bootstrap.css">
+        <link rel="stylesheet" href="static/css/cws_style.css">
+        <link rel="stylesheet" href="static/css/over_style.css">
+        <link rel="stylesheet" href="static/css/download.css">
+        <link rel="stylesheet" href="static/css/git-log.css">
+        <link rel="stylesheet" href="static/css/tags.css">
+        <link rel="stylesheet" href="static/css/checkbox.css">
+
+        <script src="static/jq/jquery-1.7.1.min.js"></script>
+        <script src="static/js/modal.js"></script>
+        <script src="static/js/download.js"></script>
+        <script src="static/js/overview.js"></script>
+
+        <script>
+            var __url_root = ".";
+            var entries = {% raw json.dumps(TaskTranslateInfo.gertranslate_entries()) %};
+            var desc = {% raw json.dumps(TaskTranslateInfo.gertranslate_desc()) %};
+            var languages = {% raw json.dumps(TaskTranslateInfo.language_list()) %};
+            var lan = "en";//TODO Should "en" remain the primary?
+            var show_col = {};
+            var criteria = {};//TODO remove this (superfluous)
+            var lan_mode = false;
+
+            function open_col_select()
+            {
+                open_modal('col-select');
+            }
+
+            function set_language(language)
+            {
+                if (language == "ALL")
+                {
+                    lan_mode = false;
+                    for(var i = 0; i < entries.length; ++i){
+                        if((entries[i].startsWith("pdf")||entries[i].startsWith("tex")) && entries[i].includes("-"))
+                            show_col[entries[i]] = true;
+                        if(entries[i].startsWith("upload")||entries[i].startsWith("mark")||entries[i].startsWith("log"))
+                            show_col[entries[i]] = false;
+                    }
+                } else {
+                    lan_mode = true;
+                    lan = language;
+                    for(var i = 0; i < entries.length; ++i)
+                        if((entries[i].startsWith("pdf")||entries[i].startsWith("tex")||entries[i].startsWith("log")||entries[i].startsWith("upload")||entries[i].startsWith("mark")) && entries[i].includes("-"))
+                            show_col[entries[i]] = entries[i].endsWith(language);
+                }
+            }
+
+            function apply_col_select()
+            {
+                close_modal('col-select');
+
+                if(window.document.getElementById("col+ALL").checked){
+                    set_language("ALL");
+                    localStorage.translation_language = "ALL";
+                }else{
+                    for(var i = 0; i < languages.length; ++i) {
+                        if(window.document.getElementById("col-" + languages[i]).checked){
+                            set_language(languages[i]);
+                            localStorage.translation_language = languages[i];
+                            break;
+                        }
+                    }
+                }
+                update();
+            }
+
+            //TODO move this to mark.js
+            function do_mark(code)
+            {
+                close_modal('mark');
+                $.post(__url_root + "/mark/" + code);
+
+
+                update();
+
+            }
+
+            function init()
+            {
+                if(__url_root[__url_root.length - 1] == '/')
+                    __url_root = __url_root.substring(0, __url_root.length - 1);
+
+                update(true, true);
+
+                for(var i = 0; i < entries.length; ++i) show_col[entries[i]] = true;
+
+                for(var i = 0; i < entries.length; ++i)
+                    if((entries[i].startsWith("pdf")||entries[i].startsWith("tex")||entries[i].startsWith("upload")||entries[i].startsWith("mark")) && entries[i].includes("-"))
+                        show_col[entries[i]] = false;
+
+                // Check whether the language was already set (and whether the saved language exists).
+                if (localStorage.translation_language && (localStorage.translation_language == "ALL" || languages.indexOf(localStorage.translation_language) != -1)) {
+                    set_language(localStorage.translation_language);
+                } else {
+//                  We want col-select to be shown initially, so we open it.
+                    open_modal('col-select');
+                }
+
+                window.setInterval(function() { if(!is_modal_opened()) update(); }, 5000);
+            }
+
+            window.addEventListener("load", init);
+        </script>
+    </head>
+
+    <body>
+        <iframe id="dummyframe" name="dummyframe" style="display:none"></iframe>
+        <iframe id="fr-download-helper" src="./static/dummy.html" style="display:none"></iframe>
+
+        <div class="modal-backdrop invisible" id="modal-backdrop"></div>
+        <div class="navbar header">
+            <div class="navbar-inner header-inner">
+                <div style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;">
+                    <div>
+                        <a class="brand" href="./">
+                            Task Translator
+                        </a>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary btn-large" onclick="open_col_select()">
+                            Select language
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal full-height flexbox hide" id="error-dialog">
+            <div class="modal-header">
+                <button type="button" class="close" onClick="close_modal('error')">&#xD7;</button>
+                <h3>An error has occured...</h3>
+            </div>
+            <div class="modal-body flexbox content">
+                <p>
+                I'm sorry, but I couldn't compile the LuaLaTeX for <span id="task-name" class="task-name">???</span>. Maybe the information below helps:
+                </p>
+
+                <form class="tabbed flexbox content">
+                    <input type="radio" name="tabbed_1" id="tabbed_1_B" hidden aria-hidden="true" checked>
+                    <input type="radio" name="tabbed_1" id="tabbed_1_A" hidden aria-hidden="true">
+                    <ul hidden aria-hidden="true">
+                        <li><label for="tabbed_1_B">Compilation log</label>
+                        <li><label for="tabbed_1_A">Error message received from server</label>
+                    </ul>
+                    <div class="flexbox content">
+                        <iframe id="error-log" width="100%"></iframe>
+                        <iframe id="error-msg" width="100%"></iframe>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+            <button class="btn btn-primary" style="float:left;" id="retry-compilation" onClick="retry_compilation()">Retry</button>
+                <button class="btn btn-secondary" onClick="close_modal('error')">Exit</button>
+            </div>
+        </div>
+
+        <div class="modal full-height flexbox hide" id="log-dialog">
+            <div class="modal-header">
+                <button type="button" class="close" onClick="close_modal('log')">&#xD7;</button>
+                <h3>Log</h3>
+            </div>
+            <div class="modal-body flexbox content">
+                <p>
+                This is the log of <span id="log-task-name" class="task-name">???</span>:
+                </p>
+
+                <div class="tabbed flexbox content">
+                    <input type="radio" name="tabbed_1" id="tabbed_1_B" hidden aria-hidden="true" checked>
+                    <ul hidden aria-hidden="true">
+                        <li><label for="tabbed_1_B">Log</label>
+                    </ul>
+                    <div class="flexbox content">
+                        <iframe id="git-log" width="100%"></iframe>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onClick="close_modal('log')">Exit</button>
+            </div>
+        </div>
+
+        <div class="modal wide hide" id="col-select-dialog">
+            <div class="modal-header unselectable">
+                <button type="button" class="close" onClick="close_modal('col-select')">&#xD7;</button>
+                <h3>Select Language</h3>
+            </div>
+            <div class="modal-body">
+                <form name="col-select">
+                    <div class="control-panel">
+                        <h6>Which language are you going to translate into?</h6>
+                        <div class="control-table" style="margin-top:2px;">
+                            <div class="two-cols">
+                                <div>
+                                {% for key in TaskTranslateInfo.language_list()[:(len(TaskTranslateInfo.language_list())+1) // 2] %}
+                                    <div class="radio">
+                                        <input type="radio" name="lan" id="col-{{key}}">
+                                        <label for="col-{{key}}">
+                                        {% raw TaskTranslateInfo.languages_desc()[key] %}
+                                        </label>
+                                    </div>
+                                {% end %}
+                                </div>
+
+                                <div>
+                                {% for key in TaskTranslateInfo.language_list()[(len(TaskTranslateInfo.language_list())+1) // 2:] %}
+                                    <div class="radio">
+                                        <input type="radio" name="lan" id="col-{{key}}">
+                                        <label for="col-{{key}}">
+                                        {% raw TaskTranslateInfo.languages_desc()[key] %}
+                                        </label>
+                                    </div>
+                                {% end %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="control-panel">
+                        <h6>Or would you like to have an overview of all languages?</h6>
+                        <div class="control-table" style="margin-top:2px;">
+                            <div class="radio">
+                                <input type="radio" name="lan" id="col+ALL">
+                                <label for="col+ALL">
+                                All languages (overview)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                    <button class="btn btn-success" style="float:left;" onclick="apply_col_select()">Apply</button>
+                    <button class="btn btn-secondary" onClick="close_modal('col-select')">Cancel</button>
+            </div>
+        </div>
+
+        <div class="modal wide hide" id="mark-dialog">
+            <div class="modal-header">
+                <button type="button" class="close" onClick="close_modal('mark')">&#xD7;</button>
+                <h3>Would you like to finalize your translation of <span id="mark-task-name-h">???</span>?</h3>
+            </div>
+            <div class="modal-body">
+                <p>
+                Are you sure you're done translating <span id="mark-task-name" class="task-name">???</span> to language <span id="mark-task-lan" class="task-name">???</span>?
+                </p>
+                <p>
+                Please make sure that you're happy with the generated PDF file first. This step can only be undone by an administrator.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" style="float:left;" id="do-mark" onClick="do_mark(dataset.code)">Yes, I'm done!</button>
+                <button class="btn btn-secondary" onClick="close_modal('mark')">On second thought…</button>
+            </div>
+        </div>
+
+        <table class="table table-bordered overview" id="overview">
+            <!-- data insert via javascript:fill_table() -->
+        </table>
+
+        <div id = "json-errors" class="alert alert-block alert-error notification json-info no-errors">
+            <h4 class="alert-heading"> WARNING! </h4>
+            <p style="margin-top:5px;"> The info.json files for the following tasks have issues:</p>
+            <span id="tasks-with-issues">
+                <!-- data insert in javascript:fill_table() -->
+            </span>
+        </div>
+    </body>
+</html>

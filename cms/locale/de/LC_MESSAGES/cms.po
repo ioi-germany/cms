@@ -3,7 +3,7 @@
 # This file is distributed under the same license as the Contest Management
 # System project.
 #
-# Manuel Gundlach <manuel.gundlach@gmail.com>, 2019, 2020.
+# Manuel Gundlach <manuel.gundlach@gmail.com>, 2019, 2020, 2021.
 msgid ""
 msgstr ""
 "Project-Id-Version: Contest Management System 1.5.dev0\n"
@@ -970,7 +970,6 @@ msgstr "Nachname"
 msgid "E-mail"
 msgstr "E-Mail"
 
-#, fuzzy
 msgid "Representing"
 msgstr "Antreten für"
 

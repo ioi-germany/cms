@@ -1,0 +1,399 @@
+/* Colors from bootstrap.css (see there) */
+
+body {
+    padding-top:60px;
+}
+
+div.modal-backdrop.invisible {
+    display:none;
+}
+
+table.overview {
+    margin-top:15px;
+    margin-left:auto;
+    margin-right:auto;
+    width:99% !important;
+}
+
+table.overview tr > td:first-child {
+    position:relative;
+    overflow:hidden;
+}
+
+table.overview td:not(.th) {
+    height:40px;
+}
+
+td.download {
+    width:30px;
+}
+
+table.overview td.lower-left {
+    border-bottom-left-radius:4px;
+}
+
+table.overview td.lower-right {
+    border-bottom-right-radius:4px;
+}
+
+table.overview td.upper-left {
+    border-top-left-radius:4px;
+}
+
+table.overview td.upper-right {
+    border-top-right-radius:4px;
+}
+
+ul.embedded {
+    margin:0px;
+    list-style-position:inside;
+}
+
+div.header {
+    position:fixed;
+    top:0px;
+    left:0px;
+    right:0px;
+    z-index:255;
+}
+
+div.header-inner {
+    border-radius:0px;
+    padding:5px 10px;
+}
+
+div.header button.btn-large {
+    min-height:40px;
+}
+
+form.my-form {
+    padding:0px;
+    margin:0px;
+    margin-right:7px;
+    float:left;
+}
+
+div.control-panel {
+    padding:10px 15px;
+    margin:7px;
+    background:#f5f5f5;
+    border-radius:6px;
+    margin-bottom:14px;
+    border:1px solid #ddd;
+    box-shadow:inset 0px 1px 0px white;
+}
+
+div.form-group {
+    padding:0px;
+    margin-top:7px;
+}
+
+div.short-container {
+    display:table-cell;
+    padding:0px;
+    margin:0px;
+}
+
+div.control-table {
+    width:100%;
+    margin:0px;
+    padding:0px;
+    overflow:auto;
+    display:table;
+    margin-bottom:-7px;
+}
+
+div.mini-table {
+    margin:0px;
+    padding:0px;
+    width:100%;
+    display:table;
+    overflow:auto;
+}
+
+div.two-cols
+{
+    margin:0px;
+    padding:0px;
+    overflow:auto;
+    display:table-row;
+}
+
+div.two-cols > div {
+    margin-bottom:0px;
+    display:table-cell;
+    border-spacing:0px;
+    width:50%;
+}
+
+div.two-cols > div > div {
+    height:100% !important;
+}
+
+div.modal-body > form > div.control-panel:last-child {
+    margin-bottom:7px;
+}
+
+form {
+    margin-bottom:0px;
+}
+
+td.th {
+    font-weight:bold;
+}
+
+td.download-heading {
+    text-align:center;
+}
+
+span.task-name {
+    font-weight:bold;
+}
+
+pre.short {
+    max-height:145px;
+    overflow:scroll;
+    line-height:14px;
+}
+
+pre.short code {
+    font-size:10px;
+}
+
+@keyframes
+blink-fresh {
+    0% {
+        background:rgba(85, 172, 85, 0);
+    }
+
+
+    20% {
+        background:rgba(85, 172, 85, .25);
+    }
+
+    50% {
+        background:rgba(85, 172, 85, .25);
+    }
+
+    100% {
+        background:rgba(85, 172, 85, 0);
+    }
+}
+
+tr.fresh td {
+    animation-name:blink-fresh;
+    animation-duration:1s;
+    animation-timing-function:linear;
+}
+
+@keyframes
+blink-updated {
+    0% {
+        background:rgba(0, 112, 204, 0);
+    }
+
+
+    20% {
+        background:rgba(0, 112, 204, .25);
+    }
+
+    50% {
+        background:rgba(0, 112, 204, .25);
+    }
+
+    100% {
+        background:rgba(0, 112, 204, 0);
+    }
+}
+
+
+tr.updated td {
+    animation-name:blink-updated;
+    animation-duration:1s;
+    animation-timing-function:linear;
+}
+
+@keyframes
+blink-removed {
+    0% {
+        background:rgba(189, 54, 47, 0);
+    }
+
+
+    20% {
+        background:rgba(189, 54, 47, .25);
+    }
+
+    50% {
+        background:rgba(189, 54, 47, .25);
+    }
+
+    100% {
+        background:rgba(189, 54, 47, 0);
+    }
+}
+
+tr.removed td {
+    animation-name:blink-removed;
+    animation-duration:1s;
+    animation-timing-function:linear;
+}
+
+@keyframes
+vanish {
+    0% {
+        opacity:1;
+    }
+
+    100% {
+
+    }
+}
+
+
+tr.removed {
+    animation-name:vanish;
+    animation-duration:1s;
+    animation-timing-function:linear;
+    animation-fill-mode:forwards;
+}
+
+td.error-msg {
+    font-family:Menlo,Monaco,Consolas,"Courier New",monospace;
+    text-align:center;
+   /* color:white;
+    background-color:#ad2620 !important;
+    text-shadow:0px 0px 4px rgba(0, 0, 0, .25);*/
+    color:#bd362f;
+    text-shadow:0px 0px 4px #ee5f5b;
+}
+
+td.no-error {
+    display:none;
+}
+
+.hidden {
+    display:none;
+}
+
+/* TODO Use consistent hover shades */
+.marked {
+    background-color:rgba(152, 251, 152, .5);
+}
+
+table.overview tr:hover td.marked, table.overview tr.marked:hover td{
+    background-color:rgba(152, 251, 152, .6);
+}
+
+.translated {
+    background-color:rgba(224, 255, 255, .5);
+}
+
+table.overview tr:hover td.translated, table.overview tr.translated:hover td{
+    background-color:rgba(224, 255, 255, 1);
+}
+
+.untouched {
+    background-color:rgba(255, 250, 205, .4);
+}
+
+table.overview tr:hover td.untouched, table.overview tr.untouched:hover td{
+    background-color:rgba(255, 250, 205, .65);
+}
+
+div.json-info {
+    position:fixed;
+    right:.25%;
+    bottom:.25%;
+    max-width:400px;
+    box-shadow:20px 20px 10px 30px white;
+}
+
+div.json-info.no-errors {
+    display:none;
+}
+
+
+/* A dialog occupying the entire height of the window. */
+.modal.full-height {
+    top: 20px;
+    height: calc(100% - 40px);
+    left: 20px;
+    width: calc(100% - 40px);
+    margin-top: 0;
+    margin-left: 0;
+}
+
+/* Puts children into a vertical flexbox. */
+.flexbox {
+    display: flex;
+    flex-direction: column;
+}
+
+/* We might want to hide the flexbox if it's a dialog. */
+.flexbox.hide {
+    display: none;
+}
+
+/* Child of a flexbox that tries to occupy all remaining space. */
+.content {
+    flex: 1 1 auto;
+    max-height: initial;
+}
+
+
+.tabbed > input {
+    display: block;
+    position: absolute;
+    left: -100%;
+}
+
+.tabbed > ul {
+    position:relative;
+    z-index:999;
+    list-style:none;
+    display:flex;
+    margin: 0;
+    margin-bottom:-1px;
+}
+
+.tabbed > ul label {
+    display:inline-block;
+    margin-bottom: 0;
+    padding:0.25em 1em;
+    background:hsl(220, 100%, 85%);
+    border:1px solid black;
+    border-right-width:0;
+    user-select:none;
+}
+
+.tabbed > ul li:first-child label {
+    border-radius:0.5em 0 0 0;
+}
+
+.tabbed > ul li:last-child label {
+    border-right-width:1px;
+    border-radius:0 0.5em 0 0;
+}
+
+.tabbed > input:nth-child(1):checked ~ ul li:nth-child(1) label,
+.tabbed > input:nth-child(2):checked ~ ul li:nth-child(2) label {
+    background:hsl(220, 100%, 95%);
+    border-bottom-color:hsl(220, 100%, 95%);
+}
+
+.tabbed > div {
+    border:1px solid black;
+}
+
+.tabbed > div > iframe {
+    display: none;
+    margin: 0;
+    height: 100%;
+    width: calc(100% - 4px);
+}
+
+.tabbed > input:nth-child(1):checked ~ div > :nth-child(1),
+.tabbed > input:nth-child(2):checked ~ div > :nth-child(2) {
+    display: block;
+}

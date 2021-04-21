@@ -1,5 +1,6 @@
 /* Programming contest management system
  * Copyright © 2012 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+ * Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -40,6 +41,7 @@ var Scoreboard = new function () {
         self.tcols_el = $('#Scoreboard_cols');
         self.thead_el = $('#Scoreboard_head');
         self.tbody_el = $('#Scoreboard_body');
+        self.hide_box_el = $('#HideUnofficialBox');
 
         self.generate();
 
@@ -88,6 +90,23 @@ var Scoreboard = new function () {
         $("tr td[data-sort_key=" + self.sort_key + "]", self.thead_el).addClass("sort_key");
         $("tr td[data-sort_key=" + self.sort_key + "]", self.tbody_el).addClass("sort_key");
 
+        // Create callbacks for selection (on screens of small width)
+        var isMobile = window.matchMedia("only screen and (max-width: 991px)");
+        if(isMobile){
+            var tr_pressTimer;
+            var tr_pressed;
+            self.tbody_el.on("touchend", "tr", function () {
+                clearTimeout(tr_pressTimer);
+            }).on("touchmove", "tr", function () {
+                clearTimeout(tr_pressTimer);
+            }).on("touchstart", "tr", function () {
+                tr_pressed = $(this);
+                tr_pressTimer = setTimeout(function () {
+                    DataStore.toggle_selected(tr_pressed.data("user"));
+                }, 500);
+            });
+        }
+
         // Create callbacks for selection
         self.tbody_el.on("click", "td.sel", function () {
             DataStore.toggle_selected($(this).parent().data("user"));
@@ -96,6 +115,15 @@ var Scoreboard = new function () {
         // Create callbacks for UserPanel
         self.tbody_el.on("click", "td.f_name, td.l_name", function () {
             UserDetail.show($(this).parent().data("user"));
+        });
+
+        // Create callbacks for HideUnofficialBox
+        self.hide_box_el.on("change", "input[type=checkbox]", function () {
+            var status = $(this).prop("checked");
+            if(status)
+                self.tbody_el.addClass("hide_unofficial");
+            else
+                self.tbody_el.removeClass("hide_unofficial");
         });
 
         // Create callbacks for animation-end
@@ -232,7 +260,7 @@ var Scoreboard = new function () {
     self.make_row = function (user) {
         // See the comment in .make_cols() for the reason we use colspans.
         var result = " \
-<tr class=\"user" + (user["selected"] > 0 ? " selected color" + user["selected"] : "") + "\" data-user=\"" + user["key"] + "\"> \
+<tr class=\"user" + (user["selected"] > 0 ? " selected color" + user["selected"] : "") + (user["unofficial"] > 0 ? " unofficial" : "") + "\" data-user=\"" + user["key"] + "\"> \
     <td class=\"sel\"></td> \
     <td class=\"rank\">" + user["rank"] + "</td> \
     <td colspan=\"10\" class=\"f_name\">" + escapeHTML(user["f_name"]) + "</td> \
@@ -384,7 +412,7 @@ var Scoreboard = new function () {
         user["index"] = self.user_list.length;
         self.user_list.push(user);
 
-        self.tbody_el.append(row);
+        self.tbody_el.append($row);
         // The row will be at the bottom (since it has a score of zero and thus
         // the maximum rank), but we may still need to sort it due to other
         // users having that score and the sort-by-name clause.

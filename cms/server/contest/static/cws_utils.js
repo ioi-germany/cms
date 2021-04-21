@@ -2,6 +2,7 @@
  * Copyright © 2012-2014 Stefano Maggiolo <s.maggiolo@gmail.com>
  * Copyright © 2012-2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
  * Copyright © 2013 Vittorio Gambaletta <VittGam@VittGam.net>
+ * Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -43,11 +44,6 @@ CMS.CWSUtils = function(url_root, contest_root, contest_name, timestamp, timezon
     this.remaining_div = null;
     this.unread_count = localStorage.getItem(this.contest_name + "_unread_count");
     this.unread_count = this.unread_count !== null ? parseInt(this.unread_count) : 0;
-
-    // Ask permission for desktop notifications
-    if ("Notification" in window) {
-        Notification.requestPermission();
-    }
 };
 
 
@@ -85,6 +81,53 @@ CMS.CWSUtils.prototype.update_notifications = function(hush) {
                 }
             }
         }, "json");
+};
+
+function get_cookie(name) {
+    var r = document.cookie.match("(^|;)\\s*" + name + "=([^;]*)(;|$)");
+    return r ? r[2] : void(0);
+}
+
+CMS.CWSUtils.prototype.ask_permission = function(){
+    // Ask permission for desktop notifications
+    Notification.requestPermission(function(permission){
+        if (Notification.permission === "denied" ||
+            Notification.permission === "granted"){
+            $("#alert-notification-request").alert("close");
+        }
+    });
+};
+
+CMS.CWSUtils.prototype.display_notification_request = function() {
+    // Show an alert asking to allow desktop notifications
+    if ("Notification" in window &&
+        Notification.permission !== "denied" &&
+        Notification.permission !== "granted" &&
+        typeof get_cookie("notification-permission") === 'undefined') {
+
+        var alert = $('<div class="alert alert-info alert-block notification">' +
+                    '<a class="close" data-dismiss="alert" href="#">×</a>' +
+                    '<h4 class="alert-heading"></h4>' +
+                    '</div>');
+
+        alert.attr('id', "alert-notification-request");
+
+        var subject = $("#translation_allow_notifications").text();
+        var onclick = 'utils.ask_permission();return false;';
+        var text = '<a href="#" onclick="' + onclick + '" class="alert-link">' +
+                   $("#translation_click_to_allow_notifications").text() +
+                   '</a>'
+
+        alert.children("h4").text(subject);
+        alert.append($("<span>" + text + "</span>"));
+
+        $("#notifications").prepend(alert);
+
+        alert.on('closed.bs.alert', function(){
+            document.cookie = "notification-permission=made-choice; path=/; SameSite=Strict";
+        });
+
+    }
 };
 
 
@@ -132,16 +175,28 @@ CMS.CWSUtils.prototype.desktop_notification = function(type, timestamp,
         return;
     }
 
-    // Ask again, if it was not explicitly denied
-    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-        Notification.requestPermission();
-    }
+    var logo = this.url("static", "favicon.ico");
 
-    // Create notification
-    if (Notification.permission === "granted") {
+    // Creates a notification
+    var create_notification = function(){
         new Notification(subject, {
             "body": text,
-            "icon": this.url("static", "favicon.ico")
+            "icon": logo
+        });
+    };
+
+    // If permission is already granted, create a notification
+    if (Notification.permission === "granted") {
+        create_notification();
+        return;
+    }
+
+    // Ask again, if it was not explicitly denied
+    if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(function(permission){
+            if(permission === "granted"){
+                create_notification();
+            }
         });
     }
 };

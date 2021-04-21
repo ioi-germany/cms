@@ -1,20 +1,19 @@
+/*
+    CSS slightly modified by Hamid Zarrabi-Zadeh for IOI 2017.
+*/
+
+
 body {
-    /* FIXME: I'd suggest putting a 0.75em font-size */
-    font: 1em/1.5em sans-serif;
-
-    color: black;
-
+    color: #333;
+    font: .85em/1.3em sans-serif;
     background-color: #F6F6F6;
     background-image: -webkit-linear-gradient(#FFFFFF, #EDEDED);
     background-image:    -moz-linear-gradient(#FFFFFF, #EDEDED);
     background-image:      -o-linear-gradient(#FFFFFF, #EDEDED);
     background-image:         linear-gradient(#FFFFFF, #EDEDED);
     background-attachment: fixed;
-
     margin: 0;
 }
-
-/* TODO: the following two might be omitted */
 
 td {
     padding: 0;
@@ -25,7 +24,7 @@ a {
 }
 
 abbr {
-    border-bottom: 1px dotted black;
+    border-bottom: 0px solid black;
 }
 
 /******************************************************************************\
@@ -37,50 +36,52 @@ abbr {
 
 #LogoPanel {
     position: absolute;
-    top: 24px;
+    top: 72px;
     left: 24px;
-    width: 200px;
+    width: 220px;
+    display: none;
+}
+
+#LogoPanel img {
+    width: 100%;
 }
 
 #UpperPanel {
     position: absolute;
     top: 0;
-    left: 248px;
+    left: 0;
     right: 0;
     height: 3em;
-    border-width: 0 0 2px 2px;
-    border-style: solid;
+    /* border-width: 0 0 2px 2px; */
+    /* border-style: solid; */
     border-color: #FAFAFA;
-    border-radius: 0 0 0 10px;
+    /* border-radius: 0 0 0 10px; */
     background-color: #EAEAEC;
-    box-shadow: 0 0 2px 0 gray;
+    /* box-shadow: 0 0 2px 0 gray; */
     z-index: 100;
 }
 
 #SidePanel {
     position: absolute;
-    left: 0;
-    top: 208px;
+    left: 30px;
+    top: 30px;
     bottom: 30px;
     width: 220px;
-    border-width: 2px 2px 2px 0;
-    border-style: solid;
-    border-color: #FAFAFA;
-    border-radius: 0 10px 10px 0;
+    /* border: 1px solid #ccc; */
     background-color: #EAEAEC;
-    box-shadow: 0 0 2px 0 gray;
+    /* box-shadow: 0 0 2px 0 gray; */
     z-index: 8;
     padding: 0;
 }
 
 #InnerFrame {
     position: absolute;
-    top: 3em;
-    left: 220px;
+    top: 0px;
+    left: 270px;
     right: 0;
     bottom: 0;
-    margin: 2px 0 0 2px;
-    padding: 0 3em;
+    /* margin: 2px 0 0 2px; */
+    padding: 0 30px 0 0;
     overflow-y: scroll;
 }
 
@@ -94,25 +95,26 @@ abbr {
 
 #TimeView {
     position: absolute;
-    top: 208px;
-    left: 0;
+    top: 3px;
+    left: 29px;
     width: 220px;
-    z-index: 10;
+    z-index: 100;
     text-align: center;
 }
 
 #TimeView_selector {
     display: inline-block;
-    height: 28px;
+    /* position: absolute; */
+    height: 2em;
     padding: 0;
     z-index: 10;
     margin: 4px;
     overflow: hidden;
     -webkit-user-select: none;
-       -moz-user-select: none;
-        -ms-user-select: none;
-         -o-user-select: none;
-            user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -o-user-select: none;
+    user-select: none;
 }
 
 /* #TimeView:not(.post_cont) #TimeView_selector:hover */
@@ -122,7 +124,7 @@ abbr {
     margin: 2px;
     background-color: #EAEAEC;
     border: 2px solid #FAFAFA;
-    border-radius: 4px;
+    border-radius: 0px;
     box-shadow: 0 0 2px 0 gray;
 }
 
@@ -135,7 +137,7 @@ abbr {
     vertical-align: top;
     text-align: center;
     line-height: 28px;
-    font-size: 24px;
+    font-size: 20px;
     margin: 0 2px 0 16px;
 }
 
@@ -189,6 +191,8 @@ abbr {
     line-height: 1.4em;
     color: #444444;
     cursor: pointer;
+/*     Modification: Don't show timeview mode */
+    display: none;
 }
 
 #TimeView.pre_cont #TimeView_selector_elapsed,
@@ -212,12 +216,17 @@ abbr {
 }
 
 #TimeView + #SidePanel {
-    top: 256px;
+    top: 72px;
 }
 
-#TimeView.pre_cont + #SidePanel,
-#TimeView.cont + #SidePanel {
-    top: 280px;
+#TimeView_name {
+    display: block;
+    position: absolute;
+    top: .5em;
+    left: 245px;
+    width: 300px;
+    font-size: 18px;
+    text-align: left;
 }
 
 
@@ -234,6 +243,13 @@ abbr {
     width: 100%;
 }
 
+#PoweredBy {
+    color: #999;
+    text-align: center;
+    font-size: 12px;
+    padding-top: 5px;
+}
+
 
 /******************************************************************************\
 |                                                                              |
@@ -247,13 +263,13 @@ abbr {
     -moz-box-sizing: content-box;
     box-sizing: content-box;
     top: 0;
-    left: 250px;
+    right: 118px;
     height: 1.5em;
     margin: 0.5em;
-    border: 0;
+    border: 1px solid #ddd;
     padding: 0.25em;
     z-index: 401;
-    border-radius: 0.5em;
+    /* border-radius: 2px; */
     /* Needed to override WebKit's default font size for inputs */
     font: inherit;
     background-color: #FFFFFF;
@@ -286,7 +302,7 @@ abbr {
     bottom: 0;
     width: 940px;
     margin: 64px auto 48px;
-    border-radius: 12px;
+    border-radius: 0px;
     background-color: white;
 }
 
@@ -374,7 +390,7 @@ abbr {
 #Scoreboard {
     width: 100%;
     table-layout: fixed;
-    margin: 3em 0;
+    margin: 70px 0 10em 0;
 }
 
 #Scoreboard_cols col.sel {
@@ -404,13 +420,14 @@ abbr {
 }
 
 #Scoreboard_head tr th {
-    background-color: #ECECEF;
-    border: 1px #D0D0D2 solid;
-    border-radius: 4px;
-    box-shadow: 0 0 2px 0 #D2D2D4 inset;
+    background-color: #EAEAEC;
+    /* border: 1px #D0D0D2 solid; */
+    /* border-radius: 4px; */
+    /* box-shadow: 0 0 2px 0 #D2D2D4 inset; */
     height: 24px;
     overflow: hidden;
     white-space: nowrap;
+    padding: 2px;
     text-overflow: ellipsis;
 }
 
@@ -421,9 +438,10 @@ abbr {
 #Scoreboard_body tr td.team img {
     display: block;
     max-width: 40px;
-    max-height: 20px;
+    max-height: 21px;
     margin: 0 auto;
-    box-shadow: 0 0 2px 0 gray;
+    border: 1px solid #ddd;
+    /* box-shadow: 0 0 2px 0 gray; */
 }
 
 #Scoreboard_head tr th,
@@ -448,11 +466,24 @@ abbr {
     cursor: pointer;
 }
 
+#Scoreboard_body.hide_unofficial tr.unofficial {
+    display: none;
+}
+
+#Scoreboard_body tr.unofficial td.rank {
+    font-size: 0;
+}
+
+#Scoreboard_body tr.unofficial td.f_name,
+#Scoreboard_body tr.unofficial td.l_name {
+    color: gray;
+}
+
 #Scoreboard_body tr:hover td.f_name,
 #Scoreboard_body tr:hover td.l_name,
-#Scoreboard_body tr:hover td.team {
+#Scoreboard_body tr:hover td {
     background-color: rgba(200,200,200,0.35);
-    border-radius: 5px;
+    border-radius: 0px;
 }
 
 #Scoreboard_body tr.selected td.f_name,
@@ -491,8 +522,8 @@ abbr {
 
 #Scoreboard_body tr.selected td.sel {
     background: url('img/tick_white.png') no-repeat center transparent;
-    border: 1px solid rgba(0,0,0,0.2);
-    border-radius: 4px;
+    /* border: 1px solid rgba(0,0,0,0.2); */
+    border-radius: 0px;
     opacity: 1;
 }
 
@@ -622,7 +653,7 @@ abbr {
  */
 
 #Scoreboard_body tr.score_up td.rank {
-    border-radius: 5px;
+    border-radius: 0px;
     -webkit-animation-duration: 5s;
        -moz-animation-duration: 5s;
          -o-animation-duration: 5s;
@@ -638,7 +669,7 @@ abbr {
 }
 
 #Scoreboard_body tr.score_down td.rank {
-    border-radius: 5px;
+    border-radius: 0px;
     -webkit-animation-duration: 5s;
        -moz-animation-duration: 5s;
          -o-animation-duration: 5s;
@@ -702,7 +733,7 @@ abbr {
 }
 
 #Scoreboard_body tr.selected.score_up td.rank {
-    border-radius: 5px;
+    border-radius: 0px;
     -webkit-animation-duration: 10s;
        -moz-animation-duration: 10s;
          -o-animation-duration: 10s;
@@ -718,7 +749,7 @@ abbr {
 }
 
 #Scoreboard_body tr.selected.score_down td.rank {
-    border-radius: 5px;
+    border-radius: 0px;
     -webkit-animation-duration: 10s;
        -moz-animation-duration: 10s;
          -o-animation-duration: 10s;
@@ -786,81 +817,73 @@ abbr {
  */
 
 #Scoreboard_body tr td.score {
-    opacity: 0.75;
-    border-radius: 5px;
-}
-
-#Scoreboard_body tr td.score.sort_key {
-    border: 1px solid #777777;
-    box-shadow: 0 0 1px white inset;
-}
-
-#Scoreboard_body tr:hover td.score,
-#Scoreboard_body tr.selected td.score,
-#Scoreboard_body tr td.score.sort_key {
     opacity: 1;
+    color: #333;
+    /* text-shadow: 1px 1px #000; */
+}
+
+#Scoreboard_body tr td.score.sort_key {
+    /* border: 1px solid #777777; */
+    /* box-shadow: 0 0 1px white inset; */
+}
+
+
+#Scoreboard_body tr.selected td.score {
+    background-color: #F3B043
+}
+
+#Scoreboard_body tr td.score.sort_key {
+    font-weight: bold;
 }
 
 .score_0 {
-    background-color: #F40000;
-    /*background-image: linear-gradient(rgb(204, 0, 0), rgb(244, 0, 0));*/
+    color: #666;
 }
 
 .score_0_10 {
-    background-color: #EB1D00;
-    /*background-image: linear-gradient(rgb(210, 38, 0), rgb(235, 29, 0));*/
+    background-color: hsl(120, 30%, 87%);
 }
 
 .score_10_20 {
-    background-color: #E23A00;
-    /*background-image: linear-gradient(rgb(216, 77, 0), rgb(226, 58, 0));*/
+    background-color: hsl(120, 30%, 84%);
 }
 
 .score_20_30 {
-    background-color: #D95700;
-    /*background-image: linear-gradient(rgb(222, 115, 0), rgb(217, 87, 0));*/
+    background-color: hsl(120, 30%, 81%);
 }
 
 .score_30_40 {
-    background-color: #D17400;
-    /*background-image: linear-gradient(rgb(228, 154, 0), rgb(209, 116, 0));*/
+    background-color: hsl(120, 30%, 78%);
 }
 
 .score_40_50 {
-    background-color: #C89100;
-    /*background-image: linear-gradient(rgb(234, 192, 0), rgb(200, 145, 0));*/
+    background-color: hsl(120, 30%, 75%);
 }
 
 .score_50_60 {
-    background-color: #B99F00;
-    /*background-image: linear-gradient(rgb(225, 211, 2), rgb(185, 159, 0));*/
+    background-color: hsl(120, 30%, 72%);
 }
 
 .score_60_70 {
-    background-color: #A39E01;
-    /*background-image: linear-gradient(rgb(203, 211, 6), rgb(163, 158, 1));*/
+    background-color: hsl(120, 30%, 69%);
 }
 
 .score_70_80 {
-    background-color: #8E9D02;
-    /*background-image: linear-gradient(rgb(181, 211, 10), rgb(142, 157, 2));*/
+    background-color: hsl(120, 30%, 66%);
 }
 
 .score_80_90 {
-    background-color: #789C03;
-    /*background-image: linear-gradient(rgb(159, 210, 14), rgb(120, 156, 3));*/
+    background-color: hsl(120, 30%, 63%);
 }
 
 .score_90_100 {
-    background-color: #639B04;
-    /*background-image: linear-gradient(rgb(137, 210, 18), rgb(99, 155, 4));*/
+    background-color: hsl(120, 30%, 60%);
 }
 
 .score_100 {
-    background-color: #4E9A05;
-    /*background-image: linear-gradient(rgb(115, 210, 22), rgb(78, 154, 5));*/
-}
 
+    background-color: hsl(120, 30%, 55%);
+}
 
 /******************************************************************************\
 |                                                                              |
@@ -896,7 +919,7 @@ abbr {
     width: 920px;
     margin: 48px auto;
     padding: 20px;
-    border-radius: 12px;
+    border-radius: 0px;
     background-color: white;
 }
 
@@ -938,6 +961,8 @@ abbr {
 
 #UserDetail_flag {
     bottom: 0;
+    max-height: 100px;
+    max-width: 150px;
 }
 
 #UserDetail_face {
@@ -995,7 +1020,7 @@ abbr {
     border: 1px solid #999999;
     box-shadow: 0 0 2px gray;
     background-color: #EEEEEE;
-    border-radius: 3px;
+    border-radius: 0px;
     cursor: pointer;
     -webkit-user-select: none;
      -khtml-user-select: none;
@@ -1097,33 +1122,38 @@ abbr {
 /* Style for the network status indicator */
 
 #ConnectionStatus_box {
-    display: inline-block;
-    position: relative;
-    float: right;
-    margin: 0.5em;
+    display: block;
+    position: absolute;
+    top: 8px;
+    right: 31px;
     text-align: right;
-    z-index: 2;
+    z-index: 200;
 }
 
 #ConnectionStatus_label {
-    display: inline-block;
+    display: block;
     position: relative;
-    height: 1.5em;
-    padding: 0.25em 20px;
+    height: 1.9em;
+    width: 85px;
+    text-align: center;
+    line-height: 2em;
+    /* padding: 0.25em 20px; */
     margin: -1px 0;
-    z-index: 2;
+    z-index: 500;
     border-width: 1px;
     border-style: solid;
-    border-radius: 4px;
+    /* border-radius: 4px; */
     -webkit-user-select: none;
-       -moz-user-select: none;
-        -ms-user-select: none;
-         -o-user-select: none;
-            user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -o-user-select: none;
+    user-select: none;
 }
 
 #ConnectionStatus_box:hover #ConnectionStatus_label {
     border-bottom-width: 0;
+    margin-bottom: .2em;
+    padding-bottom: .2em;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
 }
@@ -1131,15 +1161,15 @@ abbr {
 #ConnectionStatus_text {
     display: none;
     position: absolute;
-    top: 2em;
+    top: 2.1em;
     right: 0;
     width: 240px;
     padding: 0.5em;
     margin-top: -1px;
-    z-index: 1;
+    z-index: 400;
     border-width: 1px;
     border-style: solid;
-    border-radius: 4px 0 4px 4px;
+    border-radius: 0;
 }
 
 #ConnectionStatus_box:hover #ConnectionStatus_text,
@@ -1175,4 +1205,199 @@ abbr {
 #ConnectionStatus_box a {
     cursor: pointer;
     text-decoration: underline;
+}
+
+
+/* Style for the 'hide unnofficial contestants' checkbox */
+
+#HideUnofficialBox {
+    display: block;
+    position: absolute;
+    top: 10px;
+    right: 320px;
+    text-align: right;
+}
+
+
+/******************************************************************************\
+|                                                                              |
+|                                  Mobile Layout                               |
+|                                  -------------                               |
+\******************************************************************************/
+
+
+@media only screen and (max-width: 991px) {
+    body {
+        font: .7em/1.2em sans-serif;
+        background-image: none;
+        background-attachment: none;
+    }
+
+    #SidePanel {
+        left: 0px;
+        top: initial;
+        bottom: 0px;
+        width: 20vh;
+        transform-origin: bottom left;
+        transform: rotate(-90deg) translate(3.5vw,98.5vw);
+        height: 97vw;
+    }
+
+    #PoweredBy {
+        font-size: .7em;
+        transform-origin: bottom left;
+        width: 100px;
+        transform: rotate(+90deg) translate(-115%,1.8vh);
+    }
+
+    #InnerFrame {
+        width: 100vw;
+        left: 0;
+        margin: 0 0 23vh 0;
+        padding: 0 0 0 0;
+    }
+
+    #TimeView {
+        top: initial;
+        left: initial;
+        width: 100px;
+        height: 2em;
+        margin: .5em;
+    }
+
+    #TimeView_time {
+        line-height: initial;
+        font-size: 1.2em;
+        margin: 2px 2px 2 2px;
+    }
+
+    #TimeView + #SidePanel {
+        top: initial;
+    }
+
+    #Overview {
+        height: 97vw;
+    }
+
+    #TeamSearch_input {
+        right: 95px;
+    }
+
+    #TeamSearch {
+        width: initial;
+        margin: 48px 48px 48px 48px;
+    }
+
+    #TeamSearch_body div.item {
+        width: 50%;
+    }
+
+    #Scoreboard {
+        table-layout: auto;
+        margin: 3em 0 10em 0;
+    }
+
+    #Scoreboard_head th {
+        position: sticky;
+        top: 3em;
+        z-index: 1;
+    }
+
+    #Scoreboard_head .l_name {
+        z-index: 2;
+    }
+
+    #Scoreboard_body tr.unofficial td.rank {
+        font-size: 0;
+    }
+
+    #Scoreboard_body tr:hover td.f_name,
+    #Scoreboard_body tr:hover td.l_name,
+    #Scoreboard_body tr:hover td {
+        background-color: #EAEAEC;
+    }
+
+    #Scoreboard .sel {
+        display: none;
+    }
+
+    .l_name {
+        position: sticky;
+        left: 0;
+        background-color: #F6F6F6;
+    }
+
+    .global {
+        position: sticky;
+        right: 0;
+    }
+
+    #Scoreboard .score.contest{
+        display: none;
+    }
+
+    #UserDetail {
+        margin: 48px 48px 48px 48px;
+        width: initial;
+    }
+
+    #UserDetail_f_name,
+    #UserDetail_l_name,
+    #UserDetail_team,
+    #UserDetail_flag {
+        position: initial;
+        right: initial;
+    }
+
+    #UserDetail_f_name {
+        top: initial;
+    }
+
+    #UserDetail_l_name {
+        top: initial;
+    }
+
+    #UserDetail_team {
+        bottom: initial;
+    }
+
+    #UserDetail_flag {
+        bottom: initial;
+    }
+
+    #UserDetail_navigator {
+        width: initial;
+        margin-left: initial;
+    }
+
+    #UserDetail_navigator table {
+        table-layout: auto;
+    }
+
+    #UserDetail_face {
+        position: initial;
+        top: initial;
+        left: initial;
+        float: right;
+        max-width: 40%;
+        max-height: 120px;
+    }
+
+    #ConnectionStatus_box {
+        right: 8px;
+    }
+
+    #HideUnofficialBox {
+        display: none;
+    }
+
+    @media (orientation:landscape) {
+        #SidePanel {
+            display: none;
+        }
+
+        #InnerFrame {
+            margin: 0 0 0 0;
+        }
+    }
 }

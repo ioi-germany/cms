@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,7 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from cmscontrib.gerpythonformat.Messenger import print_msg
+from cmscontrib.gerpythonformat.Messenger import print_msg, box, yellow
 from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
 from cmscontrib.gerpythonformat.TaskConfig import TaskConfig
 from cmscontrib.gerpythonformat.LocationStack import chdir
@@ -31,6 +32,7 @@ from cmscommon.crypto import build_password
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK
 
+import copy
 import os
 import shutil
 from datetime import datetime, timedelta
@@ -49,14 +51,29 @@ class MyGroup(object):
 
 
 class MyTeam(object):
-    def __init__(self, code, name):
+    def __init__(self, code, name, primary_statements):
         self.code = code
         self.name = name
+        self.primary_statements = copy.deepcopy(primary_statements)
+
+
+class TeamContext(object):
+    def __init__(self, contest, team):
+        self.contest = contest
+        self.team = team
+
+    def __enter__(self):
+        self.prev_team = self.contest._current_team
+        self.contest._current_team = self.team
+        return self.team
+
+    def __exit__(self, *args):
+        self.contest._current_team = self.prev_team
 
 
 class MyUser(object):
     def __init__(self, username, password, group, firstname, lastname,
-                 ip, hidden, unrestricted, timezone, primary_statements, team):
+                 ip, hidden, unofficial, unrestricted, timezone, primary_statements, team):
         self.username = username
         self.password = password
         self.group = group
@@ -64,6 +81,7 @@ class MyUser(object):
         self.lastname = lastname
         self.ip = ip
         self.hidden = hidden
+        self.unofficial = unofficial
         self.unrestricted = unrestricted
         self.timezone = timezone
         self.primary_statements = primary_statements
@@ -89,8 +107,8 @@ class ContestConfig(CommonConfig):
     restricted_feedback = ("full", False)
 
 
-    def __init__(self, rules, name, ignore_latex=False, onlytask=None,
-                 minimal=False):
+    def __init__(self, rules, name, ignore_latex=False, relevant_language=None, onlytask=None,
+                 minimal=False, safe_latex=False):
         """
         Initialize.
 
@@ -102,7 +120,9 @@ class ContestConfig(CommonConfig):
                            this name is ignored
 
         """
-        super(ContestConfig, self).__init__(rules, ignore_latex=ignore_latex)
+        super(ContestConfig, self).__init__(rules, ignore_latex=ignore_latex,
+                                            relevant_language=relevant_language,
+                                            safe_latex=safe_latex)
         self.infinite_tokens()
 
         self.onlytask = onlytask
@@ -112,13 +132,15 @@ class ContestConfig(CommonConfig):
         self._allowed_localizations = []
         # FIXME If we don't allow Java submissions, all Java test submissions
         # will fail (even locally) since multithreading is not allowed.
-        self._languages = ["C++11 / g++"]
+        self._languages = ["C++17 / g++"]
 
         self.tasks = {}
 
         self.groups = {}
         self.defaultgroup = None
         self.teams = {}
+        self._current_team = MyTeam("unaffiliated", "unaffiliated", [])
+        self.teams["unaffiliated"] = self._current_team
         self.users = {}
 
         # Export variables
@@ -160,6 +182,18 @@ class ContestConfig(CommonConfig):
 
         super(ContestConfig, self)._readconfig(filename)
         self._initialize_ranking()
+
+    def finish(self):
+        asy_cnt = self.asy_warnings + sum(t.asy_warnings
+                                  for t in self.tasks.values())
+
+        if asy_cnt != 0:
+            box(" WARNING ", yellow("You compiled %d Asymptote file(s)."
+                                        % asy_cnt) + "\n" +
+                yellow("However, Asymptote support will be removed") + "\n" +
+                yellow("from our task format in the near future") + "\n" +
+                yellow("Please consider using TikZ for pictures."),
+                double=True)
 
     def _token_feedback(self, gen_initial, gen_number,
                         gen_interval=timedelta(minutes=30), gen_max=None,
@@ -270,6 +304,10 @@ class ContestConfig(CommonConfig):
         self._languages = languages
 
     @exported_function
+    def allow_usual_languages(self):
+        self.languages(self._usual_languages())
+
+    @exported_function
     def user_group(self, s, start, stop, analysis_start=None, analysis_stop=None, per_user_time=None):
         """
         Create a user group.
@@ -324,7 +362,7 @@ class ContestConfig(CommonConfig):
         return r
 
     @exported_function
-    def team(self, code, name):
+    def team(self, code, name, primary_statements=[]):
         """
         Add a team (currently only used to generate a RWS directory).
 
@@ -332,18 +370,22 @@ class ContestConfig(CommonConfig):
 
         name (unicode): a longer name (displayed in RWS)
 
+        primary_statements (string[]): list of standard task languages for this
+                                       team (can be overwritten for individual
+                                       users)
+
         return (MyTeam): object representing the created team
 
         """
         if code in self.teams:
             raise Exception("Team {} specified multiple times".format(code))
-        self.teams[code] = team = MyTeam(code, name)
-        return team
+        self.teams[code] = team = MyTeam(code, name, primary_statements)
+        return TeamContext(self, team)
 
     @exported_function
     def user(self, username, password, firstname, lastname, group=None,
-             ip=None, hidden=False, unrestricted=False, timezone=None,
-             primary_statements=[], team=None):
+             ip=None, hidden=False, unofficial=False, unrestricted=False, timezone=None,
+             primary_statements=None, team=None):
         """
         Add a user participating in this contest.
 
@@ -365,15 +407,19 @@ class ContestConfig(CommonConfig):
         hidden (bool): whether this user is hidden (not shown on the official
                        scoreboard)
 
+        unofficial (bool): whether this user is unofficial (can be hidden on the
+                       official scoreboard)
+
         unrestricted (bool): whether this user is unrestricted (can submit at
                              any time)
 
         timezone (unicode): time zone for this user (if different from contest
                             time zone)
 
-        primary_statements (string[] or {string: string[]}): either a list of
-            languages (it is assumed that all tasks have a translation for
-            this language) or a dictionary mapping task names to language names
+        primary_statements (string[] or None): the list of standard task
+                                               languages for this user (if None,
+                                               the languages for the
+                                               corresponding team will be used)
 
         team (string or MyTeam): (name of) the team the user belongs to
 
@@ -383,6 +429,11 @@ class ContestConfig(CommonConfig):
         if self.minimal:
             return
 
+        team = team or self._current_team
+        if not isinstance(team, MyTeam):
+            team = self.teams[team]
+        primary_statements = primary_statements or team.primary_statements
+
         if username in self.users:
             raise Exception(
                 "User {} specified multiple times".format(username))
@@ -390,18 +441,17 @@ class ContestConfig(CommonConfig):
             if self.defaultgroup is None:
                 raise Exception("You have to specify a group")
             group = self.defaultgroup
-        if team is not None and not isinstance(team, MyTeam):
-            team = self.teams[team]
+
         print_msg("Adding user {} to group {}".format(username, group.name),
                   headerdepth=10)
         self.users[username] = user = \
             MyUser(username, password, group,
                    firstname, lastname,
-                   ip, hidden, unrestricted, timezone, primary_statements,
+                   ip, hidden, unofficial, unrestricted, timezone, primary_statements[:],
                    team)
         return user
 
-    def _task(self, s, feedback, score_mode, minimal):
+    def _task(self, s, feedback, score_mode, minimal, standalone_task=False):
         """
         Add a task to this contest (full version, not accessible from
         config.py).
@@ -436,12 +486,16 @@ class ContestConfig(CommonConfig):
                             s, len(self.tasks),
                             feedback, score_mode,
                             ignore_latex=self.ignore_latex,
-                            minimal=minimal) as taskconfig:
+                            relevant_language=self.relevant_language,
+                            minimal=minimal,
+                            standalone_task=standalone_task) as taskconfig:
+
                 for f in self.ontasks:
                     f(taskconfig)
                 taskconfig._readconfig("config.py")
                 taskconfig._printresult()
                 self.tasks[s] = taskconfig
+
             if minimal:
                 print_msg("Statement for task {} generated successfully".
                           format(s), success=True)
@@ -571,6 +625,7 @@ class ContestConfig(CommonConfig):
 
         pdb.ip = user.ip
         pdb.hidden = user.hidden
+        pdb.unofficial = user.unofficial
         pdb.unrestricted = user.unrestricted
 
         pdb.team = teamdb

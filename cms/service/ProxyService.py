@@ -9,6 +9,7 @@
 # Copyright © 2015 Luca Versari <veluca93@gmail.com>
 # Copyright © 2015 William Di Luigi <williamdiluigi@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -99,6 +100,19 @@ def safe_put_data(ranking, resource, data, operation):
         raise CannotSendError(msg)
 
 
+def safe_url(url):
+    """Return a sanitized URL without sensitive information.
+
+       url (unicode): the URL to sanitize.
+       return (unicode): sanitized URL.
+
+    """
+    parts = urlsplit(url)
+    netloc = parts.hostname if parts.hostname is not None else ""
+    netloc += ":%d" % parts.port if parts.port is not None else ""
+    return parts._replace(netloc=netloc).geturl()
+
+
 class ProxyOperation(QueueItem):
     def __init__(self, type_, data):
         self.type_ = type_
@@ -165,6 +179,7 @@ class ProxyExecutor(Executor):
         super().__init__(batch_executions=True)
 
         self._ranking = ranking
+        self._visible_ranking = safe_url(ranking)
 
     def execute(self, entries):
         """Consume (i.e. send) the data put in the queue, forever.
@@ -198,8 +213,8 @@ class ProxyExecutor(Executor):
                     # We abuse the resource path as the English
                     # (plural) name for the entity type.
                     name = self.RESOURCE_PATHS[i]
-                    operation = "sending %s to ranking %s" % (name,
-                                                              self._ranking)
+                    operation = "sending %s to ranking %s" % (
+                                    name, self._visible_ranking)
 
                     logger.debug(operation.capitalize())
                     safe_put_data(
@@ -337,6 +352,7 @@ class ProxyService(TriggeredService):
                         "f_name": user.first_name,
                         "l_name": user.last_name,
                         "team": team.code if team is not None else None,
+                        "unofficial": participation.unofficial,
                     }
                     if team is not None:
                         teams[encode_id(team.code)] = {

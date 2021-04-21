@@ -1,5 +1,6 @@
 /* Programming contest management system
  * Copyright © 2012 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+ * Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -354,6 +355,7 @@ var DataStore = new function () {
     ////// User
 
     self.user_count = 0;
+    self.official_user_count = 0;
 
     self.init_users = function () {
         $.ajax({
@@ -427,6 +429,7 @@ var DataStore = new function () {
         console.log(data);
 
         self.user_count += 1;
+        self.official_user_count += !data["unofficial"];
 
         self.user_create.fire(key, data);
     };
@@ -453,6 +456,7 @@ var DataStore = new function () {
         console.log(old_data);
 
         self.user_count -= 1;
+        self.official_user_count -= !old_data["unofficial"];
 
         self.user_delete.fire(key, old_data);
     };
@@ -654,7 +658,7 @@ var DataStore = new function () {
 
     ////// Rank
 
-    self.init_ranks = function () {
+    self.update_ranks = function () {
         // Make a list of all users
         var list = new Array();
 
@@ -662,19 +666,69 @@ var DataStore = new function () {
             list.push(self.users[u_id]);
         }
 
-        // Sort it by decreasing score
+        // Sort it by decreasing score,
+        // official users before inofficial in case of a tie
         list.sort(function (a, b) {
+            if(b["global"] === a["global"])
+                return a["unofficial"] - b["unofficial"];
             return b["global"] - a["global"];
         });
+
+        change_rank = function (user, new_rank){
+            var old_rank = user["rank"];
+            if(old_rank === new_rank)
+                return;
+            user["rank"] = new_rank;
+            if(old_rank === null)
+                return;
+            //u_id parameter isn't actually used, so we just set u_id=-1.
+            self.rank_events.fire(-1, user, new_rank - old_rank);
+        }
 
         // Assign ranks
         var prev_score = null;
         var rank = 0;
         var equal = 1;
 
-        for (var i in list) {
+        var gap_list =  new Array();
+        process_gap = function () {
+            // Set all ranks of unofficial users u with "(old) prev_score" > u.score > score,
+            // which were put in gap_list.
+            // Same algorithm als for the official users. The subranks are normalized by dividing by
+            // (the number of unofficial users in this gap plus 1)
+            var gap_prev_score = null;
+            var gap_rank = rank - 1;
+            var gap_equal = 1;
+            var gap_len = gap_list.length;
+            for(var j = 0; j < gap_len; j++) {
+                    var gap_user = gap_list[j];
+                    var gap_score = gap_user["global"];
+                    if(gap_score === gap_prev_score) {
+                        gap_equal += 1;
+                    } else {
+                        gap_prev_score = gap_score;
+                        gap_rank += gap_equal / (gap_len + 1);
+                        gap_equal = 1;
+                    }
+
+                    change_rank(gap_user, gap_rank);
+            }
+            gap_list.length = 0;
+        };
+
+        var num_users = list.length;
+        for (var i = 0; i < num_users; i++) {
             user = list[i];
             score = user["global"];
+
+            if(user["unofficial"]) {
+                if (score === prev_score) {
+                    change_rank(user, rank);
+                } else {
+                    gap_list.push(user);
+                }
+                continue;
+            }
 
             if (score === prev_score) {
                 equal += 1;
@@ -682,10 +736,17 @@ var DataStore = new function () {
                 prev_score = score;
                 rank += equal;
                 equal = 1;
+
+                process_gap();
             }
 
-            user["rank"] = rank;
+            change_rank(user, rank);
         }
+        process_gap();
+    };
+
+    self.init_ranks = function () {
+        self.update_ranks();
 
         self.score_events.add(self.update_rank);
 
@@ -696,15 +757,7 @@ var DataStore = new function () {
                keep it up-to-date (instead of computing it every time). But
                since user creation is a rare event we could keep it this way.
              */
-            var new_rank = 1;
-
-            for (var u_id in self.users) {
-                if (self.users[u_id]["global"] > user["global"]) {
-                    new_rank += 1;
-                }
-            }
-
-            user["rank"] = new_rank;
+            self.update_ranks();
         });
 
         self.user_update.add(function (u_id, old_user, user) {
@@ -726,53 +779,7 @@ var DataStore = new function () {
     };
 
     self.update_rank = function (u_id, user) {
-        /* The rank of a user is defined as the number of other users that have
-           a score greater than theirs, plus one. Note that:
-               a.score < b.score if and only if a.rank > b.rank
-               a.score = b.score if and only if a.rank = b.rank
-               a.score > b.score if and only if a.rank < b.rank
-           Thus it's the same to sort by ascending score or by descending rank,
-           and vice versa.
-           When a user's score is updated (e.g. it changes from old_score to
-           new_score with new_score > old_score) it can be shown that:
-             - all users whose score is >= new_score don't change their rank
-             - all users whose score is < old_score don't change their rank
-             - all other users have their rank increased by exactly one
-           A similar proposition holds when new_score < old_score.
-         */
-
-        // We don't know old_score but we'll see that it's not needed.
-        var new_score = user["global"];
-        var old_rank = user["rank"];
-        // The new rank is computed by strictly applying the definition:
-        //     new_rank = 1 + |{user2 in users, user2.score > user.score}|
-        var new_rank = 1;
-
-        for (var u2_id in self.users) {
-            var user2 = self.users[u2_id];
-            // this condition is equivalent to
-            //     old_score <= user2["global"] < new_score
-            if (old_rank >= user2["rank"] && user2["global"] < new_score) {
-                user2["rank"] += 1;
-                self.rank_events.fire(u2_id, user2, +1);
-            // this condition is equivalent to
-            //     new_score <= user2["global"] < old_score
-            } else if (new_score <= user2["global"] && user2["rank"] > old_rank) {
-                user2["rank"] -= 1;
-                self.rank_events.fire(u2_id, user2, -1);
-            }
-            if (user2["global"] > new_score) {
-                new_rank += 1;
-            }
-        }
-
-        user["rank"] = new_rank;
-
-        if (old_rank != new_rank) {
-            console.info("Changed rank for user " + u_id + ": " + old_rank + " -> " + new_rank);
-
-            self.rank_events.fire(u_id, user, new_rank - old_rank);
-        }
+        self.update_ranks();
     };
 
 

@@ -2,6 +2,7 @@
 <html lang="en">
     <head>
         <meta charset='utf-8'/>
+        <meta name="viewport" content="width=device-width,initial-scale=1">
         <link rel="shortcut icon" href="img/favicon.ico" />
         <link rel='stylesheet' href='Ranking.css'>
         <script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
@@ -35,6 +36,12 @@ if (!("EventSource" in window)) {
                 <img src="logo" alt="Logo" />
             </div>
             <div id="UpperPanel">
+                <div id="HideUnofficialBox">
+                    <label>
+                        <input type="checkbox">
+                        Hide unofficial contestants
+                    </label>
+                </div>
                 <div id="ConnectionStatus_box">
                     <div id="ConnectionStatus_label">Status</div>
                     <div id="ConnectionStatus_text"></div>
@@ -51,7 +58,7 @@ if (!("EventSource" in window)) {
             </div>
             <div id="SidePanel">
                 <div id="Overview"></div>
-                <div style="color: #999; text-align: center; font-size: 12px; padding-top: 5px;">
+                <div id="PoweredBy">
                     Powered by <a style="color: #00A3DA; text-decoration: none;" href="https://cms-dev.github.io/" target="_blank">CMS</a>
                 </div>
             </div>
@@ -110,4 +117,4 @@ if (!("EventSource" in window)) {
             </div>
         </div>
     </body>
-</html> 
+</html>
