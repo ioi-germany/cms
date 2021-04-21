@@ -34,8 +34,8 @@ var Chart = new function () {
         marks (list of float): the y values at which horizontal lines will be drawn
 */
 
-        //Adjust canvas on mobile devices
-        var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        //Adjust canvas on screens of small width
+        var isMobile = window.matchMedia("only screen and (max-width: 991px)");
         if(isMobile){
                 canvas.width = window.innerWidth * .65;
                 canvas.height = canvas.width * .60;

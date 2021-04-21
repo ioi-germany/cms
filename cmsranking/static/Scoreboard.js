@@ -90,8 +90,8 @@ var Scoreboard = new function () {
         $("tr td[data-sort_key=" + self.sort_key + "]", self.thead_el).addClass("sort_key");
         $("tr td[data-sort_key=" + self.sort_key + "]", self.tbody_el).addClass("sort_key");
 
-        // Create callbacks for selection (on mobile devices)
-        var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        // Create callbacks for selection (on screens of small width)
+        var isMobile = window.matchMedia("only screen and (max-width: 991px)");
         if(isMobile){
             var tr_pressTimer;
             var tr_pressed;
