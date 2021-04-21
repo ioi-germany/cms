@@ -91,8 +91,8 @@ var Overview = new function () {
             set.animate({"opacity": 0}, 1000);
         });
 
-        //Always show HEADERS on mobile devices
-        var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        //Always show HEADERS on screens of small width
+        var isMobile = window.matchMedia("only screen and (max-width: 991px)");
         if(isMobile){
             set.attr({"opacity": 1});
             $elem.off("mouseleave");

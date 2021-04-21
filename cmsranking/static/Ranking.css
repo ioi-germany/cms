@@ -1307,6 +1307,10 @@ abbr {
         z-index: 2;
     }
 
+    #Scoreboard_body tr.unofficial td.rank {
+        font-size: 0;
+    }
+
     #Scoreboard_body tr:hover td.f_name,
     #Scoreboard_body tr:hover td.l_name,
     #Scoreboard_body tr:hover td {
