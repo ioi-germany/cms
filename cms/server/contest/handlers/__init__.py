@@ -33,7 +33,8 @@ from .main import \
     StartHandler, \
     NotificationsHandler, \
     PrintingHandler, \
-    DocumentationHandler
+    DocumentationHandler, \
+    CaptchaHandler
 from .task import \
     TaskDescriptionHandler, \
     TaskStatementViewHandler, \
@@ -66,6 +67,7 @@ HANDLERS = [
     (r"/notifications", NotificationsHandler),
     (r"/printing", PrintingHandler),
     (r"/documentation", DocumentationHandler),
+    (r"/captcha", CaptchaHandler),
 
     # Tasks
 

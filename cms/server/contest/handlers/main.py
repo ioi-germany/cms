@@ -9,6 +9,7 @@
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2015-2018 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -48,8 +49,11 @@ from cms.server.contest.printing import accept_print_job, PrintingDisabled, \
     UnacceptablePrintJob
 from cmscommon.crypto import hash_password
 from cmscommon.datetime import make_datetime, make_timestamp
+from cmscommon.mimetypes import get_type_for_file_name
 from .contest import ContestHandler
 from ..phase_management import actual_phase_required
+
+from cms.server.captcha.captcha import Captcha
 
 
 logger = logging.getLogger(__name__)
@@ -68,6 +72,60 @@ class MainHandler(ContestHandler):
     def get(self):
         self.render("overview.html", **self.r_params)
 
+class CaptchaHandler(ContestHandler):
+    """Captcha handler.
+
+    Used to get a captcha with an encoded cookie containing its
+    solution and a request identifier
+    TODO Should probably use something like FileHandler for the png
+
+    """
+
+    MAX_INPUT_LENGTH = 50
+
+    captcha = Captcha()
+
+    def prepare(self):
+        super().prepare()
+        self.set_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+
+    @multi_contest
+    def get(self):
+        this_captcha = self.captcha.captcha()
+        captcha_clear = ''.join([ str(x) for x in this_captcha[0] ])
+        captcha_bs = this_captcha[1]
+
+        mimetype = get_type_for_file_name("captcha.png")
+        if mimetype is None:
+            mimetype = 'application/octet-stream'
+
+        self.add_header('Content-Type', mimetype)
+
+        #We require an identifier so a captcha's cookie is restricted
+        #in use for a specific action.
+        try:
+            identifier = self.get_argument("identifier")
+            if not 1 <= len(identifier) <= self.MAX_INPUT_LENGTH:
+                raise ValueError()
+            if not re.match(r"^[A-Za-z0-9_-]+$", identifier):
+                raise ValueError()
+        except (tornado_web.MissingArgumentError, ValueError):
+            raise tornado_web.HTTPError(400)
+
+        #We don't use a reference to the running contest, so the answer
+        #to a captcha in one contest could be used for the same action in
+        #another. Won't fix
+        #identifier should be signed so it can't be tempered with, which is taken
+        #care of by set_secure_cookie.
+        #captcha_clear should additionally not be accessible for the user,
+        #so we only include its signature and compare that later to the signature
+        #of the user's input
+        cookie = self.signature(captcha_clear) + "_" + identifier
+        cookie_name = "captcha"
+        self.set_secure_cookie(cookie_name, cookie, expires_days=None)
+
+        self.write(captcha_bs)
+
 
 class RegistrationHandler(ContestHandler):
     """Registration handler.
@@ -78,6 +136,7 @@ class RegistrationHandler(ContestHandler):
 
     MAX_INPUT_LENGTH = 50
     MIN_PASSWORD_LENGTH = 6
+    CAPTCHA_LENGTH = 6
 
     @multi_contest
     def post(self):
@@ -92,6 +151,11 @@ class RegistrationHandler(ContestHandler):
             email = self.get_argument("email")
             if len(email) == 0:
                 email = None
+            if self.contest.registration_requires_captcha:
+                captcha_input = self.get_argument("captcha")
+                captcha_input_signature = self.signature(captcha_input)
+                captcha_cookie = self.get_secure_cookie("captcha").decode('utf-8')
+                captcha_clear_signature, captcha_username = captcha_cookie.split('_',1)
 
             if not 1 <= len(first_name) <= self.MAX_INPUT_LENGTH:
                 raise ValueError()
@@ -104,6 +168,13 @@ class RegistrationHandler(ContestHandler):
             if not self.MIN_PASSWORD_LENGTH <= len(password) \
                     <= self.MAX_INPUT_LENGTH:
                 raise ValueError()
+            if self.contest.registration_requires_captcha:
+                if not re.match(r"^[0-9]+$", captcha_input):
+                    raise ValueError()
+                if not captcha_input_signature == captcha_clear_signature:
+                    raise ValueError()
+                if not username == captcha_username:
+                    raise ValueError()
         except (tornado_web.MissingArgumentError, ValueError):
             raise tornado_web.HTTPError(400)
 
@@ -148,6 +219,7 @@ class RegistrationHandler(ContestHandler):
 
         self.r_params["MAX_INPUT_LENGTH"] = self.MAX_INPUT_LENGTH
         self.r_params["MIN_PASSWORD_LENGTH"] = self.MIN_PASSWORD_LENGTH
+        self.r_params["CAPTCHA_LENGTH"] = self.CAPTCHA_LENGTH
         self.r_params["teams"] = self.sql_session.query(Team)\
                                      .order_by(Team.name).all()
 
