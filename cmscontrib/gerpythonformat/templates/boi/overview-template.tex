@@ -3,6 +3,9 @@
 \usepackage{a4wide}
 \usepackage{ifthen}
 \ifthenelse{\equal{\TemplateLanguage}{he}}{
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=0pt, rightmargin=1cm}
+\setlist[description]{leftmargin=0pt, rightmargin=.5cm}
 }{
 \usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
 }

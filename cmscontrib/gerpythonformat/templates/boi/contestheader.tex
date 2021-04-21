@@ -8,7 +8,8 @@
 \ifthenelse{\equal{\TemplateLanguage}{he}}{
 \AtBeginDocument{\def\footnoterule{\vskip.25cm\hbox to \textwidth{\kern.6\textwidth\hrulefill}\vskip.25cm}}
 \usepackage{enumitem}
-\setlist{leftmargin=0pt, rightmargin=1cm}
+\setlist[itemize]{leftmargin=0pt, rightmargin=1cm}
+\setlist[description]{leftmargin=0pt, rightmargin=.5cm}
 }{
 \usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
 }
