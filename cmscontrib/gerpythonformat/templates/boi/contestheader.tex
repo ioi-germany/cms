@@ -6,6 +6,7 @@
 \setlength{\LTpost}{\medskipamount}
 
 \ifthenelse{\equal{\TemplateLanguage}{he}}{
+\AtBeginDocument{\def\footnoterule{\vskip.25cm\hbox to \textwidth{\kern.6\textwidth\hrulefill}\vskip.25cm}}
 }{
 \usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
 }
@@ -100,11 +101,13 @@
 \catcode`\& =\active%
 \@ctivateAMP%
 \par\medskip%
+\ifthenelse{\equal{\TemplateLanguage}{he}}{\begin{otherlanguage}{english}}{}
 \begin{tabular}{>{\cellcolor[gray]{.9}}p{3.5cm}@{\hskip0pt}p{.52cm}@{\hskip0pt}>{\cellcolor[gray]{.9}}p{3cm}@{\hskip0pt}p{.52cm}@{\hskip0pt}>{\cellcolor[gray]{.9}\sffamily\hangindent=1.25em\hangafter=1\raggedright\arraybackslash}p{7.55cm}}
 \hline
 \multicolumn{1}{|c}{\cellcolor{white}\sffamily\tProgram}&&\multicolumn{1}{c}{\sffamily \tReturn}&&\multicolumn{1}{c|}{\sffamily\tExplanation}\\\hline
 \noalign{\smallskip}%
-}{\end{tabular}\endgroup\par\medskip}
+}{\end{tabular}
+\ifthenelse{\equal{\TemplateLanguage}{he}}{\end{otherlanguage}}{}\endgroup\par\medskip}
 
 
 \def\myc@ption#1#2#3{\noalign{\bfseries\large #3}}
