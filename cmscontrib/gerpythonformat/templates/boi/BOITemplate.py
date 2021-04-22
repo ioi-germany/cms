@@ -91,6 +91,9 @@ class BOITemplate(LgTemplate):
         of any individual team in one file OR without tasks and all contestants
         separately) and ZIP them together
         """
+        if self.contest.ignore_latex:
+            return
+
         self._make_overview_sheets(attach_statements=False)
         self._make_overview_sheets(attach_statements=True)
 
