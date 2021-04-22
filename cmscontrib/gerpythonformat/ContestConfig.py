@@ -134,6 +134,8 @@ class ContestConfig(CommonConfig):
         # will fail (even locally) since multithreading is not allowed.
         self._languages = ["C++17 / g++"]
 
+        self.allow_registration = False
+
         self.tasks = {}
 
         self.groups = {}
@@ -306,6 +308,16 @@ class ContestConfig(CommonConfig):
     @exported_function
     def allow_usual_languages(self):
         self.languages(self._usual_languages())
+
+    @exported_function
+    def allow_registration(self, allow=True):
+        """
+        Set the permission for self-registration.
+
+        allow (bool): whether registration shall be allowed
+
+        """
+        self._allow_registration = allow
 
     @exported_function
     def user_group(self, s, start, stop, analysis_start=None, analysis_stop=None, per_user_time=None):
@@ -551,6 +563,7 @@ class ContestConfig(CommonConfig):
         cdb.timezone = self._timezone
         cdb.allowed_localizations = self._allowed_localizations
         cdb.languages = self._languages
+        cdb.allow_registration = self._allow_registration
         self._set_tokens(cdb)
         cdb.max_submission_number = self.max_submission_number
         cdb.min_submission_interval = self.min_submission_interval

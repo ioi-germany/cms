@@ -84,6 +84,9 @@ class ContestHandler(BaseHandler):
         else:
             self.contest_url = self.url
 
+        #TODO Make this a parameter
+        self.contest.registration_requires_captcha = True
+
         # Run render_params() now, not at the beginning of the request,
         # because we need contest_name
         self.r_params = self.render_params()
