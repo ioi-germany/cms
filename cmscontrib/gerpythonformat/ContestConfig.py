@@ -134,7 +134,7 @@ class ContestConfig(CommonConfig):
         # will fail (even locally) since multithreading is not allowed.
         self._languages = ["C++17 / g++"]
 
-        self.allow_registration = False
+        self._allow_registration = False
 
         self.tasks = {}
 

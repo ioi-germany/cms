@@ -92,7 +92,7 @@ var Overview = new function () {
         });
 
         //Always show HEADERS on screens of small width
-        var isMobile = window.matchMedia("only screen and (max-width: 991px)");
+        var isMobile = window.matchMedia("only screen and (max-width: 991px)").matches;
         if(isMobile){
             set.attr({"opacity": 1});
             $elem.off("mouseleave");
