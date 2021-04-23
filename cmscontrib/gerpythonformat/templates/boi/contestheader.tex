@@ -68,9 +68,11 @@
 \newcommand{\setlang}[1]{\ifthenelse{\equal{\TemplateLanguage}{he}}{\begin{otherlanguage}{hebrew}#1\end{otherlanguage}}{#1}}
 
 \newif\ifspoiler
-
+\AtBeginDocument{\ifspoiler
 \def\spoilerfor#1#2{\section*{#1\\[-.5ex]
 \large\scshape\lowercase{#2}}}
+\def\subtask#1\par{\global\advance\stcount by 1\subsection*{Subtask \the\stcount.\enspace\mdseries#1}}
+\fi}
 
 \chead{\vspace{-12pt}\textbf{\Large BOI 2021}\\ \tBOIPlace\\ \tBOIDates}
 \lhead{\vspace{-12pt}\hbox to 0pt{\hskip-.43in\includegraphics[scale=.65]{header.pdf}}\vspace{-6ex}}
