@@ -35,7 +35,7 @@ var Chart = new function () {
 */
 
         //Adjust canvas on screens of small width
-        var isMobile = window.matchMedia("only screen and (max-width: 991px)");
+        var isMobile = window.matchMedia("only screen and (max-width: 991px)").matches;
         if(isMobile){
                 canvas.width = window.innerWidth * .65;
                 canvas.height = canvas.width * .60;

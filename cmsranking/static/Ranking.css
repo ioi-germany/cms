@@ -1275,6 +1275,14 @@ abbr {
         top: initial;
     }
 
+    #TimeView_expand {
+        display: none;
+    }
+
+    #TimeView_name {
+        display: none;
+    }
+
     #Overview {
         height: 97vw;
     }
