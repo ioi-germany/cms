@@ -35,7 +35,7 @@ from cmscontrib.gerpythonformat.Messenger import print_msg
 import os
 import shutil
 import filecmp
-from PyPDF2 import PdfFileMerger
+from PyPDF2 import PdfFileMerger, PdfFileReader, PdfFileWriter
 
 
 # This is the template for BOI 2021 (an only slightly modified lg template)
@@ -94,51 +94,16 @@ class BOITemplate(LgTemplate):
         if self.contest.ignore_latex:
             return
 
-        self._make_overview_sheets(attach_statements=False)
-        self._make_overview_sheets(attach_statements=True)
-
-        def handout_for(t):
-            return "handout-" + t + ".pdf"
-
-        def overview_for(u):
-            return "overview-sheet-" + self._escape(u.username) + ".pdf"
-
-        zip_jobs = {}
-
-        for u in self.contest.users.values():
-            t = u.team.code
-
-            if t not in zip_jobs:
-                zip_jobs[t] = {handout_for(t) : handout_for(t)}
-            zip_jobs[t][overview_for(u)] = os.path.join(t, overview_for(u))
-
-        with chdir("overview"):
-            for team, job in zip_jobs.items():
-                if self.contest.relevant_language and self.contest.relevant_language != team:
-                    continue
-
-                print_msg("Creating zip file with overview sheets/handouts "
-                          "for team " + team)
-
-                r = ZipRule(os.path.join("..", ".rules"), team + "-all.zip",
-                            job).ensure()
-
-    def _make_overview_sheets(self, attach_statements):
-        """
-        Print an overview sheet, containing information about all tasks
-
-        attach_statements (bool): whether we should collect all primary
-                                  statements for all users and add them to the
-                                  resp. PDF right after their overview sheet
-        """
         teams = {}
+        contestants_with_language = {}
+        overview_sheets_for = {}
 
         assert(all(t._feedback_level == FEEDBACK_LEVEL_RESTRICTED
                    for t in self.contest.tasks.values()))
         assert(all(t.score_mode() == SCORE_MODE_MAX_SUBTASK
                    for t in self.contest.tasks.values()))
 
-        prefix = "handout" if attach_statements else "overview-sheet"
+        prefix = "overview-sheets-for"
 
         for u in self.contest.users.values():
             #TODO Rename team_name to team (as this actually seems to be a team object)
@@ -151,6 +116,11 @@ class BOITemplate(LgTemplate):
                 teams[team_name] = []
             teams[team_name].append(u)
 
+            for l in u.primary_statements:
+                if l not in contestants_with_language:
+                    contestants_with_language[l] = []
+                contestants_with_language[l].append(u)
+
         if not os.path.exists("overview"):
             os.mkdir("overview")
 
@@ -159,53 +129,86 @@ class BOITemplate(LgTemplate):
                                                 "general"))
 
         with chdir("overview"):
-            self.supply_overview()
-            self.contest._build_supplements_for_key("contestoverview")
+            if not os.path.exists(".overviews-per-language"):
+                os.mkdir(".overviews-per-language")
 
-            shutil.copy(os.path.join(os.path.dirname(__file__), "header.pdf"),
-                        os.path.join(os.getcwd(), "header.pdf"))
+            with chdir(".overviews-per-language"):
+                for l, users in contestants_with_language.items():
+                    self.supply_overview()
+                    self.contest._build_supplements_for_key("contestoverview")
 
-            def do_supply_language():
-                return self.language_supplement(lang_code)
+                    shutil.copy(os.path.join(os.path.dirname(__file__), "header.pdf"),
+                                os.path.join(os.getcwd(), "header.pdf"))
 
-            def do_supply_credentials():
-                return self.credentials_supplement(user, lang_code,
-                                                   attach_statements)
+                    def do_supply_language():
+                        return self.language_supplement(l)
 
-            self.contest.supply("lang", do_supply_language)
-            self.contest.supply("credentials", do_supply_credentials)
+                    def do_supply_credentials():
+                        return "\n".join("\\printoverviewpage{%s}{%s, %s}{%s}" % \
+                            (u.username, u.lastname, u.firstname, u.password)
+                            for u in users)
 
-            for team,users in teams.items():
+                    self.contest.supply("lang", do_supply_language)
+                    self.contest.supply("credentials", do_supply_credentials)
+
+                    filename = prefix + "-" + l + ".tex"
+
+                    shutil.copy(os.path.join(os.path.dirname(__file__),
+                                             "overview-template.tex"),
+                                filename)
+                    self.contest._build_supplements_for_key("credentials")
+                    self.contest._build_supplements_for_key("lang")
+
+                    pdf = PdfFileReader(self.contest.compile(filename))
+                    assert(pdf.getNumPages() == len(users))
+
+                    for i, u in enumerate(users):
+                        overview_sheets_for[(u.username,l)] = pdf.getPage(i)
+
+                    self.contest.supplements["lang"].parts.clear()
+                    self.contest.supplements["credentials"].parts.clear()
+
+            def cleardoublepage(stream):
+                if stream.getNumPages() % 2 == 1:
+                    stream.addBlankPage()
+
+            for team, users in teams.items():
                 if not os.path.exists(team.code):
                     os.mkdir(team.code)
 
-                outermerger = PdfFileMerger()
-
                 with chdir(team.code):
-                    for user in users:
-                        innermerger = PdfFileMerger()
+                    hw = PdfFileWriter()
 
-                        for lang_code in user.primary_statements:
-                            filename = prefix + "-" + \
-                                       self._escape(user.username) + "-" + \
-                                       lang_code + ".tex"
+                    for u in users:
+                        # Overview sheets
+                        ow = PdfFileWriter()
 
-                            shutil.copy(os.path.join(os.path.dirname(__file__),
-                                                     "overview-template.tex"),
-                                        filename)
+                        for l in u.primary_statements:
+                            ow.addPage(overview_sheets_for[(u.username,l)])
+                        with open("overview-" + u.username + ".pdf", "wb") as f:
+                            ow.write(f)
 
-                            self.contest._build_supplements_for_key("credentials")
-                            self.contest._build_supplements_for_key("lang")
-                            innermerger.append(self.contest.compile(filename))
+                        # handout
+                        for l in u.primary_statements:
+                            hw.addPage(overview_sheets_for[(u.username,l)])
+                            cleardoublepage(hw)
 
-                        totalfilename = prefix + "-" + \
-                                        self._escape(user.username) + ".pdf"
-                        innermerger.write(totalfilename)
-                        innermerger.close()
-                        outermerger.append(totalfilename)
+                            for t in sorted(self.contest.tasks.values(),
+                                            key=lambda x: x.name):
+                                if l in t._statements:
+                                    st = PdfFileReader(t._statements[l].file_)
+                                    hw.appendPagesFromReader(st)
+                                    cleardoublepage(hw)
 
-                outermerger.write(prefix + "-" + team.code + ".pdf")
-                outermerger.close()
 
-        self.contest.supplements["lang"].parts.clear()
-        self.contest.supplements["credentials"].parts.clear()
+                    with open("handout.pdf", "wb") as f:
+                        hw.write(f)
+
+                job = {"overview-" + u.username + ".pdf":
+                       os.path.join(team.code, "overview-" + u.username + ".pdf")
+                       for u in users }
+                job["handout.pdf"] = os.path.join(team.code, "handout.pdf")
+
+                r = ZipRule(os.path.join("..", ".rules"),
+                            team.code + "-all.zip",
+                            job).ensure()
