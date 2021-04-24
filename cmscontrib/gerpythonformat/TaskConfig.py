@@ -127,15 +127,18 @@ class MySubtask(Scope):
     :ivar description: Decription of this subtask
     :ivar name: Internal (short) name of this subtask
     :ivar sample: Whether this is the sample test case subtask
+    :ivar foldername: We create a directory with symlinks to cases
+                      at subtasks/foldername.
     :ivar groups: Groups contained in this subtask
     """
 
-    def __init__(self, task, description, name, sample):
+    def __init__(self, task, description, name, sample, foldername):
         super(MySubtask, self).__init__(task)
         self.task = task
         self.description = description
         self.name = name
         self.sample = sample
+        self.foldername = foldername
         self.groups = []
         self.feedbackcases = []
         self.checkers = []
@@ -164,7 +167,7 @@ class MySubtask(Scope):
         The name of the directory containing the groups for
         this subtask.
         """
-        return os.path.join(self.task.wdir, "subtasks", self.name)
+        return os.path.join(self.task.wdir, "subtasks", self.foldername)
 
     def group(self, points, name=None):
         """
@@ -188,7 +191,8 @@ class MySubtask(Scope):
         if name is None:
             name = "g" + str(len(self.groups))
 
-        group = MyGroup(self.task, self, points, name)
+        foldername = "Group_" + str(len(self.groups)+1)
+        group = MyGroup(self.task, self, points, name, foldername)
 
         self.groups.append(group)
 
@@ -220,15 +224,18 @@ class MyGroup(Scope):
     :ivar subtask: The subtask this group belongs to
     :ivar points: Maximum number of points for this subtask
     :ivar name: Internal (short) name of this group
+    :ivar foldername: We create a directory with symlinks to cases
+                      at subtasks/.../foldername.
     :ivar cases: Test cases contained in this group
     """
 
-    def __init__(self, task, subtask, points, name):
+    def __init__(self, task, subtask, points, name, foldername):
         super(MyGroup, self).__init__(subtask)
         self.task = task
         self.subtask = subtask
         self.points = points
         self.name = name
+        self.foldername = foldername
         # List of test cases in this group
         self.cases = []
         # List of bools specifying for each test case whether it contributes to
@@ -259,7 +266,7 @@ class MyGroup(Scope):
         The name of the directory containing the links to the test cases
         contained in this group.
         """
-        return os.path.join(self.subtask.directory, self.name)
+        return os.path.join(self.subtask.directory, self.foldername)
 
     def _dummy_case(self, name):
         if name is None:
@@ -308,10 +315,12 @@ class MyGroup(Scope):
                 .format(self.subtask, self.name, name))
         setattr(self, name, case)
 
-        linkname = os.path.join(self.directory, name)
+        dirname = "Case_" + str(len(self.cases)+1)
+        linkname = os.path.join(self.directory, dirname)
         if os.path.lexists(linkname):
             os.remove(linkname)
-        os.symlink(case.directory, linkname)
+        rel = os.path.relpath(case.directory, self.directory)
+        os.symlink(rel, linkname)
 
         print_msg("Added test case {} ({})".format(case.codename, name))
 
@@ -580,6 +589,8 @@ class TaskConfig(CommonConfig, Scope):
         if not os.path.exists("cases"):
             os.makedirs("cases")
 
+        if os.path.exists("subtasks"):
+            shutil.rmtree("subtasks")
         if not os.path.exists("subtasks"):
             os.makedirs("subtasks")
 
@@ -1050,7 +1061,10 @@ class TaskConfig(CommonConfig, Scope):
         if name is None:
             name = "s" + str(len(self.subtasks))
 
-        subtask = MySubtask(self, description, name, sample)
+        foldername = "Subtask_" + str(len(self.subtasks))
+        if sample:
+            foldername += "_Public"
+        subtask = MySubtask(self, description, name, sample, foldername)
 
         self.subtasks.append(subtask)
 
