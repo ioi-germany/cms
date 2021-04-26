@@ -269,6 +269,9 @@ class LgTemplate(PlainTemplate):
                                   statements for all users and add them to the
                                   resp. PDF right after their overview sheet
         """
+        if self.contest.ignore_latex:
+            return
+
         teams = {}
 
         for u in self.contest.users.values():
