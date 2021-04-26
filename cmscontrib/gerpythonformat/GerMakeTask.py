@@ -78,6 +78,7 @@ class GerMakeTask:
                 os.path.join(self.wdir, ".rules"),
                 "hidden contest",
                 relevant_language=(self.language if self.language!="ALL" else None),
+                ignore_latex=self.no_latex,
                 minimal=self.minimal)
 
             copyifnecessary(os.path.join(contestconfig._get_ready_dir(),
