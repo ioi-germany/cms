@@ -810,7 +810,8 @@ class TaskConfig(CommonConfig, Scope):
         """
         if primary is None:
             primary = (len(self._statements) == 0)
-        self._statements[language] = MyStatement(os.path.abspath(s), primary)
+        if s is not None:
+            self._statements[language] = MyStatement(os.path.abspath(s), primary)
 
     @exported_function
     def attachment(self, localname, publicname):
@@ -822,7 +823,8 @@ class TaskConfig(CommonConfig, Scope):
         publicname (string): file name displayed in CMS
 
         """
-        self.attachments[publicname] = os.path.abspath(localname)
+        if localname is not None:
+            self.attachments[publicname] = os.path.abspath(localname)
 
     @exported_function
     def spoiler(self, localname, publicname):
@@ -834,7 +836,8 @@ class TaskConfig(CommonConfig, Scope):
         publicname (string): file name displayed in CMS
 
         """
-        self.spoilers[publicname] = os.path.abspath(localname)
+        if localname is not None:
+            self.spoilers[publicname] = os.path.abspath(localname)
 
     def std_extensions(self):
         _EXTENSIONS = ["cpp", "pas", "java", "py"]

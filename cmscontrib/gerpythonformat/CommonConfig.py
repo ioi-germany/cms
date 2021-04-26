@@ -323,10 +323,10 @@ class CommonConfig(object):
         output = basename + ".pdf"
 
         if self.ignore_latex:
-            return output
+            return None
 
         if self.relevant_language is not None and not basename.endswith(self.relevant_language):
-            return output
+            return None
 
         if safe is None:
             safe = self.safe_latex
