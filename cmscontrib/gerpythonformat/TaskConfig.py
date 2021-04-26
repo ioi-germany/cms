@@ -238,6 +238,7 @@ class MyGroup(Scope):
         self.foldername = foldername
         # List of test cases in this group
         self.cases = []
+        self.cases_set = set()
         # List of bools specifying for each test case whether it contributes to
         # partial feedback.
         self.feedback = []
@@ -298,6 +299,15 @@ class MyGroup(Scope):
                        test case (starting at 0)
 
         """
+        if case in self.cases_set:
+            # This case has already been added to the group. We don't add it
+            # a second time.
+            # With restricted feedback, contestants would see the exact same
+            # thing whether we add the test case or not. With full feedback
+            # they would otherwise see the test case multiple times in
+            # different places.
+            return
+
         self.task.current_group = self
         checkers = self._get_checkers()
         if len(checkers) == 0 and must_still_be_checked:
@@ -325,6 +335,7 @@ class MyGroup(Scope):
         print_msg("Added test case {} ({})".format(case.codename, name))
 
         self.cases.append(case)
+        self.cases_set.add(case)
 
         self.feedback.append(feedback)
 
