@@ -372,13 +372,16 @@ class TelegramBot:
                              reply_to_message_id=msg.message_id,
                              on_send=self._record_msg(on_send))
 
-    def start(self, bot, update, args=None):
+    def start(self, update, context):
         """ The registration process
 
             For security reasons our bot will always only communicate with one
             chat, namely the first one that can authenticate to it using the
             password saved in the config file
         """
+        bot = context.bot
+        args = context.args
+
         params = args or []
 
         if self.id is not None:
@@ -425,9 +428,11 @@ class TelegramBot:
                         text=message,
                         parse_mode="MarkdownV2")
 
-    def announce(self, bot, update):
+    def announce(self, update, context):
         """ Make an announcement
         """
+        bot = context.bot
+
         if self.id is None:
             update.message.reply_text("You have to register me first (using "
                                       "the /start command).")
@@ -493,7 +498,8 @@ class TelegramBot:
                              "Sorry, this didn't work...")
 
 
-    def button_callback(self, bot, update):
+    def button_callback(self, update, context):
+        bot = context.bot
         cq = update.callback_query
 
         if cq.message.chat.id != self.id:
@@ -615,9 +621,12 @@ class TelegramBot:
                            text=a.format(new),
                            parse_mode="MarkdownV2")
 
-    def update(self, bot, job):
+    def update(self, context):
         """ Check for new questions, answers, and announcements
         """
+        bot = context.bot
+        job = context.job
+
         if self.id is None:
             return
 
@@ -645,7 +654,9 @@ class TelegramBot:
             for a in new_announcements:
                 self._notify_announcement(bot, a, True)
 
-    def list_open_questions(self, bot, update):
+    def list_open_questions(self, update, context):
+        bot = context.bot
+
         if self.id is None:
             update.message.reply_text("You have to register me first (using "
                                       "the /start command).")
@@ -681,7 +692,9 @@ class TelegramBot:
             self._notify_question(bot, q, False, False)
 
 
-    def list_all_announcements(self, bot, update):
+    def list_all_announcements(self, update, context):
+        bot = context.bot
+
         if self.id is None:
             update.message.reply_text("You have to register me first (using "
                                       "the /start command).")
@@ -716,7 +729,7 @@ class TelegramBot:
         for a in announcements:
             self._notify_announcement(bot, a, False)
 
-    def help(self, bot, update):
+    def help(self, update, context):
         HELP_TEXT = \
             escape("A bot allowing to access clarification requests and "
                    "announcements of a CMS contest via Telegram.\n\n") + \
@@ -757,7 +770,9 @@ class TelegramBot:
             update.message.reply_text(HELP_TEXT,
                                       parse_mode="MarkdownV2")
 
-    def purge(self, bot, update):
+    def purge(self, update, context):
+        bot = context.bot
+
         if self.id is None:
             update.message.reply_text("You have to register me first (using "
                                       "the /start command) — and then there "
@@ -806,13 +821,15 @@ class TelegramBot:
         self.messages_issued.clear()
         self.q_notifications.clear()
 
-    def on_reply(self, bot, update):
+    def on_reply(self, update, context):
         """ Replying to a user question posted in the chat uploads the reply as
             answer.
 
             TODO: edits
             TODO: Replying to answers and announcements?
         """
+        bot = context.bot
+
         if self.id is None:
             return
 
