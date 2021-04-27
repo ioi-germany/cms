@@ -24,6 +24,7 @@ from __future__ import unicode_literals
 
 import logging
 import json
+import traceback
 
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton, bot
 from telegram.ext import *
@@ -55,6 +56,9 @@ def italic(s):
 def escape(s):
     return "".join("\\" + c if ord(c) > 32 and ord(c) < 127 else c for c in s)
 
+def code(s):
+    linebreak = "" if len(s) > 0 and s[-1] == "\n" else "\n"
+    return "```\n" + s + linebreak + "```\n"
 
 _session = Session()
 
@@ -342,6 +346,8 @@ class TelegramBot:
         self.dispatcher = self.updater.dispatcher
         self.job_queue = self.updater.job_queue
 
+        self.dispatcher.add_error_handler(self.handle_error)
+
         self.dispatcher.add_handler(CommandHandler('start', self.start,
                                                    pass_args=True))
         self.dispatcher.add_handler(CommandHandler('announce', self.announce))
@@ -356,6 +362,22 @@ class TelegramBot:
         self.dispatcher.add_handler(CallbackQueryHandler(self.button_callback))
 
         self.job_queue.run_repeating(self.update, interval=5, first=0)
+
+    def handle_error(self, update, context):
+        e = context.error
+        err = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+        logger.error(err)
+
+        if self.id is not None:
+            ea = escape("⌁")
+
+            error_msg = ea + bold("brzzlt") + ea + escape(" not... feee") + \
+                        ea + bold("brrzzl") + ea + escape("eeling ") + \
+                        escape("welllllll...") + "\n\n" + code(escape(err)) + \
+                        bold("Update was: ") + code(escape(str(update)))
+
+            context.bot.send_message(chat_id=self.id, text=error_msg,
+                                     parse_mode="MarkdownV2")
 
     def _record_msg(self, f):
         def do_record_msg(msg):
