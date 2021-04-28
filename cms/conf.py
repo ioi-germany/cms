@@ -192,6 +192,9 @@ class Config:
         self.auto_sync = False
         self.max_compilations = 1000
 
+        # TelegramBotService
+        self.telegram_bot_max_error_messages = 5
+
         # Installed or from source?
         # We declare we are running from installed if the program was
         # NOT invoked through some python flavor, and the file is in

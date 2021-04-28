@@ -25,6 +25,12 @@ from __future__ import unicode_literals
 import logging
 import json
 import traceback
+import os
+import signal
+import sys
+
+from threading import Thread
+from time import sleep
 
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton, bot
 from telegram.ext import *
@@ -330,14 +336,17 @@ class TelegramBot:
         (Clarification Requests/Announcements/etc) happening
     """
 
-    def __init__(self, contests=None):
+    def __init__(self, contests=None, only_listen_to=None):
         self.pwd = config.bot_pwd # Password needed during startup
         self.id = None            # We will only communicate with the group of
                                   # this id (will be set during startup)
+        self.only_listen_to = only_listen_to
         self.questions = {}
         self.q_notifications = {}
         self.messages_issued = []
         self.contests = contests
+        self.err_count = 0
+        self.MAX_ERR_COUNT = config.telegram_bot_max_error_messages
 
         bot = BotWithMessageQueue(token=config.bot_token,
                                   request=Request(con_pool_size=8))
@@ -350,12 +359,14 @@ class TelegramBot:
 
         self.dispatcher.add_handler(CommandHandler('start', self.start,
                                                    pass_args=True))
+        self.dispatcher.add_handler(CommandHandler('help', self.help))
+
+    def _really_start_bot(self):
         self.dispatcher.add_handler(CommandHandler('announce', self.announce))
         self.dispatcher.add_handler(CommandHandler('openquestions',
                                                    self.list_open_questions))
         self.dispatcher.add_handler(CommandHandler('allannouncements',
                                                    self.list_all_announcements))
-        self.dispatcher.add_handler(CommandHandler('help', self.help))
         self.dispatcher.add_handler(CommandHandler('purge', self.purge))
         self.dispatcher.add_handler(MessageHandler(Filters.reply,
                                                    self.on_reply))
@@ -363,14 +374,21 @@ class TelegramBot:
 
         self.job_queue.run_repeating(self.update, interval=5, first=0)
 
+    def die(self):
+        def just_DIE_already():
+            os.kill(os.getpid(), signal.SIGINT)
+
+        Thread(target=just_DIE_already).start()
+
     def handle_error(self, update, context):
         e = context.error
         err = "".join(traceback.format_exception(type(e), e, e.__traceback__))
         logger.error(err)
 
         if self.id is not None:
-            ea = escape("⌁")
+            self.err_count += 1
 
+            ea = escape("⌁")
             error_msg = ea + bold("brzzlt") + ea + escape(" not... feee") + \
                         ea + bold("brrzzl") + ea + escape("eeling ") + \
                         escape("welllllll...") + "\n\n" + code(escape(err)) + \
@@ -378,6 +396,14 @@ class TelegramBot:
 
             context.bot.send_message(chat_id=self.id, text=error_msg,
                                      parse_mode="MarkdownV2")
+
+            if self.err_count == self.MAX_ERR_COUNT:
+                context.bot.send_message(chat_id=self.id,
+                                         text=escape("I...") +  "\n" + \
+                                              escape("I think I'm gonna lay "
+                                                     "down for a while..."),
+                                         parse_mode="MarkdownV2")
+                self.die()
 
     def _record_msg(self, f):
         def do_record_msg(msg):
@@ -435,6 +461,15 @@ class TelegramBot:
             logger.warning("Someone tried to /start me using a wrong password")
             return
 
+        if self.only_listen_to is not None and \
+           self.only_listen_to != update.message.chat_id:
+                bot.send_message(chat_id=update.message.chat_id,
+                                 text="Error: I'm already pre-bound to another "
+                                      "chat")
+                logger.error("Someone tried to /start me although I'm "
+                             "pre-bound to another chat")
+                return
+
         # Everything is fine
         self.id = update.message.chat_id
 
@@ -449,6 +484,8 @@ class TelegramBot:
         bot.send_message(chat_id=self.id,
                         text=message,
                         parse_mode="MarkdownV2")
+
+        self._really_start_bot()
 
     def announce(self, update, context):
         """ Make an announcement
@@ -930,14 +967,25 @@ class TelegramBotService:
     """ A service running the above bot
     """
     def __init__(self, shard, contest_id=None):
-        # A contest_id was provided, so we restrict ourselves to that contest
-        if contest_id is not None:
-            self.contests = [MyContest(contest_id)]
-        # No contest_id was provided, so we fetch all contests in the database
-        else:
-            contest_list = get_contest_list(Session())
-            self.contests = [ MyContest(c.id) for c in contest_list ]
-        self.bot = TelegramBot(self.contests)
+        self.contest_id = contest_id
 
     def run(self):
-        self.bot.run()
+        id = None
+
+        while True:
+            # A contest_id was provided: we restrict ourselves to that contest
+            if self.contest_id is not None:
+                contests = [MyContest(self.contest_id)]
+            # No contest_id was provided: we fetch all contests in the database
+            else:
+                contest_list = get_contest_list(_session)
+                contests = [ MyContest(c.id) for c in contest_list ]
+
+            # TODO: this should be handled better in the future (once the bot is
+            # persistent?)
+            # We save the id so that nobody else can access the bot after it
+            # shut down (for security reasons)
+            bot = TelegramBot(contests, id)
+            bot.run()
+            id = bot.id or id
+            sleep(1)
