@@ -963,10 +963,11 @@ class TelegramBot:
         self.updater.idle()
 
 
-class TelegramBotService:
+class TelegramBotService(Service):
     """ A service running the above bot
     """
     def __init__(self, shard, contest_id=None):
+        Service.__init__(self, shard)
         self.contest_id = contest_id
 
     def run(self):
