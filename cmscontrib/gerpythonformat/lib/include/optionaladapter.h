@@ -19,6 +19,7 @@
 #pragma once
 
 #include<string>
+#include<optional>
 
 using namespace std;
 
