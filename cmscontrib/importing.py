@@ -434,4 +434,5 @@ def update_participation(old_participation, new_participation):
         Participation.user_tests: False,
         Participation.printjobs: False,
         Participation.starting_time: False,
+        Participation.extra_time: False,
     })
