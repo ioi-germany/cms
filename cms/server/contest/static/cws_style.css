@@ -964,7 +964,7 @@ th.short {
     width: 20%;
 }
 
-.user_test_list colgroup col.time {
+.user_test_list colgroup col.execution_time {
     width: 3%;
 }
 
