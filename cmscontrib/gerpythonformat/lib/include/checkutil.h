@@ -49,19 +49,23 @@ using namespace std;
 /* We save constraints as strings, thereby allowing for numbers that do not fit
  * one of the usual integer types
  */
-map<string, pair<optional<string>, optional<string>>> _integral_constraints;
+typedef pair<optional<string>, optional<string>> constraint;
+map<string, constraint> _integral_constraints;
+map<string, vector<constraint>> _integral_soft_constraints;
 
 /* Queries for automatic constraints */
+template<typename T> pair<optional<T>, optional<T>> cast_constraint(constraint c) {
+    return make_pair(optional_adapter(from_string_or_fail<T>)(c.first),
+                     optional_adapter(from_string_or_fail<T>)(c.second));
+}
+
 template<typename T> pair<optional<T>, optional<T>> get_constraint(const string &name) {
     static_assert(constraints_loaded<T>(), CONSTRAINT_ERROR_MSG);
 
     auto iter = _integral_constraints.find(name);
 
     if(iter != _integral_constraints.end()) {
-        pair<optional<string>, optional<string>> result = iter->second;
-
-        return make_pair(optional_adapter(from_string_or_fail<T>)(result.first),
-                         optional_adapter(from_string_or_fail<T>)(result.second));
+        return cast_constraint<T>(iter->second);
     }
 
     else {
@@ -96,6 +100,53 @@ template<typename T> T get_constraint_value(const string &name) {
 /* Register an automatic constraint */
 void put_integral_constraint(const string &name, const optional<string> &min, const optional<string> &max) {
     _integral_constraints[name] = make_pair(min, max);
+}
+
+/* Register a soft automatic constraint -- we will check whether such a
+   constraint is satisfied, but we just output the result in the end and we will
+   certainly not die if it is violated...
+ */
+void put_integral_soft_constraint(const string &name, const optional<string> &min, const optional<string> &max) {
+    if(_integral_soft_constraints.find(name) == _integral_soft_constraints.end())
+        _integral_soft_constraints[name] = {};
+    _integral_soft_constraints[name].emplace_back(min, max);
+}
+
+map<string, vector<char>> _integral_soft_constraints_satisfied;
+
+void log_soft_constraints(FILE *flog)
+{
+    fprintf(flog, "{\n");
+
+    bool first_line = true;
+
+    for(const auto &[var, C] : _integral_soft_constraints) {
+        if(not C.empty() and _integral_soft_constraints_satisfied[var].empty()) {
+            cerr << "soft constraint \"" << var << "\" (and maybe also others?) "
+                 << "hasn't been checked -- dying...";
+            exit(1);
+        }
+    }
+
+    for(const auto &[var, L] : _integral_soft_constraints_satisfied) {
+        if(L.empty()) continue;
+
+        if(not first_line) fprintf(flog, ",\n");
+        first_line = false;
+
+        fprintf(flog, "\t\"%s\": [", var.c_str());
+        bool first_entry = true;
+
+        for(bool b : L) {
+            if(not first_entry) fprintf(flog, ", ");
+            first_entry = false;
+            fprintf(flog, "%s", b ? "true" : "false");
+        }
+
+        fprintf(flog, "]");
+    }
+
+    fprintf(flog, "\n}\n");
 }
 
 /* Facilities for special cases */
@@ -148,10 +199,32 @@ template<typename T> void check_bounds(const string &name, T t, optional<T> min,
         }
 }
 
-template<typename T> void auto_check_bounds(const string &name, T t)
-{
+template<typename T> bool satisfies_bounds(const string &name, T t, optional<T> min, optional<T> max) {
+    if(min.has_value() and t < *min) return false;
+    if(max.has_value() and t > *max) return false;
+    else                             return true;
+}
+
+template<typename T> void auto_check_bounds(const string &name, T t) {
     auto constraint = get_constraint<T>(name);
     check_bounds(name, t, constraint.first, constraint.second);
+
+    vector<char> r;
+    for(auto c: _integral_soft_constraints[name]) {
+        const auto &[min, max] = cast_constraint<T>(c);
+        r.push_back(satisfies_bounds<T>(name, t, min, max));
+    }
+
+    vector<char> &v = _integral_soft_constraints_satisfied[name];
+
+    if(not v.empty() and r != v) {
+        cerr << "Checking soft constraints for \"" << name << "\" after they've "
+             << "already been checked before -- and the results are different "
+             << "this time! Dying..." << endl;
+        exit(1);
+    }
+
+    v = r;
 }
 
 /* Provides the ability to simply scan a file token by token */
@@ -207,8 +280,9 @@ public:
     }
 
     template<typename T> T parse_and_auto_check(const string &name, const string &expected_whitespace = "") {
-        pair<optional<T>, optional<T>> constraint = get_constraint<T>(name);
-        return parse_and_check<T>(name, constraint.first, constraint.second, expected_whitespace);
+        T t = parse_and_check<T>(expected_whitespace);
+        auto_check_bounds<T>(name, t);
+        return t;
     }
 
 private:

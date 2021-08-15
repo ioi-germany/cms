@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -57,7 +57,7 @@ class ConstraintParser(object):
         """
         Read until something exciting happens
         """
-        r = ""        
+        r = ""
         while self.peek(skip_whitespace=True) not in SPECIAL_CHARACTERS and \
               not self.eof(skip_whitespace=True):
             r += self.next(skip_whitespace=(r == ""))
@@ -68,14 +68,14 @@ class ConstraintParser(object):
         Read a group (i.e. something delimited by ")
         """
         assert self.next(skip_whitespace=True) == GROUP_CHARACTER
-        
+
         r = ""
         while self.peek(skip_whitespace=False) != GROUP_CHARACTER:
             r += self.next(skip_whitespace=False)
             assert not self.eof(skip_whitespace=False)
-        
+
         assert self.next(skip_whitespace=False) == GROUP_CHARACTER
-        
+
         return r
 
     def read_token(self):
@@ -86,24 +86,24 @@ class ConstraintParser(object):
 
     def read_annotation(self):
         assert self.next(skip_whitespace=True) == ANNOTATION_BEGIN
-        r = self.read_token()        
+        r = self.read_token()
         assert self.next(skip_whitespace=True) == ANNOTATION_END
 
         return r
 
     def read_single_entry(self):
         a = self.read_token()
-        
+
         if self.peek(skip_whitespace=True) == ANNOTATION_BEGIN:
             b = self.read_annotation()
         else:
             b = None
-            
+
         return TypesetValue(a, b)
 
     def read_variables(self):
         L = []
-        
+
         while True:
             L.append(self.read_single_entry())
 
@@ -132,13 +132,13 @@ class ConstraintParser(object):
 
         if self.peek(skip_whitespace=True) != SEPARATOR:
             lower = self.read_single_entry()
-        
+
         if self.peek(skip_whitespace=True) == CONSTRAINT_END:
             upper = lower
         else:
             assert self.peek(skip_whitespace=True) == SEPARATOR
             self.next(skip_whitespace=True)
-            
+
             if self.peek(skip_whitespace=True) != CONSTRAINT_END:
                 upper = self.read_single_entry()
 
@@ -156,7 +156,7 @@ class ConstraintParser(object):
 
     def skip_whitespace(self):
         while self._peek_next() in string.whitespace:
-            self.idx += 1    
+            self.idx += 1
 
     def next(self, skip_whitespace=False):
         if skip_whitespace:
@@ -204,10 +204,10 @@ class Constraint(object):
 
     def latex(self):
         s = "$"
-        
+
         typeset_variable_list = list(v.typeset or v.val
                                      for v in self.variables)
-        
+
         if self.max is not None and self.max == self.min:
             s += "=".join(typeset_variable_list)
             s += r"= {}".format(Constraint.pretty(self.min))
@@ -289,9 +289,23 @@ class Constraint(object):
 
 
 class ConstraintList(object):
-    def __init__(self, constraints, silent):
+    ALWAYS = "__always__"
+
+    def __init__(self, constraints, silent, how_often):
         self.constraints = constraints
         self.silent = silent
+
+        if how_often == ConstraintList.ALWAYS:
+            self.how_often = how_often
+            self.soft = False
+        elif not self.silent:
+            raise Exception("soft constraints have to be silent!")
+        else:
+            def decay(pair):
+                return (Constraint.eval(pair[0]), Constraint.eval(pair[1]))
+
+            self.how_often = decay(ConstraintParser(how_often).read_bounds())
+            self.soft = True
 
     def uncompress(self):
         res = {}
@@ -303,7 +317,7 @@ class ConstraintList(object):
         return [c.latex() for c in self.constraints]
 
     @classmethod
-    def parse(cls, s, silent):
+    def parse(cls, s, silent, soft):
         parser = ConstraintParser(s)
 
         res = []
@@ -324,7 +338,7 @@ class ConstraintList(object):
                                  "you need to separate your constraints by '" +
                                  SEPARATOR + "'")
 
-        return ConstraintList(res, silent)
+        return ConstraintList(res, silent, soft)
 
 
 #For two constraining intervals, return their intersection, where there
@@ -367,3 +381,21 @@ def merge_constraints(cl1, cl2):
             res[var] = ran
     return res
 
+def format_constraint(var, min, max):
+    if min is None:
+        if max is None:
+            raise Exception("empty (soft) constraint -- why?")
+        else:
+            return "{} ≤ {}".format(var, max)
+    else:
+        if max is None:
+            return "{} ≥ {}".format(var, min)
+        else:
+            return "{} ≤ {} ≤ {}".format(min, var, max)
+
+def check_constraint(a, min, max):
+    if min is not None and a < min:
+        return False
+    if max is not None and a > max:
+        return False
+    return True
