@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
     check(argc - num_std_params, argv + num_std_params);
 
 #ifdef CONSTRAINTS_INCLUDED
-    log_soft_constraints(stdout);
+    log_soft(stdout);
 #endif
 
     return 0; // everything OK

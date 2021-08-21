@@ -31,6 +31,7 @@
 #include <iostream>
 #include <sstream>
 #include <type_traits>
+#include <utility>
 using namespace std;
 
 /* Check whether the header "constraints.h" has been included BEFORE this file
@@ -114,51 +115,23 @@ void put_integral_soft_constraint(const string &name, const optional<string> &mi
 
 map<string, vector<char>> _integral_soft_constraints_satisfied;
 
-void log_soft_constraints(FILE *flog)
-{
-    fprintf(flog, "{\n");
-
-    bool first_line = true;
-
-    for(const auto &[var, C] : _integral_soft_constraints) {
-        if(not C.empty() and _integral_soft_constraints_satisfied[var].empty()) {
-            cerr << "soft constraint \"" << var << "\" (and maybe also others?) "
-                 << "hasn't been checked -- dying...";
-            exit(1);
-        }
-    }
-
-    for(const auto &[var, L] : _integral_soft_constraints_satisfied) {
-        if(L.empty()) continue;
-
-        if(not first_line) fprintf(flog, ",\n");
-        first_line = false;
-
-        fprintf(flog, "\t\"%s\": [", var.c_str());
-        bool first_entry = true;
-
-        for(bool b : L) {
-            if(not first_entry) fprintf(flog, ", ");
-            first_entry = false;
-            fprintf(flog, "%s", b ? "true" : "false");
-        }
-
-        fprintf(flog, "]");
-    }
-
-    fprintf(flog, "\n}\n");
-}
-
 /* Facilities for special cases */
 set<string> _special_cases;
+set<string> _soft_special_cases;
+map<string, bool> _checks;
 
 void add_special_case(string s) {
     _special_cases.insert(s);
 }
 
+void add_soft_special_case(string s) {
+    _soft_special_cases.insert(s);
+}
+
 #define SPECIAL_CASE_TYPE_ERROR_MSG "You may only call is_special_case or ought_to_be with parameters convertible to strings"
 
-template<typename T> bool is_special_case(const T &s) {
+template<typename T> [[deprecated("is_special_case and ought_to_be will be removed soon---please use check_feature instead!")]]
+bool is_special_case(const T &s) {
     static_assert(constraints_loaded<T>(), CONSTRAINT_ERROR_MSG);
     static_assert(is_convertible<T, string>(), SPECIAL_CASE_TYPE_ERROR_MSG);
 
@@ -167,6 +140,30 @@ template<typename T> bool is_special_case(const T &s) {
 
 template<typename T> bool ought_to_be(const T &t) {
     return is_special_case(t);
+}
+
+template<typename F, typename... Ps> void check_feature(string special_case, F&& f, Ps&&... params) {
+    bool result = false;
+
+    if(_special_cases.find(special_case) != _special_cases.end() or
+       _soft_special_cases.find(special_case) != _soft_special_cases.end())
+        result = f(forward<Ps>(params)...);
+
+    if(_special_cases.find(special_case) != _special_cases.end() and not result) {
+        cerr << "You expected the special case \"" << special_case <<
+                "\" to hold, but it didn't---dying!" << endl;
+        exit(1);
+    }
+
+    _checks[special_case] = result;
+}
+
+template<> void check_feature(string special_case, bool&& b) {
+    check_feature(special_case, [b] { return b; });
+}
+
+template<> void check_feature(string special_case, bool& b) {
+    check_feature(special_case, (bool) b);
 }
 
 /* Replaces all whitespace escapes by their respective codes
@@ -226,6 +223,66 @@ template<typename T> void auto_check_bounds(const string &name, T t) {
 
     v = r;
 }
+
+
+void log_soft(FILE *flog)
+{
+    for(const auto &[var, C] : _integral_soft_constraints) {
+        if(not C.empty() and _integral_soft_constraints_satisfied[var].empty()) {
+            cerr << "soft constraint \"" << var << "\" (and maybe also others?) "
+                 << "hasn't been checked -- dying...";
+            exit(1);
+        }
+    }
+
+    for(string s : _special_cases) {
+        if(_checks.find(s) == _checks.end()) {
+            cerr << "\033[1m\033[93m" // yellow and bold
+                 << "WARNING! The special case \"" << s << "\" has probably "
+                 << "not been checked!" << "\033[0m" << endl;
+        }
+    }
+
+    for(string s : _soft_special_cases) {
+        if(_checks.find(s) == _checks.end()) {
+            cerr << "The soft special case \"" << s
+                 << "\" has not been checked---dying!" << endl;
+            exit(1);
+        }
+    }
+
+    fprintf(flog, "[\n{\n");
+    bool first_line = true;
+
+    for(const auto &[var, L] : _integral_soft_constraints_satisfied) {
+        if(L.empty()) continue;
+
+        if(not first_line) fprintf(flog, ",\n");
+        first_line = false;
+
+        fprintf(flog, "\t\"%s\": [", var.c_str());
+        bool first_entry = true;
+
+        for(bool b : L) {
+            if(not first_entry) fprintf(flog, ", ");
+            first_entry = false;
+            fprintf(flog, "%s", b ? "true" : "false");
+        }
+
+        fprintf(flog, "]");
+    }
+
+    fprintf(flog, "\n},\n{\n");
+    first_line = true;
+
+    for(string s : _soft_special_cases) {
+        if(not first_line) fprintf(flog, ",\n");
+        fprintf(flog, "\"%s\" : %s", s.c_str(), _checks[s] ? "true" : "false");
+    }
+
+    fprintf(flog, "\n}\n]");
+}
+
 
 /* Provides the ability to simply scan a file token by token */
 class token_stream {

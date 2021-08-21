@@ -301,10 +301,7 @@ class ConstraintList(object):
         elif not self.silent:
             raise Exception("soft constraints have to be silent!")
         else:
-            def decay(pair):
-                return (Constraint.eval(pair[0]), Constraint.eval(pair[1]))
-
-            self.how_often = decay(ConstraintParser(how_often).read_bounds())
+            self.how_often = read_frequency(how_often)
             self.soft = True
 
     def uncompress(self):
@@ -399,3 +396,9 @@ def check_constraint(a, min, max):
     if max is not None and a > max:
         return False
     return True
+
+def read_frequency(s):
+    def decay(pair):
+        return (Constraint.eval(pair[0]), Constraint.eval(pair[1]))
+
+    return decay(ConstraintParser(s).read_bounds())
