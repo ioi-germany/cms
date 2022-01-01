@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2022 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -52,7 +52,22 @@ using namespace std;
  */
 typedef pair<optional<string>, optional<string>> constraint;
 map<string, constraint> _integral_constraints;
-map<string, vector<constraint>> _integral_soft_constraints;
+
+vector<vector<vector<pair<string, constraint>>>> _integral_soft_constraints;
+vector<vector<vector<string>>> _integral_soft_results;
+
+#define NEW_SOFT_CONSTRAINT_LIST \
+    _integral_soft_constraints.emplace_back(); \
+    _integral_soft_results.emplace_back()
+
+#define NEW_SOFT_CONSTRAINT(l,u) \
+    _integral_soft_constraints.back().emplace_back(); \
+    _integral_soft_results.back().emplace_back(); \
+    curr = {l, u}
+
+#define SOFT_CONSTRAINT_VAR(var) \
+    _integral_soft_constraints.back().back().emplace_back(var, curr); \
+    _integral_soft_results.back().back().emplace_back("null")
 
 /* Queries for automatic constraints */
 template<typename T> pair<optional<T>, optional<T>> cast_constraint(constraint c) {
@@ -102,18 +117,6 @@ template<typename T> T get_constraint_value(const string &name) {
 void put_integral_constraint(const string &name, const optional<string> &min, const optional<string> &max) {
     _integral_constraints[name] = make_pair(min, max);
 }
-
-/* Register a soft automatic constraint -- we will check whether such a
-   constraint is satisfied, but we just output the result in the end and we will
-   certainly not die if it is violated...
- */
-void put_integral_soft_constraint(const string &name, const optional<string> &min, const optional<string> &max) {
-    if(_integral_soft_constraints.find(name) == _integral_soft_constraints.end())
-        _integral_soft_constraints[name] = {};
-    _integral_soft_constraints[name].emplace_back(min, max);
-}
-
-map<string, vector<char>> _integral_soft_constraints_satisfied;
 
 /* Facilities for special cases */
 set<string> _special_cases;
@@ -206,6 +209,33 @@ template<typename T> void auto_check_bounds(const string &name, T t) {
     auto constraint = get_constraint<T>(name);
     check_bounds(name, t, constraint.first, constraint.second);
 
+    for(size_t i = 0; i < _integral_soft_constraints.size(); ++i) {
+        auto &constraint_list = _integral_soft_constraints[i];
+
+        for(size_t j = 0; j < constraint_list.size(); ++j) {
+            auto &con = constraint_list[j];
+
+            for(size_t k = 0; k < con.size(); ++k) {
+                const string &var = con[k].first;
+                if(var != name) continue;
+
+                const auto &[min, max] = cast_constraint<T>(con[k].second);
+                string r = satisfies_bounds<T>(name, t, min, max) ? "true" : "false";
+                string &prev_r = _integral_soft_results[i][j][k];
+
+                if(prev_r != "null" and prev_r != r) {
+                    cerr << "Checking soft constraints for \"" << var << "\" after they've "
+                         << "already been checked before -- and the results are different "
+                         << "this time! Dying..." << endl;
+                    exit(1);
+                }
+
+                prev_r = r;
+            }
+        }
+    }
+
+    /*
     vector<char> r;
     for(auto c: _integral_soft_constraints[name]) {
         const auto &[min, max] = cast_constraint<T>(c);
@@ -221,17 +251,26 @@ template<typename T> void auto_check_bounds(const string &name, T t) {
         exit(1);
     }
 
-    v = r;
+    v = r;*/
 }
 
 
 void log_soft(FILE *flog)
 {
-    for(const auto &[var, C] : _integral_soft_constraints) {
-        if(not C.empty() and _integral_soft_constraints_satisfied[var].empty()) {
-            cerr << "soft constraint \"" << var << "\" (and maybe also others?) "
-                 << "hasn't been checked -- dying...";
-            exit(1);
+    for(size_t i = 0; i < _integral_soft_constraints.size(); ++i) {
+        auto &constraint_list = _integral_soft_constraints[i];
+
+        for(size_t j = 0; j < constraint_list.size(); ++j) {
+            auto &con = constraint_list[j];
+
+            for(size_t k = 0; k < con.size(); ++k) {
+                const string &var = con[k].first;
+                if(_integral_soft_results[i][j][k] == "null") {
+                    cerr << "soft constraint for \"" << var << "\" (and maybe also others?) "
+                         << "hasn't been checked -- dying...";
+                    exit(1);
+                }
+            }
         }
     }
 
@@ -251,6 +290,37 @@ void log_soft(FILE *flog)
         }
     }
 
+    fprintf(flog, "[\n[\n");
+    bool first_line = true;
+
+    for(const auto& con_list : _integral_soft_results) {
+        if(not first_line) fprintf(flog, ",\n");
+        first_line = false;
+
+        fprintf(flog, "[\n");
+        bool first_line_inner = true;
+
+        for(const auto& con : con_list) {
+            if(not first_line_inner) fprintf(flog, ",\n");
+            first_line_inner = false;
+
+            fprintf(flog, "[");
+            bool first_entry = true;
+
+            for(const string& r : con) {
+                if(not first_entry) fprintf(flog, ", ");
+                first_entry = false;
+
+                fprintf(flog, "%s", r.c_str());
+            }
+
+            fprintf(flog, "]");
+        }
+
+        fprintf(flog, "\n]");
+    }
+
+    /*
     fprintf(flog, "[\n{\n");
     bool first_line = true;
 
@@ -272,7 +342,8 @@ void log_soft(FILE *flog)
         fprintf(flog, "]");
     }
 
-    fprintf(flog, "\n},\n{\n");
+    fprintf(flog, "\n},\n{\n");*/
+    fprintf(flog, "\n],\n{\n");
     first_line = true;
 
     for(string s : _soft_special_cases) {

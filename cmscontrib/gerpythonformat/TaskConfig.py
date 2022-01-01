@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2022 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -29,7 +29,7 @@ from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonCon
 from cmscontrib.gerpythonformat.Executable import ExitCodeException, \
     InternalPython
 from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, \
-    merge_constraints, format_constraint, check_constraint, read_frequency
+    merge_constraints, read_frequency, check_bounds
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK
 from cms import FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
@@ -126,19 +126,11 @@ class Scope(object):
 
     def _collect_constraints(self):
         hard = {}
-        soft = {}
+        soft = []
 
         for c in self._get_constraints():
             if c.soft:
-                for con_object in c.constraints:
-                    con = con_object.uncompress()
-
-                    for variable, bounds in con.items():
-                        if variable not in soft:
-                            soft[variable] = []
-                        soft[variable].append((bounds[0], bounds[1],
-                                               c.how_often[0],
-                                               c.how_often[1]))
+                soft.append(c)
             else:
                 hard = merge_constraints(hard, c.uncompress())
 
@@ -265,7 +257,8 @@ class MyGroup(Scope):
         # partial feedback.
         self.feedback = []
         # how often is each soft constraint satisfied in this group?
-        self.soft_constraints_stats = {}
+        self.soft_constraints_stats = []
+        self.soft_constraints_stats_acc = []
         self.soft_spec_stats = {}
 
         if not os.path.exists(self.directory):
@@ -308,12 +301,12 @@ class MyGroup(Scope):
 
         failed = False
 
-        def print_stats_for(desc, stats, lower, upper, what):
+        def print_stats_for(desc, stats, bounds, what):
             nonlocal failed
 
+            lower, upper = bounds
             times_satisfied = sum(a[0] for a in stats if a[0] is not None)
-            this_constraint_okay = \
-                check_constraint(times_satisfied, lower, upper)
+            this_constraint_okay = check_bounds(times_satisfied, lower, upper)
 
             def cf(f):
                 return green if this_constraint_okay else f
@@ -356,32 +349,42 @@ class MyGroup(Scope):
 
         print_msg(bold("\nTestcase quality in this group"))
 
-        for var in self.soft_constraints:
-            if len(self.soft_constraints[var]) > \
-               len(self.soft_constraints_stats[var]):
-                print_msg(yellow(bold("You specified some soft constraints "
-                                      "(for variable {}) ".format(var) +
-                                      "after all testcases had already been "
-                                      "added—why?!")), use_ellipsis=False)
-            while len(self.soft_constraints[var]) > \
-                  len(self.soft_constraints_stats[var]):
-                self.soft_constraints_stats[var].append([])
+        if len(self.soft_constraints) > len(self.soft_constraints_stats):
+            print_msg(yellow(bold("You specified some soft constraints "
+                                  "(see the list below for details) "
+                                  "after all testcases had already been "
+                                  "added—why?!")), use_ellipsis=False)
 
-            for stats, bounds in zip(self.soft_constraints_stats[var],
-                                     self.soft_constraints[var]):
-                desc = format_constraint(var, bounds[0], bounds[1])
-                print_stats_for(desc, stats, bounds[2], bounds[3], "constraint")
+            for i in range(len(self.soft_constraints),
+                           len(self.soft_constraints_stats)):
+                self.soft_constraints_stats.append([])
 
+                with IndentManager():
+                    print_msg(self.soft_constraints[i].terminal())
+
+        for stats, c in zip(self.soft_constraints_stats_acc,
+                            self.soft_constraints):
+            print_stats_for(c.terminal(), stats, c.how_often, "constraint")
+
+        special_cases_after = [desc for desc, _ in self.soft_special_cases
+                                    if desc not in self.soft_spec_stats]
+
+        if len(special_cases_after) > 0:
+            print_msg(yellow(bold("You specified some soft special cases "
+                                  "(see the list below for details) "
+                                  "after all testcases had already been "
+                                  "added—why?!")), use_ellipsis=False)
+
+            with IndentManager():
+                for s in special_cases_after:
+                    print_msg(s)
 
         for desc, bounds in self.soft_special_cases:
             if desc not in self.soft_spec_stats:
-                print_msg(yellow(bold("You specified some soft special cases "
-                                      "after all testcases had already been "
-                                      "added—why?!")), use_ellipsis=False)
                 continue
 
             stats = self.soft_spec_stats[desc]
-            print_stats_for(desc, stats, bounds[0], bounds[1], "special case")
+            print_stats_for(desc, stats, (bounds[0], bounds[1]), "special case")
 
         if failed:
             raise Exception("at least one testcase quality check failed")
@@ -474,6 +477,7 @@ class MyGroup(Scope):
                 mycolor = yellow if result else green
             return mycolor
 
+        """
         for var in self.soft_constraints:
             if var not in self.soft_constraints_stats:
                 self.soft_constraints_stats[var] = []
@@ -492,6 +496,46 @@ class MyGroup(Scope):
                                                             len(self.cases))
 
                 self.soft_constraints_stats[var][i].append((result, mycolor))
+
+        """
+        for i, con_list in enumerate(self.soft_constraints):
+            while i >= len(self.soft_constraints_stats):
+                self.soft_constraints_stats.append([])
+                self.soft_constraints_stats_acc.\
+                    append([(None, gray)] * len(self.cases))
+
+            lower, upper = con_list.how_often
+            desc = con_list.terminal()
+            results = [res for L in soft_con_results[i] for res in L]
+            results_acc = all(results)
+            mycolor = getcolor(results_acc, lower, upper)
+            print_msg(mycolor(bold(desc + ": " + ("✗ not " if not results_acc
+                                                  else "✓ ") + "satisfied")))
+
+            for j, con in enumerate(con_list.constraints):
+                while j >= len(self.soft_constraints_stats[i]):
+                    self.soft_constraints_stats[i].append([])
+
+                for k, var in enumerate(con.variables):
+                    result = soft_con_results[i][j][k]
+                    #mycolor = getcolor(result, lower, upper)
+
+                    if len(results) > 1:
+                        with IndentManager():
+                            print_msg(mycolor(con.subconstraint(k).terminal() +
+                                              ": " + ("✗ not " if not result
+                                                               else "✓ ") +
+                                              "satisfied"))
+
+                    while k >= len(self.soft_constraints_stats[i][j]):
+                        self.soft_constraints_stats[i][j].\
+                            append([(None, gray)] * len(self.cases))
+
+                    self.soft_constraints_stats[i][j][k].\
+                        append((result, mycolor))
+
+            print_msg("")
+            self.soft_constraints_stats_acc[i].append((results_acc, mycolor))
 
         for desc, bounds in self.soft_special_cases:
             result = soft_spec_results[desc]
@@ -948,10 +992,18 @@ class TaskConfig(CommonConfig, Scope):
         for var, ran in hard_constraints.items():
             s += '\tput_integral_constraint("{}", {}, {});\n'.\
                      format(var, cppify(ran[0]), cppify(ran[1]))
-        for var, l in soft_constraints.items():
-            for ran in l:
-                s += '\tput_integral_soft_constraint("{}", {}, {});\n'.\
-                         format(var, cppify(ran[0]), cppify(ran[1]))
+
+        s += '\n\tconstraint curr;\n'
+
+        for cl in soft_constraints:
+            s += '\tNEW_SOFT_CONSTRAINT_LIST;\n'
+
+            for c in cl.constraints:
+                s += '\t\tNEW_SOFT_CONSTRAINT(({}), ({}));\n'.\
+                         format(cppify(c.lower()), cppify(c.upper()));
+
+                for var in c.variables:
+                    s += '\t\t\tSOFT_CONSTRAINT_VAR(("{}"));\n'.format(var.val)
 
         special_cases, soft_special_cases = \
             self.current_group._get_special_cases()

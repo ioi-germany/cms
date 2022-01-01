@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2022 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -176,11 +176,22 @@ class ConstraintParser(object):
         return self.peek(skip_whitespace) == "\0"
 
 
+def check_bounds(a, min, max):
+    if min is not None and a < min:
+        return False
+    if max is not None and a > max:
+        return False
+    return True
+
+
 class Constraint(object):
     def __init__(self, variables, min, max):
         self.variables = variables
         self.min = min
         self.max = max
+
+    def subconstraint(self, idx):
+        return Constraint([self.variables[idx]], self.min, self.max)
 
     def uncompress(self):
         return {v.val: (Constraint.eval(self.min),
@@ -223,6 +234,23 @@ class Constraint(object):
         s += "$"
         return s
 
+    def terminal(self):
+        vars = ", ".join(v.val for v in self.variables)
+
+        def t(x):
+            return Constraint.prettify(x.val, " ")
+
+        if self.min is None:
+            if self.max is None:
+                raise Exception("empty (soft) constraint -- why?")
+            else:
+                return "{} ≤ {}".format(vars, t(self.max))
+        else:
+            if self.max is None:
+                return "{} ≥ {}".format(vars, t(self.min))
+            else:
+                return "{} ≤ {} ≤ {}".format(t(self.min), vars, t(self.max))
+
     @staticmethod
     def pretty(v):
         if v.typeset is not None:
@@ -231,9 +259,9 @@ class Constraint(object):
             return Constraint.prettify(v.val)
 
     @staticmethod
-    def prettify(s):
+    def prettify(s, sep=r"\,"):
         """
-        Try to apply digit grouping to numbers for TeX display
+        Try to apply digit grouping to numbers for TeX or terminal display
 
         This is of course not perfect, for example one can trick it using
         something like 1{}000
@@ -244,19 +272,19 @@ class Constraint(object):
 
         for c in s:
             if (c in string.digits) != num_mode:
-                l.append(Constraint.grp(curr_token)
+                l.append(Constraint.grp(curr_token, sep)
                          if num_mode else curr_token)
                 curr_token = ""
                 num_mode = not num_mode
 
             curr_token += c
 
-        l.append(Constraint.grp(curr_token) if num_mode else curr_token)
+        l.append(Constraint.grp(curr_token, sep) if num_mode else curr_token)
 
         return "".join(l)
 
     @staticmethod
-    def grp(s):
+    def grp(s, sep):
         """
         Group s into blocks of three characters each, separated by 1/6th quad
         This should be applied to numbers
@@ -266,7 +294,7 @@ class Constraint(object):
         t = ""
         for i in range(0, len(s)):
             if (i + 3 - m) % 3 == 0 and i != 0:
-                t += "\,"
+                t += sep
             t += s[i]
         return t
 
@@ -287,6 +315,14 @@ class Constraint(object):
 
         return eval(s)
 
+    def lower(self):
+        return Constraint.eval(self.min)
+
+    def upper(self):
+        return Constraint.eval(self.max)
+
+    def _check(self, a):
+        return check_bounds(a, self.lower(), self.upper())
 
 class ConstraintList(object):
     ALWAYS = "__always__"
@@ -312,6 +348,16 @@ class ConstraintList(object):
 
     def latex(self):
         return [c.latex() for c in self.constraints]
+
+    def terminal(self):
+        return ", ".join(c.terminal() for c in self.constraints)
+
+    def check(self, var_dict):
+        for c in self.constraints:
+            for v in c.variables:
+                if not c._check(var_dict[v.val]):
+                    return False
+        return True
 
     @classmethod
     def parse(cls, s, silent, soft):
@@ -377,25 +423,6 @@ def merge_constraints(cl1, cl2):
         else:
             res[var] = ran
     return res
-
-def format_constraint(var, min, max):
-    if min is None:
-        if max is None:
-            raise Exception("empty (soft) constraint -- why?")
-        else:
-            return "{} ≤ {}".format(var, max)
-    else:
-        if max is None:
-            return "{} ≥ {}".format(var, min)
-        else:
-            return "{} ≤ {} ≤ {}".format(min, var, max)
-
-def check_constraint(a, min, max):
-    if min is not None and a < min:
-        return False
-    if max is not None and a > max:
-        return False
-    return True
 
 def read_frequency(s):
     def decay(pair):
