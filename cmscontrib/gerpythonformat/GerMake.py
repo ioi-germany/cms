@@ -77,7 +77,8 @@ class GerMake:
                 relevant_language=(self.language if self.language!="ALL" else None),
                 ignore_latex=self.no_latex,
                 onlytask=self.task,
-                safe_latex=self.safe_latex)
+                safe_latex=self.safe_latex,
+                minimal=self.minimal)
 
             contestconfig._readconfig("contest-config.py")
             if self.task is not None and len(contestconfig.tasks) == 0:

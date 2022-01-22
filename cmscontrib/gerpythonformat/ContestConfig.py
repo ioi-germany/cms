@@ -525,7 +525,7 @@ class ContestConfig(CommonConfig):
                      partial_feedback, full_feedback, restricted_feedback)
 
         """
-        self._task(s, feedback or self.restricted_feedback, score_mode, False)
+        self._task(s, feedback or self.restricted_feedback, score_mode, self.minimal)
 
     @exported_function
     def test_user(self, u):
