@@ -523,12 +523,16 @@ Die Übersichtszettel werden in einem eigenen Ordner ``overview`` innerhalb des 
 
 Task Translation Interface
 ==========================
-This is a web server and client to manage task translation by multiple users. For a given set of tasks, users can download task statements in form of TeX (and PDF) files, then upload the translated TeX files. They can then download and check the compiled PDF statement.
+This is a web server and client to manage task translation by multiple users. For a given set of tasks, users can download task statements in form of LaTeX (and PDF) files, then upload the translated TeX files. They can then download and check the compiled PDF statement.
+
+For security reasons, LaTeX statements are compiled inside a sandbox. However, some files inside your contest and task repository are accessible to the ``LaTeX`` compiler, which may sometimes include testcases and task solutions. Anyone who can upload a LaTeX file for compilation can put code inside to read these files. To prevent this, you can use a separate repository for the task translation service, where you delete all files unnecessary for the statements.
+
+You will need to adjust ``num_boxes`` to at least ``10000`` in ``/usr/local/etc/isolate`` because the LaTeXSandbox uses box numbers higher than ``1000``. Also, if compilation fails without a meaningful error message (and exit code 9 or 12), try raising ``latex_compilation_sandbox_max_memory_kib`` (the default is 2*1024*1024, i.e. 2 GiB) in ``cms.conf``. If compilation fails because the time limit is exceeded, raise ``latex_compilation_sandbox_max_time_s``.
 
 .. warning::
-    This server accepts arbitrary TeX files and tries to compile them with ``pdflatex``. One can put malicious code in such a TeX file, **which everyone with access to the translation interface can use to run arbitrary code on the server**. Be sure to limit the interface to people you trust and who are allowed to access your server. You can run the task translation server on a separate machine / inside a virtual machine to limit access and *slightly* reduce potential damage. In a future implementation, the compilation will be done inside an ``isolate`` environment.
+  The following is outdated, mainly because we now use a contest-centered directory structure.
 
-The server's task repository is to be specified in ``cms.config``. In the repository, there must be a ``language.json`` file as well as a folder for each task that follows the :ref:`GermanFormat`.
+The server's task repository is to be specified in ``cms.conf``. In the repository, there must be a ``language.json`` file as well as a folder for each task that follows the :ref:`GermanFormat`.
 
 ``language.json`` contains a ``languages`` key with a list of all languages you would like to have translations to, like this:
 
@@ -563,7 +567,7 @@ Additionally, in every task folder, there must be an ``info.json`` file. It has 
 
 The ``info.json`` file can also include the ``filename`` keyword, see below.
 
-Once you start ``cmsGerTranslateWebServer``, you can access the web interface, by default at `<localhost:8892>`_. When someone uploads a translation, it gets stored in the appropriate file in the repository and, if that's actually a git repository, is committed and pushed (if allowed in ``cms.config``).
+Once you start ``cmsGerTranslateWebServer``, you can access the web interface, by default at `<localhost:8892>`_. When someone uploads a translation, it gets stored in the appropriate file in the repository and, if that's actually a git repository, is committed and pushed (if allowed in ``cms.conf``).
 
 One can also mark a translation as finished via the web interface, which creates, commits, and pushes a ``la.lock`` file (where ``la`` is the language code) in the task folder. The server will then disallow any further attempts to change the translation, and visibly show the translation as finito in the task overview. This can only be reverted with actual access to the task repository, not via the web interface. It should make sense to have ``en.lock`` in every task folder from the beginning.
 
