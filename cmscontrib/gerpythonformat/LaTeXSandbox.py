@@ -48,7 +48,6 @@ class LaTeXSandbox(IsolateSandbox):
         self.add_mapped_directory("/usr/share/texmf")
         self.add_mapped_directory("/etc/texmf")
         self.add_mapped_directory("/var/lib/texmf")
-        self.add_mapped_directory(os.path.expanduser("~/texmf"))
 
         for d in config.latex_additional_dirs:
             self.add_mapped_directory(os.path.expanduser(d))
