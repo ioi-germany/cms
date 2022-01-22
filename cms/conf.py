@@ -123,7 +123,7 @@ class Config:
             self.compilation_sandbox_max_processes
         self.latex_compilation_sandbox_max_time_s = 60.0
         self.latex_compilation_sandbox_max_memory_kib = \
-            self.compilation_sandbox_max_memory_kib
+            2 * 1024 * 1024  # 2 GiB
 
         # Where should the LaTeX sandbox look for packages, fonts, etc.?
         now = datetime.now().year
