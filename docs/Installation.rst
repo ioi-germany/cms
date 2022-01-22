@@ -40,6 +40,9 @@ These are our requirements (in particular we highlight those that are not usuall
 
 You will also require a Linux kernel with support for control groups and namespaces. Support has been in the Linux kernel since 2.6.32. Other distributions, or systems with custom kernels, may not have support enabled. At a minimum, you will need to enable the following Linux kernel options: ``CONFIG_CGROUPS``, ``CONFIG_CGROUP_CPUACCT``, ``CONFIG_MEMCG`` (previously called as ``CONFIG_CGROUP_MEM_RES_CTLR``), ``CONFIG_CPUSETS``, ``CONFIG_PID_NS``, ``CONFIG_IPC_NS``, ``CONFIG_NET_NS``. It is anyway suggested to use Linux kernel version at least 3.8.
 
+.. warning::
+   Currently, ``isolate`` only works with ``cgroups v1``, not ``cgroups v2``. If you receive error messages regarding ``isolate`` when using CMS, you may need to add ``systemd.unified_cgroup_hierarchy=0`` to your kernel parameters (usually, add them to ``GRUB_CMDLINE_LINUX_DEFAULT`` in ``/etc/default/grub``, then re-make the GRUB configuration file) as your operating system may already use ``cgroups v2`` by default.
+
 Then you require the compilation and execution environments for the languages you will use in your contest:
 
 * `GNU compiler collection <https://gcc.gnu.org/>`_ (for C and C++, respectively with executables ``gcc`` and ``g++``);
