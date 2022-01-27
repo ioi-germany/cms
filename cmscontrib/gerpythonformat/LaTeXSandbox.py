@@ -2,6 +2,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2021 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -45,9 +46,11 @@ class LaTeXSandbox(IsolateSandbox):
 
         self.stdout_file = "LaTeX_out.txt"
         self.stderr_file = "LaTeX_err.txt"
-        self.add_mapped_directory("/usr/share/texmf")
         self.add_mapped_directory("/etc/texmf")
         self.add_mapped_directory("/var/lib/texmf")
+        self.add_mapped_directory("/etc/fonts")
+        # /usr is mapped per default, so we don't need to
+        # map anything from there explicitly.
 
         for d in config.latex_additional_dirs:
             # We probably can't map the directory into the sandbox's
