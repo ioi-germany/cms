@@ -50,7 +50,12 @@ class LaTeXSandbox(IsolateSandbox):
         self.add_mapped_directory("/var/lib/texmf")
 
         for d in config.latex_additional_dirs:
-            self.add_mapped_directory(os.path.expanduser(d))
+            # We probably can't map the directory into the sandbox's
+            # home directory, so we copy it there.
+            copyrecursivelyifnecessary(os.path.expanduser(d),
+                                    os.path.join(self.get_home_path(),
+                                                 d[2:] if d[:2]=="~/" else d),
+                                    mode=0o777)
 
     def maybe_add_mapped_directory(self, src, dest=None, options=None):
         """

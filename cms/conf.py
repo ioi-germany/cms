@@ -134,9 +134,9 @@ class Config:
                 self.latex_distro = ".texlive" + s
 
         self.latex_additional_dirs = \
-            [d for d in [os.path.expanduser("~/.local/share/fonts"),
-                         os.path.expanduser("~/texmf")]
-                if os.path.exists(d)]
+            [d for d in ["~/.local/share/fonts",
+                         "~/texmf"]
+                if os.path.exists(os.path.expanduser(d))]
 
         # Max processes, CPU time (s), memory (KiB) for trusted runs.
         self.trusted_sandbox_max_processes = 1000
