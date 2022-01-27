@@ -121,7 +121,7 @@ class Config:
         # Max processes, CPU time (s), memory (KiB) for LaTeX compilation runs
         self.latex_compilation_sandbox_max_processes = \
             self.compilation_sandbox_max_processes
-        self.latex_compilation_sandbox_max_time_s = 60.0
+        self.latex_compilation_sandbox_max_time_s = 3 * 60.0
         self.latex_compilation_sandbox_max_memory_kib = \
             2 * 1024 * 1024  # 2 GiB
 
