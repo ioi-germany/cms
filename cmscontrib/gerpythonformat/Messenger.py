@@ -3,6 +3,7 @@
 # Programming contest management system
 # Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -496,12 +497,51 @@ def header(message, depth):
     return IndentManager()
 
 def highlight_latex(s):
+    """Highlights and shortens LaTeX output.
+
+    TODO There are some off (or missing) newlines in the pruned output.
+    """
+    def to_words(s):
+        return [x.strip(":,.;-= ") for x in s.split()]
+
+    # We silence warnings that contain one of these phrases.
+    # Some come from packages and we can't do anything about them,
+    # while some may mean we should adjust our header file.
+    silenced_warnings = [
+        "Class scrartcl Warning: Usage of package `fancyhdr' together "
+        "with a KOMA-Script class is not recommended.",
+        "LaTeX hooks Warning: Generic hook  is deprecated. "
+        "Use hook  instead.",
+        "Package fontspec Warning: OpenType feature 'Numbers=Uppercase'  not "
+        "available for font 'FiraMathRegular' with script "
+        "'Math' and language 'Default'."
+        ]
+    silenced_warnings = [to_words(phrase) for phrase in silenced_warnings]
+    def silenced(w):
+        for phrase in silenced_warnings:
+            i = 0
+            for a in w:
+                if phrase[i] == a:
+                    i += 1
+                if i == len(phrase):
+                    return True
+        return False
+
     r = []
 
     def normal(f):
         return f
+    warning = yellow
 
     mode = normal
+    # TODO Do we want to remove the loading-files parts of the log?
+    # A first attempt at this is implemented below, but commented out.
+    loading_segment = False
+    #open_brackets = 0
+
+    current_warning = None
+    previous_warnings = set()
+    after_warning = False
 
     def highlight_error(s):
         return bold(red(s))
@@ -513,26 +553,57 @@ def highlight_latex(s):
         simplified = l.strip()
 
         if simplified == "":
+            if mode == warning:
+                after_warning = True
+            else:
+                mode = normal
+        # We assume the log doesn't end with a warning
+        # (if it did, this point wouldn't be reached and
+        # the warning not printed.)
+        elif after_warning:
+            after_warning = False
+            current_warning_simplified = current_warning.strip()
+            if current_warning_simplified not in previous_warnings and \
+                not silenced(to_words(current_warning_simplified)):
+                r.append(mode(
+                    current_warning.replace("Warning",bold(invert("Warning")))
+                    ))
+                previous_warnings.add(current_warning_simplified)
+            current_warning = None
             mode = normal
 
         if simplified.startswith("Output written") or \
            simplified.startswith("Transcript written"):
             mode = green
+            previous_warnings = set()
 
         if simplified.startswith("! "):
             mode = highlight_error
 
-        words = [x.strip(":,.;-= ") for x in simplified.split(" ")]
+        words = to_words(simplified)
 
         if "Overfull" in words or "Underfull" in words:
             mode = purple
 
         if "Warning" in words:
-            mode = yellow
+            mode = warning
 
         if "Error" in words or "Errors" in words:
             mode = highlight_error
 
-        r.append(mode(l.replace("Warning", bold(invert("Warning")))))
+        #if mode == normal:
+            #if simplified.startswith("(./") or simplified.startswith("(/"):
+                #loading_segment = True
+
+        if mode == warning:
+            current_warning = '\n'.join([current_warning, l])\
+                                if current_warning else l
+        elif not (mode == normal and loading_segment):
+            r.append(mode(l))
+
+        #if mode == normal and loading_segment:
+            #open_brackets += simplified.count('(') - simplified.count(')')
+            #if open_brackets == 0:
+                #loading_segment = False
 
     return "\n".join(r)
