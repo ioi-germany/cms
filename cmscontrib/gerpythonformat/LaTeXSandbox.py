@@ -32,12 +32,6 @@ class LaTeXSandbox(IsolateSandbox):
 
         IsolateSandbox.__init__(self, *args, box_id=bid, **kwargs)
 
-        copyrecursivelyifnecessary(os.path.join(os.path.expanduser("~"),
-                                                config.latex_distro),
-                                   os.path.join(self.get_home_path(),
-                                                config.latex_distro),
-                                   mode=0o777)
-
         self.preserve_env = True
         self.max_processes = config.latex_compilation_sandbox_max_processes
         self.timeout = config.latex_compilation_sandbox_max_time_s

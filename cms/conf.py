@@ -8,6 +8,7 @@
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2016 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -212,6 +213,7 @@ class Config:
         if self.installed:
             self.log_dir = os.path.join("/", "var", "local", "log", "cms")
             self.cache_dir = os.path.join("/", "var", "local", "cache", "cms")
+            self.latex_cache_dir = os.path.join("/", "var", "local", "cache", "cms", "latex")
             self.data_dir = os.path.join("/", "var", "local", "lib", "cms")
             self.run_dir = os.path.join("/", "var", "local", "run", "cms")
             paths = [os.path.join("/", "usr", "local", "etc", "cms.conf"),
@@ -219,6 +221,7 @@ class Config:
         else:
             self.log_dir = "log"
             self.cache_dir = "cache"
+            self.latex_cache_dir = "cache-latex"
             self.data_dir = "lib"
             self.run_dir = "run"
             paths = [os.path.join(".", "config", "cms.conf")]
