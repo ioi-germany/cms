@@ -4,6 +4,7 @@
 # Programming contest management system
 # Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -164,7 +165,7 @@ class MySubtask(Scope):
     @property
     def directory(self):
         """
-        The name of the directory containing the groups for
+        The path of the directory containing the groups for
         this subtask.
         """
         return os.path.join(self.task.wdir, "subtasks", self.foldername)
@@ -264,7 +265,7 @@ class MyGroup(Scope):
     @property
     def directory(self):
         """
-        The name of the directory containing the links to the test cases
+        The path of the directory containing the links to the test cases
         contained in this group.
         """
         return os.path.join(self.subtask.directory, self.foldername)
@@ -378,11 +379,13 @@ class MyCase(object):
 
     """
 
-    def __init__(self, task, codename):
+    def __init__(self, task, codename, hashname):
         self.task = task
         self.codename = codename
+        self.hashname = hashname
         if not os.path.exists(self.directory):
             os.mkdir(self.directory)
+        self._create_link()
         self.public = False
         # Strings specifying in which subtasks/groups this case can be found
         self.locations = []
@@ -390,10 +393,10 @@ class MyCase(object):
     @property
     def directory(self):
         """
-        The name of the directory containing the input and output files for
-        this test case.
+        The path (ending with a hash) of the directory containing the input
+        and output files for this test case.
         """
-        return os.path.join(self.task.wdir, "cases", self.codename)
+        return os.path.join(self.task.cases_directory, self.hashname)
 
     @property
     def infile(self):
@@ -408,6 +411,23 @@ class MyCase(object):
         The output file name.
         """
         return os.path.join(self.directory, "out.txt")
+
+    @property
+    def codenameddirectory(self):
+        """
+        The path (ending with a number, which is the codename) of the link to
+        the directory containing the input and output files for this test case.
+        """
+        return os.path.join(self.task.wdir, "cases", self.codename)
+
+    def _create_link(self):
+        """
+        Create the link from the codename to the hash name directory.
+        """
+        if os.path.lexists(self.codenameddirectory):
+            os.remove(self.codenameddirectory)
+        rel = os.path.relpath(self.directory, os.path.join(self.task.wdir, "cases"))
+        os.symlink(rel, self.codenameddirectory)
 
     def _get_cases(self):
         """
@@ -599,6 +619,8 @@ class TaskConfig(CommonConfig, Scope):
 
         if not os.path.exists("cases"):
             os.makedirs("cases")
+        if not os.path.exists("cases_by_hash"):
+            os.makedirs("cases_by_hash")
 
         if os.path.exists("subtasks"):
             shutil.rmtree("subtasks")
@@ -621,6 +643,7 @@ class TaskConfig(CommonConfig, Scope):
         self.subtask_stack = []
         self.cases = []
         self.cases_by_codename = {}
+        self.cases_hashnames = set()
         self.group_stack = []
         self.current_group = None
         self.output_generator = None
@@ -692,6 +715,13 @@ class TaskConfig(CommonConfig, Scope):
         """
         return ()
 
+    @property
+    def cases_directory(self):
+        """
+        The path of the directory containing the input and output files.
+        """
+        return os.path.join(self.task.wdir, "cases_by_hash")
+
     def _readconfig(self, filename):
         with header("Loading task {}".format(self.name), depth=2):
             super(TaskConfig, self)._readconfig(filename)
@@ -703,6 +733,8 @@ class TaskConfig(CommonConfig, Scope):
         self._makeallzip()
         if self.tasktype == "OutputOnly":
             self._makeinputzip()
+
+        self._collect_garbage()
 
         if self.tasktype is None:
             raise Exception("You have to specify a task type")
@@ -987,10 +1019,21 @@ class TaskConfig(CommonConfig, Scope):
         prog (Executable): program to run to generate the test case
 
         """
-        codename = "%.04d" % (len(self.cases) + 1)
+        codename = case_number = "%.04d" % (len(self.cases) + 1)
+        # Note that we don't use the output (infile) path as part of the
+        # mission hash, unlike the actual mission to make the output (infile)
+        hashname = prog.missionhash()[:7]
 
-        with header("Generating test case {}".format(codename), depth=5):
-            case = MyCase(self, codename)
+        if hashname in self.cases_hashnames:
+            raise Exception("Another testcase already has the identifier {}. "
+            "Perhaps you generated the same testcase twice? You should only "
+            "call testcase(x) once for any one x. If you want to add it "
+            "twice, assign it like t = testcase(x) and use add_testcase(t) "
+            "later.".format(codename))
+
+        with header("Generating test case {} ({})"\
+            .format(codename, hashname), depth=5):
+            case = MyCase(self, codename, hashname)
 
             prog(stdout=case.infile)
 
@@ -1000,6 +1043,7 @@ class TaskConfig(CommonConfig, Scope):
             self.output_generator(stdin=case.infile, stdout=case.outfile)
             self.cases.append(case)
             self.cases_by_codename[codename] = case
+            self.cases_hashnames.add(hashname)
             return case
 
     @exported_function
@@ -1015,7 +1059,7 @@ class TaskConfig(CommonConfig, Scope):
         def f(stdout, stdin=None):
             with open(filename) as fi:
                 shutil.copyfileobj(fi, stdout)
-        return self.encapsulate(f)
+        return self.encapsulate(f, filename)
 
     @exported_function
     def verbatim(self, *args, **kwargs):
@@ -1037,12 +1081,14 @@ class TaskConfig(CommonConfig, Scope):
         except:
             pass
 
-        def curried(stdout=None, **kwargs):
-            stdout.write(" ".join(["{}".format(x) for x in args]))
-            if flush:
-                stdout.write("\n")
+        stdoutstring = " ".join(["{}".format(x) for x in args])
+        if flush:
+            stdoutstring += "\n"
 
-        return self.encapsulate(curried)
+        def curried(stdout=None, **kwargs):
+            stdout.write(stdoutstring)
+
+        return self.encapsulate(curried, stdoutstring)
 
     @exported_function
     def subtask(self, description, name=None, sample=False):
@@ -1422,6 +1468,29 @@ class TaskConfig(CommonConfig, Scope):
             contents["input_{}.txt".format(c.codename)] = c.outfile
         ZipRule(self.rules, zipname, contents).ensure()
         self.attachment(zipname, "%s_input.zip" % self.name)
+
+    def _collect_garbage(self):
+        """
+        Delete directories of test cases that weren't made in this run.
+        """
+        if self.minimal:
+            return
+
+        for directoryname in os.listdir(self.cases_directory):
+            if directoryname not in self.cases_hashnames:
+                # Make sure we don't delete files other than {in,out}.txt
+                # (though no other files should exist)
+                for filename in ["in.txt", "out.txt"]:
+                    try:
+                        os.remove(os.path.join(self.cases_directory, directoryname, filename))
+                    except FileNotFoundError:
+                        pass
+                try:
+                    os.rmdir(os.path.join(self.cases_directory, directoryname))
+                    print("Collected garbage case {}".format(directoryname))
+                except OSError:
+                    print("Couldn't collect garbage case {}; "
+                          "is there some odd file in that directory?".format(directoryname))
 
     def short_path(self, f):
         """

@@ -91,13 +91,18 @@ class Rule(object):
         """
         raise NotImplementedError
 
-    def missionhashfile(self):
-        """Return the name of the file to which the results are saved.
+    def missionhash(self):
+        """Return the hash of the mission
         """
         hasher = hashlib.sha256()
         hasher.update(json.dumps(self.mission(),
                                  sort_keys=True).encode('utf-8'))
-        return os.path.join(self.rulesdir, hasher.hexdigest())
+        return hasher.hexdigest()
+
+    def missionhashfile(self):
+        """Return the name of the file to which the results are saved.
+        """
+        return os.path.join(self.rulesdir, self.missionhash())
 
     def run(self):
         """Run the rule (do what you have to do).
