@@ -1465,7 +1465,7 @@ class TaskConfig(CommonConfig, Scope):
         zipname = os.path.join(self.wdir, "inputs.zip")
         contents = {}
         for c in self.cases:
-            contents["input_{}.txt".format(c.codename)] = c.outfile
+            contents["input_{}.txt".format(c.codename)] = c.infile
         ZipRule(self.rules, zipname, contents).ensure()
         self.attachment(zipname, "%s_input.zip" % self.name)
 
