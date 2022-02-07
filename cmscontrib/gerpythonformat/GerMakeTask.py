@@ -4,6 +4,7 @@
 # Programming contest management system
 # Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -149,7 +150,7 @@ def main():
                            "contain this string",
                            type=utf8_decoder)
     parser.add_argument("-nl", "--no-latex", action="store_true",
-                        help="do not compile latex documents [not implemented]")
+                        help="do not compile latex documents")
     parser.add_argument("-l", "--language",
                         help="only compile latex files that end in this string",
                         type=utf8_decoder)
