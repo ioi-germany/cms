@@ -425,7 +425,10 @@ class MyCase(object):
         Create the link from the codename to the hash name directory.
         """
         if os.path.lexists(self.codenameddirectory):
-            os.remove(self.codenameddirectory)
+            try:
+                os.remove(self.codenameddirectory)
+            except IsADirectoryError:
+                os.rmdir(self.codenameddirectory)
         rel = os.path.relpath(self.directory, os.path.join(self.task.wdir, "cases"))
         os.symlink(rel, self.codenameddirectory)
 
