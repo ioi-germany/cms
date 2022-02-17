@@ -1023,15 +1023,23 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         codename = case_number = "%.04d" % (len(self.cases) + 1)
-        # Note that we don't use the output (infile) path as part of the
-        # mission hash, unlike the actual mission to make the output (infile)
-        hashname = prog.missionhash()[:7]
+
+        if self.output_generator is None:
+            raise Exception(
+                "You must specify an output generator before a test case")
+
+        # Note that we don't use the output (infile) path of prog or the
+        # in- and output part (infile and outfile) path of the output
+        # generator as part of the mission hash, unlike the actual missions
+        hashname = '-'.join((prog.missionhash()[:14],
+                            self.output_generator.missionhash()[:14]))
 
         if hashname in self.cases_hashnames:
             raise Exception("Another testcase already has the identifier {}. "
             "Perhaps you generated the same testcase twice? You should only "
-            "call testcase(x) once for any one x. If you want to add it "
-            "twice, assign it like t = testcase(x) and use add_testcase(t) "
+            "call testcase(x) once for any one x for the same output "
+            "generator. If you want to add it twice, assign it like "
+            "t = testcase(x) and use add_testcase(t) "
             "later.".format(codename))
 
         with header("Generating test case {} ({})"\
@@ -1040,9 +1048,6 @@ class TaskConfig(CommonConfig, Scope):
 
             prog(stdout=case.infile)
 
-            if self.output_generator is None:
-                raise Exception(
-                    "You must specify an output generator before a test case")
             self.output_generator(stdin=case.infile, stdout=case.outfile)
             self.cases.append(case)
             self.cases_by_codename[codename] = case
