@@ -1832,7 +1832,7 @@ class TaskConfig(CommonConfig, Scope):
             nr_of_testcases = len(ddb.testcases)
             for nr, codename in enumerate(sorted(iterkeys(ddb.testcases))):
                 print("\033[2K\033[1GEvaluating {} / {}"
-                      .format(nr, nr_of_testcases), end='', flush=True)
+                      .format(nr+1, nr_of_testcases), end='', flush=True)
                 evaluation_operation = ESOperation(ESOperation.EVALUATION,
                                                    -1, -1,
                                                    codename)
