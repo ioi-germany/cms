@@ -1486,19 +1486,13 @@ class TaskConfig(CommonConfig, Scope):
 
         for directoryname in os.listdir(self.cases_directory):
             if directoryname not in self.cases_hashnames:
-                # Make sure we don't delete files other than {in,out}.txt
-                # (though no other files should exist)
-                for filename in ["in.txt", "out.txt"]:
-                    try:
-                        os.remove(os.path.join(self.cases_directory, directoryname, filename))
-                    except FileNotFoundError:
-                        pass
                 try:
-                    os.rmdir(os.path.join(self.cases_directory, directoryname))
+                    shutil.rmtree(os.path.join(self.cases_directory, directoryname))
                     print("Collected garbage case {}".format(directoryname))
                 except OSError:
-                    print("Couldn't collect garbage case {}; "
-                          "is there some odd file in that directory?".format(directoryname))
+                    print("Couldn't collect garbage case {}."
+                        .format(directoryname))
+                    raise
 
     def short_path(self, f):
         """
