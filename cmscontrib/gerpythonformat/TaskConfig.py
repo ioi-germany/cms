@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2022 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
@@ -24,7 +24,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header, red, green, gray, \
-    yellow, box, side_by_side, pad_left, add_line_breaks, \
+    yellow, bold, box, side_by_side, pad_left, add_line_breaks, \
     remaining_line_length, indent
 from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
 from cmscontrib.gerpythonformat.Executable import ExitCodeException, \
@@ -1912,6 +1912,12 @@ class TaskConfig(CommonConfig, Scope):
                                                        fans, fverd],
                                                       [0, 12, 27, 37])))
 
+                        print()
+                        print(indent("     max. runtime in this group: " +
+                                     bold("%.3fs" % g["max_runtime"])))
+                        print(indent("max. memory usage in this group: " +
+                                     bold("%.1fMB" %
+                                             (float(g["max_memory"]) / 2**20))))
                     print()
 
             print()
