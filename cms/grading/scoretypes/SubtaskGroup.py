@@ -318,6 +318,10 @@ class SubtaskGroup(ScoreType):
                     {% endif %}
                         {{t}}
                 {% endfor %}
+                        <br><br>
+                        Max. runtime: {{ "%(seconds)0.3f s" % {'seconds': g["max_runtime"]} }}
+                        <br>
+                        Max. memory usage: {{ g["max_memory"]|format_size }}
                     </td>
             {% endif %}
                 </tr>
