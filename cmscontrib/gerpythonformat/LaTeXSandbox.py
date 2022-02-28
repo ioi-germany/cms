@@ -2,6 +2,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2021 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -31,12 +32,6 @@ class LaTeXSandbox(IsolateSandbox):
 
         IsolateSandbox.__init__(self, *args, box_id=bid, **kwargs)
 
-        copyrecursivelyifnecessary(os.path.join(os.path.expanduser("~"),
-                                                config.latex_distro),
-                                   os.path.join(self.get_home_path(),
-                                                config.latex_distro),
-                                   mode=0o777)
-
         self.preserve_env = True
         self.max_processes = config.latex_compilation_sandbox_max_processes
         self.timeout = config.latex_compilation_sandbox_max_time_s
@@ -45,13 +40,19 @@ class LaTeXSandbox(IsolateSandbox):
 
         self.stdout_file = "LaTeX_out.txt"
         self.stderr_file = "LaTeX_err.txt"
-        self.add_mapped_directory("/usr/share/texmf")
         self.add_mapped_directory("/etc/texmf")
         self.add_mapped_directory("/var/lib/texmf")
-        self.add_mapped_directory(os.path.expanduser("~/texmf"))
+        self.add_mapped_directory("/etc/fonts")
+        # /usr is mapped per default, so we don't need to
+        # map anything from there explicitly.
 
         for d in config.latex_additional_dirs:
-            self.add_mapped_directory(os.path.expanduser(d))
+            # We probably can't map the directory into the sandbox's
+            # home directory, so we copy it there.
+            copyrecursivelyifnecessary(os.path.expanduser(d),
+                                    os.path.join(self.get_home_path(),
+                                                 d[2:] if d[:2]=="~/" else d),
+                                    mode=0o777)
 
     def maybe_add_mapped_directory(self, src, dest=None, options=None):
         """

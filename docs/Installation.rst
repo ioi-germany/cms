@@ -16,7 +16,7 @@ These are our requirements (in particular we highlight those that are not usuall
 
 * `GNU compiler collection <https://gcc.gnu.org/>`_ (in particular the C compiler ``gcc``);
 
-* `Python <http://www.python.org/>`_ >= 3.6;
+* `Python <http://www.python.org/>`_ >= 3.8;
 
 * `libcg <http://libcg.sourceforge.net/>`_;
 
@@ -30,11 +30,18 @@ These are our requirements (in particular we highlight those that are not usuall
 
 * `a2ps <https://www.gnu.org/software/a2ps/>`_ (only for printing).
 
-* `asymptote <http://asymptote.sourceforge.net/>`_ (for german task format)
+* `asymptote <http://asymptote.sourceforge.net/>`_ (for German task format; usage now deprecated)
 
-* `latexmk <http://www.ctan.org/pkg/latexmk/>`_ (for german task format)
+* `latexmk <http://www.ctan.org/pkg/latexmk/>`_ (for German task format)
+
+* `ttf-fira-go <https://github.com/bBoxType/FiraGO>`_ (for German task format + Hebrew)
+
+* texlive-langcyrillic (or something similar; for German task format + Cyrillic)
 
 You will also require a Linux kernel with support for control groups and namespaces. Support has been in the Linux kernel since 2.6.32. Other distributions, or systems with custom kernels, may not have support enabled. At a minimum, you will need to enable the following Linux kernel options: ``CONFIG_CGROUPS``, ``CONFIG_CGROUP_CPUACCT``, ``CONFIG_MEMCG`` (previously called as ``CONFIG_CGROUP_MEM_RES_CTLR``), ``CONFIG_CPUSETS``, ``CONFIG_PID_NS``, ``CONFIG_IPC_NS``, ``CONFIG_NET_NS``. It is anyway suggested to use Linux kernel version at least 3.8.
+
+.. warning::
+   Currently, ``isolate`` only works with ``cgroups v1``, not ``cgroups v2``. If you receive error messages regarding ``isolate`` when using CMS, you may need to add ``systemd.unified_cgroup_hierarchy=0`` to your kernel parameters (usually, add them to ``GRUB_CMDLINE_LINUX_DEFAULT`` in ``/etc/default/grub``, then re-make the GRUB configuration file) as your operating system may already use ``cgroups v2`` by default.
 
 Then you require the compilation and execution environments for the languages you will use in your contest:
 
@@ -77,6 +84,12 @@ On Ubuntu 20.04, one will need to run the following script to satisfy all depend
         phppgadmin texlive-latex-base a2ps haskell-platform rustc mono-mcs \
         pypy3
 
+    # Only for compiling Hebrew statements with German task format, install the following. (TODO: Is there a package for this in Ubuntu?)
+    # https://github.com/bBoxType/FiraGO
+
+    # Only for compiling statements in Cyrillic languages with German task format
+    sudo apt-get install texlive-lang-cyrillic
+
 The above commands provide a very essential Pascal environment. Consider installing the following packages for additional units: `fp-units-base`, `fp-units-fcl`, `fp-units-misc`, `fp-units-math` and `fp-units-rtl`.
 
 Arch Linux
@@ -99,6 +112,12 @@ On Arch Linux, unofficial AUR packages can be found: `cms <http://aur.archlinux.
     # Optional
     sudo pacman -S --needed nginx python2 php php-fpm phppgadmin texlive-core \
         a2ps ghc rust mono pypy3
+
+    # Only for compiling Hebrew statements with German task format, install the following from AUR.
+    # https://aur.archlinux.org/packages/ttf-fira-go/
+
+    # Only for compiling statements in Cyrillic languages with German task format
+    sudo pacman -S --needed texlive-langcyrillic
 
 Preparation steps
 =================
@@ -156,13 +175,15 @@ Assuming you have ``pip`` installed, you can do this:
 
 .. sourcecode:: bash
 
-    sudo pip3 install -r requirements.txt
-    sudo python3 setup.py install
+    export SETUPTOOLS_USE_DISTUTILS="stdlib"
+    sudo --preserve-env=SETUPTOOLS_USE_DISTUTILS pip3 install -r requirements.txt
+    sudo --preserve-env=SETUPTOOLS_USE_DISTUTILS python3 setup.py install
 
 This command installs python dependencies globally. Note that on some distros, like Arch Linux, this might interfere with the system package manager. If you want to perform the installation in your home folder instead, then you can do this instead:
 
 .. sourcecode:: bash
 
+    export SETUPTOOLS_USE_DISTUTILS="stdlib"
     pip3 install --user -r requirements.txt
     python3 setup.py install --user
 
@@ -190,6 +211,7 @@ After the activation, the ``pip`` command will *always* be available (even if it
 
 .. sourcecode:: bash
 
+    export SETUPTOOLS_USE_DISTUTILS="stdlib"
     pip3 install -r requirements.txt
     python3 setup.py install
 

@@ -7,11 +7,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        python-version:
-          - 3.8
-          - 3.6
 
     services:
       postgres:
@@ -31,31 +26,34 @@ jobs:
         with:
           submodules: true
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+      - uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.8
 
       - name: Install dependencies
-        run: >-
-          sudo apt install -y
-          build-essential
-          php7.4-cli
-          haskell-platform
-          fp-compiler
-          python2.7
-          cppreference-doc-en-html
-          cgroup-lite
-          libcap-dev
-          python-dev
-          libpq-dev
-          libcups2-dev
-          libyaml-dev
-          rustc
-          mono-mcs
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            build-essential \
+            php7.4-cli \
+            haskell-platform \
+            fp-compiler \
+            python2.7 \
+            cppreference-doc-en-html \
+            cgroup-lite \
+            libcap-dev \
+            python-dev \
+            libpq-dev \
+            libcups2-dev \
+            libyaml-dev \
+            rustc \
+            mono-mcs
 
       - name: Install requirements
         run: |
+          # Use distutils from the standard library for 2to3 translation
+          export SETUPTOOLS_USE_DISTUTILS="stdlib"
+
           pip install -U pip setuptools wheel
           pip install -r requirements.txt
           pip install -r dev-requirements.txt

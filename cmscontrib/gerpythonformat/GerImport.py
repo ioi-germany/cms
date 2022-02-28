@@ -21,8 +21,6 @@
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
-from future.builtins.disabled import *
-from future.builtins import *
 
 import argparse
 import logging
@@ -46,9 +44,10 @@ logger = logging.getLogger(__name__)
 
 
 class GerImport(Service):
-    def __init__(self, odir, no_test, clean, preserve_participations, force):
+    def __init__(self, odir, no_test, safe_latex, clean, preserve_participations, force):
         self.odir = odir
         self.no_test = no_test
+        self.safe_latex = safe_latex
         self.clean = clean
         self.preserve_participations = preserve_participations
         self.force = force
@@ -81,7 +80,8 @@ class GerImport(Service):
         with chdir(self.wdir):
             contestconfig = ContestConfig(
                 os.path.join(self.wdir, ".rules"),
-                os.path.basename(self.odir))
+                os.path.basename(self.odir),
+                safe_latex=self.safe_latex)
 
             # Read the configuration file and build.
             contestconfig._readconfig("contest-config.py")
@@ -309,6 +309,8 @@ def main():
                         help="don't change test submissions; without this "
                         "flag, all test submissions are deleted and then re-"
                         "added.")
+    parser.add_argument("-sl", "--safe-latex", action="store_true",
+                        help="Safely compile latex documents in a sandbox")
     parser.add_argument("-c", "--clean", action="store_true",
                         help="clean the build directory (forcing a complete "
                         "rebuild)")
@@ -324,6 +326,7 @@ def main():
 
     GerImport(os.path.abspath(args.import_directory),
               args.no_test,
+              args.safe_latex,
               args.clean,
               args.preserve_participations,
               args.force).make()

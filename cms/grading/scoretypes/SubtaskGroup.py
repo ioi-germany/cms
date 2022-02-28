@@ -6,7 +6,7 @@
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2013-2019 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2022 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -318,6 +318,10 @@ class SubtaskGroup(ScoreType):
                     {% endif %}
                         {{t}}
                 {% endfor %}
+                        <br><br>
+                        Max. runtime: {{ "%(seconds)0.3f s" % {'seconds': g["max_runtime"]} }}
+                        <br>
+                        Max. memory usage: {{ g["max_memory"]|format_size }}
                     </td>
             {% endif %}
                 </tr>
@@ -531,6 +535,8 @@ class SubtaskGroup(ScoreType):
                 status: (0, "okay")
                 groups:
                     verdict: (42, "")
+                    max_runtime: 0.412
+                    max_memory: 33659290                      in bytes
                     cases:
                         line: (,)                             case_line()
                         verdict: (42, "No expl. exp.")        judge_case()
@@ -643,6 +649,14 @@ class SubtaskGroup(ScoreType):
                         short = "failed"
 
                     subtasks[-1]["groups"][-1]["verdict"] = (status, desc)
+                    subtasks[-1]["groups"][-1]["max_runtime"] = \
+                        max((c["time"]
+                             for c in subtasks[-1]["groups"][-1]["cases"]),
+                            default=None)
+                    subtasks[-1]["groups"][-1]["max_memory"] = \
+                        max((c["memory"]
+                             for c in subtasks[-1]["groups"][-1]["cases"]),
+                            default=None)
                     worst_group = min(worst_group, (status, short))
                     group_status.append(status)
 

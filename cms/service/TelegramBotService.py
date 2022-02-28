@@ -854,7 +854,7 @@ class TelegramBot:
                                      callback_data="P_No")]]
 
         update.message.reply_text(text="Are you sure you want me to " +
-                                       bold("delete ") + "all messages I've "
+                                       bold("delete") + " all messages I've "
                                        "sent during the current session?",
                                   reply_markup=InlineKeyboardMarkup(kb))
 

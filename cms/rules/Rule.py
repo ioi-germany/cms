@@ -4,6 +4,7 @@
 # Programming contest management system
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2018-2021 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -90,13 +91,18 @@ class Rule(object):
         """
         raise NotImplementedError
 
-    def missionhashfile(self):
-        """Return the name of the file to which the results are saved.
+    def missionhash(self):
+        """Return the hash of the mission
         """
         hasher = hashlib.sha256()
         hasher.update(json.dumps(self.mission(),
                                  sort_keys=True).encode('utf-8'))
-        return os.path.join(self.rulesdir, hasher.hexdigest())
+        return hasher.hexdigest()
+
+    def missionhashfile(self):
+        """Return the name of the file to which the results are saved.
+        """
+        return os.path.join(self.rulesdir, self.missionhash())
 
     def run(self):
         """Run the rule (do what you have to do).
@@ -566,7 +572,7 @@ class LaTeXRule(CommandRule):
 
 
 class SafeLaTeXRule(Rule):
-    def __init__(self, rulesdir, source, output, wdir,
+    def __init__(self, rulesdir, source, output, party, wdir,
                  extra=["-lualatex=lualatex --interaction=nonstopmode "
                         "--shell-restricted --nosocket %O %S"],
                  ignore=set(), ignore_ext=set(), do_copy=set()):
@@ -574,6 +580,7 @@ class SafeLaTeXRule(Rule):
 
         self.source = source
         self.output = output
+        self.party = party
         self.wdir = wdir
         self.file_cacher = FileCacher()
         self.extra = extra
@@ -593,6 +600,19 @@ class SafeLaTeXRule(Rule):
         sandbox = LaTeXSandbox(self.file_cacher, name="LaTeX")
         copyrecursivelyifnecessary(self.wdir, sandbox.get_home_path(),
                                    self.ignore, self.ignore_ext, self.do_copy,
+                                   mode=0o777)
+
+        stored_cache_path = os.path.join(config.latex_cache_dir,
+                                         self.party,
+                                         config.latex_distro)
+        sandbox_cache_path = os.path.join(sandbox.get_home_path(),
+                                          config.latex_distro)
+        # Create the LaTeX cache directory if it doesn't exist
+        os.makedirs(stored_cache_path,
+                    exist_ok=True)
+        # Copy the LaTeX cache directory into the sandbox
+        copyrecursivelyifnecessary(stored_cache_path,
+                                   sandbox_cache_path,
                                    mode=0o777)
 
         sandbox.allow_writing_all()
@@ -632,6 +652,10 @@ class SafeLaTeXRule(Rule):
                             os.path.join(self.wdir, relpath, self.output))
             self.result.add_output(self.output)
 
+            #Copy potentially changed latex cache
+            copyrecursivelyifnecessary(sandbox_cache_path,
+                                       stored_cache_path)
+
             # Change to the same working directory that lualatex used (which is
             # inside the sandbox).
             with chdir(os.path.join(sandbox.get_home_path(), relpath)):
@@ -639,7 +663,9 @@ class SafeLaTeXRule(Rule):
 
             def convert(path):
                 if path.startswith(os.path.join(config.latex_distro, "")):
-                    return os.path.join(os.path.expanduser("~"), path)
+                    return os.path.join(config.latex_cache_dir,
+                                        self.party,
+                                        path)
                 else:
                     return path
 

@@ -325,7 +325,8 @@ class CommonConfig(object):
         if self.ignore_latex:
             return None
 
-        if self.relevant_language is not None and not basename.endswith(self.relevant_language):
+        if self.relevant_language is not None and \
+            not basename.endswith(self.relevant_language):
             return None
 
         if safe is None:
@@ -338,7 +339,9 @@ class CommonConfig(object):
             self._build_supplements("latex")
 
             if safe:
-                r = SafeLaTeXRule(self.rules, source, output, self.wdir,
+                r = SafeLaTeXRule(self.rules, source, output,
+                                  # NOTE This assumes basename=*-[party_code]
+                                  basename.split('-')[-1], self.wdir,
                                   ignore=ignore, ignore_ext=ignore_ext,
                                   do_copy=do_copy).ensure()
             else:

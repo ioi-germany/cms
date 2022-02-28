@@ -4,6 +4,7 @@
 # Programming contest management system
 # Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,6 +23,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from collections import abc
+import hashlib
+import json
 import os.path
 from cmscontrib.gerpythonformat.Messenger import print_block, header
 from cms.rules.Rule import CommandRule, GCCRule, PythonFunctionRule
@@ -72,6 +76,59 @@ class Executable(object):
         """
         return ParamsExecutable(self, stdin=filename)
 
+    def _exerule(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
+            stderr=None, dependencies=[]):
+        """Should return a rule object that is run when the executable is, if
+        the executable is implemented using the rules system. Otherwise, it's
+        left unimplemented.
+
+        args (list): list of arguments that should be passed to the executable
+
+        kwargs (dict): dictionary of keyword arguments that should be passed
+                       to the executable
+
+        stdin (string): name of the file to redirect input from
+
+        stdinstring (string): string to pipe into stdin
+
+        stdout (string): name of the file to redirect output to
+
+        stderr (string): name of the file to redirect error output to
+
+        dependencies (string): additional dependencies
+
+        """
+        raise NotImplementedError
+
+    def _missionhash(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
+            stderr=None, dependencies=[]):
+        """Should return the missionhash of a hypothetical run of the executable.
+        This standard implementation assumes implementation using the rules
+        system, with the rule to be run accessible through _exerule.
+
+        args (list): list of arguments that should be passed to the executable
+
+        kwargs (dict): dictionary of keyword arguments that should be passed
+                       to the executable
+
+        stdin (string): name of the file to redirect input from
+
+        stdinstring (string): string to pipe into stdin
+
+        stdout (string): name of the file to redirect output to
+
+        stderr (string): name of the file to redirect error output to
+
+        dependencies (string): additional dependencies
+
+        """
+        mission = self._exerule(args, kwargs, stdin, stdinstring, stdout,
+                       stderr, dependencies).mission()
+        hasher = hashlib.sha256()
+        hasher.update(json.dumps(mission,
+                                 sort_keys=True).encode('utf-8'))
+        return hasher.hexdigest()
+
     def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
             stderr=None, dependencies=[]):
         """Should run the executable.
@@ -93,6 +150,30 @@ class Executable(object):
 
         """
         raise NotImplementedError
+
+    def missionhash(self, *args, **kwargs):
+        """Provide convenient access to the missionhash.
+        In many cases it should suffice to override the _missionhash method
+        (or leave it, if the executable is implemented using the rules system).
+
+        args (list): list of arguments that should be passed to the executable
+
+        kwargs(dict): dictionary of keyword arguments that should be passed
+                      to the executable;
+                      If stdin, stdout, stderr or dependencies is specified,
+                      the corresponding value will be discarded from the
+                      keyword arguments and instead be passed to run().
+
+        """
+        stdin = kwargs.pop("stdin", None)
+        stdinstring = kwargs.pop("stdinstring", None)
+        stdout = kwargs.pop("stdout", None)
+        stderr = kwargs.pop("stderr", None)
+        dependencies = kwargs.pop("dependencies", [])
+
+        return self._missionhash(args, kwargs, stdin=stdin, stdinstring=stdinstring,
+                 stdout=stdout, stderr=stderr,
+                 dependencies=dependencies)
 
     def __call__(self, *args, **kwargs):
         """Provide convenient access by making Executables callable.
@@ -142,6 +223,18 @@ class ParamsExecutable(Executable):
         self.kwargs = kwargs
         self.stdin = stdin
         self.stdinstring = stdinstring
+
+    def _missionhash(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
+            stderr=None, dependencies=[]):
+        k = kwargs.copy()
+        k.update(self.kwargs)
+        if stdin is None:
+            stdin = self.stdin
+        if stdinstring is None:
+            stdinstring = self.stdinstring
+        return self.parent._missionhash(args + self.args, k, stdin=stdin,
+                        stdinstring=stdinstring, stdout=stdout,
+                        stderr=stderr, dependencies=dependencies)
 
     def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
             stderr=None, dependencies=[]):
@@ -262,15 +355,21 @@ class CPPProgram(Executable):
                 if r.code != 0:
                     raise Exception("Compilation failed")
 
-    def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
+    def _exerule(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
             stderr=None, dependencies=[]):
         self.compilenow()
-        r = CommandRule(self.rulesdir,
+        return CommandRule(self.rulesdir,
                         [self.wanted_path()] +
                         list(args) +
                         keyword_list(kwargs),
                         stdin=stdin, stdinstring=stdinstring, stdout=stdout,
-                        stderr=stderr, dependencies=dependencies).ensure()
+                        stderr=stderr, dependencies=dependencies)
+
+    def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
+            stderr=None, dependencies=[]):
+        self.compilenow()
+        r = self._exerule(args, kwargs, stdin, stdinstring, stdout,
+                    stderr, dependencies).ensure()
         if stderr is None:
             print_block(r.err)
         if r.code != 0:
@@ -295,9 +394,45 @@ class InternalPython(Executable):
     File descriptors for stdin, stdout and stderr are passed to the function.
     """
 
-    def __init__(self, f=None):
+    def __init__(self, f=None, additional_params=None):
         self.f = f
         self.path = str(f)
+        self.fname = f.__qualname__
+        # These are parameters that are "built into" f and therefore wouldn't
+        # be visible in the mission dict if we didn't add them explicitly.
+        # Specifically, the filename passed to explicit or the parameters
+        # passed to verbatim (that get formed to an stdinstring).
+        # TODO Couldn't we just make them parameters of the respective
+        # function f in the definition of explicit and verbatim?
+        self.additional_params = additional_params
+
+
+    def mission(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
+            stderr=None, dependencies=[]):
+        """
+        A mission dict in analogy to a rule mission dict, only used to create a
+        hash identifying the executable
+        """
+        return {'cwd': os.getcwd(),
+                'type': 'internalpython',
+                'name': self.fname,
+                'additional_params': self.additional_params,
+                'args': args,
+                'kwargs': kwargs,
+                'stdin': stdin,
+                'stdinstring': stdinstring,
+                'stdout': stdout,
+                'stderr': stderr,
+                'dependencies': dependencies}
+
+    def _missionhash(self, args, kwargs, stdin=None, stdinstring=None,
+                     stdout=None, stderr=None, dependencies=[]):
+        mission = self.mission(args, kwargs, stdin, stdinstring, stdout,
+                               stderr, dependencies)
+        hasher = hashlib.sha256()
+        hasher.update(json.dumps(mission,
+                                 sort_keys=True).encode('utf-8'))
+        return hasher.hexdigest()
 
     def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
             stderr=None, dependencies=[]):
@@ -351,20 +486,25 @@ class ExternalPython(Executable):
         self.path = os.path.abspath(source)
         self.function = function
 
-    def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
+    def _exerule(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
             stderr=None, dependencies=[]):
         if stdin is not None or stdinstring is not None or stderr is not None:
             raise ExitCodeException(
                 "Stdin, stdinstring and stderr are not implemented "
                 "for ext_script.")
-        PythonFunctionRule(self.rulesdir,
+        return PythonFunctionRule(self.rulesdir,
                            self.path,
                            self.name,
                            self.function,
                            args,
                            kwargs,
                            stdout=stdout,
-                           dependencies=dependencies).ensure()
+                           dependencies=dependencies)
+
+    def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
+            stderr=None, dependencies=[]):
+        self._exerule(args, kwargs, stdin, stdinstring, stdout,
+                       stderr, dependencies).ensure()
 
     def __str__(self):
         return "<external>"
@@ -399,7 +539,7 @@ class ExternalScript(Executable):
         self.rules = rules
         self.path = os.path.abspath(path)
 
-    def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
+    def _exerule(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
             stderr=None, dependencies=[]):
         interpreter = None
 
@@ -412,13 +552,18 @@ class ExternalScript(Executable):
                 .format(extension, self.path))
             return None
 
-        r = CommandRule(self.rules,
+        return CommandRule(self.rules,
                         [interpreter, self.path] +
                         list(args) +
                         keyword_list(kwargs),
                         stdin=stdin, stdinstring=stdinstring,
                         stdout=stdout, stderr=stderr,
-                        dependonexe=False, dependencies=dependencies).ensure()
+                        dependonexe=False, dependencies=dependencies)
+
+    def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
+            stderr=None, dependencies=[]):
+        r = self._exerule(args, kwargs, stdin, stdinstring, stdout,
+                       stderr, dependencies).ensure()
         if stderr is None:
             print_block(r.err)
         if r.code != 0:
