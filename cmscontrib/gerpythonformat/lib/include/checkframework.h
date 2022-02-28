@@ -47,9 +47,12 @@ void check(int argc, char **argv); // you have to write this function yourself!
 
 int main(int argc, char **argv) {
     std::ios_base::sync_with_stdio();
-    assert(argc >= 2);
+
+    constexpr int num_std_params = 2;
+    assert(argc >= num_std_params);
     fin = stdin;
     fout = fopen(argv[1], "rb");
+    //FILE *flog = fopen(argv[2], "w");
 
 #ifdef CONSTRAINTS_INCLUDED
     load_constraints();
@@ -64,7 +67,11 @@ int main(int argc, char **argv) {
 #endif
 
     t = token_stream(fin);
-    check(argc - 2, argv + 2);
+    check(argc - num_std_params, argv + num_std_params);
+
+#ifdef CONSTRAINTS_INCLUDED
+    log_soft(stdout);
+#endif
 
     return 0; // everything OK
 }
