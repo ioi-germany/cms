@@ -450,7 +450,7 @@ def add_line_breaks(l, length, hanging_indent=0, use_ellipsis=True):
 
 def print_msg(message, headerdepth=None,
               error=False, warning=False, success=False,
-              hanging_indent=0, fill_character=' '):
+              hanging_indent=0, fill_character=' ', use_ellipsis=True):
     """
     If headerdepth==1, all parameters following will be ignored
     """
@@ -469,7 +469,7 @@ def print_msg(message, headerdepth=None,
         fill_character = s
     rem_length = remaining_line_length() - estimate_len(left)
 
-    res = add_line_breaks(message, rem_length - 1, hanging_indent)
+    res = add_line_breaks(message, rem_length - 1, hanging_indent, use_ellipsis)
     res = add_right(res, " ")
     res = pad_right(res, rem_length, fill_character)
     res = add_left(res, left)

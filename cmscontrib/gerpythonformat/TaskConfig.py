@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2022 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
@@ -24,13 +24,13 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header, red, green, gray, \
-    yellow, box, side_by_side, pad_left, add_line_breaks, \
-    remaining_line_length, indent
+    yellow, blue, bold, box, side_by_side, pad_left, add_line_breaks, \
+    remaining_line_length, indent, IndentManager
 from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
 from cmscontrib.gerpythonformat.Executable import ExitCodeException, \
     InternalPython
 from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, \
-    merge_constraints
+    merge_constraints, read_frequency, check_bounds
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK
 from cms import FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
@@ -48,6 +48,7 @@ import os
 import shutil
 
 from six import iteritems, iterkeys
+from textwrap import wrap
 
 class Scope(object):
     """
@@ -77,13 +78,20 @@ class Scope(object):
         res += self.constraints
         return res
 
-    def _get_special_cases(self):
+    def __get_special_cases(self):
         res = []
 
         if self.upscope is not None:
-            res += self.upscope._get_special_cases()
+            res += self.upscope.__get_special_cases()
         res += self.special_cases
         return res
+
+    def _get_special_cases(self):
+        L = self.__get_special_cases()
+
+        return [x for x, y in L if y == ConstraintList.ALWAYS], \
+               [(x, read_frequency(y)) for x, y in L
+                                       if y != ConstraintList.ALWAYS]
 
     def add_checker(self, p):
         """
@@ -96,7 +104,7 @@ class Scope(object):
         print_msg("Adding checker {}".format(p), headerdepth=10)
         self.checkers.append(p)
 
-    def add_constraint(self, s, silent=None):
+    def add_constraint(self, s, silent=None, frequency=ConstraintList.ALWAYS):
         """
         Add a constraint for this task, subtask or group.
         The constraint format is described in the docs
@@ -104,24 +112,30 @@ class Scope(object):
 
         if silent is None:
             silent = (isinstance(self, MyGroup)
-                      or (isinstance(self, MySubtask) and self.sample))
+                      or (isinstance(self, MySubtask) and self.sample)
+                      or frequency != ConstraintList.ALWAYS)
 
-        self.constraints.append(ConstraintList.parse(s, silent))
+        self.constraints.append(ConstraintList.parse(s, silent, frequency))
 
-    def add_special_case(self, descr):
+    def add_special_case(self, descr, frequency):
         """
         Add a special case for this task, subtask or group.
         This is just a string that will be passed to the checker
         """
 
-        self.special_cases.append(descr)
+        self.special_cases.append((descr, frequency))
 
     def _collect_constraints(self):
-        res = {}
-        for c in self._get_constraints():
-            res = merge_constraints(res, c.uncompress())
-        return res
+        hard = {}
+        soft = []
 
+        for c in self._get_constraints():
+            if c.soft:
+                soft.append(c)
+            else:
+                hard = merge_constraints(hard, c.uncompress())
+
+        return hard, soft
 
 class MySubtask(Scope):
     """
@@ -243,6 +257,11 @@ class MyGroup(Scope):
         # List of bools specifying for each test case whether it contributes to
         # partial feedback.
         self.feedback = []
+        # how often is each soft constraint satisfied in this group?
+        self.soft_constraints_stats = []
+        self.soft_constraints_stats_acc = []
+        self.soft_spec_stats = {}
+
         if not os.path.exists(self.directory):
             os.mkdir(self.directory)
 
@@ -254,7 +273,128 @@ class MyGroup(Scope):
         self.task.group_stack.append(self)
         return self
 
+    @property
+    def soft_constraints(self):
+        return self._collect_constraints()[1]
+
+    @property
+    def soft_special_cases(self):
+        return self._get_special_cases()[1]
+
+    def _print_stats(self, exception):
+        if len(self.soft_constraints) == 0 and \
+           len(self.soft_special_cases) == 0:
+            return
+
+        if exception is not None:
+            print_msg(gray("(There was an exception, so I won't collect "
+                           "testcase quality statistics for this group)"),
+                      use_ellipsis=False)
+            return
+
+        def format_bounds(min, max):
+            if min is None:
+                return "≤ {} times".format(max)
+            elif max is None:
+                return "≥ {} times".format(min)
+            else:
+                return "{}–{} times".format(min, max)
+
+        failed = False
+
+        def print_stats_for(desc, stats, bounds, what):
+            nonlocal failed
+
+            lower, upper = bounds
+            times_satisfied = sum(a[0] for a in stats if a[0] is not None)
+            this_constraint_okay = check_bounds(times_satisfied, lower, upper)
+
+            def cf(f):
+                return green if this_constraint_okay else f
+
+            def sym(x):
+                if x is None:
+                    return "·"
+                elif x:
+                    return "●"
+                else:
+                    return "○"
+
+            bars = "".join(cf(a[1])(sym(a[0])) for a in stats)
+            bars = " ".join(wrap(bars, 5 * len(green("○"))))
+
+            msg_long = "satisfied {} times, expected {}".\
+                           format(times_satisfied, format_bounds(lower, upper))
+
+            if this_constraint_okay:
+                msg = green(bold("OKAY"))
+                msg_long = green(msg_long)
+            else:
+                msg = red(bold("FAIL"))
+                msg_long = red(msg_long)
+                failed = True
+
+            space = remaining_line_length() - 20 - len(desc)
+            print_msg("─── " + desc + " " + (space - 2) * "─" + " " + msg +
+                      " ──────────")
+            with IndentManager():
+                print_msg(bars, use_ellipsis=False)
+                print_msg(msg_long, use_ellipsis=False)
+
+                if any(a[0] is None for a in stats):
+                    print_msg("This soft " + what + " was only specified after "
+                              "some cases had already been checked—are you "
+                              "sure this is what you want?",
+                              use_ellipsis=False)
+
+
+        print_msg(bold("\nTestcase quality in this group"))
+
+        if len(self.soft_constraints) > len(self.soft_constraints_stats):
+            print_msg(yellow(bold("You specified some soft constraints "
+                                  "(see the list below for details) "
+                                  "after all testcases had already been "
+                                  "added—why?!")), use_ellipsis=False)
+
+            for i in range(len(self.soft_constraints),
+                           len(self.soft_constraints_stats)):
+                self.soft_constraints_stats.append([])
+
+                with IndentManager():
+                    print_msg(self.soft_constraints[i].terminal())
+
+        for stats, c in zip(self.soft_constraints_stats_acc,
+                            self.soft_constraints):
+            print_stats_for(c.terminal(), stats, c.how_often, "constraint")
+
+        special_cases_after = [desc for desc, _ in self.soft_special_cases
+                                    if desc not in self.soft_spec_stats]
+
+        if len(special_cases_after) > 0:
+            print_msg(yellow(bold("You specified some soft special cases "
+                                  "(see the list below for details) "
+                                  "after all testcases had already been "
+                                  "added—why?!")), use_ellipsis=False)
+
+            with IndentManager():
+                for s in special_cases_after:
+                    print_msg(s)
+
+        for desc, bounds in self.soft_special_cases:
+            if desc not in self.soft_spec_stats:
+                continue
+
+            stats = self.soft_spec_stats[desc]
+            print_stats_for(desc, stats, (bounds[0], bounds[1]), "special case")
+
+        if failed:
+            raise Exception("at least one testcase quality check failed")
+        else:
+            print_msg(green(bold("...all shall be well\n")))
+
     def __exit__(self, type, value, traceback):
+        self._print_stats(type)
+
         self.indenter.stop()
         self.task.group_stack.pop()
 
@@ -313,9 +453,103 @@ class MyGroup(Scope):
         checkers = self._get_checkers()
         if len(checkers) == 0 and must_still_be_checked:
             self.task.everything_checked = False
+
+        soft_results = None
+
         for i, checker in enumerate(checkers):
-            self.task._check(checker, case.infile, case.outfile,
-                             case.codename, i + 1)
+            curr = self.task._check(checker, case.infile, case.outfile,
+                                    case.codename, i + 1)
+
+            if curr:
+                if soft_results:
+                    # TODO: should we relax this condition?
+                    raise Exception("only one checker may check (soft) "
+                                    "constraints")
+                soft_results = curr
+
+        soft_results = soft_results or [{}, {}]
+        soft_con_results, soft_spec_results = tuple(soft_results)
+
+        def getcolor(result, lower, upper):
+            mycolor = blue
+            if lower is not None and upper is None:
+                mycolor = green if result else yellow
+            if lower is None and upper is not None:
+                mycolor = yellow if result else green
+            return mycolor
+
+        """
+        for var in self.soft_constraints:
+            if var not in self.soft_constraints_stats:
+                self.soft_constraints_stats[var] = []
+
+            for i, (bounds, result) in enumerate(zip(self.soft_constraints[var],
+                                                     soft_con_results[var])):
+                desc = format_constraint(var, bounds[0], bounds[1])
+                mycolor = getcolor(result, bounds[2], bounds[3])
+
+                print_msg(bold(mycolor(desc + ": " +
+                                       ("✗ not " if not result else "✓ ") +
+                                       "satisfied")))
+
+                while i >= len(self.soft_constraints_stats[var]):
+                    self.soft_constraints_stats[var].append([(None, gray)] *
+                                                            len(self.cases))
+
+                self.soft_constraints_stats[var][i].append((result, mycolor))
+
+        """
+        for i, con_list in enumerate(self.soft_constraints):
+            while i >= len(self.soft_constraints_stats):
+                self.soft_constraints_stats.append([])
+                self.soft_constraints_stats_acc.\
+                    append([(None, gray)] * len(self.cases))
+
+            lower, upper = con_list.how_often
+            desc = con_list.terminal()
+            results = [res for L in soft_con_results[i] for res in L]
+            results_acc = all(results)
+            mycolor = getcolor(results_acc, lower, upper)
+            print_msg(mycolor(bold(desc + ": " + ("✗ not " if not results_acc
+                                                  else "✓ ") + "satisfied")))
+
+            for j, con in enumerate(con_list.constraints):
+                while j >= len(self.soft_constraints_stats[i]):
+                    self.soft_constraints_stats[i].append([])
+
+                for k, var in enumerate(con.variables):
+                    result = soft_con_results[i][j][k]
+                    #mycolor = getcolor(result, lower, upper)
+
+                    if len(results) > 1:
+                        with IndentManager():
+                            print_msg(mycolor(con.subconstraint(k).terminal() +
+                                              ": " + ("✗ not " if not result
+                                                               else "✓ ") +
+                                              "satisfied"))
+
+                    while k >= len(self.soft_constraints_stats[i][j]):
+                        self.soft_constraints_stats[i][j].\
+                            append([(None, gray)] * len(self.cases))
+
+                    self.soft_constraints_stats[i][j][k].\
+                        append((result, mycolor))
+
+            print_msg("")
+            self.soft_constraints_stats_acc[i].append((results_acc, mycolor))
+
+        for desc, bounds in self.soft_special_cases:
+            result = soft_spec_results[desc]
+            mycolor = getcolor(result, bounds[0], bounds[1])
+
+            print_msg(bold(mycolor(desc + ": " +
+                                   ("✗ not " if not result else "✓ ") +
+                                   "satisfied")))
+
+            if desc not in self.soft_spec_stats:
+                self.soft_spec_stats[desc] = [(None, gray)] * len(self.cases)
+            self.soft_spec_stats[desc].append((result, mycolor))
+
         self.task.current_group = None
 
         if name is None:
@@ -752,7 +986,7 @@ class TaskConfig(CommonConfig, Scope):
 
     @exported_function
     def get_constraint(self, name):
-        return self.curr_scope()._collect_constraints()[name]
+        return self.curr_scope()._collect_constraints()[0][name]
 
     @exported_function
     def get_constraint_lower(self, name):
@@ -784,16 +1018,38 @@ class TaskConfig(CommonConfig, Scope):
 
         if self.current_group is None:
             return ""
-        constraints = self.current_group._collect_constraints()
-        s = "#define CONSTRAINTS_INCLUDED\n"
+        hard_constraints, soft_constraints = \
+            self.current_group._collect_constraints()
+
+        s =  '#define CONSTRAINTS_INCLUDED\n'
         s += '#include <checkutil.h>\n'
-        s += "void load_constraints() {\n"
-        for var, ran in iteritems(constraints):
+        s += 'void load_constraints() {\n'
+        for var, ran in hard_constraints.items():
             s += '\tput_integral_constraint("{}", {}, {});\n'.\
                      format(var, cppify(ran[0]), cppify(ran[1]))
-        for desc in self.current_group._get_special_cases():
+
+        s += '\n\tconstraint curr;\n'
+
+        for cl in soft_constraints:
+            s += '\tNEW_SOFT_CONSTRAINT_LIST;\n'
+
+            for c in cl.constraints:
+                s += '\t\tNEW_SOFT_CONSTRAINT(({}), ({}));\n'.\
+                         format(cppify(c.lower()), cppify(c.upper()));
+
+                for var in c.variables:
+                    s += '\t\t\tSOFT_CONSTRAINT_VAR(("{}"));\n'.format(var.val)
+
+        special_cases, soft_special_cases = \
+            self.current_group._get_special_cases()
+
+        for desc in special_cases:
             s += '\tadd_special_case("{}");\n'.format(desc)
-        s += "}\n"
+
+        for desc, _ in soft_special_cases:
+            s += '\tadd_soft_special_case("{}");\n'.format(desc)
+
+        s += '}\n'
         return s
 
     # Simple task properties
@@ -1241,7 +1497,11 @@ class TaskConfig(CommonConfig, Scope):
             self.add_constraint(*args, **kwargs)
 
     @exported_function
-    def special_case(self, case):
+    def constraint_variable(self, con):
+        self.constraint(con + ": [,]", silent=True)
+
+    @exported_function
+    def special_case(self, case, frequency=ConstraintList.ALWAYS):
         """
         Mark a current subtask or group as "special case"
 
@@ -1249,13 +1509,16 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         if len(self.group_stack) > 0:
-            self.group_stack[-1].add_special_case(case)
+            self.group_stack[-1].add_special_case(case, frequency)
         elif len(self.subtask_stack) > 0:
-            self.subtask_stack[-1].add_special_case(case)
+            self.subtask_stack[-1].add_special_case(case, frequency)
         else:
-            print_msg("You called special_case globally—this is a bit weird, "
-                      "so I hope you know what you're doing…", warning=True)
-            self.add_special_case(case)
+            if frequency == ConstraintList.ALWAYS:
+                print_msg("You called special_case globally—this is a bit "
+                          "weird, so I hope you know what you're doing…",
+                          warning=True)
+
+            self.add_special_case(case, frequency)
 
     @exported_function
     def add_testcase(self, *args, **kwargs):
@@ -1312,7 +1575,15 @@ class TaskConfig(CommonConfig, Scope):
             return
 
         try:
-            checker(outfile, stdin=infile, dependencies=[outfile])
+            checker_log = "checker-log.txt"
+
+            checker(outfile, stdout=checker_log, stdin=infile,
+                    dependencies=[outfile])
+
+            with open(checker_log, 'r') as log_file:
+                log = log_file.read()
+                return json.loads(log) if len(log) > 0 else None
+
         except ExitCodeException:
             raise Exception(
                 "Checker {} judged case {} as wrong".format(checker, caseno))
@@ -1914,6 +2185,12 @@ class TaskConfig(CommonConfig, Scope):
                                                        fans, fverd],
                                                       [0, 12, 27, 37])))
 
+                        print()
+                        print(indent("     max. runtime in this group: " +
+                                     bold("%.3fs" % g["max_runtime"])))
+                        print(indent("max. memory usage in this group: " +
+                                     bold("%.1fMB" %
+                                             (float(g["max_memory"]) / 2**20))))
                     print()
 
             print()
