@@ -348,10 +348,10 @@ class TelegramBot:
         self.err_count = 0
         self.MAX_ERR_COUNT = config.telegram_bot_max_error_messages
 
-        bot = BotWithMessageQueue(token=config.bot_token,
-                                  request=Request(con_pool_size=8))
+        self.bot = BotWithMessageQueue(token=config.bot_token,
+                                       request=Request(con_pool_size=8))
 
-        self.updater = Updater(bot=bot)
+        self.updater = Updater(bot=self.bot)
         self.dispatcher = self.updater.dispatcher
         self.job_queue = self.updater.job_queue
 
@@ -416,9 +416,9 @@ class TelegramBot:
         bot.send_message(on_send = self._record_msg(on_send), **kwargs)
 
     def issue_reply(self, msg, *args, on_send = lambda _ : None, **kwargs):
-        msg.bot.send_message(msg.chat.id, *args, **kwargs,
-                             reply_to_message_id=msg.message_id,
-                             on_send=self._record_msg(on_send))
+        self.bot.send_message(msg.chat.id, *args, **kwargs,
+                              reply_to_message_id=msg.message_id,
+                              on_send=self._record_msg(on_send))
 
     def start(self, update, context):
         """ The registration process
@@ -646,6 +646,13 @@ class TelegramBot:
         for msg in self.q_notifications[q.question.id]:
             msg.edit_text(**self._question_notification_params(q, False))
 
+    def _record_answer(self, q):
+        def do_record(msg):
+            self.questions[msg.message_id] = q
+            self._update_question(q)
+
+        return do_record
+
     def _notify_answer(self, q, new):
         msg = self.q_notifications[q.question.id][-1]
 
@@ -654,11 +661,8 @@ class TelegramBot:
 
         reply = self.issue_reply(msg,
                                  text=escape(notification) + q.format_answer(),
-                                 quote=True,
-                                 parse_mode="MarkdownV2")
-
-        self.questions[reply.message_id] = q
-        self._update_question(q)
+                                 parse_mode="MarkdownV2",
+                                 on_send=self._record_answer(q))
 
     def _notify_question_ignore(self, q, ignore):
         msg = self.q_notifications[q.question.id][-1]
@@ -668,11 +672,8 @@ class TelegramBot:
 
         reply = self.issue_reply(msg,
                                  text=escape(notification),
-                                 quote=True,
-                                 parse_mode="MarkdownV2")
-
-        self.questions[reply.message_id] = q
-        self._update_question(q)
+                                 parse_mode="MarkdownV2",
+                                 on_send=self._record_answer(q))
 
     def _notify_announcement(self, bot, a, new):
         self.issue_message(bot,
@@ -929,8 +930,7 @@ class TelegramBot:
                     update.answer(text=IGNORE_FAIL_MSG)
                 else:
                     self.issue_reply(update.message,
-                                     IGNORE_FAIL_MSG,
-                                     quote=True)
+                                     IGNORE_FAIL_MSG)
 
             else:
                 q.ignore()
@@ -939,8 +939,7 @@ class TelegramBot:
                     update.answer(text="I have ignored this question!")
                 else:
                     self.issue_reply(update.message,
-                                     "I have ignored this question!",
-                                     quote=True)
+                                     "I have ignored this question!")
 
                 self._update_question(q)
 
@@ -953,7 +952,6 @@ class TelegramBot:
         else:
             msg = self.issue_reply(update.message,
                                    "I have added your answer!",
-                                   quote=True,
                                    on_send=self._record_question(q, False))
 
         self._update_question(q)
