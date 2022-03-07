@@ -1303,6 +1303,9 @@ abbr {
     #Scoreboard {
         table-layout: auto;
         margin: 3em 0 10em 0;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        user-select: none;
     }
 
     #Scoreboard_head th {
