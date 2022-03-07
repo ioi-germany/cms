@@ -505,45 +505,47 @@ class TelegramBot:
                              "announcement in another chat!")
             return
 
+        if len(self.contests) == 0:
+            update.answer(text="There's no contest I could announce this in.")
+            return
+
         if len(self.contests) > 1:
             kb =  [[InlineKeyboardButton(text=self.contests[i].description,
                                         callback_data="A_"+str(i))]
                    for i in range(len(self.contests)) ] + \
-                   [[InlineKeyboardButton(text="<I would not.>",
-                                          callback_data="A_N")]]
-
-            bot.send_message(chat_id=self.id,
-                             reply_to_message_id=update.message.message_id,
-                             text="Which contest would you like to announce "
-                                  "this in?",
-                             reply_markup=InlineKeyboardMarkup(kb))
-        elif len(self.contests) == 1:
-            self._do_announce(update, direct_announce=True)
+                  [[InlineKeyboardButton(text="<I would not.>",
+                                        callback_data="A_N")]]
+            text = "Which contest would you like to announce this in?"
         else:
-            update.answer(text="There's no contest I could announce this in.")
+            kb =  [[InlineKeyboardButton(text="Yes", callback_data="A_0"),
+                    InlineKeyboardButton(text="No",  callback_data="A_N")]]
+            text = "Would you like to announce the following?"
+
+        announcement_text = update.message.text
+        header, msg = split_off_header(strip_cmd(announcement_text))
+        text += "\n\n" + bold(escape(header)) + "\n" + escape(msg)
+
+        bot.send_message(chat_id=self.id,
+                            reply_to_message_id=update.message.message_id,
+                            text=text,
+                            reply_markup=InlineKeyboardMarkup(kb),
+                            parse_mode="MarkdownV2")
 
     def _callback_announce(self, update, decision):
         bot = update.bot
 
         if decision == "N":
-            update.answer(text="Alright, I won't announce anything."
+            update.answer(text="Alright, I won't announce anything. "
                           "Why bother?")
         else:
-            self._do_announce(update, direct_announce=False, contest_id=int(decision))
+            self._do_announce(update, contest_id=int(decision))
 
         bot.delete_message(chat_id=self.id,
                            message_id=update.message.message_id)
 
-    def _do_announce(self, update, direct_announce, contest_id=0):
-        # The function was called directly.
-        if direct_announce:
-            orig_msg = update.message
-        # The function was called from a button callback.
-        else:
-            orig_msg = update.message.reply_to_message
-
+    def _do_announce(self, update, contest_id=0):
+        orig_msg = update.message.reply_to_message
         text = orig_msg.text
-
         contest = self.contests[contest_id]
         header, msg = split_off_header(strip_cmd(text))
         if not contest.announce(header, msg):
