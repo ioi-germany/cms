@@ -510,16 +510,16 @@ class TelegramBot:
             return
 
         if len(self.contests) > 1:
+            text = "Which contest would you like to announce this in?"
             kb =  [[InlineKeyboardButton(text=self.contests[i].description,
                                         callback_data="A_"+str(i))]
                    for i in range(len(self.contests)) ] + \
                   [[InlineKeyboardButton(text="<I would not.>",
                                         callback_data="A_N")]]
-            text = "Which contest would you like to announce this in?"
         else:
+            text = "Would you like to announce the following?"
             kb =  [[InlineKeyboardButton(text="Yes", callback_data="A_0"),
                     InlineKeyboardButton(text="No",  callback_data="A_N")]]
-            text = "Would you like to announce the following?"
 
         announcement_text = update.message.text
         header, msg = split_off_header(strip_cmd(announcement_text))
@@ -581,7 +581,7 @@ class TelegramBot:
             self.issue_message(bot,
                                chat_id=self.id,
                                text="Warning! A weird callback that I can't "
-                                    "interprete has occured!")
+                                    "interpret has occured!")
 
         if a[0] == 'R':
             self._callback_reply(cq, a[2:])
@@ -594,7 +594,7 @@ class TelegramBot:
             self.issue_message(bot,
                                chat_id=self.id,
                                text="Warning! A weird callback that I can't "
-                                    "interprete has occured!")
+                                    "interpret has occured!")
 
     def _callback_reply(self, cq, a):
         msg_id = cq.message.message_id
