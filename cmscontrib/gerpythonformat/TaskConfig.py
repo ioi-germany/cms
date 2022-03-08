@@ -2112,7 +2112,15 @@ class TaskConfig(CommonConfig, Scope):
                     sdb,
                     ddb,
                     submission_result)
+                # Remove testcase_codename so the submission isn't re-evaluated
+                # when only the testcase's codename has changed.
+                evaluation_job.operation.testcase_codename = None
+                # Human-readable info would also contain testcase_codename
+                evaluation_job.info = None
                 evaluation_job = self._run_job(evaluation_job)
+                # We insert the codename again because to_submission actually
+                # uses it
+                evaluation_job.operation.testcase_codename = codename
                 evaluation_job.to_submission(submission_result)
             submission_result.set_evaluation_outcome()
             print("\033[2K\033[1G", end='', flush=True)
@@ -2239,7 +2247,7 @@ class TaskConfig(CommonConfig, Scope):
 
     def _run_job(self, job):
         """
-        Run the given job and save the results to it.
+        Run the given job (if necessary) and save the results to it.
 
         job (Job): the job
 
