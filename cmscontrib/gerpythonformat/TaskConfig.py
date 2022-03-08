@@ -2164,6 +2164,13 @@ class TaskConfig(CommonConfig, Scope):
                     with header("Group {}".format(i + 1), depth=4):
                         print_block(v(g["verdict"]))
                         print()
+
+                        if not g["cases"]:
+                            print(indent(yellow(
+                                "This group has no testcases.")))
+                            print()
+                            continue
+
                         print(indent(side_by_side(["Time", "Memory",
                                                    "Answer", "Verdict"],
                                                   [2, 14, 27, 37])))
