@@ -234,24 +234,6 @@ template<typename T> void auto_check_bounds(const string &name, T t) {
             }
         }
     }
-
-    /*
-    vector<char> r;
-    for(auto c: _integral_soft_constraints[name]) {
-        const auto &[min, max] = cast_constraint<T>(c);
-        r.push_back(satisfies_bounds<T>(name, t, min, max));
-    }
-
-    vector<char> &v = _integral_soft_constraints_satisfied[name];
-
-    if(not v.empty() and r != v) {
-        cerr << "Checking soft constraints for \"" << name << "\" after they've "
-             << "already been checked before -- and the results are different "
-             << "this time! Dying..." << endl;
-        exit(1);
-    }
-
-    v = r;*/
 }
 
 
@@ -320,29 +302,6 @@ void log_soft(FILE *flog)
         fprintf(flog, "\n]");
     }
 
-    /*
-    fprintf(flog, "[\n{\n");
-    bool first_line = true;
-
-    for(const auto &[var, L] : _integral_soft_constraints_satisfied) {
-        if(L.empty()) continue;
-
-        if(not first_line) fprintf(flog, ",\n");
-        first_line = false;
-
-        fprintf(flog, "\t\"%s\": [", var.c_str());
-        bool first_entry = true;
-
-        for(bool b : L) {
-            if(not first_entry) fprintf(flog, ", ");
-            first_entry = false;
-            fprintf(flog, "%s", b ? "true" : "false");
-        }
-
-        fprintf(flog, "]");
-    }
-
-    fprintf(flog, "\n},\n{\n");*/
     fprintf(flog, "\n],\n{\n");
     first_line = true;
 
