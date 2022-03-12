@@ -349,6 +349,7 @@ void log_soft(FILE *flog)
     for(string s : _soft_special_cases) {
         if(not first_line) fprintf(flog, ",\n");
         fprintf(flog, "\"%s\" : %s", s.c_str(), _checks[s] ? "true" : "false");
+        first_line = false;
     }
 
     fprintf(flog, "\n}\n]");
