@@ -24,5 +24,5 @@ from __future__ import unicode_literals
 from .BOITemplate import *
 
 
-def load(contest, short_name=None):
-    BOITemplate(contest, short_name)
+def load(contest, short_name=None, year="2021"):
+    BOITemplate(contest, short_name, year)

@@ -4,7 +4,7 @@
 # Programming contest management system
 # Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2020-2021 Manuel Gundlach <manuel.gundlach@gmail.com>
+# Copyright © 2020-2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -38,10 +38,11 @@ import filecmp
 from PyPDF2 import PdfFileMerger, PdfFileReader, PdfFileWriter
 
 
-# This is the template for BOI 2021 (an only slightly modified lg template)
+# This is the template for BOI 2021 and 2022 (an only slightly modified lg template)
 class BOITemplate(LgTemplate):
-    def __init__(self, contest, short_name):
+    def __init__(self, contest, short_name, year):
         super(BOITemplate, self).__init__(contest, short_name)
+        self.year = year
 
     def ontask(self, task):
         """ Some additional supplies for the latex format
@@ -49,8 +50,10 @@ class BOITemplate(LgTemplate):
         super(BOITemplate, self).ontask(task)
 
         #Provide access to the BOI logo
-        shutil.copy(os.path.join(os.path.dirname(__file__), "header.pdf"),
-                    os.path.join(task.wdir, "header.pdf"))
+        shutil.copy(os.path.join(os.path.dirname(__file__),
+                                    "header{}.pdf".format(self.year)),
+                    os.path.join(os.getcwd(),
+                                    "header.pdf"))
 
         # Copy translation headers
         copyrecursivelyifnecessary(os.path.join(task.wdir, "..", "general"),
@@ -62,6 +65,8 @@ class BOITemplate(LgTemplate):
                     os.path.join(task.wdir, "taskheader.tex"))
         task.supply("latex", def_latex("taskheader",
                                        input_latex("taskheader.tex")))
+
+        task.supply("latex", def_latex("olympiadyear", self.year))
 
         self.mktestcasetable(task)
 
@@ -106,15 +111,15 @@ class BOITemplate(LgTemplate):
         prefix = "overview-sheets-for"
 
         for u in self.contest.users.values():
-            #TODO Rename team_name to team (as this actually seems to be a team object)
-            team_name = u.team
+            team = u.team
 
-            if self.contest.relevant_language and self.contest.relevant_language not in team_name.primary_statements:
+            if self.contest.relevant_language and \
+                self.contest.relevant_language not in team.primary_statements:
                 continue
 
-            if team_name not in teams:
-                teams[team_name] = []
-            teams[team_name].append(u)
+            if team not in teams:
+                teams[team] = []
+            teams[team].append(u)
 
             for l in u.primary_statements:
                 if l not in contestants_with_language:
@@ -137,8 +142,11 @@ class BOITemplate(LgTemplate):
                     self.supply_overview()
                     self.contest._build_supplements_for_key("contestoverview")
 
-                    shutil.copy(os.path.join(os.path.dirname(__file__), "header.pdf"),
-                                os.path.join(os.getcwd(), "header.pdf"))
+                    #Provide access to the BOI logo
+                    shutil.copy(os.path.join(os.path.dirname(__file__),
+                                             "header{}.pdf".format(self.year)),
+                                os.path.join(os.getcwd(),
+                                             "header.pdf"))
 
                     def do_supply_language():
                         return self.language_supplement(l)
