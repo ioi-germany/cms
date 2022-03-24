@@ -245,13 +245,13 @@ Testcase-Quality-Checks
 =======================
 Manchmal möchte man nicht, dass ein Spezialfall/Constraint für alle Testfälle erfüllt ist, sonder nur für hinreichend viele, oder man möchte umgekehrt, dass ein Spezialfall/Constraint nur in wenigen Fällen erfüllt ist. Das ist insbesondere der Fall, wenn man sicherstellen möchte, dass die Testfälle hinreichend gut sind: vielleicht möchte man, in einer Aufgabe, in der Bäume erwartet werden, dass nicht zu viele Fälle zu Linien ausgeartet sind, oder dass in hinreichend vielen Fällen der maximale Knotengrad groß ist.
 
-Zu diesem Zweck gibt es die Möglichkeit, ``special_case`` oder ``constraint`` den Schlüsselwortparameter ``how_often`` mitzugeben, der einen String in ähnlicher Syntax wie für die Constraints erwartet, also z.B.
+Zu diesem Zweck gibt es die Möglichkeit, ``special_case`` oder ``constraint`` den Schlüsselwortparameter ``frequency`` mitzugeben, der einen String in ähnlicher Syntax wie für die Constraints erwartet, also z.B.
 
 .. sourcecode:: Python
 
-    constraint("N: [,3]", how_often="[,2]") # höchstens zwei Fälle mit N ≤ 3
-    constraint("N: [1000,], M: [3000,]", how_often="[5,10]") # mindestens 5 und höchstens 10 Fälle mit N ≥ 1000 UND M ≥ 3000
-    special_case("line", how_often="[,1]") # höchstens einen Fall, der "line" erfüllt
+    constraint("N: [,3]", frequency="[,2]") # höchstens zwei Fälle mit N ≤ 3
+    constraint("N: [1000,], M: [3000,]", frequency="[5,10]") # mindestens 5 und höchstens 10 Fälle mit N ≥ 1000 UND M ≥ 3000
+    special_case("line", frequency="[,1]") # höchstens einen Fall, der "line" erfüllt
 
 Für diese "weichen" Constraints und Spezialfälle wird vom Checker nur überprüft, ob sie vorliegen und das Ergebnis dem CMS mitgeteilt (insbesondere stürzt der Checker also natürlich nicht einfach ab, nur weil der entsprechende Spezialfall/Constraint nicht erfüllt ist). Das CMS überprüft dann am Ende jedes Scopes (also: Gruppe, Subtask, Aufgabe), ob alle relevanten "weichen" Constraints entsprechend oft erfüllt wurden oder nicht. Es gibt auch eine schöne bunte Ausgabe dazu, welche Testfälle welche weichen Constraints/Spezialfälle erfüllen.
 
