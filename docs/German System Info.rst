@@ -220,21 +220,43 @@ Oft gibt es auch Teilaufgaben, in denen zwar die Limits genauso groß sind wie i
 
 Um dies auf einfache und durchsichtige Weise zu bewerkstelligen, steht der Befehl ``special_case`` zur Verfügung, den man üblicherweise in einem ``with subtask``-Block aufruft. Dieser erwartet einfach nur einen String als Parameter und hat die Semantik *dieser Subtask gehört zu diesem Spezialfall*. Im obigen Beispiel würde man etwa ``special_case("tree")`` schreiben.
 
-Die Überprüfung, ob dieser Spezialfall dann auch gilt, ist Aufgabe des Checkers. In jedem Checker, der wie oben beschrieben das Constraint-System lädt, steht der Befehl ``is_special_case`` zur Verfügung. Dieser erwartet wiederum nur einen String ``Fall`` als Parameter und gibt einen Boolean zurück: ob der entsprechende Testfall in einer Teilaufgabe verwendet wird, für die in ``config.py`` der Befehl ``special_case(Fall)`` ausgeführt wurde.
-
-Als Alias für ``is_special_case`` steht auch ``ought_to_be`` zur Verfügung. Das typische Idiom wäre dann
+Die Überprüfung, ob dieser Spezialfall dann auch gilt, ist Aufgabe des Checkers. In jedem Checker, der wie oben beschrieben das Constraint-System lädt, steht der Befehl
+``check_feature`` zur Verfügung, der als Parameter einen String ``Fall`` (den Namen des Spezialfalls) und im Anschluss entweder ein ``bool`` (ob der Spezialfall vorliegt) oder irgendein funktionenähnliches Objekt ``f`` (optional gefolgt von einer Liste von Parametern für ``f``) das ein ``bool`` zurückgibt, also z.B.
 
 .. sourcecode:: C++
 
-    if(ought_to_be("tree"))
-    {
-        // prüfe, ob die Eingabe einen Baum spezifiziert
-    }
+    bool is_tree;
+    // berechne etwas...
+    check_feature("tree", is_tree);
 
-Ich möchte ausdrücklich und wiederholt davon abraten, das alte Idiom eines Checkers ``chk``, der einen oder mehrere Integer auf der Kommandozeile erwartet und dann in jeder Teilaufgabe neu gesetzt wird (``checker(chk.p(1))`` o.ä.), zu verwenden!
+oder
+
+.. sourcecode:: C++
+
+    auto f = [&](int N) { /* tue etwas und gib ein bool zurück */ };
+    check_feature("magic", f, 42);
+
+Das alte Idiom mittels ``is_special_case`` bzw. ``ought_to_be`` wird in Zukunft nicht mehr unterstützt werden und sollte daher tunlichst vermieden werden, z.B. weil es (a) so passieren könnte, dass man vergisst einen Spezialfall zu überprüfen (ohne dass das CMS das herausfinden könnte), und (b) aus offensichtlichen Gründen nicht mit den Testcase-Quality-Checks (s.u.) verträglich ist.
 
 Aktuell hat ``special_case`` keinerlei Auswirkung auf das TeX-Statement, da mir keine Lösung einfällt, die das sinnvoll mit der Möglichkeit verschiedener Sprachen (z.B. bei Olympiaden) in Einklang bringt.
 
+
+Testcase-Quality-Checks
+=======================
+Manchmal möchte man nicht, dass ein Spezialfall/Constraint für alle Testfälle erfüllt ist, sonder nur für hinreichend viele, oder man möchte umgekehrt, dass ein Spezialfall/Constraint nur in wenigen Fällen erfüllt ist. Das ist insbesondere der Fall, wenn man sicherstellen möchte, dass die Testfälle hinreichend gut sind: vielleicht möchte man, in einer Aufgabe, in der Bäume erwartet werden, dass nicht zu viele Fälle zu Linien ausgeartet sind, oder dass in hinreichend vielen Fällen der maximale Knotengrad groß ist.
+
+Zu diesem Zweck gibt es die Möglichkeit, ``special_case`` oder ``constraint`` den Schlüsselwortparameter ``how_often`` mitzugeben, der einen String in ähnlicher Syntax wie für die Constraints erwartet, also z.B.
+
+.. sourcecode:: Python
+
+    constraint("N: [,3]", how_often="[,2]") # höchstens zwei Fälle mit N ≤ 3
+    constraint("N: [1000,], M: [3000,]", how_often="[5,10]") # mindestens 5 und höchstens 10 Fälle mit N ≥ 1000 UND M ≥ 3000
+    special_case("line", how_often="[,1]") # höchstens einen Fall, der "line" erfüllt
+
+Für diese "weichen" Constraints und Spezialfälle wird vom Checker nur überprüft, ob sie vorliegen und das Ergebnis dem CMS mitgeteilt (insbesondere stürzt der Checker also natürlich nicht einfach ab, nur weil der entsprechende Spezialfall/Constraint nicht erfüllt ist). Das CMS überprüft dann am Ende jedes Scopes (also: Gruppe, Subtask, Aufgabe), ob alle relevanten "weichen" Constraints entsprechend oft erfüllt wurden oder nicht. Es gibt auch eine schöne bunte Ausgabe dazu, welche Testfälle welche weichen Constraints/Spezialfälle erfüllen.
+
+
+**WARNUNG!** Ruft man mehrmals ``check_feature`` für einen "weichen" Spezialfall auf, gilt nur der letzte Aufruf (während für einen normalen Spezialfall der Checker schon abgestürzt wäre, sobald einer der Tests fehlschlug). Das wird (hoffentlich) in Zukunft geändert. **Um sicherzustellen, dass das Verhalten über zukünftige Anpassungen der Checker-Bibliothek hinweg konsistent ist, sollte man also für jeden Spezialfall nur genau einmal** ``check_feature`` **aufrufen.**
 
 Automatische Teile des Statements
 =================================
