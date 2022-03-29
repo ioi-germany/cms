@@ -7,6 +7,7 @@
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2016 Masaki Hara <ackie.h.gmai@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2022 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,6 +23,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import time
 import os
 import signal
 import tempfile
@@ -412,6 +414,10 @@ class Communication(TaskType):
         if not self._uses_stub():
             # Manager still running but wants to quit
             if solution_quitter.read() == "<3":
+                # we wait a short amount of time to avoid interrupting the user
+                # process to early (which might lead to runtime errors going
+                # undetected and instead being shown as "wrong answer")
+                time.sleep(.01)
                 for i in indices:
                     processes[i].send_signal(signal.SIGINT)  # Kill user
                 wait_without_std(processes)
