@@ -28,7 +28,7 @@ from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header,
     remaining_line_length, indent, IndentManager
 from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
 from cmscontrib.gerpythonformat.Executable import ExitCodeException, \
-    InternalPython
+    InternalPython, CPPProgram
 from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, \
     merge_constraints, read_frequency, check_bounds
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
@@ -1574,15 +1574,15 @@ class TaskConfig(CommonConfig, Scope):
         if self.minimal:
             return
 
+        if not isinstance(checker, CPPProgram):
+            raise Exception("Only checkers written in c++ are allowed.")
+
         try:
-            checker_log = "checker-log.txt"
+            result = checker(outfile, stdin=infile,
+                             dependencies=[outfile])
 
-            checker(outfile, stdout=checker_log, stdin=infile,
-                    dependencies=[outfile])
-
-            with open(checker_log, 'r') as log_file:
-                log = log_file.read()
-                return json.loads(log) if len(log) > 0 else None
+            log = result.out
+            return json.loads(log) if len(log) > 0 else None
 
         except ExitCodeException:
             raise Exception(
