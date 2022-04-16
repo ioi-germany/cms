@@ -163,6 +163,12 @@ def main():
     full_dir = os.path.abspath(args.import_directory)
     source_dir, task = os.path.split(full_dir)
 
+    if not os.path.isfile(os.path.join(full_dir, "config.py")):
+        raise Exception("Couldn't find task config file. Make sure it "
+                        "is named 'config.py' and located on the "
+                        "topmost level of the folder {}"
+                        .format(full_dir))
+
     GerMakeTask(source_dir,
                 task,
                 args.minimal,
