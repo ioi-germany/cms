@@ -331,6 +331,8 @@ To check if your test cases are all valid, you can specify test case checkers us
 
 In the above example, :samp:`checker OUTPUT 0 < INPUT` would be run for all test cases and :samp:`checker OUTPUT 1 < INPUT` would be run for the test cases belonging to subtask 1.
 
+Checkers must be written in C++ and compiled with `compile(...)`. They mustn't write anything to stdout. On the other hand, stderr output is allowed and will be displayed to the user.
+
 Constraints
 ^^^^^^^^^^^
 

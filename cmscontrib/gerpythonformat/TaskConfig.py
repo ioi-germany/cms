@@ -1471,6 +1471,8 @@ class TaskConfig(CommonConfig, Scope):
         """
         Register a test case checker for the "current" task, subtask or group.
 
+        The checker must be a CPPProgram.
+
         See :py:meth:`.Scope.add_checker`.
 
         """
