@@ -1575,7 +1575,7 @@ class TaskConfig(CommonConfig, Scope):
             return
 
         if not isinstance(checker, CPPProgram):
-            raise Exception("Only checkers written in c++ are allowed.")
+            raise Exception("Only checkers written in C++ are allowed.")
 
         try:
             result = checker(outfile, stdin=infile,
