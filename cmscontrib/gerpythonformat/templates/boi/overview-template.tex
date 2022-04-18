@@ -86,12 +86,12 @@
 
 \newcommand{\setlang}[1]{\ifthenelse{\equal{\TemplateLanguage}{he}}{\begin{otherlanguage}{hebrew}#1\end{otherlanguage}}{#1}}
 
-\chead{\vspace{-12pt}\textbf{\Large BOI 2021}\\ \tBOIPlace\\ \tBOIDates}
+\chead{\vspace{-12pt}\textbf{\Large BOI \olympiadyear}\\ \tBOIPlace\\ \tBOIDates}
 \lhead{\vspace{-12pt}\hbox to 0pt{\hskip-.43in\includegraphics[scale=.65]{header.pdf}}\vspace{-6ex}}
 \rhead{\vspace{-12pt}\textbf{\contestname}\\\textbf{\tOverviewSheet}\\ \tLang:\enspace\textbf{\TemplateLanguage}}
 
 \ifthenelse{\equal{\TemplateLanguage}{he}}{
-\chead{\vspace{-12pt}\begin{otherlanguage}{hebrew}\textbf{\Large BOI 2021}\\ {\tBOIPlace}\\ {\tBOIDates}\end{otherlanguage}}
+\chead{\vspace{-12pt}\begin{otherlanguage}{hebrew}\textbf{\Large BOI \olympiadyear}\\ {\tBOIPlace}\\ {\tBOIDates}\end{otherlanguage}}
 \rhead{\vspace{-12pt}\hbox to 0pt{\hskip-.43in\includegraphics[scale=.65]{header.pdf}}\vspace{-6ex}}
 \lhead{\vspace{-12pt}\begin{otherlanguage}{hebrew}\textbf{\contestname}\\\textbf{\tOverviewSheet}\\ \tLang:\enspace\textbf{\TemplateLanguage}\end{otherlanguage}}
 }{}

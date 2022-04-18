@@ -133,6 +133,9 @@ class BOITemplate(LgTemplate):
                                    os.path.join(self.contest.wdir, "overview",
                                                 "general"))
 
+        self.contest.supply("contestoverview",
+                            def_latex("olympiadyear", self.year))
+
         with chdir("overview"):
             if not os.path.exists(".overviews-per-language"):
                 os.mkdir(".overviews-per-language")
