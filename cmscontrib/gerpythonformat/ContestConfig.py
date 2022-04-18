@@ -345,9 +345,6 @@ class ContestConfig(CommonConfig):
         if s in self.groups:
             raise Exception("Group {} specified multiple times".format(s))
 
-        if self.minimal:
-            return
-
         if (analysis_start is None) ^ (analysis_stop is None):
             raise Exception("Analysis start and stop time can only be used together")
 
@@ -438,9 +435,6 @@ class ContestConfig(CommonConfig):
         return (MyUser): object representing the created user
 
         """
-        if self.minimal:
-            return
-
         team = team or self._current_team
         if not isinstance(team, MyTeam):
             team = self.teams[team]

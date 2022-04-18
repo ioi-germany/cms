@@ -82,7 +82,7 @@ class Repository:
 
     #For GerTranslate
     #TODO Show errors in web overview
-    def commit(self, file_path):
+    def commit(self, file_path, file_identifier):
         #TODO Only do this if it's a git repository
         #if self.auto_sync:
             logger.info("Committing {} in {}".format(file_path,self.path))
@@ -104,7 +104,7 @@ class Repository:
                         #might be confusing.
                         gitout = check_output(["git", "commit",
                                             "-o", file_path,
-                                            "-m","Changes to "+file_path+", uploaded via GerTranslate web interface",
+                                            "-m","Changes to "+file_identifier+", uploaded via GerTranslate web interface",
                                             #TODO Provide meaningful commit message and author
                                             "--author","\"GerTranslate <GerTranslate@localhost>\""])
                     except:

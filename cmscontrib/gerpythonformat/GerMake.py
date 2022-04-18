@@ -68,7 +68,7 @@ class GerMake:
         copyrecursivelyifnecessary(self.odir, self.wdir, set(["build"]))
         self.wdir = os.path.abspath(self.wdir)
 
-    def build(self):
+    def build(self, extra_conf_f=None):
         file_cacher = FileCacher(path=os.path.join(self.wdir, ".cache"))
         with chdir(self.wdir):
             contestconfig = ContestConfig(
@@ -80,8 +80,12 @@ class GerMake:
                 safe_latex=self.safe_latex,
                 minimal=self.minimal)
 
+            if extra_conf_f:
+                extra_conf_f(contestconfig)
+            print(contestconfig.users)
+
             contestconfig._readconfig("contest-config.py")
-            if self.task is not None and len(contestconfig.tasks) == 0:
+            if self.task not in (None, "NO_TASK") and len(contestconfig.tasks) == 0:
                 raise Exception("Task {} not found".format(self.task))
 
             if not self.minimal:
@@ -101,8 +105,10 @@ class GerMake:
 
         contestconfig.finish()
 
-        statements = list(contestconfig.tasks.values())[
-            0]._statements
+        taskvalues = list(contestconfig.tasks.values())
+        if not taskvalues:
+            return None
+        statements = taskvalues[0]._statements
 
         if self.language == "ALL":
             return [os.path.abspath(s.file_) for s in list(statements.values())]

@@ -36,6 +36,7 @@ from ansi2html import Ansi2HTMLConverter
 
 from cms.io.TaskTranslateInfo import TaskTranslateInfo
 
+from cmscontrib.gerpythonformat.ContestConfig import MyGroup
 from cmscontrib.gerpythonformat.GerMake import GerMake
 from cmscontrib.gerpythonformat import copyifnecessary
 
@@ -111,13 +112,13 @@ class TaskCompileJob:
                 try:
                     is_overview = self.name.endswith("overview")
 
-                    path = Path(self.repository.path) / "languages.json"
+                    lan_path = Path(self.repository.path) / "languages.json"
 
-                    if not path.exists():
+                    if not lan_path.exists():
                         i = {"error": "The languages.json file is missing."}
                     else:
                         try:
-                            i = json.loads(path.open().read())
+                            i = json.loads(lan_path.open().read())
                         except:
                             i = {"error": "The languages.json file is corrupt."}
                         else:
@@ -132,14 +133,21 @@ class TaskCompileJob:
 
                     #TODO do this right, i.e.: Why copyifnecessary?
                     if is_overview:
-                        copyifnecessary(path,
-                                    Path(self.repository.path) / self.contest / "languages.json")
+                        copyifnecessary(lan_path,
+                                    Path(self.repository.path) /
+                                    self.contest /
+                                    "languages.json"
+                                    )
                     else:
-                        copyifnecessary(path,
-                                    Path(self.repository.path) / self.contest / self.name / "languages.json")
+                        copyifnecessary(lan_path,
+                                    Path(self.repository.path) /
+                                    self.contest /
+                                    self.name /
+                                    "languages.json"
+                                    )
 
                     comp = GerMake(repository.path + "/" + self.contest,
-                                   task=self.name if not is_overview else None,
+                                   task=self.name if not is_overview else "NO_TASK",
                                    no_test=True,
                                    submission=None,
                                    no_latex=False,
@@ -151,15 +159,48 @@ class TaskCompileJob:
                     with repository:
                         comp.prepare()
 
+                        # TODO Kommentieren!
+                        credentials_file = (Path(repository.path) /
+                                            self.contest /
+                                            "build" /
+                                            "users.py"
+                                            )
+                        credentials_file.write_text('')
+                        f = None
+                        if is_overview:
+                            if self.language == "ALL":
+                                languages = i["languages"]
+                            elif self.language is None:
+                                raise NotImplementedError
+                            else:
+                                languages = [self.language]
+                            print(languages)
+                            def f(contestconfig):
+                                for l in languages:
+                                    contestconfig.user(
+                                        "[user-{}]".format(l),
+                                        "[password]",
+                                        "Max", "Mustermann",
+                                        group=MyGroup("dummy", 0, 0, 0, 0, None),
+                                        primary_statements=[l]
+                                        )
+
                     #If self.language is None, this is the primary statement.
                     #If self.language is ALL, this is _a list_ of all statements.
                     #Else, it's the task statement associated with that language.
-                    statement_file = comp.build()
+                    pdf_file = comp.build(extra_conf_f=f)
 
                     if is_overview:
-                        statement_file = str(Path(self.repository.path) / self.contest / "build" / "overview" / ("overview-sheet-" + self.language + ".pdf"))
+                        filename = "overview-sheets-for-" + self.language + ".pdf"
+                        pdf_file = str(Path(self.repository.path) /
+                                             self.contest /
+                                             "build" /
+                                             "overview" /
+                                             ".overviews-per-language" /
+                                             filename
+                                             )
 
-                    if statement_file is None:
+                    if pdf_file is None:
                         status["error"] = True
                         status["msg"] = "No statement found"
 
@@ -168,13 +209,18 @@ class TaskCompileJob:
 
                         if self.language == "ALL":
                             pdfmerger = PdfFileMerger()
-                            for s in statement_file:
+                            for s in pdf_file:
                                 pdfmerger.append(s)
-                            statement_file = str(Path(self.repository.path) / self.contest / "build" / self.name / "statement-ALL.pdf")
-                            pdfmerger.write(statement_file)
+                            pdf_file = str(Path(self.repository.path) /
+                                                 self.contest /
+                                                 "build" /
+                                                 self.name /
+                                                 "statement-ALL.pdf"
+                                                 )
+                            pdfmerger.write(pdf_file)
                             pdfmerger.close()
 
-                        with open(statement_file, "rb") as f:
+                        with open(pdf_file, "rb") as f:
                             result = f.read()
 
                         status["result"] = result
@@ -309,7 +355,7 @@ class TaskTeXReceiver:
             else:
                 with open(tex_file, "wb") as target_file:
                     target_file.write(f)
-                self.repository.commit(str(_repository_code))
+                self.repository.commit(str(tex_file.resolve()), str(_repository_code))
 
         return result
 
@@ -328,7 +374,7 @@ class TaskMarker:
 
         with open(lock_file, "w") as target_file:
             target_file.write("The translation in this language is locked.")
-        self.repository.commit(str(_repository_lock_file_code))
+        self.repository.commit(str(lock_file.resolve()), str(_repository_lock_file_code))
 
 
 class TaskGitLog:
@@ -352,7 +398,7 @@ class TaskGitLog:
             error = "No statement TeX found"
 
         else:
-            result = self.repository.getlog(str(tex_file))
+            result = self.repository.getlog(str(tex_file.resolve()))
 
         return result
 

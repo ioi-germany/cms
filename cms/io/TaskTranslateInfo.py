@@ -71,12 +71,12 @@ class SingleTaskTranslateInfo:
                  "remarks": "This is a collection of overview sheets automatically generated as soon as general is translated."}
         else:
             if not path.exists():
-                i = {"error": "The info.json file is missing."}
+                i = {"error": "The info-translate.json file is missing."}
             else:
                 try:
                     i = json.loads(path.open().read())
                 except:
-                    i = {"error": "The info.json file is corrupt."}
+                    i = {"error": "The info-translate.json file is corrupt."}
                 else:
                     missing = []
                     for e in ["title"]:
@@ -138,13 +138,13 @@ class TaskTranslateInfo:
         def load_single(d, tasks, contests, is_contest):
             if not d.is_dir() \
                 or d.name.startswith('.') \
-                or d.is_symlink() \
+                or (d.is_symlink() and d.name=="general")\
                 or d.name=="build":
                 return False
 
             # We catch all exceptions since the main loop must go on
             try:
-                info_path = d / "info.json"
+                info_path = d / "info-translate.json"
 
                 if is_contest:
                     if d.name.endswith('general'):

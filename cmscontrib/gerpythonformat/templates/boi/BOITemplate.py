@@ -113,10 +113,6 @@ class BOITemplate(LgTemplate):
         for u in self.contest.users.values():
             team = u.team
 
-            if self.contest.relevant_language and \
-                self.contest.relevant_language not in team.primary_statements:
-                continue
-
             if team not in teams:
                 teams[team] = []
             teams[team].append(u)
@@ -142,6 +138,10 @@ class BOITemplate(LgTemplate):
 
             with chdir(".overviews-per-language"):
                 for l, users in contestants_with_language.items():
+                    if self.contest.relevant_language and \
+                        self.contest.relevant_language != l:
+                        continue
+
                     self.supply_overview()
                     self.contest._build_supplements_for_key("contestoverview")
 
@@ -195,12 +195,18 @@ class BOITemplate(LgTemplate):
                         ow = PdfFileWriter()
 
                         for l in u.primary_statements:
+                            if self.contest.relevant_language and \
+                                self.contest.relevant_language != l:
+                                continue
                             ow.addPage(overview_sheets_for[(u.username,l)])
                         with open("overview-" + u.username + ".pdf", "wb") as f:
                             ow.write(f)
 
                         # handout
                         for l in u.primary_statements:
+                            if self.contest.relevant_language and \
+                                self.contest.relevant_language != l:
+                                continue
                             hw.addPage(overview_sheets_for[(u.username,l)])
                             cleardoublepage(hw)
 
