@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013-2022 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013-2016 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2022 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@ from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header,
     remaining_line_length, indent, IndentManager
 from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
 from cmscontrib.gerpythonformat.Executable import ExitCodeException, \
-    InternalPython
+    InternalPython, CPPProgram
 from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, \
     merge_constraints, read_frequency, check_bounds
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
@@ -1471,6 +1471,8 @@ class TaskConfig(CommonConfig, Scope):
         """
         Register a test case checker for the "current" task, subtask or group.
 
+        The checker must be a CPPProgram.
+
         See :py:meth:`.Scope.add_checker`.
 
         """
@@ -1574,15 +1576,15 @@ class TaskConfig(CommonConfig, Scope):
         if self.minimal:
             return
 
+        if not isinstance(checker, CPPProgram):
+            raise Exception("Only checkers written in C++ are allowed.")
+
         try:
-            checker_log = "checker-log.txt"
+            result = checker(outfile, stdin=infile,
+                             dependencies=[outfile])
 
-            checker(outfile, stdout=checker_log, stdin=infile,
-                    dependencies=[outfile])
-
-            with open(checker_log, 'r') as log_file:
-                log = log_file.read()
-                return json.loads(log) if len(log) > 0 else None
+            log = result.out
+            return json.loads(log) if len(log) > 0 else None
 
         except ExitCodeException:
             raise Exception(

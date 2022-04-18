@@ -3,7 +3,7 @@
 
 # Programming contest management system
 # Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
-# Copyright © 2013-2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2013-2022 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -194,9 +194,9 @@ class Executable(object):
         stderr = kwargs.pop("stderr", None)
         dependencies = kwargs.pop("dependencies", [])
 
-        self.run(args, kwargs, stdin=stdin, stdinstring=stdinstring,
-                 stdout=stdout, stderr=stderr,
-                 dependencies=dependencies)
+        return self.run(args, kwargs, stdin=stdin, stdinstring=stdinstring,
+                        stdout=stdout, stderr=stderr,
+                        dependencies=dependencies)
 
 
 class ParamsExecutable(Executable):
@@ -244,9 +244,9 @@ class ParamsExecutable(Executable):
             stdin = self.stdin
         if stdinstring is None:
             stdinstring = self.stdinstring
-        self.parent.run(args + self.args, k, stdin=stdin,
-                        stdinstring=stdinstring, stdout=stdout,
-                        stderr=stderr, dependencies=dependencies)
+        return self.parent.run(args + self.args, k, stdin=stdin,
+                               stdinstring=stdinstring, stdout=stdout,
+                               stderr=stderr, dependencies=dependencies)
 
     def __str__(self):
         return "{} with additional arguments {}" \
@@ -377,6 +377,7 @@ class CPPProgram(Executable):
                 "Error executing program {} with parameters {}"
                 .format(self.conf.short_path(self.wanted_path()),
                         str(list(args) + keyword_list(kwargs))))
+        return r
 
     def __str__(self):
         return self.conf.short_path(self.executable)
