@@ -180,7 +180,7 @@ class TaskCompileJob:
                                     contestconfig.user(
                                         "[user-{}]".format(l),
                                         "[password]",
-                                        "Max", "Mustermann",
+                                        "Jane", "Doe",
                                         group=MyGroup("dummy", 0, 0, 0, 0, None),
                                         primary_statements=[l]
                                         )
