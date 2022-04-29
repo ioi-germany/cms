@@ -132,6 +132,19 @@ class BOITemplate(LgTemplate):
         self.contest.supply("contestoverview",
                             def_latex("olympiadyear", self.year))
 
+        import csv
+        printingunwanted = dict()
+        requestsfile = "printingrequested.csv"
+        if os.path.exists(requestsfile):
+            with open(requestsfile, encoding='utf-8-sig') as f:
+                reader = csv.DictReader(f, delimiter=',', quotechar='"')
+                for row in reader:
+                    c, l = row["Country"], row["Language"]
+                    if c not in printingunwanted:
+                        printingunwanted[c] = dict()
+                    printingunwanted[c]["en"] = row["English"] == "No"
+                    printingunwanted[c][l] = row["Own"] == "No"
+
         with chdir("overview"):
             if not os.path.exists(".overviews-per-language"):
                 os.mkdir(".overviews-per-language")
@@ -207,6 +220,17 @@ class BOITemplate(LgTemplate):
                             if self.contest.relevant_language and \
                                 self.contest.relevant_language != l:
                                 continue
+                            if printingunwanted \
+                                .get(team.name, dict()) \
+                                .get(l, False):
+                                print_msg(
+                                    "Not adding translation to language "
+                                    "{} for user {} to the handout "
+                                    "as requested by team {}"
+                                    .format(l, u.username, team.code))
+                                hw.addPage(overview_sheets_for[(u.username,l)])
+                                cleardoublepage(hw)
+                                continue
                             hw.addPage(overview_sheets_for[(u.username,l)])
                             cleardoublepage(hw)
 
@@ -216,7 +240,6 @@ class BOITemplate(LgTemplate):
                                     st = PdfFileReader(t._statements[l].file_)
                                     hw.appendPagesFromReader(st)
                                     cleardoublepage(hw)
-
 
                     with open("handout.pdf", "wb") as f:
                         hw.write(f)
