@@ -174,9 +174,19 @@ function build_row(task_code, lan_mode=false)
     return r;
 }
 
+function entry_sorting(a,b)
+{
+    if(__info[a]['contest']<__info[b]['contest']) return -1;
+    if(__info[a]['contest']>__info[b]['contest']) return +1; if(a.endsWith('overview')) return -1;
+    if(b.endsWith('overview')) return +1;
+    if(a<b) return -1;
+    if(a>b) return +1;
+    return 0;
+}
+
 function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, init, lan_mode)
 {
-    new_tasks = new_tasks.sort(function(a,b){ if(__info[a]['contest']<__info[b]['contest'])return -1;if(__info[a]['contest']>__info[b]['contest'])return +1; if(a<b)return -1;if(a>b)return +1;return 0; });
+    new_tasks = new_tasks.sort(entry_sorting);
 
     if(init)
     {
@@ -242,7 +252,7 @@ function fill_table(new_tasks, updated_tasks, show_col, criteria, languages, ini
         }
     }
 
-    __tasks = __tasks.concat(new_tasks).sort(function(a,b){ if(__info[a]['contest']<__info[b]['contest'])return -1;if(__info[a]['contest']>__info[b]['contest'])return +1; if(a<b)return -1;if(a>b)return +1;return 0; });
+    __tasks = __tasks.concat(new_tasks).sort(entry_sorting);
 
     var num_interesting_columns = 0;
     for(var j = 1; j < entries.length - 1; ++j)
