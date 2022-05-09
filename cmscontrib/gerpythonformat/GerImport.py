@@ -203,8 +203,9 @@ class GerImport(Service):
                 tdbs = {t.name : t for t in tdbs}
 
                 if not self.no_test:
-                    ans = input("Replace test submissions? (This might cause "
-                        "serious issues during a contest!) [y/N] ") \
+                    ans = input("Replace (perhaps not yet existent) test "
+                        "submissions? (This will cause workers to crash if "
+                        "there are still test submissions pending!) [y/N] ") \
                             .strip().lower()
                     if ans not in ["y", "yes"]:
                         self.no_test = True
