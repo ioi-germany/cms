@@ -138,13 +138,6 @@ class TaskCompileJob:
                                     self.contest /
                                     "languages.json"
                                     )
-                    else:
-                        copyifnecessary(lan_path,
-                                    Path(self.repository.path) /
-                                    self.contest /
-                                    self.name /
-                                    "languages.json"
-                                    )
 
                     comp = GerMake(repository.path + "/" + self.contest,
                                    task=self.name if not is_overview else "NO_TASK",
