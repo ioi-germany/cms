@@ -8,6 +8,7 @@
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2015 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -86,7 +87,10 @@ class RankingHandler(BaseHandler):
             output = io.StringIO()  # untested
             writer = csv.writer(output)
 
-            include_partial = True
+            # This would, in a separate column after each score, indicate if not
+            # all submissions of the participation (in a certain task or
+            # globally) have been scored
+            include_partial = False
 
             contest = self.r_params["contest"]
 
