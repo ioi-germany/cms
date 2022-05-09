@@ -77,12 +77,12 @@ class RankingHandler(BaseHandler):
         if format == "txt":
             self.set_header("Content-Type", "text/plain")
             self.set_header("Content-Disposition",
-                            "attachment; filename=\"ranking.txt\"")
+                            "attachment; filename=\"ranking-{}.txt\"".format(self.contest.name))
             self.render("ranking.txt", **self.r_params)
         elif format == "csv":
             self.set_header("Content-Type", "text/csv")
             self.set_header("Content-Disposition",
-                            "attachment; filename=\"ranking.csv\"")
+                            "attachment; filename=\"ranking-{}.csv\"".format(self.contest.name))
 
             output = io.StringIO()  # untested
             writer = csv.writer(output)
