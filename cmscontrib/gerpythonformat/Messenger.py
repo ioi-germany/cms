@@ -49,11 +49,14 @@ highlight_code = "\033[38;5;6m"
 purple_code = "\033[01;35m"
 red_code = "\033[91m"
 green_code = "\033[92m"
+lightgreen_code = "\033[38;5;155m"
+orange_code = "\033[38;5;208m"
 yellow_code = "\033[93m"
 gray_code = "\033[90m" # no pun intended
 blue_code = "\033[94m"
 bold_code = "\033[1m"
 invert_code = "\033[7m"
+purple_code = "\033[38;5;165m"
 end_code = "\033[0m"
 
 _disable_color_switch = False
@@ -86,11 +89,14 @@ highlight = color_function(highlight_code)
 purple = color_function(purple_code)
 red = color_function(red_code)
 green = color_function(green_code)
+lightgreen = color_function(lightgreen_code)
+orange = color_function(orange_code)
 yellow = color_function(yellow_code)
 gray = color_function(gray_code)
 blue = color_function(blue_code)
 bold = color_function(bold_code)
 invert = color_function(invert_code)
+purple = color_function(purple_code)
 
 def ellipsis_symbol():
     return bold(highlight("⤷")) + " "

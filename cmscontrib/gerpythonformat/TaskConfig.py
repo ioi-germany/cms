@@ -24,7 +24,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header, red, green, gray, \
-    yellow, blue, bold, box, side_by_side, pad_left, add_line_breaks, \
+    yellow, blue, lightgreen, orange, purple, bold, box, side_by_side, pad_left, add_line_breaks, \
     remaining_line_length, indent, IndentManager
 from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
 from cmscontrib.gerpythonformat.Executable import ExitCodeException, \
@@ -1914,6 +1914,7 @@ class TaskConfig(CommonConfig, Scope):
 
         failed = []
         unit_tests = []
+        unit_test_results = {}
 
         # Test submissions
         for s in self.testsubmissions:  # submissions are saved because they
@@ -1932,10 +1933,12 @@ class TaskConfig(CommonConfig, Scope):
                 sdb.id = 1
                 with header("Running solution {}".format(code),
                             depth=3):
-                    if not self._do_test_submission(sdb, ddb):
+                    okay, details = self._do_test_submission(sdb, ddb)
+                    if not okay:
                         failed.append(code)
 
                     unit_tests.append(code)
+                    unit_test_results[code] = details
 
         if len(self.testsubmissions) == 0:
             print()
@@ -1956,7 +1959,176 @@ class TaskConfig(CommonConfig, Scope):
                  else ""), double=True)
             print()
 
+            self._testcase_importance(unit_test_results)
+
         return sdbs
+
+    def _testcase_importance(self, unit_test_results):
+        essential = {}
+        useful = set()
+        dominated = {d.codename : {c.codename for c in self.cases
+                                              if c.codename != d.codename}
+                     for d in self.cases}
+
+        for u, details in unit_test_results.items():
+            useful |= details["useful"]
+
+            for e in details["essential"]:
+                if e not in essential:
+                    essential[e] = []
+                essential[e].append(u)
+
+            for id in dominated.keys():
+                dominated[id] &= details["dominated"][id]
+
+        samples = {c.codename for s in self.subtasks if s.sample
+                              for g in s.groups
+                              for c in g.cases}
+        private = {c.codename for s in self.subtasks
+                              for g in s.groups
+                              for c in g.cases} - samples
+
+        essential_cases = sorted(list(essential))
+        potentially_useful_cases = sorted(c for c in useful
+                                          if c not in essential)
+        useless_cases = sorted(list(private - (set(essential) | useful)))
+        probably_useless = []
+        probably_useful = []
+        to_inspect = []
+        strictly_dominated = {}
+
+        for c in potentially_useful_cases:
+            D = [d for d in dominated[c] if c not in dominated[d]]
+            num_dominated = len(D)
+
+            if num_dominated > 0:
+                probably_useless.append(c)
+                strictly_dominated[c] = D[:]
+            elif len(dominated[c]) == 0:
+                probably_useful.append(c)
+            else:
+                to_inspect.append(c)
+
+        def color(c):
+            id = c.codename
+            if id in samples:
+                if id in essential or id in probably_useful or id in to_inspect:
+                    return yellow(str(id))
+                else:
+                    return gray(str(id))
+            elif id in essential:
+                return purple(str(id))
+            elif id in probably_useful:
+                return lightgreen(str(id))
+            elif id in to_inspect:
+                return blue(str(id))
+            elif id in probably_useless:
+                return orange(str(id))
+            else:
+                return red(str(id))
+
+        def nice(c):
+            return str(self.cases_by_codename[c])
+
+        def nice_list(L):
+            return ", ".join(nice(c) for c in sorted(L))
+
+        with header("Testcase utility", 2):
+            with header("Overview", 3):
+               print_msg(" ".join(color(c) for c in self.cases),
+                         use_ellipsis=False)
+               print()
+
+            if len(essential_cases) > 0:
+                with header(purple("Essential"), 3):
+                    print_msg("The following testcases are essential, i.e. "
+                              "removing any of them would immediately affect "
+                              "scoring substantially (while this means they "
+                              "are strong cases, you should maybe worry about "
+                              "the quality of your other testcases):",
+                              use_ellipsis=False)
+                    print()
+                    for c in essential_cases:
+                        print_msg(purple(bold(nice(c)) + " is essential for "
+                                  "the following submission(s): " +
+                                  ", ".join(essential[c])),
+                                  use_ellipsis = True)
+                    print()
+
+            if(len(probably_useful)) > 0:
+                with header(lightgreen("Probably useful"), 3):
+                    print_msg("The following testcases are useful, but not "
+                              "essential from what I can tell (that's great!):",
+                              use_ellipsis=False)
+                    print()
+                    print_msg(lightgreen(nice_list(probably_useful)),
+                              use_ellipsis=False)
+                    print()
+
+            if len(to_inspect) > 0:
+                with header(blue("To inspect"), 3):
+                    print_msg("For each fixed submission, the following "
+                              "testcases get very similar scores; you might "
+                              "want to have a closer look whether you need all "
+                              "of them:", use_ellipsis=False)
+                    print()
+
+                    # We assume for simplicity that the graph of mutual
+                    # domination is transitive; this might not be entirely true
+                    # (due to the thresholds we set), but we're not going to
+                    # solve the clique problem here (and we're in the case that
+                    # the task author should have a closer look anyhow...)
+                    X = set()
+                    for c in to_inspect:
+                        component = frozenset(d for d in dominated[c]
+                                                if c in dominated[d]) | {c}
+                        if component not in X:
+                            X.add(component)
+                            print_msg(blue("[" + nice_list(component) + "]"),
+                                      use_ellipsis=True)
+
+                    print()
+
+            if len(probably_useless) > 0:
+                with header(orange("Probably useless"), 3):
+                    print_msg("The following testcases are probably useless as "
+                              "there are other testcases which are at least as "
+                              "sharp across all submissions (i.e. which always "
+                              "produce scores which are lower or at least "
+                              "close to the score of this testcase)",
+                              use_ellipsis=False)
+                    print()
+                    for c, d in strictly_dominated.items():
+                        print_msg(orange(bold(nice(c)) +
+                                  " is dominated by each of the following: " +
+                                  nice_list(d)), use_ellipsis=True)
+                    print()
+
+            if len(useless_cases) > 0:
+                with header(red("Useless"), 3):
+                    print_msg("The following testcases are useless, i.e. "
+                              "removing them does not even come close to "
+                              "affecting scoring (for example because every "
+                              "submission succeeds on them):",
+                              use_ellipsis=False)
+                    print()
+                    print_msg(red(nice_list(useless_cases)), use_ellipsis=False)
+                    print()
+
+            useful_sample = [id for id in samples
+                                if id in essential or id in probably_useful or
+                                   id in to_inspect]
+
+            if len(useful_sample) != 0:
+                with header(yellow("Warning: strong public testcases"), 3):
+                    print_msg("At least one public testcase is relevant for "
+                              "scoring (listed below, see the above output for "
+                              "further details)—that's... kind of disturbing "
+                              "to be honest.", use_ellipsis=False)
+                    print()
+                    print_msg(yellow(nice_list(useful_sample)),
+                              use_ellipsis=False)
+                    print()
 
     def _makesubmission(self, submission, participation, tdb, official=True):
         """
@@ -2245,7 +2417,7 @@ class TaskConfig(CommonConfig, Scope):
             else red(verd[1]))
         print()
 
-        return verd[0] == 1
+        return verd[0] == 1, details
 
     def _run_job(self, job):
         """

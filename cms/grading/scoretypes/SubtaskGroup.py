@@ -523,6 +523,10 @@ class SubtaskGroup(ScoreType):
             public_score, public_score_details, \
             ranking_score_details
 
+    EPS = 1e-4
+    THRESHOLD_LAX = .1
+    THRESHOLD_STRICT = .05
+    THRESHOLD_VERY_STRICT = .01
 
     def compute_unit_test_score(self, submission_result,
                                 submission_info):
@@ -545,6 +549,11 @@ class SubtaskGroup(ScoreType):
                         memory: 33659290                      in bytes
 
         """
+        eps = SubtaskGroup.EPS
+        threshold_lax = SubtaskGroup.THRESHOLD_LAX
+        threshold_strict = SubtaskGroup.THRESHOLD_STRICT
+        threshold_very_strict = SubtaskGroup.THRESHOLD_VERY_STRICT
+
         if submission_info is None:
             return {"unit_test": True,
                     "verdict": (-1, "Not a Unit Test")}
@@ -562,6 +571,14 @@ class SubtaskGroup(ScoreType):
                         in iteritems(submission_info["expected"])}
         case_expectations = submission_info["expected_case"]
         possible_task = expectations[()]
+
+        useful = set()
+        essential = set()
+        all_cases = {c["codename"] for s in self.parameters["subtasks"]
+                                   for g in s["groups"]
+                                   for c in g["testcases"]}
+        dominated = {d : {c for c in all_cases if c != d}
+                     for d in all_cases}
 
         # Actually, this means it didn't even compile
         if not submission_result.evaluated():
@@ -584,8 +601,12 @@ class SubtaskGroup(ScoreType):
 
                 worst_group = (1, "okay")
                 group_status = []
+                curr_group_dict = {}
 
                 for i, g in enumerate(subtask["groups"]):
+                    """
+                    Check unit test
+                    """
                     possible_group = expectations[tuple(g["key"])]
 
                     possible = possible_task + possible_subtask + possible_group
@@ -604,7 +625,9 @@ class SubtaskGroup(ScoreType):
                         idx = testcase["codename"]
                         r = UnitTest.get_result(submission_info["limits"],
                                                 evaluations[idx])
-                        min_f = min(min_f, float(evaluations[idx].outcome))
+                        this_score = float(evaluations[idx].outcome)
+                        curr_group_dict[idx] = this_score
+                        min_f = min(min_f, this_score)
 
                         mandatory = case_expectations[idx]
 
@@ -631,7 +654,8 @@ class SubtaskGroup(ScoreType):
                         subtasks[-1]["groups"][-1]["cases"].\
                             append({"line": l, "verdict": v,
                                     "time": evaluations[idx].execution_time,
-                                    "memory": evaluations[idx].execution_memory})
+                                    "memory": evaluations[idx].execution_memory,
+                                    "codename": idx})
 
                     status, short, desc = \
                         UnitTest.judge_group(case_results, extended_results,
@@ -659,6 +683,33 @@ class SubtaskGroup(ScoreType):
                             default=None)
                     worst_group = min(worst_group, (status, short))
                     group_status.append(status)
+
+                    """
+                    Check testcase utility
+                    """
+                    if len(g["testcases"]) == 0 or subtask["sample"]:
+                        continue
+
+                    group_scores = sorted(curr_group_dict.values())
+
+                    for c in g["testcases"]:
+                        id = c["codename"]
+                        s = curr_group_dict[id]
+                        is_useful = (s <= min((1 + threshold_lax) *
+                                              group_scores[0] + eps, 1 - eps))
+                        is_essential = (len(group_scores) == 1 or
+                                        (1 + threshold_strict) * s + eps <
+                                         group_scores[1])
+
+                        if is_essential:
+                            essential.add(id)
+
+                        elif is_useful:
+                            useful.add(id)
+
+                        dominated[id] &= {c for c,p in curr_group_dict.items()
+                                            if p <= (1 + threshold_very_strict)
+                                                    * s + eps}
 
                 subtasks[-1]["status"] = (worst_group[0], worst_group[1].upper())
 
@@ -712,6 +763,10 @@ class SubtaskGroup(ScoreType):
             "final_score_okay": final_score_okay,
             "final_score": final_score,
             "expected_final_score": expected_final_score_info,
+
+            "dominated": dominated,
+            "essential": essential,
+            "useful": useful
             }
 
         return details
