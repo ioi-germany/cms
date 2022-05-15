@@ -1231,6 +1231,28 @@ class TaskConfig(CommonConfig, Scope):
         num_processes:        e.g. set to 2 for a Two-Step task
         """
         self.tasktype = "Communication"
+        self._communication_common(manager, stub, num_processes)
+
+    @exported_function
+    def omnipotent_manager(self, manager, num_processes=1):
+        """
+        Specify this to be a communication task with an "omnipotent" manager
+
+        manager (CPPProgram): executable communicating with the contestant
+                              submissions and CMS
+                              (must at least implement get_path() to get
+                              the file name of the executable)
+
+        Submissions are linked together with interface.{c,cpp,pas,py,...}.
+        num_processes:        e.g. set to 2 for a Two-Step task
+        """
+        self.tasktype = "OmnipotentManager"
+        self._communication_common(manager, True, num_processes)
+
+    def _communication_common(self, manager, stub, num_processes):
+        """
+        Common code for Communication and OmnipotentManager tasktypes
+        """
         if stub:
             for end in self.std_extensions():
                 p = os.path.join(self.wdir, "interface." + end)
@@ -1243,7 +1265,8 @@ class TaskConfig(CommonConfig, Scope):
                 self.managers["%slib.pas" % self.name] = \
                     os.path.join(self.wdir, "lib.pas")
         self.managers["manager"] = manager.get_path()
-        self.tasktypeparameters = ([num_processes, "stub" if stub else "alone", "fifo_io"])
+        self.tasktypeparameters = ([num_processes, "stub" if stub else "alone",
+                                    "fifo_io"])
 
     @exported_function
     def output_generator(self, s):

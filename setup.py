@@ -11,6 +11,7 @@
 # Copyright © 2016 Masaki Hara <ackie.h.gmai@gmail.com>
 # Copyright © 2016 Peyman Jabbarzade Ganje <peyman.jabarzade@gmail.com>
 # Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
+# Copyright © 2022 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -202,6 +203,8 @@ setup(
             "Communication=cms.grading.tasktypes.Communication:Communication",
             "OutputOnly=cms.grading.tasktypes.OutputOnly:OutputOnly",
             "TwoSteps=cms.grading.tasktypes.TwoSteps:TwoSteps",
+            "OmnipotentManager=" \
+                "cms.grading.tasktypes.OmnipotentManager:OmnipotentManager",
         ],
         "cms.grading.scoretypes": [
             "Sum=cms.grading.scoretypes.Sum:Sum",
