@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2022 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
@@ -122,7 +122,7 @@ def remaining_line_length():
     return line_length - IndentManager.indent * 2
 
 
-def estimate_len(s):
+def generic_split(s, first=0, max_len=-1):
     """Estimate the length of a string when displayed in a terminal.
     The basic ANSI formatting commands are skipped (but for example \n and \t
     are counted as one character).
@@ -133,9 +133,13 @@ def estimate_len(s):
 
     """
     r = 0
+    t = []
     skip = False
 
-    for c in s:
+    for i in range(first, len(s)):
+        c = s[i]
+        t.append(c)
+
         if c == '\033':
             skip = True
 
@@ -145,8 +149,17 @@ def estimate_len(s):
         if c == 'm' or c == 'K':
             skip = False
 
-    return r
+        if r > max_len >= 0:
+            t = t[:-1]
+            break
 
+    return "".join(t), r
+
+def estimate_len(*args, **kwargs):
+    return generic_split(*args, **kwargs)[1]
+
+def split(*args, **kwargs):
+    return generic_split(*args, **kwargs)[0]
 
 def color_codes(s):
     """ Return all color codes in s
@@ -385,7 +398,7 @@ def add_line_breaks(l, length, hanging_indent=0, use_ellipsis=True):
         result.append(" " * data.indent + data.pre + data.old_color_code +
                       data.curr_line.rstrip() + (end_code if colors_enabled()
                                                           else ""))
-        #print(data.color_code.replace("\033", "\\033"))
+        # print("##" + result[-1].replace("\033", "\\033") + "##")
         data.old_color_code = data.color_code
         data.indent = next_indent
         data.pre = ellipsis_symbol() if ellipsis else ""
@@ -402,20 +415,23 @@ def add_line_breaks(l, length, hanging_indent=0, use_ellipsis=True):
                 data.color_code += code
 
     def add_word(s):
-        l = estimate_len(s)
+        cursor = 0
 
-        if l <= data.rem_width:
-            put_word(s)
-            data.rem_width -= l
-        # Also too long for the next line?
-        elif l > length - next_indent:
-            data.curr_line += s[:data.rem_width]
-            s = s[data.rem_width:]
+        while cursor < len(s):
+            l = estimate_len(s, first=cursor, max_len=length + 10)
+
+            if l <= data.rem_width:
+                put_word(s[cursor:])
+                data.rem_width -= l
+                break
+
+            # Also too long for the next line?
+            elif l > length - next_indent - estimate_len(data.pre):
+                t = split(s, first=cursor, max_len=data.rem_width)
+                put_word(t)
+                cursor += len(t)
+
             flush_line()
-            add_word(s)
-        else:
-            flush_line()
-            add_word(s)
 
     def add_whitespace(s):
         l = estimate_len(s)
@@ -439,15 +455,15 @@ def add_line_breaks(l, length, hanging_indent=0, use_ellipsis=True):
     def splittable(c):
         return c == '/' or c == '-'
 
-    part = ""
+    part = []
     for c in l:
         if len(part) > 0 and (c == "\n" or splittable(c) or
                               classify(part[0]) != classify(c)):
-            classify(part[0])(part)
-            part = ""
-        part += c
+            classify(part[0])("".join(part))
+            part = []
+        part.append(c)
     if len(part) > 0:
-        classify(part[0])(part)
+        classify(part[0])("".join(part))
     if len(data.curr_line) > 0:
         flush_line(ellipsis=False)
 
