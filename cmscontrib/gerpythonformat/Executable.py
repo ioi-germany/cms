@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2022 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2022 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
@@ -511,7 +511,7 @@ class ExternalPython(Executable):
         return "<external>"
 
 
-interpreter_table = {".py": "python2", ".rb": "ruby", ".pl": "perl",
+interpreter_table = {".py": "python", ".rb": "ruby", ".pl": "perl",
                      ".sh": "/bin/bash"}
 
 
