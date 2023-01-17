@@ -518,13 +518,16 @@ def header(message, depth):
     print_msg(message, depth)
     return IndentManager()
 
-def highlight_latex(s):
+def highlight_latex(s, verbose=False):
     """Highlights and shortens LaTeX output.
 
     TODO There are some off (or missing) newlines in the pruned output.
     """
-    def to_words(s):
-        return [x.strip(":,.;-= ") for x in s.split()]
+
+    to_words = lambda s: [x.strip(":,.;-= ") for x in s.split()]
+
+    if "Errors" in to_words(s):
+        verbose = True
 
     # We silence warnings that contain one of these phrases.
     # Some come from packages and we can't do anything about them,
@@ -551,8 +554,7 @@ def highlight_latex(s):
 
     r = []
 
-    def normal(f):
-        return f
+    normal = lambda f: f
     warning = yellow
 
     mode = normal
@@ -565,8 +567,7 @@ def highlight_latex(s):
     previous_warnings = set()
     after_warning = False
 
-    def highlight_error(s):
-        return bold(red(s))
+    highlight_error = lambda s: bold(red(s))
 
     for l in s.split("\n"):
         if mode == green or mode == purple:
@@ -620,7 +621,8 @@ def highlight_latex(s):
         if mode == warning:
             current_warning = '\n'.join([current_warning, l])\
                                 if current_warning else l
-        elif not (mode == normal and loading_segment):
+        elif not ( (mode == normal and loading_segment) or
+                   (mode == normal and not verbose) ):
             r.append(mode(l))
 
         #if mode == normal and loading_segment:

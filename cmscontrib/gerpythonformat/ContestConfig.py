@@ -107,8 +107,9 @@ class ContestConfig(CommonConfig):
     restricted_feedback = ("full", False)
 
 
-    def __init__(self, rules, name, ignore_latex=False, relevant_language=None, onlytask=None,
-                 minimal=False, safe_latex=False):
+    def __init__(self, rules, name, ignore_latex=False, verbose_latex=False,
+                 relevant_language=None, onlytask=None, minimal=False,
+                 safe_latex=False):
         """
         Initialize.
 
@@ -121,6 +122,7 @@ class ContestConfig(CommonConfig):
 
         """
         super(ContestConfig, self).__init__(rules, ignore_latex=ignore_latex,
+                                            verbose_latex=verbose_latex,
                                             relevant_language=relevant_language,
                                             safe_latex=safe_latex)
         self.infinite_tokens()
@@ -492,6 +494,7 @@ class ContestConfig(CommonConfig):
                             s, len(self.tasks),
                             feedback, score_mode,
                             ignore_latex=self.ignore_latex,
+                            verbose_latex=self.verbose_latex,
                             relevant_language=self.relevant_language,
                             minimal=minimal,
                             standalone_task=standalone_task) as taskconfig:
@@ -503,7 +506,7 @@ class ContestConfig(CommonConfig):
                 self.tasks[s] = taskconfig
 
             if minimal:
-                print_msg("Statement for task {} generated successfully".
+                print_msg("Statement(s) for task {} generated successfully".
                           format(s), success=True)
             else:
                 print_msg("Task {} loaded completely".format(s), success=True)

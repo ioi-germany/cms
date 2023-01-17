@@ -846,9 +846,11 @@ class TaskConfig(CommonConfig, Scope):
     """
 
     def __init__(self, upstream, rules, name, num, feedback, score_mode,
-                 ignore_latex=False, relevant_language=None, minimal=False,
-                 safe_latex=None, standalone_task=False):
+                 ignore_latex=False, verbose_latex=False,
+                 relevant_language=None, minimal=False, safe_latex=None,
+                 standalone_task=False):
         super(TaskConfig, self).__init__(rules, ignore_latex=ignore_latex,
+                                         verbose_latex=verbose_latex,
                                          relevant_language=relevant_language,
                                          safe_latex=safe_latex)
         self.no_tokens()
@@ -1760,6 +1762,7 @@ class TaskConfig(CommonConfig, Scope):
             contents["%d.out" % (i + 1)] = c.outfile
         ZipRule(self.rules, zipname, contents).ensure()
         self.spoiler(zipname, "%s_all.zip" % self.name)
+        # TODO Replace by zipped subtask directory
 
     def _makeinputzip(self):
         """

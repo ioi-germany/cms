@@ -38,8 +38,8 @@ from psutil import virtual_memory
 
 
 class GerMakeTask:
-    def __init__(self, odir, task, minimal, no_test,
-                 submission, no_latex, language, clean):
+    def __init__(self, odir, task, minimal, no_test, submission, no_latex,
+                 verbose_latex, language, clean):
         self.odir = odir
         self.task = task
         self.minimal = minimal
@@ -47,6 +47,7 @@ class GerMakeTask:
         if self.local_test and submission is not None:
             self.local_test = submission
         self.no_latex = no_latex
+        self.verbose_latex = verbose_latex
         self.language = language
         self.clean = clean
 
@@ -80,6 +81,7 @@ class GerMakeTask:
                 "hidden contest",
                 relevant_language=(self.language if self.language!="ALL" else None),
                 ignore_latex=self.no_latex,
+                verbose_latex=self.verbose_latex,
                 minimal=self.minimal)
 
             copyifnecessary(os.path.join(contestconfig._get_ready_dir(),
@@ -151,6 +153,8 @@ def main():
                            type=utf8_decoder)
     parser.add_argument("-nl", "--no-latex", action="store_true",
                         help="do not compile latex documents")
+    parser.add_argument("-vl", "--verbose-latex", action="store_true",
+                        help="print verbose (i.e., most of the) LaTeX log")
     parser.add_argument("-l", "--language",
                         help="only compile latex files that end in this string",
                         type=utf8_decoder)
@@ -175,6 +179,7 @@ def main():
                 args.no_test,
                 args.submission,
                 args.no_latex,
+                args.verbose_latex,
                 args.language,
                 args.clean).make()
 

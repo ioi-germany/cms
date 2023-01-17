@@ -78,11 +78,12 @@ class CommonConfig(object):
     querying system.
     """
 
-    def __init__(self, rules, ignore_latex=False, relevant_language=None,
-                 safe_latex=True):
+    def __init__(self, rules, ignore_latex=False, verbose_latex=False,
+                 relevant_language=None, safe_latex=True):
         self.upstream = None
         self.rules = rules
         self.ignore_latex = ignore_latex
+        self.verbose_latex = verbose_latex
         self.relevant_language = relevant_language
         self.safe_latex = safe_latex
 
@@ -347,8 +348,8 @@ class CommonConfig(object):
             else:
                 r = LaTeXRule(self.rules, source).ensure()
 
-            print_block(highlight_latex(r.out))
-            print_block(highlight_latex(r.err))
+            print_block(highlight_latex(r.out, self.verbose_latex))
+            print_block(highlight_latex(r.err, self.verbose_latex))
 
             if r.code != 0:
                 raise Exception("Compilation failed")
