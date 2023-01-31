@@ -125,7 +125,7 @@ class Service:
         # Install a file handler.
         file_handler = FileHandler(os.path.join(log_dir, log_filename),
                                    mode='w', encoding='utf-8')
-        if config.file_log_debug:
+        if config.systemwide.file_log_debug:
             file_log_level = logging.DEBUG
         else:
             file_log_level = logging.INFO
@@ -256,7 +256,7 @@ class Service:
                                              socket.SOCK_STREAM)
         backdoor_sock.setblocking(0)
         backdoor_sock.bind(backdoor_path)
-        user = pwd.getpwnam(config.cmsuser)
+        user = pwd.getpwnam(config.systemwide.cmsuser)
         # We would like to also set the user to "cmsuser" but only root
         # can do that. Therefore we limit ourselves to the group.
         os.chown(backdoor_path, os.getuid(), user.pw_gid)
@@ -308,7 +308,7 @@ class Service:
             else:
                 raise
 
-        if config.backdoor:
+        if config.systemwide.backdoor:
             self.start_backdoor()
 
         logger.info("%s %d up and running!", *self._my_coord)
@@ -318,7 +318,7 @@ class Service:
 
         logger.info("%s %d is shutting down", *self._my_coord)
 
-        if config.backdoor:
+        if config.systemwide.backdoor:
             self.stop_backdoor()
 
         self._disconnect_all()

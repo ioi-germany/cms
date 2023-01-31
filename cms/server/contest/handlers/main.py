@@ -73,6 +73,7 @@ class MainHandler(ContestHandler):
     def get(self):
         self.render("overview.html", **self.r_params)
 
+
 class CaptchaHandler(ContestHandler):
     """Captcha handler.
 
@@ -88,12 +89,13 @@ class CaptchaHandler(ContestHandler):
 
     def prepare(self):
         super().prepare()
-        self.set_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.set_header("Cache-Control",
+                        "no-store, no-cache, must-revalidate, max-age=0")
 
     @multi_contest
     def get(self):
         this_captcha = self.captcha.captcha()
-        captcha_clear = ''.join([ str(x) for x in this_captcha[0] ])
+        captcha_clear = ''.join([str(x) for x in this_captcha[0]])
         captcha_bs = this_captcha[1]
 
         mimetype = get_type_for_file_name("captcha.png")
@@ -102,8 +104,8 @@ class CaptchaHandler(ContestHandler):
 
         self.add_header('Content-Type', mimetype)
 
-        #We require an identifier so a captcha's cookie is restricted
-        #in use for a specific action.
+        # We require an identifier so a captcha's cookie is restricted
+        # in use for a specific action.
         try:
             identifier = self.get_argument("identifier")
             if not 1 <= len(identifier) <= self.MAX_INPUT_LENGTH:
@@ -113,14 +115,14 @@ class CaptchaHandler(ContestHandler):
         except (tornado_web.MissingArgumentError, ValueError):
             raise tornado_web.HTTPError(400)
 
-        #We don't use a reference to the running contest, so the answer
-        #to a captcha in one contest could be used for the same action in
-        #another. Won't fix
-        #identifier should be signed so it can't be tempered with, which is taken
-        #care of by set_secure_cookie.
-        #captcha_clear should additionally not be accessible for the user,
-        #so we only include its signature and compare that later to the signature
-        #of the user's input
+        # We don't use a reference to the running contest, so the answer
+        # to a captcha in one contest could be used for the same action in
+        # another. Won't fix
+        # identifier should be signed so it can't be tempered with, which is
+        # taken care of by set_secure_cookie.
+        # captcha_clear should additionally not be accessible for the user,
+        # so we only include its signature and compare that later to the
+        # signature of the user's input
         cookie = self.signature(captcha_clear) + "_" + identifier
         cookie_name = "captcha"
         self.set_secure_cookie(cookie_name, cookie, expires_days=None)
@@ -197,8 +199,10 @@ class RegistrationHandler(ContestHandler):
             if self.contest.registration_requires_captcha:
                 captcha_input = self.get_argument("captcha")
                 captcha_input_signature = self.signature(captcha_input)
-                captcha_cookie = self.get_secure_cookie("captcha").decode('utf-8')
-                captcha_clear_signature, captcha_username = captcha_cookie.split('_',1)
+                captcha_cookie = \
+                    self.get_secure_cookie("captcha").decode('utf-8')
+                captcha_clear_signature, captcha_username = \
+                    captcha_cookie.split('_', 1)
 
             if not 1 <= len(first_name) <= self.MAX_INPUT_LENGTH:
                 raise ValueError()
@@ -243,8 +247,8 @@ class RegistrationHandler(ContestHandler):
 
         # Find user if it exists
         user = self.sql_session.query(User)\
-                        .filter(User.username == username)\
-                        .first()
+            .filter(User.username == username)\
+            .first()
         if user is None:
             raise tornado_web.HTTPError(404)
 
@@ -394,13 +398,16 @@ class PrintingHandler(ContestHandler):
             .filter(PrintJob.participation == participation)\
             .all()
 
-        remaining_jobs = max(0, config.max_jobs_per_user - len(printjobs))
+        remaining_jobs = max(
+            0,
+            config.printingservice.max_jobs_per_user - len(printjobs)
+        )
 
         self.render("printing.html",
                     printjobs=printjobs,
                     remaining_jobs=remaining_jobs,
-                    max_pages=config.max_pages_per_job,
-                    pdf_printing_allowed=config.pdf_printing_allowed,
+                    max_pages=config.printingservice.max_pages_per_job,
+                    pdf_printing_allowed=config.printingservice.pdf_printing_allowed,
                     **self.r_params)
 
     @tornado_web.authenticated

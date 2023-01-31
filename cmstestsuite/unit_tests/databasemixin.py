@@ -42,7 +42,7 @@ import cms
 
 # Monkeypatch the db string.
 # Noqa to avoid complaints due to imports after a statement.
-cms.config.database += "fortesting"  # noqa
+cms.config.database.database += "fortesting"  # noqa
 
 from cms.db import engine, metadata, Announcement, Contest, Dataset, Evaluation, \
     Executable, File, Manager, Message, Participation, Question, Session, \

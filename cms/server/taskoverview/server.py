@@ -106,16 +106,17 @@ class TaskOverviewWebServer:
                   "static_path": resource_filename("cms.server",
                                                    "taskoverview/static")}
 
-        repository = Repository(config.task_repository, config.auto_sync)
+        repository = Repository(config.taskoverview.task_repository,
+                                config.taskoverview.auto_sync)
 
-        TaskFetch.init(repository, config.max_compilations)
+        TaskFetch.init(repository, config.taskoverview.max_compilations)
         TaskInfo.init(repository)
 
         self.app = Application(handlers, **params)
 
     def run(self):
-        self.app.listen(config.overview_listen_port,
-                        address=config.overview_listen_address)
+        self.app.listen(config.taskoverview.listen_port,
+                        address=config.taskoverview.listen_address)
 
         try:
             IOLoop.instance().start()

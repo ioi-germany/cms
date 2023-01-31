@@ -69,21 +69,21 @@ class ContestWebServer(WebService):
         parameters = {
             "static_files": [("cms.server", "static"),
                              ("cms.server.contest", "static")],
-            "cookie_secret": hex_to_bin(config.secret_key),
-            "debug": config.tornado_debug,
-            "is_proxy_used": config.is_proxy_used,
-            "num_proxies_used": config.num_proxies_used,
+            "cookie_secret": hex_to_bin(config.webservers.secret_key),
+            "debug": config.webservers.tornado_debug,
+            "is_proxy_used": config.cws.is_proxy_used,
+            "num_proxies_used": config.cws.num_proxies_used,
             "xsrf_cookies": True,
             "xsrf_cookie_kwargs": {"samesite": "Strict"},
         }
 
         try:
-            listen_address = config.contest_listen_address[shard]
-            listen_port = config.contest_listen_port[shard]
+            listen_address = config.cws.listen_address[shard]
+            listen_port = config.cws.listen_port[shard]
         except IndexError:
             raise ConfigError("Wrong shard number for %s, or missing "
                               "address/port configuration. Please check "
-                              "contest_listen_address and contest_listen_port "
+                              "cws.listen_address and cws.listen_port "
                               "in cms.conf." % __name__)
 
         self.contest_id = contest_id
@@ -105,8 +105,8 @@ class ContestWebServer(WebService):
             listen_address=listen_address)
 
         self.wsgi_app = SharedDataMiddleware(
-            self.wsgi_app, {"/stl": config.stl_path,
-                            "/py-sl": config.py_sl_path},
+            self.wsgi_app, {"/stl": config.cws.stl_path,
+                            "/py-sl": config.cws.py_sl_path},
             cache=True, cache_timeout=SECONDS_IN_A_YEAR,
             fallback_mimetype="application/octet-stream")
 
@@ -127,12 +127,12 @@ class ContestWebServer(WebService):
         self.scoring_service = self.connect_to(
             ServiceCoord("ScoringService", 0))
 
-        ranking_enabled = len(config.rankings) > 0
+        ranking_enabled = len(config.proxyservice.rankings) > 0
         self.proxy_service = self.connect_to(
             ServiceCoord("ProxyService", 0),
             must_be_present=ranking_enabled)
 
-        printing_enabled = config.printer is not None
+        printing_enabled = config.printingservice.printer is not None
         self.printing_service = self.connect_to(
             ServiceCoord("PrintingService", 0),
             must_be_present=printing_enabled)

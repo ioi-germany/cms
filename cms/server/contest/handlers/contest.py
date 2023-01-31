@@ -84,7 +84,7 @@ class ContestHandler(BaseHandler):
         else:
             self.contest_url = self.url
 
-        #TODO Make this a parameter
+        # TODO Make this a parameter
         self.contest.registration_requires_captcha = True
 
         # Run render_params() now, not at the beginning of the request,
@@ -177,7 +177,7 @@ class ContestHandler(BaseHandler):
         else:
             ret["phase"] = self.current_user.group.phase(self.timestamp)
 
-        ret["printing_enabled"] = (config.printer is not None)
+        ret["printing_enabled"] = (config.printingservice.printer is not None)
         ret["questions_enabled"] = self.contest.allow_questions
         ret["testing_enabled"] = self.contest.allow_user_tests
 

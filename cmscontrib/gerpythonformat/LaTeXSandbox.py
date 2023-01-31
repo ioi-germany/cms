@@ -33,10 +33,10 @@ class LaTeXSandbox(IsolateSandbox):
         IsolateSandbox.__init__(self, *args, box_id=bid, **kwargs)
 
         self.preserve_env = True
-        self.max_processes = config.latex_compilation_sandbox_max_processes
-        self.timeout = config.latex_compilation_sandbox_max_time_s
+        self.max_processes = config.sandbox.latex_compilation_sandbox_max_processes
+        self.timeout = config.sandbox.latex_compilation_sandbox_max_time_s
         self.wallclock_timeout = 2 * self.timeout + 1
-        self.address_space = config.latex_compilation_sandbox_max_memory_kib * 1024
+        self.address_space = config.sandbox.latex_compilation_sandbox_max_memory_kib * 1024
 
         self.stdout_file = "LaTeX_out.txt"
         self.stderr_file = "LaTeX_err.txt"
@@ -46,7 +46,7 @@ class LaTeXSandbox(IsolateSandbox):
         # /usr is mapped per default, so we don't need to
         # map anything from there explicitly.
 
-        for d in config.latex_additional_dirs:
+        for d in config.sandbox.latex_additional_dirs:
             # We probably can't map the directory into the sandbox's
             # home directory, so we copy it there.
             copyrecursivelyifnecessary(os.path.expanduser(d),

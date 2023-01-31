@@ -36,13 +36,15 @@ import shlex
 from cms import config
 from cmscontrib.gerpythonformat.LaTeXSandbox import LaTeXSandbox
 from cms.db.filecacher import FileCacher
-from cmscontrib.gerpythonformat import copyifnecessary, copyrecursivelyifnecessary
+from cmscontrib.gerpythonformat \
+    import copyifnecessary, copyrecursivelyifnecessary
 from cmscontrib.gerpythonformat.LocationStack import chdir
 
 from six import iteritems
 from copy import copy
 
 from cms import config
+
 
 def compute_file_hash(filename):
     """Return the sha256 sum of the given file.
@@ -222,7 +224,7 @@ class RuleResult(object):
 
         assert stat.S_ISREG(sta.st_mode)
 
-        if config.always_recompute_hash:
+        if config.germake.always_recompute_hash:
             return compute_file_hash(filename)
 
         # TODO Check that the following works reliably on all systems.
@@ -247,16 +249,18 @@ class RuleResult(object):
                         sta.st_ctime_ns + 3000000000 < stahash.st_ctime_ns:
                     return res['hash']
 
-        ## Only remember this hash if the file's ctime is at least 10 seconds ago.
-        ## Thus, if the file changes after hashing, its ctime has to change, too.
-        ## (Even if ctime has only low resolution!)
-        ## See also https://mirrors.edge.kernel.org/pub/software/scm/git/docs/technical/racy-git.html.
+        # Only remember this hash if the file's ctime is at least 10 seconds
+        # ago. Thus, if the file changes after hashing, its ctime has to
+        # change, too. (Even if ctime has only low resolution!)
+        # See also
+        # https://mirrors.edge.kernel.org/pub/software/scm/git/docs/technical/racy-git.html.
         time_before_hash = time.time()
-        #print("Reading {} to compute hash".format(filename))
+        # print("Reading {} to compute hash".format(filename))
         hash_ = compute_file_hash(filename)
         if os.path.getctime(filename)+10 < time_before_hash:
             with io.open(hashfile, 'w', encoding='utf-8') as f:
-                json.dump({'type': 'filehash', 'file': filename, 'ctime': sta.st_ctime_ns, 'hash': hash_}, f)
+                json.dump({'type': 'filehash', 'file': filename,
+                          'ctime': sta.st_ctime_ns, 'hash': hash_}, f)
 
         return hash_
 
@@ -277,7 +281,8 @@ class RuleResult(object):
             for filename, oldhash in iteritems(di):
                 newhash = self.hash_of_file(filename)
                 if oldhash != newhash:
-                    #print("Out of date: {}, old hash {}, new hash {}".format(filename, oldhash, newhash))
+                    # print("Out of date: {}, old hash {}, new hash {}"
+                    #       .format(filename, oldhash, newhash))
                     return False
         return True
 
@@ -604,9 +609,9 @@ class SafeLaTeXRule(Rule):
 
         stored_cache_path = os.path.join(config.latex_cache_dir,
                                          self.party,
-                                         config.latex_distro)
+                                         config.sandbox.latex_distro)
         sandbox_cache_path = os.path.join(sandbox.get_home_path(),
-                                          config.latex_distro)
+                                          config.sandbox.latex_distro)
         # Create the LaTeX cache directory if it doesn't exist
         os.makedirs(stored_cache_path,
                     exist_ok=True)
@@ -652,7 +657,7 @@ class SafeLaTeXRule(Rule):
                             os.path.join(self.wdir, relpath, self.output))
             self.result.add_output(self.output)
 
-            #Copy potentially changed latex cache
+            # Copy potentially changed latex cache
             copyrecursivelyifnecessary(sandbox_cache_path,
                                        stored_cache_path)
 
@@ -662,7 +667,9 @@ class SafeLaTeXRule(Rule):
                 readmakefile(".deps", self.result, True)
 
             def convert(path):
-                if path.startswith(os.path.join(config.latex_distro, "")):
+                if path.startswith(
+                        os.path.join(config.sandbox.latex_distro, "")
+                ):
                     return os.path.join(config.latex_cache_dir,
                                         self.party,
                                         path)
@@ -670,15 +677,16 @@ class SafeLaTeXRule(Rule):
                     return path
 
             self.result.dependencies = \
-               {convert(path): hash
-                for path, hash in self.result.dependencies.items()}
+                {convert(path): hash
+                 for path, hash in self.result.dependencies.items()}
 
-            sandbox.cleanup(not config.keep_sandbox)
+            sandbox.cleanup(not config.worker.keep_sandbox)
 
     def finish(self):
         self.result.code = self.result.log['code']
         self.result.out = self.result.log['out']
         self.result.err = self.result.log['err']
+
 
 class JobRule(Rule):
     def __init__(self, rulesdir, job, file_cacher):

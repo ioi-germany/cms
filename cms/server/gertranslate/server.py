@@ -57,12 +57,14 @@ class TaskCompileHandler(RequestHandler):
 class PDFHandler(RequestHandler):
     def share(self, statement, code):
         self.set_header("Content-Type", "application/pdf")
-        #TODO Do this less ugly.
+        # TODO Do this less ugly.
         srcname = TaskTranslateInfo.tasks[unpack_code(code)[1]]["filename"]
         prefix = "statement-" if srcname == "statement" else ""
         self.set_header(
             "Content-Disposition",
-            "attachment;filename=\"{}{}.pdf\"".format(prefix,code.replace('/','-')))
+            "attachment;filename=\"{}{}.pdf\""
+            .format(prefix, code.replace('/', '-'))
+        )
         self.write(statement)
         self.flush()
 
@@ -82,16 +84,18 @@ class PDFHandler(RequestHandler):
 class TeXHandler(RequestHandler):
     def share(self, statement, code):
         self.set_header("Content-Type", "text")
-        #TODO Do this less ugly.
+        # TODO Do this less ugly.
         srcname = TaskTranslateInfo.tasks[unpack_code(code)[1]]["filename"]
-        code = code[1:] if code[0]=='/' else code
+        code = code[1:] if code[0] == '/' else code
         if srcname == "statement":
             srcname += "-"
         else:
             srcname = ""
         self.set_header(
             "Content-Disposition",
-            "attachment;filename=\""+srcname+"{}.tex\"".format(code.replace('/','-')))
+            "attachment;filename=\""+srcname+"{}.tex\""
+            .format(code.replace('/', '-'))
+        )
         self.write(statement)
         self.flush()
 
@@ -102,16 +106,17 @@ class TeXHandler(RequestHandler):
             if statement is None:
                 raise ValueError
         except:
-            logger.error("could not download statement TeX file for {}".format(code))
-            self.render("error.html")#TODO
+            logger.error(
+                "could not download statement TeX file for {}".format(code))
+            self.render("error.html")  # TODO
         else:
             self.share(statement, code)
 
 
 class UploadHandler(RequestHandler):
     def post(self, code):
-        #TODO Handle Error
-        #TODO Check file size
+        # TODO Handle Error
+        # TODO Check file size
         f = self.request.files['file'][0]['body']
         TaskAccess.receiveTeX(code, f)
 
@@ -142,8 +147,9 @@ class LogHandler(RequestHandler):
             if gitlog is None:
                 raise ValueError
         except:
-            logger.error("could not download statement log for {}".format(code))
-            self.render("error.html")#TODO
+            logger.error(
+                "could not download statement log for {}".format(code))
+            self.render("error.html")  # TODO
         else:
             self.write(gitlog)
             self.flush()
@@ -152,9 +158,9 @@ class LogHandler(RequestHandler):
 class GerTranslateWebServer:
     """Service running a web server that lets you download task statements
     and upload translations
-    For a future implementation, there should be something like an nginx configuration with one user
-    per language, where all users have access to /, but /it/ is restricted
-    to user 'it'.
+    For a future implementation, there should be something like an nginx
+    configuration with one user per language, where all users have access
+    to /, but /it/ is restricted to user 'it'.
     """
 
     def __init__(self):
@@ -173,16 +179,17 @@ class GerTranslateWebServer:
                   "static_path": resource_filename("cms.server",
                                                    "gertranslate/static")}
 
-        repository = Repository(config.translate_task_repository, config.translate_auto_sync)
+        repository = Repository(
+            config.gertranslate.task_repository, config.gertranslate.auto_sync)
 
-        TaskAccess.init(repository, config.translate_max_compilations)
+        TaskAccess.init(repository, config.gertranslate.max_compilations)
         TaskTranslateInfo.init(repository)
 
         self.app = Application(handlers, **params)
 
     def run(self):
-        self.app.listen(config.translate_listen_port,
-                        address=config.translate_listen_address)
+        self.app.listen(config.gertranslate.listen_port,
+                        address=config.gertranslate.listen_address)
 
         try:
             IOLoop.instance().start()
