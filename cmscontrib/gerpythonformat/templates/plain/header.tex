@@ -43,6 +43,8 @@
 \def\spoilerfor#1#2{\section*{#1\\[-.5ex]
 \large\scshape\lowercase{#2}}}
 \def\subtask#1\par{\global\advance\stcount by 1\subsection*{Subtask \the\stcount.\enspace\mdseries#1}}
-\fi}
+\fi
+\ifcsdef{TemplateLanguage}{\ifthenelse{\equal{\TemplateLanguage}{de}}{\sisetup{output-decimal-marker={,}}}{}}{\sisetup{output-decimal-marker={,}}}
+\sisetup{output-decimal-marker={,}}}
 
 \def\setlang#1{#1}
