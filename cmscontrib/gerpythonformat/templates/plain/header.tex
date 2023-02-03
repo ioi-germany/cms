@@ -37,3 +37,10 @@
 \headsep=16pt%
 \vspace{2mm}%
 }
+
+\newif\ifspoiler
+\AtBeginDocument{\ifspoiler
+\def\spoilerfor#1#2{\section*{#1\\[-.5ex]
+\large\scshape\lowercase{#2}}}
+\def\subtask#1\par{\global\advance\stcount by 1\subsection*{Subtask \the\stcount.\enspace\mdseries#1}}
+\fi}
