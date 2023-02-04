@@ -53,7 +53,7 @@ unit_test (boolean): whether to display only the unit tests (true) or
         <col class="files"/>
     {% set num_cols = num_cols + 1 %}
 {% endif %}
-{% if can_use_tokens and actual_phase == 0 %}
+{% if can_use_tokens and actual_phase == 0 or actual_phase == 0.5%}
         <col class="token"/>
     {% set num_cols = num_cols + 1 %}
 {% endif %}
@@ -78,7 +78,7 @@ unit_test (boolean): whether to display only the unit tests (true) or
 {% if submissions_download_allowed %}
             <th class="files">{% trans %}Files{% endtrans %}</th>
 {% endif %}
-{% if can_use_tokens and actual_phase == 0 %}
+{% if can_use_tokens and (actual_phase == 0 or actual_phase == 0.5) %}
             <th class="token">{% trans %}Token{% endtrans %}</th>
 {% endif %}
         </tr>
@@ -255,7 +255,7 @@ unit_test (bool): whether this is a unit test
         {% endif %}
     </td>
 {% endif %}
-{% if can_use_tokens and actual_phase == 0 %}
+{% if can_use_tokens and (actual_phase == 0 or actual_phase == 0.5) %}
     <td class="token">
         {% if s.token is not none %}
         <a class="btn disabled">{% trans %}Played{% endtrans %}</a>
