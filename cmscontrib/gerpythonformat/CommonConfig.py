@@ -563,6 +563,10 @@ class CommonConfig(object):
         self.min_submission_interval = min_interval
 
     @exported_function
+    def lift_restrictions_after(self, restricted_time):
+        self.restricted_time = restricted_time
+
+    @exported_function
     def user_test_limits(self, max_number, min_interval):
         """
         Set limits on the frequency of user tests.

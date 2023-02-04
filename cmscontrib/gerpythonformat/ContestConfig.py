@@ -162,7 +162,8 @@ class ContestConfig(CommonConfig):
         # Default submission limits
         self.submission_limits(None, None)
         self.user_test_limits(None, None)
-
+        self.lift_restrictions_after(None)
+        
         # a standard tokenwise comparator (specified here so that it has to be
         # compiled at most once per contest)
         shutil.copy(os.path.join(self._get_ready_dir(), "tokens.cpp"),
@@ -566,7 +567,8 @@ class ContestConfig(CommonConfig):
         cdb.min_submission_interval = self.min_submission_interval
         cdb.max_user_test_number = self.max_user_test_number
         cdb.min_user_test_interval = self.min_user_test_interval
-
+        cdb.restricted_time = self.restricted_time
+        
         self.usersdb = {}
         self.participationsdb = {}
 

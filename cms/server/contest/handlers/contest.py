@@ -195,6 +195,7 @@ class ContestHandler(BaseHandler):
                 group.analysis_stop if group.analysis_enabled
                 else None,
                 group.per_user_time, participation.starting_time,
+                self.contest.restricted_time,
                 participation.delay_time, participation.extra_time)
 
             ret["actual_phase"], ret["current_phase_begin"], \

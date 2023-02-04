@@ -110,7 +110,17 @@ def accept_submission(sql_session, file_cacher, participation, task, timestamp,
                "at most %d submissions on this task."),
             task.max_submission_number)
 
-    if not check_min_interval(sql_session, contest.min_submission_interval,
+    
+    if  compute_actual_phase(
+                contest.timestamp, group.start, group.stop,
+                group.analysis_start if group.analysis_enabled
+                else None,
+                group.analysis_stop if group.analysis_enabled
+                else None,
+                group.per_user_time, participation.starting_time,
+                contest.restricted_time,
+                participation.delay_time, participation.extra_time) is not .5 \
+        and not check_min_interval(sql_session, contest.min_submission_interval,
                               timestamp, participation, contest=contest):
         raise UnacceptableSubmission(
             N_("Submissions too frequent!"),

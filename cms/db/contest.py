@@ -219,6 +219,9 @@ class Contest(Base):
         CheckConstraint("min_user_test_interval > '0 seconds'"),
         nullable=True)
 
+    # Time after which the interval restriction is lifted
+    restricted_time = Column(Interval, nullable=True)
+
     # The scores for this contest will be rounded to this number of
     # decimal places.
     score_precision = Column(
