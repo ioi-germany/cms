@@ -1420,7 +1420,7 @@ class IsolateSandbox(SandboxBase):
             + (["--cg"] if self.cgroup else [])
             + ["--box-id=%d" % self.box_id, "--init"])
         try:
-            subprocess.check_call(init_cmd)
+            subprocess.check_call(init_cmd, stdout=subprocess.DEVNULL)
         except subprocess.CalledProcessError as e:
             raise SandboxInterfaceException(
                 "Failed to initialize sandbox") from e
