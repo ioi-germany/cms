@@ -29,7 +29,7 @@ represented by JSON objects.
 
 from abc import ABCMeta, abstractmethod
 
-from jinja2 import Markup
+from markupsafe import Markup
 
 from cms.server.jinja2_toolbox import GLOBAL_ENVIRONMENT
 
