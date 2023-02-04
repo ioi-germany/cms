@@ -564,6 +564,16 @@ class CommonConfig(object):
 
     @exported_function
     def lift_restrictions_after(self, restricted_time):
+        """
+        Set the time before the interval restriction on submissions is lifted
+        This refers to both restrictions set by contest and task. After lifting of restrictions
+        a participation is moved to phase 0.5
+
+        restricted_time (timedelta): if None restrictions are always active
+                                     if 0 restrictions are never active
+                                     if <0 restrictions are active until end + restricted_time
+                                     if >0 restrictions are active until start + restricted_time
+        """
         self.restricted_time = restricted_time
 
     @exported_function
