@@ -159,7 +159,7 @@ def test(contest_start, contest_stop, analysis_start, analysis_end,
                 res = compute_actual_phase(
                     end - step, contest_start, contest_stop,
                     analysis_start, analysis_end,
-                    per_user_time, starting_time, delay_time, extra_time)
+                    per_user_time, starting_time, restricted_time, delay_time, extra_time)
                 assert res == (status, begin, end, valid_begin, valid_end), \
                     "Check on %s returned %s instead of %s" % (
                         end - step, res, (status, begin, end,
