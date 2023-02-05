@@ -251,6 +251,13 @@
       </td>
       <td><input type="text" name="min_user_test_interval" value="{{ contest.min_user_test_interval.total_seconds()|int if contest.min_user_test_interval is not none else "" }}"></td>
     </tr>
+    <tr>
+      <td>
+        <span class="info" title="Time after which the min_interval restriction for submissions is lifted. Leave empty to keep forever."></span>
+        Restricted lifted after
+      </td>
+      <td><input type="text" name="restricted_time" value="{{ contest.restricted_time.total_seconds()| int if contest.restricted_time is not none else "" }}"></td>
+    </tr>
   </table>
   <input type="submit"
          value="Update"

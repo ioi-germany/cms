@@ -78,7 +78,7 @@ class SubmitHandler(ContestHandler):
 
         # Only set the official bit when the user can compete and we are not in
         # analysis mode.
-        official = self.r_params["actual_phase"] == 0
+        official = self.r_params["actual_phase"] == 0 or self.r_params["actual_phase"] == 0.5
 
         query_args = dict()
 
@@ -86,7 +86,7 @@ class SubmitHandler(ContestHandler):
             submission = accept_submission(
                 self.sql_session, self.service.file_cacher, self.current_user,
                 task, self.timestamp, self.request.files,
-                self.get_argument("language", None), official)
+                self.get_argument("language", None), official, self.r_params["actual_phase"] == 0)
             self.sql_session.commit()
         except UnacceptableSubmission as e:
             logger.info("Sent error: `%s' - `%s'", e.subject, e.formatted_text)

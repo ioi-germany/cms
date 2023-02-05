@@ -25,6 +25,7 @@ The limits can be set both for individual tasks and for the whole contest. A sub
 
 Each of these fields can be left unset to prevent the corresponding limitation from being enforced.
 
+Instead of unsetting them manually, you can also set ``restricted_time`` this lifts the min interval restriction. If the field is empty the restrictions are never lifted, if it is zero they are never active. If the field is positive the restrictions are lifted, that much time after the constests starts and if it is negative they are lifted that much time before/after the contests ends.`
 
 Feedback to contestants
 =======================

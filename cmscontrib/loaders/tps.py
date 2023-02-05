@@ -205,6 +205,7 @@ class TpsTaskLoader(TaskLoader):
 
         args['min_submission_interval'] = make_timedelta(60)
         args['min_user_test_interval'] = make_timedelta(60)
+        args['restricted_time'] = make_timedelta(60*15)
 
         task = Task(**args)
 
