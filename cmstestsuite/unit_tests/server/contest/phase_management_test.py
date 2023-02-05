@@ -196,6 +196,28 @@ class TestComputeActualPhase(unittest.TestCase):
         test("4", "8", None, None, None, "7", None, "5", "0",
              ("4", -1, "9", 0, "13"))
 
+        # Almost identical, with restricted_time to test it
+        test("4", "12", None, None, None, "7", "6", "0", "0",
+             ("4", 0, "10", .5, "12"))
+        test("4", "12", None, None, None, "7", "6", "0", "2",
+             ("4", 0, "10", .5 "14"))
+        test("4", "12", None, None, None, "7", "6", "2", "0",
+             ("4", -1, "6", 0 ,"12", .5, "14"))
+        test("4", "12", None, None, None, "7", "6", "2", "2",
+             ("4", -1, "6", 0, "12", .5, "16"))
+        test("4", "8", None, None, None, "7", "6", "5", "0",
+             ("4", -1, "9", 0, "15", .5, "13"))
+        test("4", "12", None, None, None, "7", "-2", "0", "0",
+             ("4", 0, "10", .5, "12"))
+        test("4", "12", None, None, None, "7", "-4", "0", "2",
+             ("4", 0, "10", .5 "14"))
+        test("4", "12", None, None, None, "7", "-2", "2", "0",
+             ("4", -1, "6", 0 ,"12", .5, "14"))
+        test("4", "12", None, None, None, "7", "-4", "2", "2",
+             ("4", -1, "6", 0, "12", .5, "16"))
+        test("4", "8", None, None, None, "7", "-2", "5", "0",
+             ("4", -1, "9", 0, "15", .5, "13"))
+
         # Test analysis mode. Almost identical to above
         test("4", "12", "17", "20", None, None, None, "0", "0",
              ("4", 0, "12", 2, "17", 3, "20"))

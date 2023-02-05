@@ -142,8 +142,8 @@ def compute_actual_phase(timestamp, contest_start, contest_stop,
                 else:
                     lift_time = max(actual_start, actual_stop + restricted_time)
                 actual_phase = 0 if timestamp <= lift_time else 0.5
-            current_phase_begin = actual_start if actual_phase is 0 else lift_time
-            current_phase_end = actual_stop if actual_phase is .5 or restricted_time is None else lift_time
+            current_phase_begin = actual_start if actual_phase == 0 else lift_time
+            current_phase_end = actual_stop if actual_phase == .5 or restricted_time is None else lift_time
         elif contest_start <= timestamp < actual_start:
             # This also includes a funny corner case: the user's start
             # is known but is in the future (the admin either set it
