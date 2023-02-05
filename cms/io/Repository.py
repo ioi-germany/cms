@@ -41,10 +41,11 @@ class Repository:
         You have to use one repository object for all of these!
     """
 
-    def __init__(self, path, auto_sync=False):
+    def __init__(self, path, auto_sync=False, auto_push=False):
         self.lock = Manager().Lock()
         self.path = path
         self.auto_sync = auto_sync
+        self.auto_push = auto_push
 
     def __enter__(self):
         self.lock.acquire()
@@ -56,82 +57,101 @@ class Repository:
     def _sync(self):
         if self.auto_sync:
             logger.info("Synchronizing {}".format(self.path))
+            self._pull()
+            if self.auto_push:
+                self._push()
 
-            with chdir(self.path):
-                gitout = ""
+    def _pull(self):
+        logger.info("Pulling {}".format(self.path))
 
-                try:
-                    gitout = check_output(["git", "pull"])
-                except:
-                    logger.error("Couldn't sync with repository: " +
-                                 "{}".format(gitout))
-                else:
-                    logger.info("Finished synchronization: " +
-                                "{}".format(gitout))
+        with chdir(self.path):
+            gitout = ""
 
-                gitout = ""
+            try:
+                gitout = check_output(["git", "pull"])
+            except:
+                logger.error("Couldn't pull from repository " +
+                             "({})".format(gitout))
+            else:
+                logger.info("Finished pulling: " +
+                            "{}".format(gitout))
 
-                try:
-                    gitout = check_output(["git", "push"])
-                except:
-                    logger.error("Couldn't push to repository: " +
-                                 "{}".format(gitout))
-                else:
-                    logger.info("Finished pushing: " +
-                                "{}".format(gitout))
+    def _push(self):
+        logger.info("Pushing {}".format(self.path))
 
-    #For GerTranslate
-    #TODO Show errors in web overview
+        with chdir(self.path):
+            gitout = ""
+
+            try:
+                gitout = check_output(["git", "push"])
+            except:
+                logger.error("Couldn't push to repository " +
+                             "({})".format(gitout))
+            else:
+                logger.info("Finished pushing: " +
+                            "{}".format(gitout))
+
+    # For GerTranslate
+    # TODO Show errors in web overview
     def commit(self, file_path, file_identifier):
-        #TODO Only do this if it's a git repository
-        #if self.auto_sync:
-            logger.info("Committing {} in {}".format(file_path,self.path))
+        # TODO Only do this if it's a git repository
+        # if self.auto_sync:
+        logger.info("Committing {} in {}".format(file_path, self.path))
 
-            with chdir(self.path):
-                gitout = ""
+        with chdir(self.path):
+            gitout = ""
 
+            try:
+                gitout = check_output(["git", "add",
+                                       file_path])
+            except:
+                logger.error("Couldn't add file to git staging area: " +
+                             "{}".format(gitout))
+            else:
                 try:
-                    gitout = check_output(["git", "add",
-                                           file_path])
+                    gitout = ""
+                    # NOTE file_path is relative to self.path, which isn't
+                    # necessarily the root of the git repo. So the commit
+                    # message might be confusing.
+                    gitout = \
+                        check_output(
+                            ["git", "commit",
+                             "-o", file_path,
+                             # TODO Provide meaningful commit message and
+                             # author
+                             "-m", "Changes to " +
+                             file_identifier +
+                             ", uploaded via GerTranslate web "
+                             "interface",
+                             "--author", '"GerTranslate <GerTranslate@localhost>"']
+                        )
                 except:
-                    logger.error("Couldn't add file to git staging area: " +
+                    logger.error("Couldn't commit in repository: " +
                                  "{}".format(gitout))
                 else:
-                    try:
-                        gitout = ""
-                        #NOTE file_path is relative to self.path, which isn't
-                        #necessarily the root of the git repo. So the commit message
-                        #might be confusing.
-                        gitout = check_output(["git", "commit",
-                                            "-o", file_path,
-                                            "-m","Changes to "+file_identifier+", uploaded via GerTranslate web interface",
-                                            #TODO Provide meaningful commit message and author
-                                            "--author","\"GerTranslate <GerTranslate@localhost>\""])
-                    except:
-                        logger.error("Couldn't commit in repository: " +
-                                    "{}".format(gitout))
-                    else:
-                        logger.info("Committed: " +
-                                    "{}".format(gitout))
+                    logger.info("Committed: " +
+                                "{}".format(gitout))
 
-    #For GerTranslate
-    #TODO Show errors in web overview
+    # For GerTranslate
+    # TODO Show errors in web overview
     def getlog(self, file_path):
-        #TODO Only do this if it's a git repository
-        #if self.auto_sync:
-            with chdir(self.path):
-                gitout = ""
+        # TODO Only do this if it's a git repository
+        # if self.auto_sync:
+        with chdir(self.path):
+            gitout = ""
 
-                try:
-                    #TODO Remove diff info lines
-                    gitout = check_output(["git", "log",
-                                           '--pretty=format:Date:   %ci%n%n    %s%n',
-                                           "-p",
-                                           "--word-diff=color",
-                                           file_path])
-                except:
-                    logger.error("Couldn't get log: " +
-                                 "{}".format(gitout))
-                else:
-                    gitout = gitout.decode('utf-8')
-                    return gitout
+            try:
+                # TODO Remove diff info lines
+                gitout = check_output(
+                    ["git", "log",
+                     '--pretty=format:Date:   %ci%n%n    %s%n',
+                     "-p",
+                     "--word-diff=color",
+                     file_path]
+                )
+            except:
+                logger.error("Couldn't get log: " +
+                             "{}".format(gitout))
+            else:
+                gitout = gitout.decode('utf-8')
+                return gitout

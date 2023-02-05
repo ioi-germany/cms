@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 def add_participation(username, contest_id, ip, delay_time, extra_time,
                       password, method, is_hashed, team_code, hidden,
-                      unrestricted, groupname):
+                      unofficial, unrestricted, groupname):
     logger.info("Creating the user's participation in the database.")
     delay_time = delay_time if delay_time is not None else 0
     extra_time = extra_time if extra_time is not None else 0

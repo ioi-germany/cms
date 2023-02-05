@@ -43,11 +43,12 @@ from cmscontrib.gerpythonformat import copyifnecessary
 
 logger = logging.getLogger(__name__)
 
+
 def unpack_code(code):
-    if code.count("/")>=2:
-        contest,task,language = code.split("/")
+    if code.count("/") >= 2:
+        contest, task, language = code.split("/")
     else:
-        contest,task,language = [""] + code.split("/")
+        contest, task, language = [""] + code.split("/")
 
     if contest != "" and contest not in TaskTranslateInfo.contests:
         raise KeyError("No such contest")
@@ -56,22 +57,25 @@ def unpack_code(code):
     if language not in TaskTranslateInfo.languages and language != "ALL":
         raise KeyError("No such language")
 
-    return contest,task,language
+    return contest, task, language
 
-def repository_code(contest,task,language):
+
+def repository_code(contest, task, language):
     srcname = TaskTranslateInfo.tasks[task]["filename"]
-    p = Path(contest,task) if contest else Path(task)
+    p = Path(contest, task) if contest else Path(task)
     if language is not None:
         return p / (srcname+"-"+language+".tex")
     else:
         return p / srcname+".tex"
 
-def repository_lock_file_code(contest,task,language):
-    p = Path(contest,task) if contest else Path(task)
+
+def repository_lock_file_code(contest, task, language):
+    p = Path(contest, task) if contest else Path(task)
     if language is not None:
         return p / (language+".lock")
     else:
         return p / "O.lock"
+
 
 class TaskCompileJob:
     def __init__(self, repository, contest, name, balancer, language=None):
@@ -120,7 +124,9 @@ class TaskCompileJob:
                         try:
                             i = json.loads(lan_path.open().read())
                         except:
-                            i = {"error": "The languages.json file is corrupt."}
+                            i = {
+                                "error": "The languages.json file is corrupt."
+                            }
                         else:
                             missing = []
                             for e in ["languages"]:
@@ -128,26 +134,31 @@ class TaskCompileJob:
                                     missing.append(e)
 
                             if len(missing) > 0:
-                                i["error"] = "Some important entries are missing: " + \
-                                            ", ".join(missing) + "."
+                                i["error"] = \
+                                    "Some important entries are missing: " + \
+                                    ", ".join(missing) + "."
 
-                    #TODO do this right, i.e.: Why copyifnecessary?
+                    # TODO do this right, i.e.: Why copyifnecessary?
                     if is_overview:
                         copyifnecessary(lan_path,
-                                    Path(self.repository.path) /
-                                    self.contest /
-                                    "languages.json"
-                                    )
+                                        Path(self.repository.path) /
+                                        self.contest /
+                                        "languages.json"
+                                        )
 
-                    comp = GerMake(repository.path + "/" + self.contest,
-                                   task=self.name if not is_overview else "NO_TASK",
-                                   no_test=True,
-                                   submission=None,
-                                   no_latex=False,
-                                   safe_latex=True,
-                                   language=self.language,
-                                   clean=False,
-                                   minimal=True)
+                    comp = \
+                        GerMake(
+                            repository.path + "/" + self.contest,
+                            task=self.name if not is_overview else "NO_TASK",
+                            no_test=True,
+                            submission=None,
+                            no_latex=False,
+                            verbose_latex=True,
+                            safe_latex=True,
+                            language=self.language,
+                            clean=False,
+                            minimal=True
+                        )
 
                     with repository:
                         comp.prepare()
@@ -168,30 +179,33 @@ class TaskCompileJob:
                             else:
                                 languages = [self.language]
                             print(languages)
+
                             def f(contestconfig):
                                 for l in languages:
                                     contestconfig.user(
                                         "[user-{}]".format(l),
                                         "[password]",
                                         "Jane", "Doe",
-                                        group=MyGroup("dummy", 0, 0, 0, 0, None),
+                                        group=MyGroup(
+                                            "dummy", 0, 0, 0, 0, None),
                                         primary_statements=[l]
-                                        )
+                                    )
 
-                    #If self.language is None, this is the primary statement.
-                    #If self.language is ALL, this is _a list_ of all statements.
-                    #Else, it's the task statement associated with that language.
+                    # If self.language is None, this is the primary statement.
+                    # If self.language is ALL, this is _a list_ of all statements.
+                    # Else, it's the task statement associated with that language.
                     pdf_file = comp.build(extra_conf_f=f)
 
                     if is_overview:
-                        filename = "overview-sheets-for-" + self.language + ".pdf"
+                        filename = \
+                            "overview-sheets-for-{}.pdf".format(self.language)
                         pdf_file = str(Path(self.repository.path) /
-                                             self.contest /
-                                             "build" /
-                                             "overview" /
-                                             ".overviews-per-language" /
-                                             filename
-                                             )
+                                       self.contest /
+                                       "build" /
+                                       "overview" /
+                                       ".overviews-per-language" /
+                                       filename
+                                       )
 
                     if pdf_file is None:
                         status["error"] = True
@@ -205,11 +219,11 @@ class TaskCompileJob:
                             for s in pdf_file:
                                 pdfmerger.append(s)
                             pdf_file = str(Path(self.repository.path) /
-                                                 self.contest /
-                                                 "build" /
-                                                 self.name /
-                                                 "statement-ALL.pdf"
-                                                 )
+                                           self.contest /
+                                           "build" /
+                                           self.name /
+                                           "statement-ALL.pdf"
+                                           )
                             pdfmerger.write(pdf_file)
                             pdfmerger.close()
 
@@ -295,18 +309,18 @@ class TaskTeXYielder:
         self.name = name
 
     def get(self):
-        result = None#TODO
+        result = None  # TODO
 
-        contest,task,language = unpack_code(self.name)
-        _repository_code = repository_code(contest,task,language)
+        contest, task, language = unpack_code(self.name)
+        _repository_code = repository_code(contest, task, language)
         tex_file = Path(self.repository.path) / _repository_code
 
         logger.info(str(_repository_code) + " is accessed.")
 
         if tex_file is None:
-            #TODO Handle the error (you should probably implement a info function
-            #like above, then implement a query function in TaskAccess
-            #and handle the result in download.js
+            # TODO Handle the error (you should probably implement an info
+            # function like above, then implement a query function in
+            # TaskAccess and handle the result in download.js
             error = "No statement TeX found"
 
         else:
@@ -324,31 +338,33 @@ class TaskTeXReceiver:
     def receive(self, f):
         result = None
 
-        contest,task,language = unpack_code(self.name)
-        _repository_code = repository_code(contest,task,language)
+        contest, task, language = unpack_code(self.name)
+        _repository_code = repository_code(contest, task, language)
         tex_file = Path(self.repository.path) / _repository_code
 
-        _repository_lock_file_code = repository_lock_file_code(contest,task,language)
+        _repository_lock_file_code = repository_lock_file_code(
+            contest, task, language)
         lock_file = Path(self.repository.path) / _repository_lock_file_code
         if lock_file.is_file():
-            #TODO Handle error
+            # TODO Handle error
             error = "Translation already locked; currently, you can't change"\
-            "this translation. Please contact an administrator."
+                "this translation. Please contact an administrator."
 
         else:
             logger.info(str(_repository_code) + " is written to.")
 
             if f is None:
-                #TODO Handle the error (via result?)
+                # TODO Handle the error (via result?)
                 error = "No file received"
 
-            elif len(f)>1048576: #1MB
+            elif len(f) > 1048576:  # 1MB
                 error = "File too big"
 
             else:
                 with open(tex_file, "wb") as target_file:
                     target_file.write(f)
-                self.repository.commit(str(tex_file.resolve()), str(_repository_code))
+                self.repository.commit(
+                    str(tex_file.resolve()), str(_repository_code))
 
         return result
 
@@ -359,15 +375,17 @@ class TaskMarker:
         self.name = name
 
     def mark(self):
-        contest,task,language = unpack_code(self.name)
-        _repository_lock_file_code = repository_lock_file_code(contest,task,language)
+        contest, task, language = unpack_code(self.name)
+        _repository_lock_file_code = repository_lock_file_code(
+            contest, task, language)
         lock_file = Path(self.repository.path) / _repository_lock_file_code
 
         logger.info(str(_repository_lock_file_code) + " is created.")
 
         with open(lock_file, "w") as target_file:
             target_file.write("The translation in this language is locked.")
-        self.repository.commit(str(lock_file.resolve()), str(_repository_lock_file_code))
+        self.repository.commit(str(lock_file.resolve()),
+                               str(_repository_lock_file_code))
 
 
 class TaskGitLog:
@@ -376,18 +394,18 @@ class TaskGitLog:
         self.name = name
 
     def get(self):
-        result = None#TODO
+        result = None  # TODO
 
-        contest,task,language = unpack_code(self.name)
-        _repository_code = repository_code(contest,task,language)
+        contest, task, language = unpack_code(self.name)
+        _repository_code = repository_code(contest, task, language)
         tex_file = Path(self.repository.path) / _repository_code
 
         logger.info("Git log for " + str(_repository_code) + " is accessed.")
 
         if tex_file is None:
-            #TODO Handle the error (you should probably implement a info function
-            #like above, then implement a query function in TaskAccess
-            #and handle the result in download.js
+            # TODO Handle the error (you should probably implement an info
+            # function like above, then implement a query function in
+            # TaskAccess and handle the result in download.js
             error = "No statement TeX found"
 
         else:
@@ -411,11 +429,14 @@ class TaskAccess:
 
     @staticmethod
     def compile(name):
-        contest,task,language = unpack_code(name)
+        contest, task, language = unpack_code(name)
 
         if name not in TaskAccess.jobs:
-            TaskAccess.jobs[name] = TaskCompileJob(TaskAccess.repository, contest, task,
-                                                  TaskAccess.balancer, language)
+            TaskAccess.jobs[name] = TaskCompileJob(TaskAccess.repository,
+                                                   contest,
+                                                   task,
+                                                   TaskAccess.balancer,
+                                                   language)
         return TaskAccess.jobs[name].join()
 
     @staticmethod
@@ -449,4 +470,6 @@ class TaskAccess:
     @staticmethod
     def getGitLog(name):
         C = Ansi2HTMLConverter()
-        return {"log": C.convert(TaskGitLog(TaskAccess.repository, name).get())}
+        return {
+            "log": C.convert(TaskGitLog(TaskAccess.repository, name).get())
+        }

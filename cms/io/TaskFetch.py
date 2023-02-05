@@ -74,7 +74,7 @@ class TaskCompileJob:
             with balancer:
                 try:
                     comp = GerMakeTask(repository.path, self.name, True, True,
-                                       None, False, None, False)
+                                       None, False, True, None, False)
 
                     with repository:
                         comp.prepare()
