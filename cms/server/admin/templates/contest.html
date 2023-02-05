@@ -253,8 +253,10 @@
     </tr>
     <tr>
       <td>
-        <span class="info" title="Time after which the min_interval restriction for submissions is lifted. Leave empty to keep forever."></span>
-        Restricted lifted after
+        <span class="info" title="The time (in seconds) after which the minimum interval restriction for submissions is lifted.
+                                  Leave empty to keep forever.
+                                  Give a positive value to specify the time from the contest start, give a negative value to specify the time before the contest end."></span>
+        Lift minimum submission interval restriction after
       </td>
       <td><input type="text" name="restricted_time" value="{{ contest.restricted_time.total_seconds()| int if contest.restricted_time is not none else "" }}"></td>
     </tr>

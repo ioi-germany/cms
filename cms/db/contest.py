@@ -219,7 +219,7 @@ class Contest(Base):
         CheckConstraint("min_user_test_interval > '0 seconds'"),
         nullable=True)
 
-    # Time after which the interval restriction is lifted
+    # Time after which the minimum interval restriction for submissions is lifted
     restricted_time = Column(Interval, nullable=True)
 
     # The scores for this contest will be rounded to this number of
