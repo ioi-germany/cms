@@ -200,7 +200,7 @@ class TestComputeActualPhase(unittest.TestCase):
         test("4", "12", None, None, None, "7", "6", "0", "0",
              ("4", 0, "10", .5, "12"))
         test("4", "12", None, None, None, "7", "6", "0", "2",
-             ("4", 0, "10", .5 "14"))
+             ("4", 0, "10", .5, "14"))
         test("4", "12", None, None, None, "7", "6", "2", "0",
              ("4", -1, "6", 0 ,"12", .5, "14"))
         test("4", "12", None, None, None, "7", "6", "2", "2",
@@ -210,7 +210,7 @@ class TestComputeActualPhase(unittest.TestCase):
         test("4", "12", None, None, None, "7", "-2", "0", "0",
              ("4", 0, "10", .5, "12"))
         test("4", "12", None, None, None, "7", "-4", "0", "2",
-             ("4", 0, "10", .5 "14"))
+             ("4", 0, "10", .5, "14"))
         test("4", "12", None, None, None, "7", "-2", "2", "0",
              ("4", -1, "6", 0 ,"12", .5, "14"))
         test("4", "12", None, None, None, "7", "-4", "2", "2",
