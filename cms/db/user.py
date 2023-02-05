@@ -50,7 +50,7 @@ class Group(Base):
     __table_args__ = (
         UniqueConstraint('contest_id', 'name'),
         CheckConstraint("start <= stop"),
-        CheckConstraint("stop <= analysis_start"),
+        CheckConstraint("start <= analysis_start"),
         CheckConstraint("analysis_start <= analysis_stop"),
     )
 

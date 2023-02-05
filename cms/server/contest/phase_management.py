@@ -158,9 +158,9 @@ def compute_actual_phase(timestamp, contest_start, contest_stop,
         else:
             raise RuntimeError("Logic doesn't seem to be working...")
 
-    if actual_phase == +2:
+    if actual_phase >= +1:
         if analysis_start is not None:
-            assert contest_stop <= analysis_start
+            #assert contest_stop <= analysis_start
             assert analysis_stop is not None
             assert analysis_start <= analysis_stop
             if timestamp < analysis_start:
