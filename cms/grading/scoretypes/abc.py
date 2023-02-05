@@ -75,8 +75,14 @@ class ScoreType(metaclass=ABCMeta):
             self.max_score, self.max_public_score, self.ranking_headers = \
                 self.max_scores()
 
-            self.public_score_header, self.private_score_header = \
-                self.score_column_headers()
+            # Only SubtaskGroup has this method. I think it's not needed with
+            # the other scoretypes. But this is certainly a messy way to make
+            # this distinction. SubtaskGroup is also the only one that is
+            # really used and thus tested in our fork right now, because
+            # GerMake _always_ uses it.
+            if hasattr(self, "score_column_headers"):
+                self.public_score_header, self.private_score_header = \
+                    self.score_column_headers()
         except Exception as e:
             raise ValueError(
                 "Unable to instantiate score type (probably due to invalid "
