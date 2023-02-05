@@ -4,7 +4,7 @@ FROM ubuntu:20.04
 RUN apt-get update
 RUN apt-get install -y \
     build-essential \
-    cairo \
+    libcairo2 \
     cgroup-lite \
     cppreference-doc-en-html \
     fp-compiler \
