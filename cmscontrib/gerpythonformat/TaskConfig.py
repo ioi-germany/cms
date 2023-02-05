@@ -2012,8 +2012,7 @@ class TaskConfig(CommonConfig, Scope):
                 essential[e].append(u)
 
             for id in dominated.keys():
-                dominated[id] &= details["dominated"][id]
-
+                dominated[id] &= set(details["dominated"][id])
         samples = {c.codename for s in self.subtasks if s.sample
                               for g in s.groups
                               for c in g.cases}

@@ -707,7 +707,7 @@ class SubtaskGroup(ScoreType):
                         elif is_useful:
                             useful.add(id)
 
-                        dominated[id] &= {c for c,p in curr_group_dict.items()
+                        dominated[id] &= {c for c, p in curr_group_dict.items()
                                             if p <= (1 + threshold_very_strict)
                                                     * s + eps}
 
@@ -764,7 +764,7 @@ class SubtaskGroup(ScoreType):
             "final_score": final_score,
             "expected_final_score": expected_final_score_info,
 
-            "dominated": dominated,
+            "dominated": {d: list(u) for d, u in dominated.items()},
             "essential": list(essential),
             "useful": list(useful)
         }
