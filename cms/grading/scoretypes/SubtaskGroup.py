@@ -717,7 +717,7 @@ class SubtaskGroup(ScoreType):
                     subtasks[-1]["status"] = (1337, "IGNORED")
                 elif subtasks[-1]["status"][0] > 0 and any(s == 1337
                                                         for s in group_status):
-                        subtasks[-1]["status"] = (1337, "PARTIALLY IGNORED")
+                    subtasks[-1]["status"] = (1337, "PARTIALLY IGNORED")
 
                 if len(group_status) == 0:
                     subtasks[-1]["status"] = (1337, "EMPTY")
@@ -765,9 +765,9 @@ class SubtaskGroup(ScoreType):
             "expected_final_score": expected_final_score_info,
 
             "dominated": dominated,
-            "essential": essential,
-            "useful": useful
-            }
+            "essential": list(essential),
+            "useful": list(useful)
+        }
 
         return details
 

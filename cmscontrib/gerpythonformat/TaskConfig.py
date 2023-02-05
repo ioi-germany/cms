@@ -23,10 +23,12 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, header, red, green, gray, \
-    yellow, blue, lightgreen, orange, purple, bold, box, side_by_side, pad_left, add_line_breaks, \
+from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \
+    header, red, green, gray, yellow, blue, lightgreen, orange, purple, bold, \
+    box, side_by_side, pad_left, add_line_breaks, \
     remaining_line_length, indent, IndentManager
-from cmscontrib.gerpythonformat.CommonConfig import exported_function, CommonConfig
+from cmscontrib.gerpythonformat.CommonConfig import exported_function, \
+    CommonConfig
 from cmscontrib.gerpythonformat.Executable import ExitCodeException, \
     InternalPython, CPPProgram
 from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, \
@@ -49,6 +51,7 @@ import shutil
 
 from six import iteritems, iterkeys
 from textwrap import wrap
+
 
 class Scope(object):
     """
@@ -136,6 +139,7 @@ class Scope(object):
                 hard = merge_constraints(hard, c.uncompress())
 
         return hard, soft
+
 
 class MySubtask(Scope):
     """
@@ -234,6 +238,7 @@ class MySubtask(Scope):
     def max_score(self):
         return sum(g.points for g in self.groups)
 
+
 class MyGroup(Scope):
     """
     :ivar subtask: The subtask this group belongs to
@@ -324,7 +329,7 @@ class MyGroup(Scope):
             bars = " ".join(wrap(bars, 5 * len(green("○"))))
 
             msg_long = "satisfied {} times, expected {}".\
-                           format(times_satisfied, format_bounds(lower, upper))
+                format(times_satisfied, format_bounds(lower, upper))
 
             if this_constraint_okay:
                 msg = green(bold("OKAY"))
@@ -342,11 +347,10 @@ class MyGroup(Scope):
                 print_msg(msg_long, use_ellipsis=False)
 
                 if any(a[0] is None for a in stats):
-                    print_msg("This soft " + what + " was only specified after "
-                              "some cases had already been checked—are you "
-                              "sure this is what you want?",
+                    print_msg("This soft " + what + " was only specified "
+                              "after some cases had already been checked—are "
+                              "you sure this is what you want?",
                               use_ellipsis=False)
-
 
         print_msg(bold("\nTestcase quality in this group"))
 
@@ -519,7 +523,7 @@ class MyGroup(Scope):
 
                 for k, var in enumerate(con.variables):
                     result = soft_con_results[i][j][k]
-                    #mycolor = getcolor(result, lower, upper)
+                    # mycolor = getcolor(result, lower, upper)
 
                     if len(results) > 1:
                         with IndentManager():
@@ -1153,9 +1157,9 @@ class TaskConfig(CommonConfig, Scope):
     def std_language(self, filename):
         ext = os.path.splitext(filename)[1]
         possible_languages = [l for l in self._usual_languages()
-                                 if ext in get_language(l).source_extensions]
+                                if ext in get_language(l).source_extensions]
 
-        assert(len(possible_languages) == 1)
+        assert (len(possible_languages) == 1)
         return possible_languages[0]
 
     """
@@ -1317,14 +1321,14 @@ class TaskConfig(CommonConfig, Scope):
 
         if hashname in self.cases_hashnames:
             raise Exception("Another testcase already has the identifier {}. "
-            "Perhaps you generated the same testcase twice? You should only "
-            "call testcase(x) once for any one x for the same output "
-            "generator. If you want to add it twice, assign it like "
-            "t = testcase(x) and use add_testcase(t) "
-            "later.".format(codename))
+                            "Perhaps you generated the same testcase twice? "
+                            "You should only call testcase(x) once for any "
+                            "one x for the same output generator. If you want "
+                            "to add it twice, assign it like t = testcase(x) "
+                            "and use add_testcase(t) later.".format(codename))
 
-        with header("Generating test case {} ({})"\
-            .format(codename, hashname), depth=5):
+        with header("Generating test case {} ({})"
+                    .format(codename, hashname), depth=5):
             case = MyCase(self, codename, hashname)
 
             prog(stdout=case.infile)
@@ -1883,23 +1887,25 @@ class TaskConfig(CommonConfig, Scope):
                 'key': list(s.unique_name),
                 'sample': s.sample,
                 'groups': [make_group_parameters(g) for g in s.groups],
-                }
+            }
+
         def make_group_parameters(g):
             return {
                 'points': g.points,
                 'key': list(g.unique_name),
                 'testcases': [make_case_parameters(c, f)
                               for c, f in zip(g.cases, g.feedback)],
-                }
+            }
+
         def make_case_parameters(c, f):
             return {
                 'codename': c.codename,
                 'in_partial_feedback': f,
-                }
+            }
         score_type_parameters = {
             'feedback': self.feedback,
             'subtasks': [make_subtask_parameters(s) for s in self.subtasks],
-            }
+        }
 
         ddb = Dataset(task=tdb,
                       description=self._dataset,
@@ -1976,10 +1982,11 @@ class TaskConfig(CommonConfig, Scope):
         elif len(unit_tests) != 0:
             print()
             box(" Unit Test Statistics for Task \"{}\" ".format(self._title),
-                (green("All unit tests passed.") if len(failed) == 0
-                 else red("{} unit test{} failed:\n".format(len(failed),
-                                                            "s" if len(failed) > 1 else "") +
-                          "\n".join(red(f) for f in failed))) +
+                (green("All unit tests passed.")
+                if len(failed) == 0
+                else red("{} unit test{} failed:\n".format(len(failed), "s" if len(failed) > 1 else "") +
+                         "\n".join(red(f) for f in failed))
+                 ) +
                 ("\n\n" + yellow("There are some additional (non-local) "
                                  "unit tests!") if len(unit_tests) != len(self.testsubmissions)
                  else ""), double=True)
@@ -1992,12 +1999,12 @@ class TaskConfig(CommonConfig, Scope):
     def _testcase_importance(self, unit_test_results):
         essential = {}
         useful = set()
-        dominated = {d.codename : {c.codename for c in self.cases
-                                              if c.codename != d.codename}
+        dominated = {d.codename: {c.codename for c in self.cases
+                                  if c.codename != d.codename}
                      for d in self.cases}
 
         for u, details in unit_test_results.items():
-            useful |= details["useful"]
+            useful |= set(details["useful"])
 
             for e in details["essential"]:
                 if e not in essential:
@@ -2061,9 +2068,9 @@ class TaskConfig(CommonConfig, Scope):
 
         with header("Testcase utility", 2):
             with header("Overview", 3):
-               print_msg(" ".join(color(c) for c in self.cases),
-                         use_ellipsis=False)
-               print()
+                print_msg(" ".join(color(c) for c in self.cases),
+                          use_ellipsis=False)
+                print()
 
             if len(essential_cases) > 0:
                 with header(purple("Essential"), 3):
@@ -2081,7 +2088,7 @@ class TaskConfig(CommonConfig, Scope):
                                   use_ellipsis = True)
                     print()
 
-            if(len(probably_useful)) > 0:
+            if len(probably_useful) > 0:
                 with header(lightgreen("Probably useful"), 3):
                     print_msg("The following testcases are useful, but not "
                               "essential from what I can tell (that's great!):",
@@ -2405,7 +2412,7 @@ class TaskConfig(CommonConfig, Scope):
                                      bold("%.3fs" % g["max_runtime"])))
                         print(indent("max. memory usage in this group: " +
                                      bold("%.1fMB" %
-                                             (float(g["max_memory"]) / 2**20))))
+                                          (float(g["max_memory"]) / 2**20))))
                     print()
 
             print()
@@ -2427,7 +2434,7 @@ class TaskConfig(CommonConfig, Scope):
                     score = red(score)
                 expected_score = details["expected_" + prefix + "_score"]
                 print_msg("{} score: {}; expected: {}".
-                        format(name, score, expected_score))
+                          format(name, score, expected_score))
 
             print_score_info("sample", "Sample")
 
