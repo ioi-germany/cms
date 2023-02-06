@@ -38,6 +38,8 @@ These are our requirements (in particular we highlight those that are not usuall
 
 * texlive-langcyrillic (or something similar; for German task format + Cyrillic)
 
+* cairo (for captcha)
+
 You will also require a Linux kernel with support for control groups and namespaces. Support has been in the Linux kernel since 2.6.32. Other distributions, or systems with custom kernels, may not have support enabled. At a minimum, you will need to enable the following Linux kernel options: ``CONFIG_CGROUPS``, ``CONFIG_CGROUP_CPUACCT``, ``CONFIG_MEMCG`` (previously called as ``CONFIG_CGROUP_MEM_RES_CTLR``), ``CONFIG_CPUSETS``, ``CONFIG_PID_NS``, ``CONFIG_IPC_NS``, ``CONFIG_NET_NS``. It is anyway suggested to use Linux kernel version at least 3.8.
 
 .. warning::
@@ -90,6 +92,9 @@ On Ubuntu 20.04, one will need to run the following script to satisfy all depend
     # Only for compiling statements in Cyrillic languages with German task format
     sudo apt-get install texlive-lang-cyrillic
 
+    # Only for captcha in contest registration interface
+    sudo apt-get install libcairo2
+
 The above commands provide a very essential Pascal environment. Consider installing the following packages for additional units: `fp-units-base`, `fp-units-fcl`, `fp-units-misc`, `fp-units-math` and `fp-units-rtl`.
 
 Arch Linux
@@ -118,6 +123,9 @@ On Arch Linux, unofficial AUR packages can be found: `cms <http://aur.archlinux.
 
     # Only for compiling statements in Cyrillic languages with German task format
     sudo pacman -S --needed texlive-langcyrillic
+
+    # Only for captcha in contest registration interface
+    sudo pacman -S --needed cairo
 
 Preparation steps
 =================
