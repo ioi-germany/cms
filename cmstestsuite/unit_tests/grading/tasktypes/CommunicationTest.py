@@ -368,11 +368,14 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         self.assertEqual(self.Sandbox.call_count, 2)
         # We need input (with the default filename for redirection) and
         # executable copied in the sandbox.
+        # In the ioi-germany fork, we also need the reference output in the
+        # sandbox (see Communication.py).
         sandbox_mgr.create_file_from_storage.assert_has_calls([
             call("manager", "digest of manager", executable=True),
             call("input.txt", "digest of input"),
+            call("ok.txt", "digest of correct output"),
         ], any_order=True)
-        self.assertEqual(sandbox_mgr.create_file_from_storage.call_count, 2)
+        self.assertEqual(sandbox_mgr.create_file_from_storage.call_count, 3)
         sandbox_usr.create_file_from_storage.assert_has_calls([
             call("foo", "digest of foo", executable=True),
         ], any_order=True)
@@ -614,11 +617,14 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         self.assertEqual(self.Sandbox.call_count, 3)
         # We need input (with the default filename for redirection) and
         # executable copied in the sandbox.
+        # In the ioi-germany fork, we also need the reference output in the
+        # sandbox (see Communication.py).
         sandbox_mgr.create_file_from_storage.assert_has_calls([
             call("manager", "digest of manager", executable=True),
             call("input.txt", "digest of input"),
+            call("ok.txt", "digest of correct output"),
         ], any_order=True)
-        self.assertEqual(sandbox_mgr.create_file_from_storage.call_count, 2)
+        self.assertEqual(sandbox_mgr.create_file_from_storage.call_count, 3)
         # Same content in both user sandboxes.
         for s in [sandbox_usr0, sandbox_usr1]:
             s.create_file_from_storage.assert_has_calls([
