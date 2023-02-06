@@ -67,7 +67,9 @@ class Updater:
                 if v["public_score_details"] is not None:
                     v["public_score_details"] = \
                         json.loads(v["public_score_details"])
-                if v["unit_test_score_details"] is not None:
+                if "unit_test_score_details" not in v:
+                    v["unit_test_score_details"] = dict()
+                elif v["unit_test_score_details"] is not None:
                     v["unit_test_score_details"] = \
                         json.loads(v["unit_test_score_details"])
                 if v["ranking_score_details"] is not None:
