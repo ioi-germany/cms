@@ -153,7 +153,7 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
         return accept_submission(
             self.session, self.file_cacher, self.participation, self.task,
             self.timestamp, self.tornado_files, self.language_name,
-            self.official, True)
+            self.official)
 
     def assertSubmissionIsValid(self, submission, timestamp, language, files,
                                 official):
