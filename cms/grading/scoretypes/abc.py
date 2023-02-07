@@ -80,9 +80,10 @@ class ScoreType(metaclass=ABCMeta):
             # this distinction. SubtaskGroup is also the only one that is
             # really used and thus tested in our fork right now, because
             # GerMake _always_ uses it.
-            if hasattr(self, "score_column_headers"):
-                self.public_score_header, self.private_score_header = \
-                    self.score_column_headers()
+            self.public_score_header, self.private_score_header = \
+                self.score_column_headers() \
+                if hasattr(self, "score_column_headers") \
+                else "", ""
         except Exception as e:
             raise ValueError(
                 "Unable to instantiate score type (probably due to invalid "
