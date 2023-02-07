@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 class TestRunner:
-    def __init__(self, test_list, contest_id=None, workers=1, cpu_limits=None):
+    def __init__(self, test_list, contest_id=None, group_id=None, workers=1, cpu_limits=None):
         self.start_time = datetime.datetime.now()
         self.last_end_time = self.start_time
 
@@ -71,6 +71,10 @@ class TestRunner:
             self.contest_id = self.create_contest()
         else:
             self.contest_id = int(contest_id)
+        if group_id is None:
+            self.group_id = self.create_group()
+        else:
+            self.group_id = int(group_id)
         self.user_id = self.create_or_get_user()
 
         self.failures = []
@@ -153,6 +157,19 @@ class TestRunner:
         logger.info("Created contest %s.", self.contest_id)
         return self.contest_id
 
+    def create_group(self):
+        """Create a new group.
+
+        return (int): group id.
+
+        """
+        self.group_id = self.framework.add_group(
+            contest_id=str(self.contest_id),
+            name="testgroup_%s" % self.suffix,
+        )
+        logger.info("Created group %s.", self.group_id)
+        return self.group_id
+
     def create_or_get_user(self):
         """Create a new user if it doesn't exists already.
 
@@ -176,7 +193,8 @@ class TestRunner:
             "method": "plaintext",
             "first_name": "Ms. Test",
             "last_name": "Wabbit the %d%s" % (self.num_users,
-                                              enumerify(self.num_users))
+                                              enumerify(self.num_users)),
+            "group_id": self.group_id
         }
 
         if username in users:

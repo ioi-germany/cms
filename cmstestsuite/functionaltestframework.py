@@ -279,6 +279,16 @@ class FunctionalTestFramework:
         self.admin_req('dataset/%s/testcases/add' % dataset_id,
                        files=files, args=args)
 
+    def add_group(self, **kwargs):
+        r = self.admin_req('contest/%s/groups/add' % kwargs["contest_id"],
+                           args=kwargs)
+        g = re.search(r'/group/([0-9]+)/edit$', r.url)
+        if g:
+            group_id = int(g.group(1))
+            return group_id
+        else:
+            raise TestException("Unable to create group.")
+
     def add_user(self, **kwargs):
         r = self.admin_req('users/add', args=kwargs)
         g = re.search(r'/user/([0-9]+)$', r.url)
