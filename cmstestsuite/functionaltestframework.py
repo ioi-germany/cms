@@ -210,8 +210,17 @@ class FunctionalTestFramework:
             r'action="../contest/([0-9]+)" '
             r'method="POST" name="edit_contest" style="display:inline;">',
             page)
-        if match is not None:
+        match2 = re.search(
+            r'<select name="main_group_id">'
+            r'.*'
+            r'<option value="([0-9]+)" selected>'
+            r'.*'
+            r'</select>',
+            page, flags=re.DOTALL)
+        if match is not None and match2 is not None:
             contest_id = int(match.groups()[0])
+            main_group_id = int(match2.groups()[0])
+            kwargs["main_group_id"] = main_group_id
             self.admin_req('contest/%s' % contest_id, args=kwargs)
             return contest_id
         else:
