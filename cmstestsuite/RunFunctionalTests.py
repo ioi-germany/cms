@@ -222,7 +222,7 @@ def main():
     clear_coverage()
 
     # Startup the test runner.
-    runner = TestRunner(test_list, contest_id=args.contest, workers=4)
+    runner = TestRunner(test_list, contest_id=args.contest, workers=2)
 
     # Submit and wait for all tests to complete.
     runner.submit_tests()
