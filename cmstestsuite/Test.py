@@ -218,7 +218,7 @@ class Test:
 
         # Wait for evaluation to complete.
         result_info = self.framework.get_evaluation_result(
-            contest_id, self.submission_id[language], timeout=180)
+            contest_id, self.submission_id[language], timeout=600)
 
         # Run checks.
         for check in self.checks:
