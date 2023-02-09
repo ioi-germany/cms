@@ -573,6 +573,7 @@ class EvaluationService(TriggeredService):
                     self.user_test_evaluation_ended(user_test_result)
 
         logger.info("Done")
+        logger.info(self.workers_status())
 
     def write_results_one_object_and_type(
             self, session, object_result, operation_results):
