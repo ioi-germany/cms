@@ -25,6 +25,7 @@
 import json
 import logging
 import re
+import subprocess
 import sys
 import time
 
@@ -381,6 +382,11 @@ class FunctionalTestFramework:
 
             raise TestException("Unknown submission status: %s" % status)
 
+        logger.info("Waited too long. Submission status is '%s'.", status)
+        logger.info("Running df to show disk usage...")
+        df_result = subprocess.run(["df", "-H"],
+                                   capture_output=True, encoding='utf-8')
+        logger.info(df_result.stdout)
         raise TestException("Waited too long for submission result.")
 
     def get_user_test_result(self, contest_id, user_test_id, timeout=60):
