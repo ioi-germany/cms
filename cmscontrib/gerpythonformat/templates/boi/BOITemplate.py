@@ -40,9 +40,13 @@ from PyPDF2 import PdfFileMerger, PdfFileReader, PdfFileWriter
 
 # This is the template for BOI 2021 and 2022 (an only slightly modified lg template)
 class BOITemplate(LgTemplate):
-    def __init__(self, contest, short_name, year):
+    def __init__(self, contest, short_name, year, header = None, hformat="pdf",
+                 dirname = None):
         super(BOITemplate, self).__init__(contest, short_name)
         self.year = year
+        self.header = header or f"header{self.year}"
+        self.hformat = hformat
+        self.dirname = dirname or os.path.dirname(__file__)
 
     def ontask(self, task):
         """ Some additional supplies for the latex format
@@ -50,18 +54,15 @@ class BOITemplate(LgTemplate):
         super(BOITemplate, self).ontask(task)
 
         #Provide access to the BOI logo
-        shutil.copy(os.path.join(os.path.dirname(__file__),
-                                    "header{}.pdf".format(self.year)),
-                    os.path.join(os.getcwd(),
-                                    "header.pdf"))
+        shutil.copy(os.path.join(self.dirname, self.header + "." + self.hformat),
+                    os.path.join(os.getcwd(), "header." + self.hformat))
 
         # Copy translation headers
         copyrecursivelyifnecessary(os.path.join(task.wdir, "..", "general"),
                                    os.path.join(task.wdir, "general"))
 
         # Register contestheader.tex as \taskheader
-        shutil.copy(os.path.join(os.path.dirname(__file__),
-                                 "contestheader.tex"),
+        shutil.copy(os.path.join(self.dirname, "contestheader.tex"),
                     os.path.join(task.wdir, "taskheader.tex"))
         task.supply("latex", def_latex("taskheader",
                                        input_latex("taskheader.tex")))
@@ -159,7 +160,7 @@ class BOITemplate(LgTemplate):
                     self.contest._build_supplements_for_key("contestoverview")
 
                     #Provide access to the BOI logo
-                    shutil.copy(os.path.join(os.path.dirname(__file__),
+                    shutil.copy(os.path.join(self.dirname,
                                              "header{}.pdf".format(self.year)),
                                 os.path.join(os.getcwd(),
                                              "header.pdf"))
@@ -177,7 +178,7 @@ class BOITemplate(LgTemplate):
 
                     filename = prefix + "-" + l + ".tex"
 
-                    shutil.copy(os.path.join(os.path.dirname(__file__),
+                    shutil.copy(os.path.join(self.dirname,
                                              "overview-template.tex"),
                                 filename)
                     self.contest._build_supplements_for_key("credentials")

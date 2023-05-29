@@ -1,56 +1,239 @@
 \basicheader
-\usepackage[sc]{mathpazo}
-\linespread{1.05} 
-\definecolor{bgblue}{RGB}{255,160,102}
-\definecolor{textblue}{RGB}{0,18,98}
-\color{textblue}
+\usepackage{ifthen,etoolbox}
 \usepackage{colortbl}
+\usepackage{longtable}
+\usepackage{luacode}
 
-\translationheader
+\begin{luacode}
+    mx = 0
+    my = 0
+    r = 0
+    delta = .42
+    textwidth = 0
+    off = 35
 
-\def\showcases{\subsection*{\tSample} \testcasetable}
-\def\showlimits{\subsection*{\tLimits} \tTimeLimit: \timelimit \\
-\tMemoryLimit: \memlimit}
+    function get(s)
+        return tonumber(string.sub(s, 1, string.len(s) - 2))
+    end
 
-\def\sthelper#1#2{{\sffamily\bfseries\tSubtask\ #1 (#2 \tPoints).\enspace}}
+    function setwidth(s)
+        textwidth = get(s)
+    end
+
+    function compute(_x, _y)
+        x = get(_x)
+        y = get(_y)
+
+        mx = x / 2
+        my = 0
+        r = x / 2
+    end
+
+    function rc(ynorm)
+        tex.print("(")
+        x = math.sqrt(1 - ynorm * ynorm)
+        tex.print(mx + x * r + 8.5)
+        tex.print("pt, ")
+        tex.print(my + ynorm * r)
+        tex.print("pt)")
+    end
+
+    function lc(ynorm)
+        tex.print("(")
+        x = math.sqrt(1 - (ynorm  +delta/2) * (ynorm + delta/2))
+        print(x)
+        tex.print(-mx - x * r - 11)
+        tex.print("pt, ")
+        tex.print(my + ynorm * r)
+        tex.print("pt)")
+    end
+
+    function rmid()
+        rc(-.16)
+    end
+
+    function rtop()
+        rc(-.16 + delta)
+    end
+
+    function rbot()
+        rc(-.16 - delta)
+    end
+
+    function rrc(ynorm)
+        tex.print("(")
+        tex.print(textwidth - off)
+        tex.print("pt, ")
+        tex.print(ynorm * r + my)
+        tex.print("pt)")
+    end
+
+    function rrtop()
+        rrc(-.16)
+    end
+
+    function rrmid()
+        rrc(-.16 - delta)
+    end
+
+    function rrbot()
+        rrc(-.16 - 2* delta)
+    end
+\end{luacode}
+\AtBeginDocument{\directlua{setwidth("\the\linewidth")}}
+
+\setlength{\LTpost}{\medskipamount}
+
+\ifthenelse{\equal{\TemplateLanguage}{he}}{
+\AtBeginDocument{\def\footnoterule{\vskip.25cm\hbox to \textwidth{\kern.6\textwidth\hrulefill}\vskip.25cm}}
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=0pt, rightmargin=1cm}
+\setlist[description]{leftmargin=0pt, rightmargin=0pt}
+}{
+\usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
+}
+\usepackage[lining,scaled=.9]{FiraMono}
+\usepackage[mathrm=sym]{unicode-math}
+\usepackage[Scale=.9]{firamath-otf}
+\usepackage{luatexbase}
+\usepackage{microtype}
+\usepackage[hang,symbol,multiple]{footmisc}
+\usepackage{tikz}
+\usepackage{siunitx}
+\usepackage{xcolor}
+
+\renewcommand{\footnotemargin}{1em}
+
+\input graphdrawing.tex
+
+\input general/protected.tex
+\input general/translation-\TemplateLanguage.tex
+
+\ifthenelse{\equal{\TemplateLanguage}{da}}{
+    \usepackage[danish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{de}}{
+    \usepackage[ngerman]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{en}}{
+    \usepackage[english]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{et}}{
+    \usepackage[estonian]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{fi}}{
+    \usepackage[finnish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{he}}{
+\usepackage[nil,bidi=basic]{babel}
+\addtokomafont{disposition}{\rmfamily}
+\setmainfont{FiraGO}[Numbers=Lowercase, Scale=.9]
+\setsansfont{FiraGO}[Numbers=Lowercase, Scale=.9]
+\babelfont{rm}[Numbers=Lowercase, Scale=.9]{FiraGO}
+\babelfont[hebrew]{rm}[Numbers=Lowercase, Scale=.9]{FiraGO}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{nb}}{
+    \usepackage[norsk]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{pl}}{
+    \usepackage[polish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{sv}}{
+    \usepackage[swedish]{babel}
+}{
+\ifthenelse{\equal{\TemplateLanguage}{uk}}{
+    \usepackage[ukrainian]{babel}
+}{}}}}}}}}}}
+
+\renewcommand{\setlang}[1]{\ifthenelse{\equal{\TemplateLanguage}{he}}{\begin{otherlanguage}{hebrew}#1\end{otherlanguage}}{#1}}
+\ifthenelse{\equal{\TemplateLanguage}{he}}{
+\rhead{\setlang{\hskip-19pt
+\directlua{setwidth("\the\linewidth")}
+\begin{tikzpicture}
+    \node[inner sep=0pt] (A) at (0,0) {\includegraphics[scale=.475]{header.png}};
+    \useasboundingbox (A.north west) -- (A.north east) -- (A.south east) -- (A.south west) -- cycle;
+    \path let \p1 = (A.north east) in \directlua{compute("\x1", "\y1")} {};
+    \node[anchor=south west, inner sep=0pt] (B) at \directlua{rtop()} {\setlang{\textbf{\fontsize{22pt}{30pt}\newfontface\titling{Fira Sans Light}[Numbers=Uppercase]\titling\selectfont$\!$CEOI \olympiadyear}\vphantom{lg}}};
+    \node[anchor=south west, inner sep=0pt] (C) at \directlua{rmid()} {\setlang{\tCEOIPlace\vphantom{lg}}};
+    \node[anchor=south west, inner sep=0pt] at \directlua{rbot()} {\setlang{\tCEOIDates\vphantom{lg}}};
+
+    \node[anchor=south east, inner sep=0pt] at \directlua{rrtop()} {\setlang{\textbf{\contestname}\vphantom{lg}}};
+    \node[anchor=south east, inner sep=0pt] at \directlua{rrmid()} {\setlang{{\tTask}:\enspace\textbf{\taskname}\vphantom{lg}}};
+    \node[anchor=south east, inner sep=0pt] at \directlua{rrbot()} {\setlang{{\tLang}:\enspace\textbf{\TemplateLanguage}\vphantom{lg}}};
+\end{tikzpicture}}}
+}{\lhead{\hskip-17pt
+\directlua{setwidth("\the\linewidth")}
+\begin{tikzpicture}
+    \node[inner sep=0pt] (A) at (0,0) {\includegraphics[scale=.475]{header.png}};
+    \useasboundingbox (A.north west) -- (A.north east) -- (A.south east) -- (A.south west) -- cycle;
+    \path let \p1 = (A.north east) in \directlua{compute("\x1", "\y1")} {};
+    \node[anchor=south west, inner sep=0pt] (B) at \directlua{rtop()} {\setlang{\textbf{\fontsize{22pt}{30pt}\newfontface\titling{Fira Sans Light}[Numbers=Uppercase]\titling\selectfont$\!$CEOI \olympiadyear}\vphantom{lg}}};
+    \node[anchor=south west, inner sep=0pt] (C) at \directlua{rmid()} {\setlang{\tCEOIPlace\vphantom{lg}}};
+    \node[anchor=south west, inner sep=0pt] at \directlua{rbot()} {\setlang{\tCEOIDates\vphantom{lg}}};
+
+    \node[anchor=south east, inner sep=0pt] at \directlua{rrtop()} {\setlang{\textbf{\contestname}\vphantom{lg}}};
+    \node[anchor=south east, inner sep=0pt] at \directlua{rrmid()} {\setlang{{\tTask}:\enspace\textbf{\taskname}\vphantom{lg}}};
+    \node[anchor=south east, inner sep=0pt] at \directlua{rrbot()} {\setlang{{\tLang}:\enspace\textbf{\TemplateLanguage}\vphantom{lg}}};
+\end{tikzpicture}}}
+
+\cfoot{\textbf{\thepage}/\pageref{LastPage}}
+
+\addtolength{\topmargin}{-5pt}
+
+\makeatletter
+\def\sthelper#1#2{{\sffamily\bfseries \tSubtask{#1} \hss(\ifnum#2=1\tPoint{#2}\else\tPoints{#2}\fi).\enspace}}
 \newcount\stcount
 \stcount=0
-\def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \removelastskip\smallskip\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}
+\def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}}\ignorespaces}
+\def\subtask{\count1=\stcount \advance\count1 by 1 \st{\subtaskpoints{\the\count1}}}
+\def\currconstraint#1{\scopedconstraint{\the\stcount}{#1}}
+\def\currconstraints{\@ifstar{\currconstraint{@ll*}}{\currconstraint{@ll}}}
+\def\currconstraintupper#1{\scopedconstraintupper{\the\stcount}{#1}}
+\def\currconstraintlower#1{\scopedconstraintlower{\the\stcount}{#1}}
+\def\currconstraintvalue#1{\scopedconstraintvalue{\the\stcount}{#1}}
 
-\def\empty{}
-\newbox\ceoibox
-\newbox\daybox
-\newbox\taskbox
-\newbox\langbox
-\newdimen\bw
-
-\newif\ifspoiler
-\spoilerfalse
-
-\AtBeginDocument{%
-\setbox\ceoibox=\hbox{\sffamily\bfseries CEOI 2014}%
-\setbox\daybox=\hbox{\null\sffamily\kern.5em \ifx\contestday\empty \tPracticeSession\else\tDay\ \contestday\fi}%
-\setbox\taskbox=\hbox{\null\kern1em\sffamily \tTask: \bfseries \taskname}%
-\setbox\langbox=\hbox{\null\kern1.5em\sffamily\ifspoiler\bfseries Spoiler\else\tLanguage: \bfseries\myLanguage\fi}
-\bw=\wd\taskbox%
-\ifdim\wd\daybox>\bw \bw=\wd\daybox\fi
-\ifdim\wd\langbox>\bw \bw=\wd\langbox\fi
-}
-
-\lhead{\hskip-3in\vbox to \headh{\vskip-3.25in\includegraphics[height=11\headh]{\watermark}}}
-\rhead{\vskip-18pt\vbox to \headh{\vbox to 0pt{\vskip14pt\vskip-2.35in\hbox to 0pt{\hskip\hsize\hskip-20pt\hskip-\bw\hskip-12pt\includegraphics{\barpdf}}}\vskip-.55in
-{\vbox to  \headh{\unhcopy\ceoibox\\ \unhcopy\daybox \\ \unhcopy\taskbox\\ \unhcopy\langbox\vss}}}}
+\def\programcolumnwidth{3.5cm}
+\def\returncolumnwidth{3cm}
+\def\explanationcolumnwidth{7.55cm}
+\begingroup
+\catcode`\ǁ=4
+\catcode`\& =\active%
+\gdef\@ctivateAMP{\def&{ǁǁ}}
+\endgroup
+\newenvironment{interactiontable}{\begingroup%
+\catcode`\& =\active%
+\@ctivateAMP%
+\par\medskip%
+\ifthenelse{\equal{\TemplateLanguage}{he}}{\begin{otherlanguage}{english}}{}
+\begin{tabular}{>{\cellcolor[gray]{.9}}p{\programcolumnwidth}@{\hskip0pt}p{.52cm}@{\hskip0pt}>{\cellcolor[gray]{.9}}p{\returncolumnwidth}@{\hskip0pt}p{.52cm}@{\hskip0pt}>{\cellcolor[gray]{.9}\sffamily\hangindent=1.25em\hangafter=1\raggedright\arraybackslash}p{\explanationcolumnwidth}}
+\hline
+\multicolumn{1}{|c}{\cellcolor{white}\sffamily\tProgram}&&\multicolumn{1}{c}{\sffamily \tReturn}&&\multicolumn{1}{c|}{\sffamily\tExplanation}\\\hline
+\noalign{\smallskip}%
+}{\end{tabular}
+\ifthenelse{\equal{\TemplateLanguage}{he}}{\end{otherlanguage}}{}\endgroup\par\medskip}
 
 
-\cfoot{}
-\lfoot{\vskip-1.5\baselineskip\vbox to 12pt{\vskip-.1in\leavevmode\hskip-2.5in\includegraphics{\barpdf}\vskip-2.5in%\vskip-.5\baselineskip
-\sffamily\bfseries\thepage/\pageref{LastPage}}}
+\def\myc@ption#1#2#3{\noalign{\bfseries\large #3}}
+\def\showcases{\removelastskip\par\bigskip\begingroup%
+% This is evil: we hijack LT@makecaption to force longtable to place the heading
+% same page as the table...
+\let\LT@makecaption=\myc@ption
+\begingroup%
+\microtypesetup{activate=false}%
+\testcasetable%
+\endgroup%
+\endgroup}
+\def\showlimits{\sheading{\tLimits}%
+\tTime: \timelimit\\
+\tMemory: \memlimit}
+% ---
+\makeatother
 
-\def\fullfeedback{full}
-\def\partialfeedback{partial}
-\def\showfeedback{\subsection*{\tFeedback}
-\ifx\feedback\fullfeedback \tFullFeedback\else%
-\ifx\feedback\partialfeedback \tPartialFeedback\else%
-\tNoFeedback\fi\fi}
+\def\flushsubtasks{\global\stcount=\numsubtasks}
 
-\advance\vsize-\baselineskip
+\AtEndDocument{\ifnum\stcount=\numsubtasks\else\PackageError{lg-template}{Not all subtasks are contained in the task statement!\MessageBreak You should call \protect\subtask\space (or \protect\st) precisely as often as there are subtasks, not counting the public one. If for some reason you do not want to do this, you can call \protect\flushsubtasks\space after all calls to \protect\subtask\space and \protect\st}{You should call \protect\subtask\space (or \protect\st) precisely as often as there are subtasks, not counting the public one. If for some reason you do not want to do this, you can call \protect\flushsubtasks\space after all calls to \protect\subtask\space and \protect\st}\fi}
+
+\definecolor{myred}{RGB}{230, 37, 46}
+\definecolor{mygreen}{RGB}{46, 168, 83}
+\definecolor{myyellow}{RGB}{249, 187, 32}
+\definecolor{myblue}{RGB}{46, 83, 168}
