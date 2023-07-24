@@ -152,7 +152,8 @@ class MySubtask(Scope):
     :ivar scorestyle: score style (for multiscoring)
     """
 
-    def __init__(self, task, description, name, sample, foldername, scorestyle):
+    def __init__(self, task, description, name, sample, foldername, scorestyle,
+                 individual):
         super(MySubtask, self).__init__(task)
         self.task = task
         self.description = description
@@ -163,6 +164,7 @@ class MySubtask(Scope):
         self.feedbackcases = []
         self.checkers = []
         self.scorestyle = scorestyle
+        self.individual = individual
         if not os.path.exists(self.directory):
             os.mkdir(self.directory)
 
@@ -241,6 +243,18 @@ class MySubtask(Scope):
 
     def max_score(self):
         return sum(g.points for g in self.groups)
+
+    def scoreinfo(self):
+        def mystr(f):
+            i = int(f + .5)
+            assert abs(i - f) < 1e-4
+            return "{}".format(i)
+
+        if self.individual:
+            return " + ".join(mystr(g.points) for g in self.groups)
+        else:
+            return mystr(self.max_score())
+
 
 
 class MyGroup(Scope):
@@ -1421,7 +1435,7 @@ class TaskConfig(CommonConfig, Scope):
         return self.encapsulate(curried, stdoutstring)
 
     @exported_function
-    def subtask(self, description, name=None, sample=False, scorestyle=0):
+    def subtask(self, description, name=None, sample=False, scorestyle=0, individual=False):
         """
         Specify the start of a new subtask. The number of points awarded
         for a subtask is the sum of the numbers of points awarded for each
@@ -1457,7 +1471,8 @@ class TaskConfig(CommonConfig, Scope):
         foldername = "Subtask_" + str(len(self.subtasks))
         if sample:
             foldername += "_Public"
-        subtask = MySubtask(self, description, name, sample, foldername, scorestyle)
+        subtask = MySubtask(self, description, name, sample, foldername,
+                            scorestyle, individual)
 
         self.subtasks.append(subtask)
 
@@ -1500,7 +1515,7 @@ class TaskConfig(CommonConfig, Scope):
 
 
     @exported_function
-    def multigroup(self, points, distr, *args, name=None, scorestyle = None, **kwargs):
+    def multigroup(self, *args, name=None, scorestyle=None, **kwargs):
         """
         Add multiple groups with different score styles to the "current" subtask.
 
@@ -1513,17 +1528,16 @@ class TaskConfig(CommonConfig, Scope):
         ::
 
             with subtask("Subtask 1", name="fancy_partial_scoring_subtask"):
-                with multigroup(20, [.5, .3, .2]):
+                with multigroup(10, 6, 4):
                     ...
         """
         if name is None:
             name = f"__g{len(self.subtask_stack[-1].groups)}_mg"
 
-        scorestyle = scorestyle or self.subtask_stack[-1].scorestyle
+        kwargs["scorestyle"] = scorestyle or self.subtask_stack[-1].scorestyle
+        points = list(args)
 
-        return MultiGroupProxy(self.group(points * distr[0], *args,
-                                          scorestyle=scorestyle, **kwargs),
-                               [points * distr[i] for i in range(1, len(distr))])
+        return MultiGroupProxy(self.group(points[0], **kwargs), points[1:])
 
     def _subsume_group(self, g, *args, **kwargs):
         for t in g.cases:

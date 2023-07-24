@@ -261,11 +261,7 @@ class PlainTemplate(Template):
 
     def initsubtaskinfo(self, task):
         def points(s):
-            f = s.max_score()
-            i = int(f+.1)
-            assert(abs(i - f) < 1e-4)
-
-            return "{}".format(i)
+            return s.scoreinfo()
 
         def subtaskinfo():
             r = ""

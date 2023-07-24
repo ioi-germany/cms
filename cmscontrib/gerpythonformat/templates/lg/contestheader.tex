@@ -15,6 +15,7 @@
 \usepackage[hang,symbol,multiple]{footmisc}
 \usepackage{tikz}
 \usepackage{siunitx}
+\usepackage{xstring}
 
 \renewcommand{\footnotemargin}{1em}
 
@@ -49,10 +50,12 @@
 \lhead{}
 
 \makeatletter
-\def\sthelper#1#2{{\sffamily\bfseries \tSubtask\ #1 ($\symbf{#2}$ \ifnum#2=1\tPoint\else\tPoints\fi).\enspace}}
+\def\sthelper#1#2{{\sffamily\bfseries \tSubtask\ #1 ($\symbf{#2}$ \IfInteger{#2}{\ifnum#2=1\tPoint\else\tPoints\fi}{\tPoints}).\enspace}}
 \newcount\stcount
 \stcount=0
-\def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}\hss}\ignorespaces}
+\def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1%
+\setbox1=\hbox{\sthelper{\the\stcount}{#1}\hss}%
+\ifdim\wd1>\wd0\box1\else\hbox to \wd0{\unhbox1\hss}\fi\ignorespaces}
 \def\subtask{\count1=\stcount \advance\count1 by 1 \st{\subtaskpoints{\the\count1}}}
 \def\currconstraint#1{\scopedconstraint{\the\stcount}{#1}}
 \def\currconstraints{\@ifstar{\currconstraint{@ll*}}{\currconstraint{@ll}}}

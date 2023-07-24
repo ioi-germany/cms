@@ -3,6 +3,7 @@
 \usepackage{colortbl}
 \usepackage{longtable}
 \usepackage{luacode}
+\usepackage{xstring}
 
 \begin{luacode}
     mx = 0
@@ -181,10 +182,12 @@
 \addtolength{\topmargin}{-5pt}
 
 \makeatletter
-\def\sthelper#1#2{{\sffamily\bfseries \tSubtask{#1} \hss(\ifnum#2=1\tPoint{#2}\else\tPoints{#2}\fi).\enspace}}
+\def\sthelper#1#2{{\sffamily\bfseries \tSubtask{#1} (\IfInteger{#2}{\ifnum#2=1\tPoint{#2}\else\tPoints{#2}\fi}{\tPoints{#2}}).\enspace\hss}}
 \newcount\stcount
 \stcount=0
-\def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1 \hbox to \wd0{\sthelper{\the\stcount}{#1}}\ignorespaces}
+\def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1%
+\setbox1=\hbox{\sthelper{\the\stcount}{#1}}%
+\ifdim\wd1>\wd0\box1\else\hbox to \wd0{\sthelper{\the\stcount}{#1}}\fi\ignorespaces}
 \def\subtask{\count1=\stcount \advance\count1 by 1 \st{\subtaskpoints{\the\count1}}}
 \def\currconstraint#1{\scopedconstraint{\the\stcount}{#1}}
 \def\currconstraints{\@ifstar{\currconstraint{@ll*}}{\currconstraint{@ll}}}
