@@ -6,7 +6,7 @@
 # Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013-2015 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2013-2022 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2023 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -31,6 +31,7 @@ from cms.grading.scoring import UnitTest
 
 import json
 import logging
+import copy
 
 from six import iteritems
 
@@ -392,6 +393,23 @@ class SubtaskGroup(ScoreType):
 
         return public_score_header, private_score_header
 
+    def get_evaluation(self, ev, scorestyle):
+        ev = copy.copy(ev)
+
+        if self.parameters["multiscore"]:
+            assert scorestyle is not None
+
+            try:
+                L = ev.text[0].split(chr(3))
+                old_text = chr(3).join(L[:-1])
+                evdict = json.loads(L[-1])
+                ev.outcome = evdict["outcome"][scorestyle]
+                ev.text = [old_text + evdict["text"][scorestyle]]
+            except ValueError:
+                assert float(ev.outcome) == 0
+
+        return ev
+
     def _compute_score(self, submission_result, score_type):
         assert score_type in ["sample", "partial", "final"]
 
@@ -423,8 +441,9 @@ class SubtaskGroup(ScoreType):
                         first_worst_itc = None
                         for itc, testcase in enumerate(used_cases):
                             codename = testcase["codename"]
-                            tc_relative_score = \
-                                float(evaluations[codename].outcome)
+                            ev = self.get_evaluation(evaluations[codename],
+                                                     group["scorestyle"])
+                            tc_relative_score = float(ev.outcome)
                             if gr_relative_score > tc_relative_score:
                                 gr_relative_score = tc_relative_score
                                 first_worst_itc = itc
@@ -440,14 +459,15 @@ class SubtaskGroup(ScoreType):
                         details_first_worst_tcs = []
                         for itc, testcase in enumerate(used_cases):
                             codename = testcase["codename"]
-                            outcome = self.get_public_outcome(
-                                float(evaluations[codename].outcome))
+                            ev = self.get_evaluation(evaluations[codename],
+                                                     group["scorestyle"])
+                            outcome = self.get_public_outcome(float(ev.outcome))
                             details_tc = {
                                 "number_in_group": itc + 1,
                                 "outcome": outcome,
-                                "text": evaluations[codename].text,
-                                "time": evaluations[codename].execution_time,
-                                "memory": evaluations[codename].execution_memory,
+                                "text": ev.text,
+                                "time": ev.execution_time,
+                                "memory": ev.execution_memory,
                                 }
                             details_tcs.append(details_tc)
                             if itc == first_worst_itc:
@@ -612,7 +632,7 @@ class SubtaskGroup(ScoreType):
                     possible = possible_task + possible_subtask + possible_group
 
                     subtasks[-1]["groups"].append({"verdict": (42, ""),
-                                                "cases": []})
+                                                   "cases": []})
                     min_f = 1.0  # Minimum "score" of a test case in this group
 
                     cases_failed = False
@@ -623,9 +643,9 @@ class SubtaskGroup(ScoreType):
 
                     for testcase in g["testcases"]:
                         idx = testcase["codename"]
-                        r = UnitTest.get_result(submission_info["limits"],
-                                                evaluations[idx])
-                        this_score = float(evaluations[idx].outcome)
+                        ev = self.get_evaluation(evaluations[idx], g["scorestyle"])
+                        r = UnitTest.get_result(submission_info["limits"], ev)
+                        this_score = float(ev.outcome)
                         curr_group_dict[idx] = this_score
                         min_f = min(min_f, this_score)
 
@@ -649,12 +669,12 @@ class SubtaskGroup(ScoreType):
 
                         v = (v[0],
                             v[1] + "\nGrader output: " +
-                            format_status_text((evaluations[idx].text)).strip())
+                            format_status_text((ev.text)).strip())
 
                         subtasks[-1]["groups"][-1]["cases"].\
                             append({"line": l, "verdict": v,
-                                    "time": evaluations[idx].execution_time,
-                                    "memory": evaluations[idx].execution_memory,
+                                    "time": ev.execution_time,
+                                    "memory": ev.execution_memory,
                                     "codename": idx})
 
                     status, short, desc = \

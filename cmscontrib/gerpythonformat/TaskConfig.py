@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
-# Copyright © 2013-2022 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2023 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2022 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
@@ -149,9 +149,10 @@ class MySubtask(Scope):
     :ivar foldername: We create a directory with symlinks to cases
                       at subtasks/foldername.
     :ivar groups: Groups contained in this subtask
+    :ivar scorestyle: score style (for multiscoring)
     """
 
-    def __init__(self, task, description, name, sample, foldername):
+    def __init__(self, task, description, name, sample, foldername, scorestyle):
         super(MySubtask, self).__init__(task)
         self.task = task
         self.description = description
@@ -161,6 +162,7 @@ class MySubtask(Scope):
         self.groups = []
         self.feedbackcases = []
         self.checkers = []
+        self.scorestyle = scorestyle
         if not os.path.exists(self.directory):
             os.mkdir(self.directory)
 
@@ -188,13 +190,15 @@ class MySubtask(Scope):
         """
         return os.path.join(self.task.wdir, "subtasks", self.foldername)
 
-    def group(self, points, name=None):
+    def group(self, points, name=None, scorestyle=0):
         """
         Specify the start of a new test case group (part of a subtask).
 
         points (int): maximum number of points for this test case group;
                       the number of points awarded for a test case group is
                       points * (minimal outcome for test cases in this group)
+
+        scorestyle (int): score style (for multiscoring)
 
         name (string): name of this group; the group object will be accessible
                        as an attribute with this name of the subtask object;
@@ -211,7 +215,7 @@ class MySubtask(Scope):
             name = "g" + str(len(self.groups))
 
         foldername = "Group_" + str(len(self.groups)+1)
-        group = MyGroup(self.task, self, points, name, foldername)
+        group = MyGroup(self.task, self, points, name, foldername, scorestyle)
 
         self.groups.append(group)
 
@@ -247,9 +251,10 @@ class MyGroup(Scope):
     :ivar foldername: We create a directory with symlinks to cases
                       at subtasks/.../foldername.
     :ivar cases: Test cases contained in this group
+    :ivar scorestyle: score style (for multiscoring)
     """
 
-    def __init__(self, task, subtask, points, name, foldername):
+    def __init__(self, task, subtask, points, name, foldername, scorestyle):
         super(MyGroup, self).__init__(subtask)
         self.task = task
         self.subtask = subtask
@@ -266,6 +271,7 @@ class MyGroup(Scope):
         self.soft_constraints_stats = []
         self.soft_constraints_stats_acc = []
         self.soft_spec_stats = {}
+        self.scorestyle = scorestyle
 
         if not os.path.exists(self.directory):
             os.mkdir(self.directory)
@@ -610,6 +616,26 @@ class MyGroup(Scope):
         return 2
 
 
+class MultiGroupProxy(object):
+    def __init__(self, g, L):
+        self.g = g
+        self.L = L
+
+    def __enter__(self):
+        self.g.__enter__()
+
+    def __exit__(self,*args):
+        self.g.__exit__(*args)
+
+        t = self.g.task
+        n = self.g.name
+        s = self.g.scorestyle
+
+        for i, p in enumerate(self.L):
+            with t.group(p, name=n + "##" + str(i + 1), scorestyle=s + i + 1):
+                t.subsume_group(n)
+
+
 class MyCase(object):
     """
     :ivar codename: The code name of this test case (usually a four-digit
@@ -948,6 +974,9 @@ class TaskConfig(CommonConfig, Scope):
         # Is this task only part of a dummy contest?
         self.standalone_task = standalone_task
 
+        # Multiscoring? (see batch())
+        self.multiscore = False
+
     @exported_function
     def max_score(self):
         return sum(t.max_score() for t in self.subtasks if not t.sample)
@@ -1167,7 +1196,8 @@ class TaskConfig(CommonConfig, Scope):
     """
 
     @exported_function
-    def batch(self, input='', output='', comparator=None, library=False):
+    def batch(self, input='', output='', comparator=None, library=False,
+              multiscore=False):
         """
         Specify this to be a batch task.
 
@@ -1185,6 +1215,10 @@ class TaskConfig(CommonConfig, Scope):
                         interface.{c,cpp,pas,py,...} and, if existent, lib.h
                         and lib.pas.
 
+        multiscore (bool): whether or not we allow multiscoring
+                           (award different scores to the same testcase
+                           depending on subtask/group, e.g. if there is only one
+                           partial scoring subtask)
         """
         self.tasktype = "Batch"
         grader_param = "alone"
@@ -1205,6 +1239,7 @@ class TaskConfig(CommonConfig, Scope):
             evaluation_param = "comparator"
             self.managers["checker"] = comparator.get_path()
         self.tasktypeparameters = ([grader_param, [input, output], evaluation_param])
+        self.multiscore = multiscore
 
     @exported_function
     def outputonly(self, comparator=None):
@@ -1224,7 +1259,7 @@ class TaskConfig(CommonConfig, Scope):
         self.tasktypeparameters = ([evaluation_param])
 
     @exported_function
-    def communication(self, manager, stub=True, num_processes=1):
+    def communication(self, manager, stub=True, num_processes=1, multiscore=False):
         """
         Specify this to be a communication task.
 
@@ -1237,10 +1272,11 @@ class TaskConfig(CommonConfig, Scope):
         num_processes:        e.g. set to 2 for a Two-Step task
         """
         self.tasktype = "Communication"
+        self.multiscore = multiscore
         self._communication_common(manager, stub, num_processes)
 
     @exported_function
-    def omnipotent_manager(self, manager, num_processes=1):
+    def omnipotent_manager(self, manager, num_processes=1, multiscore=False):
         """
         Specify this to be a communication task with an "omnipotent" manager
 
@@ -1253,6 +1289,7 @@ class TaskConfig(CommonConfig, Scope):
         num_processes:        e.g. set to 2 for a Two-Step task
         """
         self.tasktype = "OmnipotentManager"
+        self.multiscore = multiscore
         self._communication_common(manager, True, num_processes)
 
     def _communication_common(self, manager, stub, num_processes):
@@ -1384,7 +1421,7 @@ class TaskConfig(CommonConfig, Scope):
         return self.encapsulate(curried, stdoutstring)
 
     @exported_function
-    def subtask(self, description, name=None, sample=False):
+    def subtask(self, description, name=None, sample=False, scorestyle=0):
         """
         Specify the start of a new subtask. The number of points awarded
         for a subtask is the sum of the numbers of points awarded for each
@@ -1408,6 +1445,9 @@ class TaskConfig(CommonConfig, Scope):
 
         sample (bool): whether this subtask is for sample test cases
 
+        scorestyle (int): score style (always 0 for usual tasks, general integer
+                         for multiscoring tasks)
+
         return (MySubtask): object representing the created subtask
 
         """
@@ -1417,7 +1457,7 @@ class TaskConfig(CommonConfig, Scope):
         foldername = "Subtask_" + str(len(self.subtasks))
         if sample:
             foldername += "_Public"
-        subtask = MySubtask(self, description, name, sample, foldername)
+        subtask = MySubtask(self, description, name, sample, foldername, scorestyle)
 
         self.subtasks.append(subtask)
 
@@ -1446,6 +1486,8 @@ class TaskConfig(CommonConfig, Scope):
         if len(self.subtask_stack) == 0:
             raise Exception("group() called outside subtask")
 
+        kwargs["scorestyle"] = kwargs.get("scorestyle") or self.subtask_stack[-1].scorestyle
+
         g = self.subtask_stack[-1].group(*args, **kwargs)
 
         if name is not None:
@@ -1455,6 +1497,33 @@ class TaskConfig(CommonConfig, Scope):
             setattr(self.subtask_stack[-1], name, g)
 
         return g
+
+
+    @exported_function
+    def multigroup(self, points, distr, *args, name=None, scorestyle = None, **kwargs):
+        """
+        Add multiple groups with different score styles to the "current" subtask.
+
+        This is meant if you want to grade different aspects of the output
+        separately: all groups have the same testcases, but different score styles
+        (consecutive styles starting with scorestyle or the score style of the
+        subtask).
+
+        You usually use it like this:
+        ::
+
+            with subtask("Subtask 1", name="fancy_partial_scoring_subtask"):
+                with multigroup(20, [.5, .3, .2]):
+                    ...
+        """
+        if name is None:
+            name = f"__g{len(self.subtask_stack[-1].groups)}_mg"
+
+        scorestyle = scorestyle or self.subtask_stack[-1].scorestyle
+
+        return MultiGroupProxy(self.group(points * distr[0], *args,
+                                          scorestyle=scorestyle, **kwargs),
+                               [points * distr[i] for i in range(1, len(distr))])
 
     def _subsume_group(self, g, *args, **kwargs):
         for t in g.cases:
@@ -1895,6 +1964,7 @@ class TaskConfig(CommonConfig, Scope):
                 'key': list(g.unique_name),
                 'testcases': [make_case_parameters(c, f)
                               for c, f in zip(g.cases, g.feedback)],
+                'scorestyle': g.scorestyle
             }
 
         def make_case_parameters(c, f):
@@ -1904,6 +1974,7 @@ class TaskConfig(CommonConfig, Scope):
             }
         score_type_parameters = {
             'feedback': self.feedback,
+            'multiscore': self.multiscore,
             'subtasks': [make_subtask_parameters(s) for s in self.subtasks],
         }
 

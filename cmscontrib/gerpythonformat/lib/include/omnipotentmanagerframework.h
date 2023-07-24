@@ -1,7 +1,7 @@
 /*
  * Programming contest management system
  * Copyright © 2022 Lukas Michel <lukas-michel@gmx.de>
- * Copyright © 2013-2022 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2023 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -80,6 +80,60 @@ result_helper(float points, const char *msg, ...) {
     va_end(args);
     // Write the score to stdout.
     fprintf(stdout, "%f", points);
+
+    #ifdef DEBUG_
+      fprintf(stderr, "waiting for answer from cms");
+    #endif
+
+    // Wait for cms to confirm the solution has terminated to avoid breaking pipes
+    char c = fgetc(fcmsin);
+
+    #ifdef DEBUG_
+      fprintf(stderr, "received answer [%c]", c);
+    #else
+      (void) c;
+    #endif
+
+    exit(0);
+}
+
+void __attribute__((noreturn))
+result_helper(vector<float> points, vector<string> msgs) {
+    // Tell CMS we are done
+    _write(fcmsout, "Q");
+
+    // the submission might also be interested in this
+    if(message_on_shutdown)
+      for(int i = 0; i < num_instances; ++i)
+        _write(fcommout[i], "-1\n-1\n"), fclose(fcommout[i]);
+
+    // Write verdict to stderr
+    fprintf(stderr, "%c", (char) 3);
+    fprintf(stderr, "{\"outcome\": [");
+    for(size_t i = 0; i < points.size(); ++i) {
+        if(i) fprintf(stderr, ",");
+        fprintf(stderr, "%f", points[i]);
+    }
+    fprintf(stderr, "], \"text\": [");
+
+    auto escape = [](char c) -> string {
+        if(c == '\\')      return "\\\\";
+        else if(c == '\n') return "\\n";
+        else if(c == '"')  return "\"";
+        else if(c == 0)    return "\\u0000";
+        else if(c == 3)    return "\\u0003";
+        string s = " "; s[0] = c;
+        return s;
+    };
+
+    for(size_t i = 0; i < msgs.size(); ++i) {
+        if(i) fprintf(stderr, ",");
+        string s;
+        for(char c : msgs[i]) s += escape(c);
+        fprintf(stderr, "\"%s\"", s.c_str());
+    }
+    fprintf(stderr, "]}");
+    fprintf(stdout, "-1");
 
     #ifdef DEBUG_
       fprintf(stderr, "waiting for answer from cms");

@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2023 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  * Copyright © 2019 Florian Jüngermann <florianjuengermann@gmai.com>
  *
@@ -20,7 +20,7 @@
 
 /* Framework for simple managers for two step style communication tasks.
  * Use it when you need two independet instances of the submissions running
- * at the same time. 
+ * at the same time.
  * Include this file and write your check function yourself
  */
 
@@ -67,6 +67,51 @@ result(float points, const char *msg, ...) {
     if (fquittingresponse != 0) {
         char x;
         size_t read = fread(&x, 1, 1, fquittingresponse); (void) read;// mark unsed
+    }
+
+    exit(0);
+}
+
+void __attribute__((noreturn))
+result(vector<float> points, vector<string> msgs) {
+    // Ask cms to kill the submission.
+    if(fquitter != 0) {
+        fprintf(fquitter, "<3");
+        fclose(fquitter);
+    }
+
+    // Write verdict to stderr
+    fprintf(stderr, "%c", (char) 3);
+    fprintf(stderr, "{\"outcome\": [");
+    for(size_t i = 0; i < points.size(); ++i) {
+        if(i) fprintf(stderr, ",");
+        fprintf(stderr, "%f", points[i]);
+    }
+    fprintf(stderr, "], \"text\": [");
+
+    auto escape = [](char c) -> string {
+        if(c == '\\')      return "\\\\";
+        else if(c == '\n') return "\\n";
+        else if(c == '"')  return "\"";
+        else if(c == 0)    return "\\u0000";
+        else if(c == 3)    return "\\u0003";
+        string s = " "; s[0] = c;
+        return s;
+    };
+
+    for(size_t i = 0; i < msgs.size(); ++i) {
+        if(i) fprintf(stderr, ",");
+        string s;
+        for(char c : msgs[i]) s += escape(c);
+        fprintf(stderr, "\"%s\"", s.c_str());
+    }
+    fprintf(stderr, "]}");
+    fprintf(stdout, "-1");
+
+    // Wait for cms to confirm the solution has terminated (by closing fquittingresponse).
+    if (fquittingresponse != 0) {
+        char x;
+        size_t read = fread(&x, 1, 1, fquittingresponse); (void) read;// mark unused
     }
 
     exit(0);

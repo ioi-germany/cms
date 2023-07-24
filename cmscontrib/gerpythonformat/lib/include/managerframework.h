@@ -1,6 +1,6 @@
 /*
  * Programming contest management system
- * Copyright © 2013 Tobias Lenz <t_lenz94@web.de>
+ * Copyright © 2013-2023 Tobias Lenz <t_lenz94@web.de>
  * Copyright © 2013 Fabian Gundlach <320pointsguy@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -56,6 +56,51 @@ result(float points, const char *msg, ...) {
     va_end(args);
     // Write the score to stdout.
     fprintf(stdout, "%f", points);
+
+    // Wait for cms to confirm the solution has terminated (by closing fquittingresponse).
+    if (fquittingresponse != 0) {
+        char x;
+        fread(&x, 1, 1, fquittingresponse);
+    }
+
+    exit(0);
+}
+
+void __attribute__((noreturn))
+result(vector<float> points, vector<string> msgs) {
+    // Ask cms to kill the submission.
+    if(fquitter != 0) {
+        fprintf(fquitter, "<3");
+        fclose(fquitter);
+    }
+
+    // Write the verdict to stderr
+    fprintf(stderr, "%c", (char) 3);
+    fprintf(stderr, "{\"outcome\": [");
+    for(size_t i = 0; i < points.size(); ++i) {
+        if(i) fprintf(stderr, ",");
+        fprintf(stderr, "%f", points[i]);
+    }
+    fprintf(stderr, "], \"text\": [");
+
+    auto escape = [](char c) -> string {
+        if(c == '\\')      return "\\\\";
+        else if(c == '\n') return "\\n";
+        else if(c == '"')  return "\"";
+        else if(c == 0)    return "\\u0000";
+        else if(c == 3)    return "\\u0003";
+        string s = " "; s[0] = c;
+        return s;
+    };
+
+    for(size_t i = 0; i < msgs.size(); ++i) {
+        if(i) fprintf(stderr, ",");
+        string s;
+        for(char c : msgs[i]) s += escape(c);
+        fprintf(stderr, "\"%s\"", s.c_str());
+    }
+    fprintf(stderr, "]}");
+    fprintf(stdout, "-1");
 
     // Wait for cms to confirm the solution has terminated (by closing fquittingresponse).
     if (fquittingresponse != 0) {

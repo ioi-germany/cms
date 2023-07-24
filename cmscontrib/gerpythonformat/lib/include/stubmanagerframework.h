@@ -51,7 +51,47 @@ result(float points, const char *msg, ...) {
     va_end(args);
     // Write the score to stdout.
     fprintf(stdout, "%f", points);
-    
+
+    // Tell the user program it should quit
+    if(message_on_shutdown)
+    {
+        fprintf(fcommout, "-1\n");
+        fflush(fcommout);
+    }
+
+    exit(0);
+}
+
+void __attribute__((noreturn))
+result(vector<float> points, vector<string> msgs) {
+    // Write the verdict to stderr
+    fprintf(stderr, "%c", (char) 3);
+    fprintf(stderr, "{\"outcome\": [");
+    for(size_t i = 0; i < points.size(); ++i) {
+        if(i) fprintf(stderr, ",");
+        fprintf(stderr, "%f", points[i]);
+    }
+    fprintf(stderr, "], \"text\": [");
+
+    auto escape = [](char c) -> string {
+        if(c == '\\')      return "\\\\";
+        else if(c == '\n') return "\\n";
+        else if(c == '"')  return "\"";
+        else if(c == 0)    return "\\u0000";
+        else if(c == 3)    return "\\u0003";
+        string s = " "; s[0] = c;
+        return s;
+    };
+
+    for(size_t i = 0; i < msgs.size(); ++i) {
+        if(i) fprintf(stderr, ",");
+        string s;
+        for(char c : msgs[i]) s += escape(c);
+        fprintf(stderr, "\"%s\"", s.c_str());
+    }
+    fprintf(stderr, "]}");
+    fprintf(stdout, "-1");
+
     // Tell the user program it should quit
     if(message_on_shutdown)
     {
@@ -70,7 +110,7 @@ int main(int argc, char **argv) {
     signal(SIGPIPE, SIG_IGN);
 
     std::ios_base::sync_with_stdio();
-    
+
     fin = fopen("input.txt", "r");
     fok = fopen("ok.txt", "r");
 

@@ -26,6 +26,7 @@
 #include <cstdarg>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 #include <computil.h>
 
 void __attribute__((noreturn)) __attribute__((format(printf, 2, 3)))
@@ -36,6 +37,37 @@ result(float points, const char *msg, ...) {
     fprintf(stderr, "\n");
     va_end(args);
     fprintf(stdout, "%f", points);
+    exit(0);
+}
+
+void __attribute__((noreturn))
+result(vector<float> points, vector<string> msgs) {
+    fprintf(stderr, "%c", (char) 3);
+    fprintf(stderr, "{\"outcome\": [");
+    for(size_t i = 0; i < points.size(); ++i) {
+        if(i) fprintf(stderr, ",");
+        fprintf(stderr, "%f", points[i]);
+    }
+    fprintf(stderr, "], \"text\": [");
+
+    auto escape = [](char c) -> string {
+        if(c == '\\')      return "\\\\";
+        else if(c == '\n') return "\\n";
+        else if(c == '"')  return "\"";
+        else if(c == 0)    return "\\u0000";
+        else if(c == 3)    return "\\u0003";
+        string s = " "; s[0] = c;
+        return s;
+    };
+
+    for(size_t i = 0; i < msgs.size(); ++i) {
+        if(i) fprintf(stderr, ",");
+        string s;
+        for(char c : msgs[i]) s += escape(c);
+        fprintf(stderr, "\"%s\"", s.c_str());
+    }
+    fprintf(stderr, "]}");
+    fprintf(stdout, "-1");
     exit(0);
 }
 
