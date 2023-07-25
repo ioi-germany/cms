@@ -2024,7 +2024,7 @@ class TaskConfig(CommonConfig, Scope):
 
         return ddb
 
-    def _make_test_submissions(self, pdb, tdb, local_test):
+    def _make_test_submissions(self, pdb, tdb, local_test, tcimp=True):
         ddb = tdb.active_dataset
 
         sdbs = []
@@ -2077,7 +2077,8 @@ class TaskConfig(CommonConfig, Scope):
                  else ""), double=True)
             print()
 
-            self._testcase_importance(unit_test_results)
+            if tcimp:
+                self._testcase_importance(unit_test_results)
 
         return sdbs
 
