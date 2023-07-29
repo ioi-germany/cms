@@ -60,7 +60,9 @@ unit_test (boolean): whether to display only the unit tests (true) or
     </colgroup>
     <thead>
         <tr>
-{% if show_date %}
+{% if unit_test %}
+            <th class="datetime">{% trans %}Name{% endtrans %}</th>
+{% elif show_date %}
             <th class="datetime">{% trans %}Date and time{% endtrans %}</th>
 {% else %}
             <th class="time">{% trans %}Time{% endtrans %}</th>
@@ -159,7 +161,9 @@ unit_test (bool): whether this is a unit test
     {% endif %}
 {% endif %}
 >
-{% if show_date %}
+{% if unit_test %}
+    <td class="datetime" title="{{ s.timestamp|format_datetime }}"> {{ s.short_comment }} </td>
+{% elif show_date %}
     <td class="datetime">{{ s.timestamp|format_datetime }}</td>
 {% else %}
     <td class="time">{{ s.timestamp|format_time }}</td>

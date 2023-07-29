@@ -109,7 +109,7 @@ update_scores = function (submission_id, data) {
     row.children("td.status").text(data["status_text"]);
     var terminal_status = is_status_terminal(data["status"]);
     var is_unit_test = ("verdict" in data);
-    
+
     if (!terminal_status) {
         row.children("td.status").append(
             $("<img class=\"details\" src=\"{{ url("static", "loading.gif") }}\"/>"));
@@ -123,18 +123,18 @@ update_scores = function (submission_id, data) {
             data["public_score"], data["public_score_message"],
             data["task_public_score"], data["task_public_score_message"],
             data["task_score_is_partial"], data["max_public_score"]);
-            
+
         if (is_unit_test) {
             row.children("td.total_score").text(data["score_message"]);
             row.children("td.total_score").removeClass("undefined");
-            
+
             row.removeClass("unit_test_undefined");
             row.children("td.verdict").text(data["verdict"][1]);
-            
+
             if(data["verdict"][0]) row.addClass("unit_test_ok");
             else row.addClass("unit_test_failed");
         }
-        else {   
+        else {
 {% if can_use_tokens %}
             update_score(
                 row.children("td.total_score"), $("#task_score_tokened"),
@@ -228,7 +228,7 @@ $(document).ready(function () {
             {{ score_type.format_score(actual_score if score_type.feedback() == "full" or actual_phase == 3 else tokened_score, score_type.max_score, none, task.score_precision, translation=translation) }}
             {% if is_score_partial %}
             <img src="{{ url("static", "loading.gif") }}" />
-            {% endif %}       
+            {% endif %}
         {% else %}
             {% trans %}N/A{% endtrans %}
         {% endif %}

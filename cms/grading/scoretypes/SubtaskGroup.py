@@ -164,6 +164,7 @@ class SubtaskGroup(ScoreType):
 {% endfor %}
 {% endif %}
 {% else %}{# Unit test #}
+<h2 style="margin-top:0px;">{{ details["unit_test_name"] }}</h2>
 <h3>Score Verdicts</h3>
 <div class="subtask {% if details["sample_score_okay"] %}correct{% else %}notcorrect{% endif %}">
     <div class="subtask-head">
@@ -768,6 +769,7 @@ class SubtaskGroup(ScoreType):
 
         details = {
             "unit_test": True,
+            "unit_test_name": submission_result.submission.comment,
             "subtasks": subtasks,
             "verdict": (1, "Okay") if okay else (0, "Failed"),
 
