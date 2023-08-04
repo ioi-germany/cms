@@ -22,6 +22,7 @@ from cmscontrib.gerpythonformat.templates.boi.BOITemplate \
     import BOITemplate
 
 import os
+import shutil
 
 
 # This is the template for CEOI 2023 (identical with BOI template)
@@ -30,3 +31,8 @@ class CEOITemplate(BOITemplate):
         super(CEOITemplate, self).__init__(contest, short_name, year,
                                            "header", "png",
                                            os.path.dirname(__file__))
+
+    def ontask(self, task):
+        super(CEOITemplate, self).ontask(task)
+        shutil.copy(os.path.join(self.dirname, "footer.png"),
+                    os.path.join(os.getcwd(), "footer.png"))

@@ -104,6 +104,7 @@
 \usepackage{xcolor}
 
 \renewcommand{\footnotemargin}{1em}
+\addtolength{\textheight}{2.5ex}
 
 \input graphdrawing.tex
 
@@ -177,7 +178,8 @@
     \node[anchor=south east, inner sep=0pt] at \directlua{rrbot()} {\setlang{{\tLang}:\enspace\textbf{\TemplateLanguage}\vphantom{lg}}};
 \end{tikzpicture}}}
 
-\cfoot{\textbf{\thepage}/\pageref{LastPage}}
+\cfoot{\setbox0=\hbox{\includegraphics[scale=.6]{footer.png}}\hbox to 0pt{\hskip-.5\wd0{\lower24pt\copy0}}%
+    {\hskip-2pt\llap{\textbf{\thepage}}/\pageref{LastPage}}}
 
 \addtolength{\topmargin}{-5pt}
 
