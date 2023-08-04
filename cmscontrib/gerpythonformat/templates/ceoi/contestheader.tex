@@ -241,12 +241,15 @@
 \definecolor{myyellow}{RGB}{249, 187, 32}
 \definecolor{myblue}{RGB}{46, 83, 168}
 
-\AtBeginDocument{\setbox0=\hbox{$ $}%
-\Umathsubshiftdown\textstyle=1.75pt%
-\Umathsubshiftdrop\textstyle=1.75pt%
-\Umathsupshiftdrop\textstyle=4pt%
-\Umathsupshiftup\textstyle=4pt%
-\Umathsubshiftdrop\displaystyle=1.75pt%
-\Umathsubshiftdown\displaystyle=1.75pt%
-\Umathsupshiftdrop\displaystyle=4pt%
-\Umathsupshiftup\displaystyle=4pt}
+\def\setmymathdims{\global\Umathsubshiftdown\textstyle=2.5pt%
+\global\Umathsubshiftdrop\textstyle=2.5pt%
+\global\Umathsubtopmax\textstyle=4pt%
+\global\Umathsupshiftup\textstyle=3.75pt%
+\global\Umathopopenspacing\textstyle=225mu
+\global\Umathsubshiftdrop\displaystyle=3pt%
+\global\Umathsubshiftdown\displaystyle=3pt%
+\global\Umathsubtopmax\displaystyle=3pt%
+\global\Umathsupshiftdrop\displaystyle=4pt%
+\global\Umathsupshiftup\displaystyle=4pt%
+\global\Umathopopenspacing\textstyle=2.25mu}
+\AtBeginDocument{\everymath{\setmymathdims}\setbox0=\hbox{$ $}\setmymathdims}
