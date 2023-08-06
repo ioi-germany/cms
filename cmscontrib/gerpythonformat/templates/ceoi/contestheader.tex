@@ -85,14 +85,20 @@
 
 \setlength{\LTpost}{\medskipamount}
 
+\usepackage{enumitem}
 \ifthenelse{\equal{\TemplateLanguage}{he}}{
 \AtBeginDocument{\def\footnoterule{\vskip.25cm\hbox to \textwidth{\kern.6\textwidth\hrulefill}\vskip.25cm}}
-\usepackage{enumitem}
 \setlist[itemize]{leftmargin=0pt, rightmargin=1cm}
 \setlist[description]{leftmargin=0pt, rightmargin=0pt}
 }{
 \usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
 }
+\setlist[itemize,1]{label={\begin{tikzpicture}
+    \useasboundingbox (0,-.5pt) rectangle (5pt,4.25pt);
+    \fill[myyellow] (0,0)--(0,5pt)--(5pt,2.5pt)--cycle;
+\end{tikzpicture}}}
+
+
 \usepackage[lining,scaled=.9]{FiraMono}
 \usepackage[mathrm=sym]{unicode-math}
 \usepackage[Scale=.9]{firamath-otf}
@@ -178,8 +184,8 @@
     \node[anchor=south east, inner sep=0pt] at \directlua{rrbot()} {\setlang{{\tLang}:\enspace\textbf{\TemplateLanguage}\vphantom{lg}}};
 \end{tikzpicture}}}
 
-\cfoot{\setbox0=\hbox{\includegraphics[scale=.6]{footer.png}}\hbox to 0pt{\hskip-.5\wd0{\lower24pt\copy0}}%
-    {\hskip-2pt\llap{\textbf{\thepage}}/\pageref{LastPage}}}
+\addtolength{\footskip}{-1.5ex}
+\cfoot{{\textbf{\thepage}}/\pageref{LastPage}}
 
 \addtolength{\topmargin}{-5pt}
 
