@@ -29,10 +29,5 @@ import shutil
 class CEOITemplate(BOITemplate):
     def __init__(self, contest, short_name, year):
         super(CEOITemplate, self).__init__(contest, short_name, year,
-                                           "header", "png",
+                                           "header", "pdf",
                                            os.path.dirname(__file__))
-
-    def ontask(self, task):
-        super(CEOITemplate, self).ontask(task)
-        shutil.copy(os.path.join(self.dirname, "footer.png"),
-                    os.path.join(os.getcwd(), "footer.png"))

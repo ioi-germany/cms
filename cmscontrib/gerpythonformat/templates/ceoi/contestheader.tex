@@ -2,86 +2,7 @@
 \usepackage{ifthen,etoolbox}
 \usepackage{colortbl}
 \usepackage{longtable}
-\usepackage{luacode}
 \usepackage{xstring}
-
-\begin{luacode}
-    mx = 0
-    my = 0
-    r = 0
-    delta = .42
-    textwidth = 0
-    off = 35
-
-    function get(s)
-        return tonumber(string.sub(s, 1, string.len(s) - 2))
-    end
-
-    function setwidth(s)
-        textwidth = get(s)
-    end
-
-    function compute(_x, _y)
-        x = get(_x)
-        y = get(_y)
-
-        mx = x / 2
-        my = 0
-        r = x / 2
-    end
-
-    function rc(ynorm)
-        tex.print("(")
-        x = math.sqrt(1 - ynorm * ynorm)
-        tex.print(mx + x * r + 8.5)
-        tex.print("pt, ")
-        tex.print(my + ynorm * r)
-        tex.print("pt)")
-    end
-
-    function lc(ynorm)
-        tex.print("(")
-        x = math.sqrt(1 - (ynorm  +delta/2) * (ynorm + delta/2))
-        print(x)
-        tex.print(-mx - x * r - 11)
-        tex.print("pt, ")
-        tex.print(my + ynorm * r)
-        tex.print("pt)")
-    end
-
-    function rmid()
-        rc(-.16)
-    end
-
-    function rtop()
-        rc(-.16 + delta)
-    end
-
-    function rbot()
-        rc(-.16 - delta)
-    end
-
-    function rrc(ynorm)
-        tex.print("(")
-        tex.print(textwidth - off)
-        tex.print("pt, ")
-        tex.print(ynorm * r + my)
-        tex.print("pt)")
-    end
-
-    function rrtop()
-        rrc(-.16)
-    end
-
-    function rrmid()
-        rrc(-.16 - delta)
-    end
-
-    function rrbot()
-        rrc(-.16 - 2* delta)
-    end
-\end{luacode}
-\AtBeginDocument{\directlua{setwidth("\the\linewidth")}}
 
 \setlength{\LTpost}{\medskipamount}
 
@@ -154,35 +75,12 @@
 }{}}}}}}}}}}
 
 \renewcommand{\setlang}[1]{\ifthenelse{\equal{\TemplateLanguage}{he}}{\begin{otherlanguage}{hebrew}#1\end{otherlanguage}}{#1}}
+
 \ifthenelse{\equal{\TemplateLanguage}{he}}{
-\rhead{\setlang{\hskip-19pt
-\directlua{setwidth("\the\linewidth")}
-\begin{tikzpicture}
-    \node[inner sep=0pt] (A) at (0,0) {\includegraphics[scale=.475]{header.png}};
-    \useasboundingbox (A.north west) -- (A.north east) -- (A.south east) -- (A.south west) -- cycle;
-    \path let \p1 = (A.north east) in \directlua{compute("\x1", "\y1")} {};
-    \node[anchor=south west, inner sep=0pt] (B) at \directlua{rtop()} {\setlang{\textbf{\fontsize{22pt}{30pt}\newfontface\titling{Fira Sans Light}[Numbers=Uppercase]\titling\selectfont$\!$CEOI \olympiadyear}\vphantom{lg}}};
-    \node[anchor=south west, inner sep=0pt] (C) at \directlua{rmid()} {\setlang{\tCEOIPlace\vphantom{lg}}};
-    \node[anchor=south west, inner sep=0pt] at \directlua{rbot()} {\setlang{\tCEOIDates\vphantom{lg}}};
-
-    \node[anchor=south east, inner sep=0pt] at \directlua{rrtop()} {\setlang{\textbf{\contestname}\vphantom{lg}}};
-    \node[anchor=south east, inner sep=0pt] at \directlua{rrmid()} {\setlang{{\tTask}:\enspace\textbf{\taskname}\vphantom{lg}}};
-    \node[anchor=south east, inner sep=0pt] at \directlua{rrbot()} {\setlang{{\tLang}:\enspace\textbf{\TemplateLanguage}\vphantom{lg}}};
-\end{tikzpicture}}}
-}{\lhead{\hskip-17pt
-\directlua{setwidth("\the\linewidth")}
-\begin{tikzpicture}
-    \node[inner sep=0pt] (A) at (0,0) {\includegraphics[scale=.475]{header.png}};
-    \useasboundingbox (A.north west) -- (A.north east) -- (A.south east) -- (A.south west) -- cycle;
-    \path let \p1 = (A.north east) in \directlua{compute("\x1", "\y1")} {};
-    \node[anchor=south west, inner sep=0pt] (B) at \directlua{rtop()} {\setlang{\textbf{\fontsize{22pt}{30pt}\newfontface\titling{Fira Sans Light}[Numbers=Uppercase]\titling\selectfont$\!$CEOI \olympiadyear}\vphantom{lg}}};
-    \node[anchor=south west, inner sep=0pt] (C) at \directlua{rmid()} {\setlang{\tCEOIPlace\vphantom{lg}}};
-    \node[anchor=south west, inner sep=0pt] at \directlua{rbot()} {\setlang{\tCEOIDates\vphantom{lg}}};
-
-    \node[anchor=south east, inner sep=0pt] at \directlua{rrtop()} {\setlang{\textbf{\contestname}\vphantom{lg}}};
-    \node[anchor=south east, inner sep=0pt] at \directlua{rrmid()} {\setlang{{\tTask}:\enspace\textbf{\taskname}\vphantom{lg}}};
-    \node[anchor=south east, inner sep=0pt] at \directlua{rrbot()} {\setlang{{\tLang}:\enspace\textbf{\TemplateLanguage}\vphantom{lg}}};
-\end{tikzpicture}}}
+\rhead{\hbox to \hsize{\hbox{\null\hskip-17pt\includegraphics[scale=.5]{header.pdf}}\hfill}}
+\lhead{\begin{otherlanguage}{hebrew}{\vbox{\large\null\par\textbf{\contestname}\\[-1pt]\tTask:\enspace\textbf{\taskname}\\[-1pt] \tLang:\enspace\textbf{\TemplateLanguage}}}\end{otherlanguage}\vskip-5pt}}{
+\lhead{\hskip-17pt\includegraphics[scale=.5]{header.pdf}}
+\rhead{\vbox{\large\textbf{\contestname}\\[1pt]\tTask:\enspace\textbf{\taskname}\\[1pt]\tLang:\enspace\textbf{\TemplateLanguage}\par\vskip9.5pt}}}
 
 \addtolength{\footskip}{-1.5ex}
 \cfoot{{\textbf{\thepage}}/\pageref{LastPage}}
