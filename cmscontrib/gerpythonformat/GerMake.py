@@ -37,7 +37,7 @@ from psutil import virtual_memory
 
 class GerMake:
     def __init__(self, odir, task, minimal, no_test, submission, no_latex,
-                 verbose_latex, safe_latex, language, clean):
+                 verbose_latex, safe_latex, language, clean, ntcimp):
         self.odir = odir
         self.task = task
         self.minimal = minimal
@@ -49,6 +49,7 @@ class GerMake:
         self.safe_latex = safe_latex
         self.language = language
         self.clean = clean
+        self.tcimp = not ntcimp
 
     def prepare(self):
         # Unset stack size limit
@@ -103,7 +104,8 @@ class GerMake:
                     test_udb, test_gdb, None)
                 for t in contestconfig.tasks.values():
                     tdb = t._makedbobject(cdb, file_cacher)
-                    t._make_test_submissions(test_pdb, tdb, self.local_test)
+                    t._make_test_submissions(
+                        test_pdb, tdb, self.local_test, self.tcimp)
 
         contestconfig.finish()
 
@@ -167,6 +169,9 @@ def main():
     parser.add_argument("-c", "--clean", action="store_true",
                         help="clean the build directory (forcing a complete "
                         "rebuild)")
+    parser.add_argument("-nti", "--no-tc-importance", action="store_true",
+                        help="do not run testcase utility (judging importance "
+                             "of testcases for grading)")
 
     args = parser.parse_args()
 
@@ -179,7 +184,8 @@ def main():
             args.verbose_latex,
             args.safe_latex,
             args.language,
-            args.clean).make()
+            args.clean,
+            args.no_tc_importance).make()
 
 
 if __name__ == "__main__":
