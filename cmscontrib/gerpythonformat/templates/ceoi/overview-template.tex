@@ -84,20 +84,19 @@
     \usepackage[ukrainian]{babel}
 }{}}}}}}}}}}
 
+
 \newcommand{\setlang}[1]{\ifthenelse{\equal{\TemplateLanguage}{he}}{\begin{otherlanguage}{hebrew}#1\end{otherlanguage}}{#1}}
 
-\chead{\vspace{-12pt}\textbf{\Large BOI \olympiadyear}\\ \tBOIPlace\\ \tBOIDates}
-\lhead{\vspace{-12pt}\hbox to 0pt{\hskip-.43in\includegraphics[scale=.65]{header.pdf}}\vspace{-6ex}}
-\rhead{\vspace{-12pt}\textbf{\contestname}\\\textbf{\tOverviewSheet}\\ \tLang:\enspace\textbf{\TemplateLanguage}}
-
 \ifthenelse{\equal{\TemplateLanguage}{he}}{
-\chead{\vspace{-12pt}\begin{otherlanguage}{hebrew}\textbf{\Large BOI \olympiadyear}\\ {\tBOIPlace}\\ {\tBOIDates}\end{otherlanguage}}
-\rhead{\vspace{-12pt}\hbox to 0pt{\hskip-.43in\includegraphics[scale=.65]{header.pdf}}\vspace{-6ex}}
-\lhead{\vspace{-12pt}\begin{otherlanguage}{hebrew}\textbf{\contestname}\\\textbf{\tOverviewSheet}\\ \tLang:\enspace\textbf{\TemplateLanguage}\end{otherlanguage}}
-}{}
+\rhead{\hbox to \hsize{\hbox{\null\hskip-17pt\includegraphics[scale=.5]{header.pdf}}\hfill}}
+\lhead{\begin{otherlanguage}{hebrew}{\vbox{\large\null\par\textbf{\contestname}\\[-1pt]\textbf{\tOverviewSheet}\\[-1pt] \tLang:\enspace\textbf{\TemplateLanguage}}}\end{otherlanguage}\vskip-5pt}}{
+\lhead{\hskip-17pt\includegraphics[scale=.5]{header.pdf}}
+\rhead{\vbox{\large\textbf{\contestname}\\[1pt]\textbf{\tOverviewSheet}\\[1pt]\tLang:\enspace\textbf{\TemplateLanguage}\par\vskip9.5pt}}}
 
+\addtolength{\footskip}{-1.5ex}
 \cfoot{}
 
+\addtolength{\topmargin}{-5pt}
 \def\printoverviewpage#1#2#3{%
 \pagestyle{fancy}
 
@@ -143,7 +142,7 @@
   \tGeneralRemarks
 %   \printtaskoverview
   \printscoring
-  \par\medskip\tMaxScoreGeneral{$100$}
+  \par\medskip\tMaxScoreGeneral{100}
   \tFeedback}
   \vfill\eject
   \pagestyle{empty}

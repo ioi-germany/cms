@@ -161,9 +161,10 @@ class BOITemplate(LgTemplate):
 
                     #Provide access to the BOI logo
                     shutil.copy(os.path.join(self.dirname,
-                                             "header{}.pdf".format(self.year)),
+                                             self.header + "." + self.hformat),
                                 os.path.join(os.getcwd(),
-                                             "header.pdf"))
+                                             "header." + self.hformat))
+
 
                     def do_supply_language():
                         return self.language_supplement(l)
