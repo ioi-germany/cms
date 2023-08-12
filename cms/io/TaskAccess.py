@@ -157,7 +157,8 @@ class TaskCompileJob:
                             safe_latex=True,
                             language=self.language,
                             clean=False,
-                            minimal=True
+                            minimal=True,
+                            ntcimp=True
                         )
 
                     with repository:
