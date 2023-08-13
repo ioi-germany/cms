@@ -45,7 +45,11 @@
 }
 
 \input ../general/protected.tex
+\IfFileExists{../general/translation-\TemplateLanguage.tex}{
 \input ../general/translation-\TemplateLanguage.tex
+}{
+\input ../general/translation-en.tex
+}
 \input{contest-overview.tex}
 
 \ifthenelse{\equal{\TemplateLanguage}{da}}{
