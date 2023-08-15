@@ -80,7 +80,7 @@
 \rhead{\hbox to \hsize{\hbox{\null\hskip-17pt\includegraphics[scale=.635]{header.pdf}}\hfill}}
 \lhead{\begin{otherlanguage}{hebrew}{\vbox{\large\null\par\textbf{\contestname}\\\tTask:\enspace\textbf{\taskname}\\\tLang:\enspace\textbf{\TemplateLanguage}}}\end{otherlanguage}\vskip-1pt}}{
 \lhead{\hskip-17pt\includegraphics[scale=.635]{header.pdf}}
-\rhead{\vbox{\large\textbf{\contestname}\\\tTask:\enspace\textbf{\taskname}\\\tLang:\enspace\textbf{\TemplateLanguage}\par\vskip9.5pt}}}
+\rhead{\vbox{\large\textbf{\contestname}\\\tTask:\enspace\textbf{\taskname}\\\ifspoiler\textbf{Spoiler}\else\tLang:\enspace\textbf{\TemplateLanguage}\fi\par\vskip9.5pt}}}
 
 \addtolength{\footskip}{-1.5ex}
 \cfoot{{\textbf{\thepage}}/\pageref{LastPage}}
@@ -159,3 +159,13 @@
 \global\Umathsupshiftup\displaystyle=4pt%
 \global\Umathopopenspacing\textstyle=2.25mu}
 \AtBeginDocument{\everymath{\setmymathdims}\setbox0=\hbox{$ $}\setmymathdims}
+
+\AtBeginDocument{\ifspoiler
+\def\spoilerfor#1#2{\section*{#1\\[-.25ex]
+\large\mdseries{#2}}}
+\def\subtask#1\par{{\global\advance\stcount by 1\removelastskip\bigskip
+\begin{tikzpicture}
+    \useasboundingbox (0,0) rectangle (7.5pt,7.25pt);
+    \fill[myyellow] (0,0) rectangle (7.5pt,7.5pt);%(0,0)--(0,7.5pt)--(7.5pt,3.75pt)--cycle;
+\end{tikzpicture}
+\large\bfseries\hskip2pt Subtask \the\stcount.\enspace\mdseries#1\par\medskip}}\fi}
