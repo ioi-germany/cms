@@ -636,10 +636,14 @@ class MultiGroupProxy(object):
         self.L = L
 
     def __enter__(self):
-        self.g.__enter__()
+        return self.g.__enter__()
 
-    def __exit__(self,*args):
+    def __exit__(self, *args):
         self.g.__exit__(*args)
+
+        for x in args:
+            if x is not None:
+                return
 
         t = self.g.task
         n = self.g.name
