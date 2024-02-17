@@ -6,6 +6,7 @@ Welcome to CMS's documentation!
 
    German System Info
    Introduction
+   Docker image
    Installation
    Running CMS
    Data model
