@@ -40,6 +40,7 @@
 \def\sthelper#1#2{{\sffamily\bfseries \tSubtask\ #1 ($\symbf{#2}$ \IfInteger{#2}{\ifnum#2=1\tPoint\else\tPoints\fi}{\tPoints}).\enspace}}
 \newcount\stcount
 \stcount=0
+\def\st#1{\PackageError{lg-template}{command \protect\st\space no longer supported; please use the \protect\subtask\space macro as described in the docs}{please use the \protect\subtask\space macro as described in the docs}}
 \def\st@sk#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1%
 \setbox1=\hbox{\sthelper{\the\stcount}{#1}\hss}%
 \ifdim\wd1>\wd0\box1\else\hbox to \wd0{\unhbox1\hss}\fi\ignorespaces}

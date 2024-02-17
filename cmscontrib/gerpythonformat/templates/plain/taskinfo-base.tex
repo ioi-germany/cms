@@ -1,3 +1,4 @@
+\def\constraint#1{\PackageError{lg-template}{command \protect\constraint\space no longer supported; please use the other constraint macros as described in the docs}{please use the other constraint macros as described in the docs}}
 \def\makescopedconstraint#1#2#3{\expandafter\gdef\csname constr@int__#1__#2__\endcsname{#3}}
 \def\makescopedconstraintupper#1#2#3{\expandafter\gdef\csname  constr@int__#1__#2__U\endcsname{#3}}
 \def\makescopedconstraintlower#1#2#3{\expandafter\gdef\csname  constr@int__#1__#2__L\endcsname{#3}}
