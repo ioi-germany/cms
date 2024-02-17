@@ -1,29 +1,17 @@
 \NeedsTeXFormat{LaTeX2e}
-\documentclass[a4paper, 11pt]{scrartcl}
-
-\usepackage{a4wide}
+\documentclass[11pt]{scrartcl}
+\usepackage[a4paper, margin=2.5cm, top=3.25cm, bottom=1.5cm, headsep=1.25cm, footskip=1cm, includefoot]{geometry}
 \usepackage{graphicx}
-\usepackage{pstricks}
-\usepackage{calc}
 \usepackage{ifthen}
 \usepackage{fancyhdr}
 \usepackage{lastpage}
-\usepackage{listings}
 \usepackage{amsmath}
 \usepackage{verbatim}
-\usepackage{textcomp}
-\usepackage{marvosym}
 \usepackage{siunitx}
 
-\cfoot{\thepage/\pageref{LastPage}}
-\newdimen\headh
-\headh=36pt
-\lhead{}
-\rhead{}
-\chead{}
+\cfoot{\textbf{\thepage}/\pageref{LastPage}}
+\lhead{} \rhead{} \chead{}
 \renewcommand{\headrulewidth}{0pt} % no top bar
-
-\addtolength{\topmargin}{-1cm}
 
 \def\heading#1{\section*{#1}}
 \def\sheading#1{\subsection*{#1}}
@@ -31,12 +19,6 @@
 \pagestyle{fancy}
 \parindent=0pt
 \parskip=\smallskipamount
-
-\AtBeginDocument{
-\headheight=72pt%
-\headsep=16pt%
-\vspace{2mm}%
-}
 
 \newif\ifspoiler
 \AtBeginDocument{\ifspoiler

@@ -1,11 +1,7 @@
 \basicheader
-\usepackage{ifthen,etoolbox}
 \usepackage[ngerman]{babel}
 \usepackage{colortbl}
 \usepackage{longtable}
-
-\setlength{\LTpost}{\medskipamount}
-
 \usepackage[sfdefault,tabular,scaled=.9]{FiraSans}
 \usepackage[lining,scaled=.9]{FiraMono}
 \usepackage[mathrm=sym]{unicode-math}
@@ -14,44 +10,54 @@
 \usepackage{microtype}
 \usepackage[hang,symbol,multiple]{footmisc}
 \usepackage{tikz}
-\usepackage{siunitx}
 \usepackage{xstring}
-
-\renewcommand{\footnotemargin}{1em}
+\usepackage{enumitem}
+\usepackage{xcolor}
 
 \input graphdrawing.tex
 
 \input translation-\ifcsdef{TemplateLanguage}{\TemplateLanguage}{de}.tex
 \fancyheadoffset[roh,reh]{.667em}
-\addtolength{\topmargin}{-1cm}
 
+% Logo
+\definecolor{highlightcolor}{HTML}{c20e1a}
 \def\logo{
 \begin{tikzpicture}
-    \definecolor{ioicolor}{HTML}{c20e1a}
     \node[anchor=east] (pic) at (0, 0) {\includegraphics[scale=.45]{logo.eps}};
     \node[white!40!black,anchor=west,align=left, outer xsep=1em] (A) at (1em,0)
         {{\bfseries\contestname}\\\tTask:\enspace\bfseries\taskname};
-    \draw[ioicolor,very thick] (A.north west) -- (A.south west);
+    \draw[highlightcolor,very thick] (A.north west) -- (A.south west);
 \end{tikzpicture}
 }
+\rhead{\logo} \lhead{}
 
-\rhead{{\logo}}
-\lhead{}
 
 \makeatletter
+\def\inputwidth{.4705\textwidth}
+\def\outputwidth{.4705\textwidth}
+
+% Subtask headings
 \def\sthelper#1#2{{\sffamily\bfseries \tSubtask\ #1 ($\symbf{#2}$ \IfInteger{#2}{\ifnum#2=1\tPoint\else\tPoints\fi}{\tPoints}).\enspace}}
 \newcount\stcount
 \stcount=0
-\def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1%
+\def\st@sk#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1%
 \setbox1=\hbox{\sthelper{\the\stcount}{#1}\hss}%
 \ifdim\wd1>\wd0\box1\else\hbox to \wd0{\unhbox1\hss}\fi\ignorespaces}
-\def\subtask{\count1=\stcount \advance\count1 by 1 \st{\subtaskpoints{\the\count1}}}
+\def\subtask{\count1=\stcount \advance\count1 by 1 \st@sk{\subtaskpoints{\the\count1}}}
+
+
+% Constraints
 \def\currconstraint#1{\scopedconstraint{\the\stcount}{#1}}
 \def\currconstraints{\@ifstar{\currconstraint{@ll*}}{\currconstraint{@ll}}}
 \def\currconstraintupper#1{\scopedconstraintupper{\the\stcount}{#1}}
 \def\currconstraintlower#1{\scopedconstraintlower{\the\stcount}{#1}}
 \def\currconstraintvalue#1{\scopedconstraintvalue{\the\stcount}{#1}}
 
+
+% Sample interaction for interactive tasks
+\def\programcolumnwidth{3.55cm}
+\def\returncolumnwidth{3cm}
+\def\explanationcolumnwidth{8.025cm}
 \begingroup
 \catcode`\ǁ=4
 \catcode`\& =\active%
@@ -61,12 +67,15 @@
 \catcode`\& =\active%
 \@ctivateAMP%
 \par\medskip%
-\begin{tabular}{>{\cellcolor[gray]{.9}}p{3.5cm}@{\hskip0pt}p{.52cm}@{\hskip0pt}>{\cellcolor[gray]{.9}}p{3cm}@{\hskip0pt}p{.52cm}@{\hskip0pt}>{\cellcolor[gray]{.9}\sffamily\hangindent=1.25em\hangafter=1\raggedright\arraybackslash}p{7.55cm}}
+\begin{tabular}{>{\cellcolor[gray]{.9}}p{\programcolumnwidth}@{\hskip0pt}p{.52cm}@{\hskip0pt}>{\cellcolor[gray]{.9}}p{\returncolumnwidth}@{\hskip0pt}p{.52cm}@{\hskip0pt}>{\cellcolor[gray]{.9}\sffamily\hangindent=1.25em\hangafter=1\raggedright\arraybackslash}p{\explanationcolumnwidth}}
 \hline
 \multicolumn{1}{|c}{\cellcolor{white}\sffamily\tProgram}&&\multicolumn{1}{c}{\sffamily \tReturn}&&\multicolumn{1}{c|}{\sffamily\tExplanation}\\\hline
 \noalign{\smallskip}%
 }{\end{tabular}\endgroup\par\medskip}
 
+
+% Sample for (standard) batch tasks
+\setlength{\LTpost}{\medskipamount}
 \def\myc@ption#1#2#3{\noalign{\bfseries\large #3}}
 \def\showcases{\removelastskip\par\bigskip\begingroup%
 % This is evil: we hijack LT@makecaption to force longtable to place the heading
@@ -77,11 +86,15 @@
 \testcasetable%
 \endgroup%
 \endgroup}
+
+
+% Limits
 \def\showlimits{\sheading{\tLimits}%
 \tTime: \timelimit\\
 \tMemory: \memlimit}
 
-% Feedback Section
+
+% Feedback [[deprecated]]
 \def\feedbackheading{\sheading{\tFeedback}}
 \def\nofeedback{\feedbackheading \tNofeedback}
 \def\partialfeedback{\feedbackheading \tPartialfeedback}
@@ -92,25 +105,50 @@
 \tFullfeedbackPrecise
 \fi}
 \def\tokenfeedback{\feedbackheading \tTokenFeedback
-
 \ifrestricted
 \tTokenRestrictedFeedback
 \fi}
 \let\dummyfeedack=\relax
-\def\showfeedback{\csname\feedback feedback\endcsname}
+\def\showfeedback{\PackageWarning{lg-template}{We've been using the same feedback settings for years; are you really sure you want to include them in the statement?}\csname\feedback feedback\endcsname}
 
-% Scoring Section
+
+% Scoring [[deprecated]]
 \def\scoringheading{\sheading{\tScoring}}
 \def\IOIXIIIscoring{\scoringheading \tScoringFromIOIXIII}
 \def\IOIXVIIscoring{\scoringheading \tScoringFromIOIXVII}
 \def\IOIXscoring   {\scoringheading \tScoringFromIOIX}
-\def\showscoring{\csname\scoring scoring\endcsname}
+\def\showscoring{\PackageWarning{lg-template}{We've been using the same scoring mode for years; are you really sure you want to include it in the statement?}\csname\scoring scoring\endcsname}
 
-% ---
 
-\def\standardpart{\showcases\showlimits\showfeedback\showscoring}
+% all of the above
+\def\standardpart{\showcases\showlimits}
 \makeatother
 
-\def\flushsubtasks{\global\stcount=\numsubtasks}
 
+% math settings
+\def\setmymathdims{\global\Umathsubshiftdown\textstyle=2.5pt%
+\global\Umathsubshiftdrop\textstyle=2.5pt%
+\global\Umathsubtopmax\textstyle=4pt%
+\global\Umathsupshiftup\textstyle=3.75pt%
+\global\Umathopopenspacing\textstyle=225mu
+\global\Umathsubshiftdrop\displaystyle=3pt%
+\global\Umathsubshiftdown\displaystyle=3pt%
+\global\Umathsubtopmax\displaystyle=3pt%
+\global\Umathsupshiftdrop\displaystyle=4pt%
+\global\Umathsupshiftup\displaystyle=4pt%
+\global\Umathopopenspacing\textstyle=2.25mu}
+\AtBeginDocument{\everymath{\setmymathdims}\setbox0=\hbox{$ $}\setmymathdims}
+
+
+% nice items
+\setlist[itemize,1]{label={\begin{tikzpicture}
+    \useasboundingbox (0,-1.25pt) rectangle (5pt,4.25pt);
+    \fill[highlightcolor] (0,0)--(0,4pt)--(4pt,4pt)--(4pt,0)--cycle;
+\end{tikzpicture}}}
+
+
+% ensure all subtasks appear in the statement...
 \AtEndDocument{\ifnum\stcount=\numsubtasks\else\PackageError{lg-template}{Not all subtasks are contained in the task statement!\MessageBreak You should call \protect\subtask\space (or \protect\st) precisely as often as there are subtasks, not counting the public one. If for some reason you do not want to do this, you can call \protect\flushsubtasks\space after all calls to \protect\subtask\space and \protect\st}{You should call \protect\subtask\space (or \protect\st) precisely as often as there are subtasks, not counting the public one. If for some reason you do not want to do this, you can call \protect\flushsubtasks\space after all calls to \protect\subtask\space and \protect\st}\fi}
+
+% ... or not (only use this if you know what you are doing)
+\def\flushsubtasks{\global\stcount=\numsubtasks}
