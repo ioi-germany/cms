@@ -346,7 +346,7 @@ und dem folgenden TeX-Code
     \section*{Beschränkungen}
     Stets gilt \currconstraints. % Ausgabe: Stets gilt $M\le 3\,000$.
 
-Aus historischen Gründen gibt es noch das Makro ``\constraint``, das als Parameter den "Index" des Constraints erwartet; ``\constraint1`` würde also z.B. den ersten Constraint aus der ``config.py`` ausgeben. *Dieses Makro sollte man vermeiden, da das Hinzufügen neuer Constraints natürlich die ganze Nummerierung durcheinanderwerfen kann* und es gilt aus diesem Grund auch als *deprecated*.
+Das Makro ``\constraint`` (das den Index des entsprechenden Constraints erwartete) wird nicht mehr unterstützt; sollte es noch in einer älteren Aufgabe verwendet werden, ist es wie oben beschrieben zu ersetzen.
 
 Der Standardteil
 ----------------
