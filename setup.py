@@ -167,7 +167,7 @@ setup(
              "scripts/cmsTelegramBotService"],
     entry_points={
         "console_scripts": [
-            "cmsRunTests=cmstestsuite.RunTests:main",
+            "cmsRunFunctionalTests=cmstestsuite.RunFunctionalTests:main",
             "cmsAddAdmin=cmscontrib.AddAdmin:main",
             "cmsAddParticipation=cmscontrib.AddParticipation:main",
             "cmsAddParticipationsForAll=cmscontrib.AddParticipationsForAll:main",

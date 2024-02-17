@@ -17,9 +17,13 @@ jobs:
         run: |
           mount | grep cgroup
 
+      - name: Build docker image
+        run: |
+          docker compose -p cms -f docker-compose.test.yml build testcms
+
       - name: Run tests
         run: |
-          docker-compose -f docker-compose.test.yml run cms_test
+          docker compose -p cms -f docker-compose.test.yml run --rm testcms
 
       - uses: codecov/codecov-action@v3
         with:
