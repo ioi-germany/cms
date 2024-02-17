@@ -82,7 +82,7 @@ The following is the bot's self-specification containing a list of commands avai
     A bot allowing to access clarification requests and announcements
     of a CMS contest via Telegram.
 
-    /start 〈pwd〉 — tries to bind the bot to the current chat when
+    /start <pwd> — tries to bind the bot to the current chat when
     used with the correct password; the bot can only be bound to a
     single chat at a time and all further binding attempts will be
     rejected until the bot service has been restarted
@@ -278,7 +278,8 @@ Quasi alle Aufgaben bestehen aus mehreren Teilaufgaben. Dazu erstellt man üblic
 
 Es gibt eine Fehlermeldung, wenn ``\subtask`` nicht genauso oft aufgerufen wird, wie es (nicht-öffentliche) Subtasks gibt. Möchte man aus irgendeinem Grund ``\subtask`` weniger oft aufrufen, muss man irgendwann nach dem letzten Aufruf von ``\subtask`` den Befehl ``\flushsubtasks`` einfügen.
 
-Der alte Befehl ``\st``, dem man als Parameter die Punktzahl für die entsprechende Teilaufgabe übergeben muss, ist als *deprecated* anzusehen. Er wird also nicht empfohlen und eventuell bald entfernt.
+Der alte Befehl ``\st``, dem man als Parameter die Punktzahl für die entsprechende Teilaufgabe übergeben muss, wird nicht mehr unterstützt. Sollte er bei einer älteren Aufgabe noch verwendet werden, ist er wie oben beschrieben durch ``\subtask`` zu ersetzen.
+
 
 Constraints
 -----------
