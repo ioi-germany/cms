@@ -354,7 +354,6 @@ Fast alle Aufgabenstellungen enden auf die gleiche Weise:
 
 * Zunächst gibt es einen Abschnitt mit den Beispieltestfällen. Dazu kann man den Befehl ``\showcases`` verwenden, der überprüft, ob es mehr als einen öffentlichen Testfall gibt, dementsprechend die passende Überschrift für den Abschnitt wählt, und dann eine ``\longtable`` der Testfälle ausgibt. *Dieser Befehl ist nicht für interaktive Aufgaben geeignet, bei denen es wohl keine sinnvolle Alternative dazu gibt, die Kommunikation von Hand zu erstellen!*
 * Daraufhin werden Speicher- und Zeitlimit ausgegeben. Dies kann einfach mit ``\showlimits`` geschehen.
-* Ganz zum Schluss wird auf das Feedback hingewiesen (beachte, dass dies zum Zeitpunkt, an dem man die Aufgabe schreibt, eigentlich noch gar nicht feststeht, da er von der Verwendung der Aufgabe in ``contest-config.py`` abhängt!); dies geschieht mit ``\showfeedback``.
 
 Da diese Befehle fast immer so aufgerufen werden, kann man stattdessen einfach ``\standardpart`` schreiben. Beachte aber, dass man die Makros einzeln aufrufen muss, wenn man z.B. erläuternde Worte zu einem der Beispieltestfälle hinzufügen möchte.
 
