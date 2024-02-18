@@ -34,15 +34,18 @@ In a Batch task, each testcase has an input (usually kept secret from the contes
 
 The contestant must submit a single source file; thus the submission format should contain one element with a ``.%l`` placeholder for the language extension.
 
-Batch has three parameters:
+Batch has four parameters:
 
 - the first specifies whether the source submitted by the contestant is compiled on its own, or together with a grader provided by the admins;
 - the second specifies the filenames of input and output (for reading and writing by the contestant source or by the grader), or whether to redirect them to standard input and standard output (if left blank);
 - the third whether to compare correct output and contestant-produced output with a simple diff, or with an admin-provided comparator.
+- the fourth whether to use multiscoring, i.e. add `multiscore=True` (explained below)
 
 A grader is a source file that is compiled with the contestant's source, and usually performs I/O for the contestants, so that they only have to implement one or more functions. If the task uses a grader, the admins must provide a manager called :file:`grader.{ext}` for each allowed language, where :file:`{ext}` is the standard extension of a source file in that language. If header files are needed, they can be provided as additional managers with an appropriate extension (for example, ``.h`` for C/C++ and ``lib.pas`` for Pascal).
 
 The output produced by the contestant (possibly through the grader) is then evaluated against the correct output. This can be done with :ref:`white-diff<tasktypes_white_diff>`, or using a :ref:`comparator<tasktypes_checker>`. In the latter case, the admins must provide an executable manager called :file:`checker`. If the contestant's code fails, this step is omitted, and the outcome will be 0.0 and the message will explain the reason.
+
+When `multiscore` is set to `True`, the comparator may then return a vector of scores (between 0.0 and 1.0) and a vector of messages explaining them. In the `config.py` the `scorestyle=i` argument can be passed to a `group` to use index `i` of the returned vector as scoring result. One possible use case is a task which uses partial scoring only in the last subtask.
 
 Batch supports user tests; if a grader is used, the contestants must provide their own grader (a common practice is to provide a simple grader to contestants, that can be used for local testing and for server-side user tests). The output produced by the contestant's solution, possibly through the grader, is sent back to the contestant; it is not evaluated against a correct output.
 
