@@ -73,8 +73,16 @@ class TaskCompileJob:
 
             with balancer:
                 try:
-                    comp = GerMakeTask(repository.path, self.name, True, True,
-                                       None, False, True, None, False)
+                    comp = GerMakeTask(odir = repository.path,
+                                       task = self.name,
+                                       minimal = True,
+                                       no_test = True,
+                                       submission = None,
+                                       no_latex = False,
+                                       verbose_latex = True,
+                                       language = None,
+                                       clean = False,
+                                       ntcimp = True)
 
                     with repository:
                         comp.prepare()
