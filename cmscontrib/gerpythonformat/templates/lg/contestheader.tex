@@ -37,7 +37,7 @@
 \def\outputwidth{.4705\textwidth}
 
 % Subtask headings
-\def\sthelper#1#2{{\sffamily\bfseries \tSubtask\ #1 ($\symbf{#2}$ \IfInteger{#2}{\ifnum#2=1\tPoint\else\tPoints\fi}{\tPoints}).\enspace}}
+\def\sthelper#1#2{{\sffamily\bfseries \tSubtask{} #1 (#2 \IfInteger{#2}{\ifnum#2=1\tPoint\else\tPoints\fi}{\tPoints}).\enspace\hss}}
 \newcount\stcount
 \stcount=0
 \def\st#1{\PackageError{lg-template}{command \protect\st\space no longer supported; please use the \protect\subtask\space macro as described in the docs}{please use the \protect\subtask\space macro as described in the docs}}
