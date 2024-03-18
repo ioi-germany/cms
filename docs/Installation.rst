@@ -30,8 +30,6 @@ These are our requirements (in particular we highlight those that are not usuall
 
 * `a2ps <https://www.gnu.org/software/a2ps/>`_ (only for printing).
 
-* `asymptote <http://asymptote.sourceforge.net/>`_ (for German task format; usage now deprecated)
-
 * `latexmk <http://www.ctan.org/pkg/latexmk/>`_ (for German task format)
 
 * `ttf-fira-go <https://github.com/bBoxType/FiraGO>`_ (for German task format + Hebrew)
@@ -281,7 +279,7 @@ To install CMS python dependencies on Arch Linux (again: assuming you did not us
 
     # Optional.
     # sudo pacman -S --needed python-yaml python-sphinx python-pycups \
-    #      asymptote texlive-core
+    #      texlive-core
     # Optionally install the following from AUR.
     # https://aur.archlinux.org/packages/python-pypdf2/
 
