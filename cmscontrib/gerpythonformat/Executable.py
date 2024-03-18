@@ -270,16 +270,6 @@ def keyword_list(kwords):
     return L
 
 
-def asy_keyword_list(kwords):
-    """ Convert a keyword dictionary to something readable by
-    asymptote on the command line
-    """
-    def encode(key, val):
-        return ("-" if val else "-no") + str(key)
-
-    return [encode(key, val) for key, val in kwords.items()]
-
-
 class CPPProgram(Executable):
     """An Executable which is the binary resulting from compiling some c++
     source files.

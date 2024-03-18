@@ -86,12 +86,6 @@ class LgTemplate(PlainTemplate):
                                      "translation-en.tex"),
                         os.path.join(task.wdir, "translation-en.tex"))
 
-        # Provide common asy files
-        shutil.copyfile(os.path.join(os.path.dirname(__file__), "graphics.cfg"),
-                        "graphics.cfg")
-        shutil.copyfile(os.path.join(os.path.dirname(__file__), "mystyle.asy"),
-                        "mystyle.asy")
-
         task.supply("latex", def_latex("feedback", task.feedback))
 
         score_mode = task.score_mode()

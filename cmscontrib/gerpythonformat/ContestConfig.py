@@ -188,16 +188,7 @@ class ContestConfig(CommonConfig):
         self._initialize_ranking()
 
     def finish(self):
-        asy_cnt = self.asy_warnings + sum(t.asy_warnings
-                                  for t in self.tasks.values())
-
-        if asy_cnt != 0:
-            box(" WARNING ", yellow("You compiled %d Asymptote file(s)."
-                                        % asy_cnt) + "\n" +
-                yellow("However, Asymptote support will be removed") + "\n" +
-                yellow("from our task format in the near future") + "\n" +
-                yellow("Please consider using TikZ for pictures."),
-                double=True)
+        pass
 
     def _token_feedback(self, gen_initial, gen_number,
                         gen_interval=timedelta(minutes=30), gen_max=None,
