@@ -43,7 +43,10 @@ These are our requirements (in particular we highlight those that are not usuall
 You will also require a Linux kernel with support for control groups and namespaces. Support has been in the Linux kernel since 2.6.32. Other distributions, or systems with custom kernels, may not have support enabled. At a minimum, you will need to enable the following Linux kernel options: ``CONFIG_CGROUPS``, ``CONFIG_CGROUP_CPUACCT``, ``CONFIG_MEMCG`` (previously called as ``CONFIG_CGROUP_MEM_RES_CTLR``), ``CONFIG_CPUSETS``, ``CONFIG_PID_NS``, ``CONFIG_IPC_NS``, ``CONFIG_NET_NS``. It is anyway suggested to use Linux kernel version at least 3.8.
 
 .. warning::
-   Currently, ``isolate`` only works with ``cgroups v1``, not ``cgroups v2``. If you receive error messages regarding ``isolate`` when using CMS, you may need to add ``systemd.unified_cgroup_hierarchy=0`` to your kernel parameters (usually, add them to ``GRUB_CMDLINE_LINUX_DEFAULT`` in ``/etc/default/grub``, then re-make the GRUB configuration file) as your operating system may already use ``cgroups v2`` by default.
+   Previous versions of ``isolate`` worked with ``cgroups v1``, but versions since 2.0 use ``cgroups v2``.
+   If you are using a version before 2.0, you may have to add ``systemd.unified_cgroup_hierarchy=0`` to your kernel parameters (usually, add them to ``GRUB_CMDLINE_LINUX_DEFAULT`` in ``/etc/default/grub``, then re-make the GRUB configuration file) as most distros now use ``cgroups v2`` by default.
+   If you are using version 2.0 or later, you must enable ``isolate.service`` (on distributions without systemd, you can alternatively use ``cgroupfs`` to create a cgroup, and write the path to ``/run/isolate/cgroup``).
+
 
 Then you require the compilation and execution environments for the languages you will use in your contest:
 
@@ -67,6 +70,9 @@ All dependencies can be installed automatically on most Linux distributions.
 
 Ubuntu
 ------
+
+.. warning::
+   The instructions below may be outdated.
 
 On Ubuntu 20.04, one will need to run the following script to satisfy all dependencies:
 
@@ -100,7 +106,11 @@ The above commands provide a very essential Pascal environment. Consider install
 Arch Linux
 ----------
 
-On Arch Linux, unofficial AUR packages can be found: `cms <http://aur.archlinux.org/packages/cms>`_ or `cms-git <http://aur.archlinux.org/packages/cms-git>`_. However, if you do not want to use them, the following command will install almost all dependencies (some of them can be found in the AUR):
+On Arch Linux, unofficial AUR packages can be found: `cms-germany-git <http://aur.archlinux.org/packages/cms-germany-git`.
+If using this method, we also recommend installing ``isolate`` from ``isolate-git <http://aur.archlinux.org/packages/isolate-git>`` (as the other package does not include the systemd services).
+Remember to ``systemctl enable --now isolate.service``.
+
+However, if you do not want to use them, the following command will install almost all dependencies (some of them can be found in the AUR):
 
 .. sourcecode:: bash
 
