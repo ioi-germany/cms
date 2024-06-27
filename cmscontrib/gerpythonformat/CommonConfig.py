@@ -23,16 +23,16 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \
-    header, box, yellow, highlight_latex
+    header, box, red, highlight_latex
 from cmscontrib.gerpythonformat.Executable import CPPProgram, InternalPython, ExternalScript, \
-    ExternalPython, asy_keyword_list
+    ExternalPython
 from cms.rules.Rule import LaTeXRule, SafeLaTeXRule, CommandRule, ZipRule
 from cms.grading.languages.c11_gcc import C11Gcc
 from cms.grading.languages.cpp17_gpp import Cpp17Gpp
 from cms.grading.languages.java_jdk import JavaJDK
 from cms.grading.languages.pascal_fpc import PascalFpc
 from cms.grading.languages.python3_pypy import Python3PyPy
-from cmscontrib.gerpythonformat.Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
+from cmscontrib.gerpythonformat.Supplement import easycall, def_latex, escape_latex
 import inspect
 import io
 import os
@@ -113,8 +113,6 @@ class CommonConfig(object):
 
         self.exported["timedelta"] = timedelta
 
-        self.asy_warnings = 0
-
     # Run the configuration file
 
     def _readconfig(self, filename):
@@ -184,10 +182,6 @@ class CommonConfig(object):
     @exported_function
     def supply_latex(self, name, f):
         self.supply("latex", def_latex(name, escape_latex(f)))
-
-    @exported_function
-    def supply_asy(self, name, f):
-        self.supply("asy", def_asy(name, escape_asy(f)))
 
     @exported_function
     def register_supplement(self, key, extension):
@@ -376,6 +370,8 @@ class CommonConfig(object):
     @exported_function
     def compileasy(self, basename, stdin=None, output=None, **kwargs):
         """
+        DEPRECATED: Asymptote support is deprecated and removed.
+        
         Compile and run an asymptote file to generate a pdf file.
 
         basename (string): base of the asymptote file name: basename.asy
@@ -389,34 +385,11 @@ class CommonConfig(object):
         arguments.
 
         """
-        source = basename + ".asy"
-        if output is None:
-            output = basename + ".pdf"
 
-        with header("Compile {} to {} using Asymptote"
-                    .format(self.short_path(source), self.short_path(output)),
-                    depth=10):
+        box(" ERROR ", red("Asymptote support is removed from our task format."
+                           "\n") + red("Please use TikZ for pictures instead."))
+        raise Exception("Compilation failed")
 
-            box(" WARNING ", yellow("Asymptote support will be removed from "
-                                    "our task format in the near future.") +
-                "\n" + yellow("Please consider using TikZ for pictures."))
-            self.asy_warnings += 1
-
-            self._build_supplements("asy")
-
-            # Asymptote does not tell us the dependencies, so we have to guess
-            dep = [source] + self._get_supplement_extension_files("asy")
-
-            r = CommandRule(self.rules,
-                            ["asy"] + ["-tex", "lualatex"] +
-                            ["-o", output] + asy_keyword_list(kwargs) +
-                            [source], stdin=stdin, dependencies=dep,
-                            outputs=[output], dependonexe=False).ensure()
-            print_block(r.out)
-            print_block(r.err)
-            if r.code != 0:
-                raise Exception("Compilation failed")
-        return output
 
     @exported_function
     def compile(self, filename, **kwargs):
