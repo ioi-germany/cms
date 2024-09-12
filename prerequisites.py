@@ -50,6 +50,8 @@ AS_ROOT = False
 # Do not even try to install configuration files (i.e., copying the
 # samples) when installing.
 NO_CONF = False
+# Do not check isolate availability
+NO_CHECK_ISOLATE = False
 # The user and group that CMS will be run as: will be created and will
 # receive the correct permissions to access isolate, the configuration
 # file and the system directories.
@@ -187,56 +189,28 @@ def get_real_user():
 
     return name
 
+def check_isolate(gr_name):
+    print("===== Verifying isolate availability")
 
-def build_isolate():
-    """This function compiles the isolate sandbox.
+    isolate_test_run = subprocess.run(["sudo", "-E", "-u", CMSUSER, "isolate --cg --init"], stdout = subprocess.PIPE, stderr = subprocess.STDOUT, text=True)
+    if isolate_test_run.returncode == 0:
+        subprocess.run(["sudo", "-E", "-u", CMSUSER, "isolate --cg --cleanup"])
+    else:
+        print('''
+###########################################################################
+###                                                                     ###
+###    'isolate' failed with the following error:                       ###
+---------------------------------------------------------------------------
+        ''')
+        print(isolate_test_run.stdout)
+        print('''
+---------------------------------------------------------------------------
+###    Note that cms expects users in the %s group to be able to   ###
+###    be able to run 'isolate' without sudo.                           ###
+###                                                                     ###
+###########################################################################
+        ''' % gr_name)
 
-    """
-    assert_not_root()
-
-    print("===== Compiling isolate")
-    # We make only the executable isolate, otherwise the tool a2x
-    # is needed and we have to add more compilation dependencies.
-    subprocess.check_call(["make", "-C", "isolate", "isolate"])
-
-
-def install_isolate():
-    """This function installs the isolate sandbox.
-
-    """
-    assert_root()
-    root = pwd.getpwnam("root")
-    try:
-        cmsuser_grp = grp.getgrgid(pwd.getpwnam(CMSUSER).pw_gid)
-    except:
-        print("[Error] The user %s doesn't exist yet" % CMSUSER)
-        print("[Error] You need to run the install command at least once")
-        exit(1)
-
-    # Check if build_isolate() has been called
-    if not os.path.exists(os.path.join("isolate", "isolate")):
-        print("[Error] You must run the build_isolate command first")
-        exit(1)
-
-    print("===== Copying isolate to /usr/local/bin/")
-    makedir(os.path.join(USR_ROOT, "bin"), root, 0o755)
-    copyfile(os.path.join(".", "isolate", "isolate"),
-             os.path.join(USR_ROOT, "bin", "isolate"),
-             root, 0o4750, group=cmsuser_grp)
-
-    print("===== Copying isolate config to /usr/local/etc/")
-    makedir(os.path.join(USR_ROOT, "etc"), root, 0o755)
-    copyfile(os.path.join(".", "isolate", "default.cf"),
-             os.path.join(USR_ROOT, "etc", "isolate"),
-             root, 0o640, group=cmsuser_grp)
-
-
-def build():
-    """This function builds all the prerequisites by calling:
-    - build_isolate
-
-    """
-    build_isolate()
 
 
 def install_conf():
@@ -291,15 +265,9 @@ def install():
 
     root_pw = pwd.getpwnam("root")
 
-    if real_user == "root":
-        # Run build() command as root
-        build()
-    else:
-        # Run build() command as not root
-        subprocess.check_call(["sudo", "-E", "-u", real_user,
-                               sys.executable, sys.argv[0], "build"])
-
-    install_isolate()
+    # Check if isolate is installed, and executable as CMSUSER.
+    # Otherwise, print a warning.
+    check_isolate(cmsuser_gr.gr_name)
 
     # We set permissions for each manually installed files, so we want
     # max liberty to change them.
@@ -435,6 +403,10 @@ if __name__ == '__main__':
         "--no-conf", action="store_true",
         help="Don't install configuration files")
     parser.add_argument(
+        "--no-check-isolate", action="store_true",
+        help="Do not check if isolate is available. (Note: cms will not be able to run properly without isolate)"
+    )
+    parser.add_argument(
         "--as-root", action="store_true",
         help="(DON'T USE) Allow running non-root commands as root")
     parser.add_argument(
@@ -444,15 +416,6 @@ if __name__ == '__main__':
 
     subparsers = parser.add_subparsers(metavar="command",
                                        help="Subcommand to run")
-    subparsers.add_parser("build_isolate",
-                          help="Build \"isolate\" sandbox") \
-        .set_defaults(func=build_isolate)
-    subparsers.add_parser("build",
-                          help="Build everything") \
-        .set_defaults(func=build)
-    subparsers.add_parser("install_isolate",
-                          help="Install \"isolate\" sandbox (requires root)") \
-        .set_defaults(func=install_isolate)
     subparsers.add_parser("install",
                           help="Install everything (requires root)") \
         .set_defaults(func=install)
@@ -466,6 +429,7 @@ if __name__ == '__main__':
     NO_CONF = args.no_conf
     AS_ROOT = args.as_root
     CMSUSER = args.cmsuser
+    NO_CHECK_ISOLATE = args.no_check_isolate
 
     if not hasattr(args, "func"):
         parser.error("Please specify a command to run. "
