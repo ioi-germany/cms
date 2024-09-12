@@ -143,21 +143,21 @@ Preparation steps
 Clone :gh_clone_ssh:`CMS using SSH` or :gh_clone_https:`HTTPS`. Alternatively, download :gh_download:`CMS from GitHub as an archive`, then extract it on your filesystem.
 You should then access the ``cms`` folder using a terminal.
 
-.. warning::
-
-    If you decided to ``git clone`` the repository instead of downloading the archive, and you didn't use the ``--recursive`` option when cloning, then **you need** to issue the following command to fetch the source code of the sandbox:
-
-    .. sourcecode:: bash
-
-        git submodule update --init
-
 In order to run CMS there are some preparation steps to run (like installing the sandbox, compiling localization files, creating the ``cmsuser``, and so on). You can either do all these steps by hand or you can run the following command:
+
+.. warning::
+   In previous versions, ``prerequisites.py`` also installed ``isolate``.
+   This is no longer the case, as ``isolate`` is now packaged for many distributions, and users may choose different versions of ``isolate`` depending on which version of ``cgroups`` they are using.
+
+    Note however that ``cms`` expects to be able to run ``isolate`` without root, which not all packages provide.
+
+.. FIXME -- We should consider making the path to 'isolate' configurable, allowing users to create custom wrappers for e.g. setuid or sudo.
 
 .. sourcecode:: bash
 
     sudo python3 prerequisites.py install
 
-.. FIXME -- The following part probably does not need to be mentioned. Moreover, it would be better if isolate was just a dependency (like postgresql) to be installed separately, with its own group (e.g. 'isolate' instead of 'cmsuser'). The 'cmsuser' group could just become deprected, at that point.
+.. FIXME -- The following part probably does not need to be mentioned. Moreover, since we now treat ``isolate`` as a dependency to be installed externally (and likely with its own group), we could deprecate the `cmsuser` group.
 
 This script will add you to the ``cmsuser`` group if you answer ``Y`` when asked. If you want to handle your groups by yourself, answer ``N`` and then run:
 
