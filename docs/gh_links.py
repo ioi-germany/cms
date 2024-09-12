@@ -34,11 +34,27 @@ def gh_issue(typ, rawtext, text, lineno, inliner, options={}, content=[]):
 def make_gh_download(app):
     def gh_download(typ, rawtext, text, lineno, inliner, options={}, content=[]):
         title = utils.unescape(text)
-        full_url = 'https://github.com/cms-dev/cms/releases/download/v%(ver)s/v%(ver)s.tar.gz' % {"ver": app.config.release}
+        full_url = 'https://github.com/ioi-germany/cms/archive/refs/heads/main.tar.gz'
 
         retnode = nodes.reference(title, title, internal=False, refuri=full_url, **options)
         return [retnode], []
     return gh_download
+
+def make_gh_clone_https(app):
+    def gh_clone_https(typ, rawtext, text, lineno, inliner, options={}, content=[]):
+        title = utils.unescape(text)
+        full_url = 'https://github.com/ioi-germany/cms.git'
+        retnode = nodes.reference(title, title, internal=False, refuri=full_url, **options)
+        return [retnode], []
+    return gh_clone_https
+
+def make_gh_clone_ssh(app):
+    def gh_clone_ssh(typ, rawtext, text, lineno, inliner, options={}, content=[]):
+        title = utils.unescape(text)
+        full_url = 'git@github.com:ioi-germany/cms.git'
+        retnode = nodes.reference(title, title, internal=False, refuri=full_url, **options)
+        return [retnode], []
+    return gh_clone_ssh
 
 def make_gh_tree(app):
     def gh_tree(typ, rawtext, text, lineno, inliner, options={}, content=[]):
@@ -67,6 +83,8 @@ def make_gh_blob(app):
 def setup_roles(app):
     app.add_role("gh_issue", gh_issue)
     app.add_role("gh_download", make_gh_download(app))
+    app.add_role("gh_clone_https", make_gh_clone_https(app))
+    app.add_role("gh_clone_ssh", make_gh_clone_ssh(app))
     app.add_role("gh_tree", make_gh_tree(app))
     app.add_role("gh_blob", make_gh_blob(app))
 
