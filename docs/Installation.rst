@@ -140,7 +140,8 @@ However, if you do not want to use them, the following command will install almo
 Preparation steps
 =================
 
-Download :gh_download:`CMS` |release| from GitHub as an archive, then extract it on your filesystem. You should then access the ``cms`` folder using a terminal.
+Clone :gh_clone_ssh:`CMS using SSH` or :gh_clone_https:`HTTPS`. Alternatively, download :gh_download:`CMS from GitHub as an archive`, then extract it on your filesystem.
+You should then access the ``cms`` folder using a terminal.
 
 .. warning::
 
