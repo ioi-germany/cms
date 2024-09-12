@@ -162,7 +162,8 @@ class ContestConfig(CommonConfig):
         # Default submission limits
         self.submission_limits(None, None)
         self.user_test_limits(None, None)
-
+        self.lift_restrictions_after(None)
+        
         # a standard tokenwise comparator (specified here so that it has to be
         # compiled at most once per contest)
         shutil.copy(os.path.join(self._get_ready_dir(), "tokens.cpp"),
@@ -534,6 +535,20 @@ class ContestConfig(CommonConfig):
         """
         self._mytestuser = u
 
+    @exported_function
+    def lift_restrictions_after(self, restricted_time):
+        """
+        Set the time before the interval restriction on submissions is lifted
+        This refers to both restrictions set by contest and task. After lifting of restrictions
+        a participation is moved to phase 0.5
+
+        restricted_time (timedelta): if None restrictions are always active
+                                     if 0 restrictions are never active
+                                     if <0 restrictions are active until end + restricted_time
+                                     if >0 restrictions are active until start + restricted_time
+        """
+        self.restricted_time = restricted_time
+
     def short_path(self, f):
         """
         Return a (possibly) shorter name for a file (which can be relative
@@ -566,7 +581,8 @@ class ContestConfig(CommonConfig):
         cdb.min_submission_interval = self.min_submission_interval
         cdb.max_user_test_number = self.max_user_test_number
         cdb.min_user_test_interval = self.min_user_test_interval
-
+        cdb.restricted_time = self.restricted_time
+        
         self.usersdb = {}
         self.participationsdb = {}
 
