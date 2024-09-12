@@ -143,14 +143,6 @@ Preparation steps
 Clone :gh_clone_ssh:`CMS using SSH` or :gh_clone_https:`HTTPS`. Alternatively, download :gh_download:`CMS from GitHub as an archive`, then extract it on your filesystem.
 You should then access the ``cms`` folder using a terminal.
 
-.. warning::
-
-    If you decided to ``git clone`` the repository instead of downloading the archive, and you didn't use the ``--recursive`` option when cloning, then **you need** to issue the following command to fetch the source code of the sandbox:
-
-    .. sourcecode:: bash
-
-        git submodule update --init
-
 In order to run CMS there are some preparation steps to run (like installing the sandbox, compiling localization files, creating the ``cmsuser``, and so on). You can either do all these steps by hand or you can run the following command:
 
 .. warning::
