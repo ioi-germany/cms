@@ -26,18 +26,16 @@ clean:
 
 install-isolate:
 	sudo apt update
-	sudo $(PACKAGE_MGR_INSTALL) libcap-dev libsystemd-dev
+	sudo $(PACKAGE_MGR_INSTALL) libcap-dev libsystemd-dev pkg-config
 	sudo groupadd $(CMS_USER_GROUP) || true
 	sudo usermod -a -G $(CMS_USER_GROUP) $(shell whoami)
 	git clone https://github.com/ioi/isolate.git
-	cd isolate && make isolate
-	cd isolate && sudo cp ./isolate $(USR_ROOT)/bin/isolate
-	sudo chgrp $(CMS_USER_GROUP) $(USR_ROOT)/bin/isolate
-	sudo chmod 4750 $(USR_ROOT)/bin/isolate
-	cd isolate && sudo cp ./default.cf $(USR_ROOT)/etc/isolate
-	sudo chgrp $(CMS_USER_GROUP) $(USR_ROOT)/etc/isolate
-	sudo chmod 640 $(USR_ROOT)/etc/isolate
-	echo $(shell isolate --version)
+	cd isolate && sudo make install
+	cd isolate && sudo cp -rf systemd/* /etc/systemd/system/
+	sudo systemctl daemon-reload
+	sudo systemctl enable isolate.service
+	sudo systemctl start isolate.service
+	isolate --version
 	sudo rm -rf isolate
 
 
@@ -58,5 +56,10 @@ install-cms:
 	export SETUPTOOLS_USE_DISTUTILS="stdlib" ; . $(VENV_PATH)/bin/activate ; pip3 install -r requirements.txt
 	export SETUPTOOLS_USE_DISTUTILS="stdlib" ; . $(VENV_PATH)/bin/activate ; $(PYTHON_BIN) setup.py install
 
-install: assert-not-root apt-deps install-isolate python-apt-deps install-cms
+assert-isolate-functional:
+	sudo -E -u $(shell whoami) isolate --cg --init
+	sudo -E -u $(shell whoami) isolate --cg --cleanup
+	@echo isolate is functional
+
+install: assert-not-root apt-deps install-isolate python-apt-deps install-cms assert-isolate-functional
 	@echo "SUCCESS"
