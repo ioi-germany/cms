@@ -16,3 +16,4 @@ log/
 .vagrant/
 codecov/
 cmsvenv/
+isolate

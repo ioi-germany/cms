@@ -28,7 +28,7 @@ install-isolate:
 	sudo apt update
 	sudo $(PACKAGE_MGR_INSTALL) libcap-dev libsystemd-dev
 	sudo groupadd $(CMS_USER_GROUP) || true
-	sudo usermod -a -G cmsuser $(shell whoami)
+	sudo usermod -a -G $(CMS_USER_GROUP) $(shell whoami)
 	git clone https://github.com/ioi/isolate.git
 	cd isolate && make isolate
 	cd isolate && sudo cp ./isolate $(USR_ROOT)/bin/isolate
@@ -38,6 +38,7 @@ install-isolate:
 	sudo chgrp $(CMS_USER_GROUP) $(USR_ROOT)/etc/isolate
 	sudo chmod 640 $(USR_ROOT)/etc/isolate
 	echo $(shell isolate --version)
+	sudo rm -rf isolate
 
 
 python-apt-deps:
