@@ -13,14 +13,22 @@ CMS_USER_GROUP=cmsuser
 help:
 	echo TODO
 
+ifeq "$(shell whoami)" "root"
+assert-not-root:
+	@echo "Do not use sudo before make"
+	exit 1
+else
+assert-not-root:
+endif
+
 clean:
-	rm -rf isolate
+	sudo rm -rf isolate
 
 install-isolate:
 	sudo apt update
 	sudo $(PACKAGE_MGR_INSTALL) libcap-dev libsystemd-dev
 	sudo groupadd $(CMS_USER_GROUP) || true
-	sudo usermod -a -G cmsuser $(whoami)
+	sudo usermod -a -G cmsuser $(shell whoami)
 	git clone https://github.com/ioi/isolate.git
 	cd isolate && make isolate
 	cd isolate && sudo cp ./isolate $(USR_ROOT)/bin/isolate
@@ -49,5 +57,5 @@ install-cms:
 	export SETUPTOOLS_USE_DISTUTILS="stdlib" ; . $(VENV_PATH)/bin/activate ; pip3 install -r requirements.txt
 	export SETUPTOOLS_USE_DISTUTILS="stdlib" ; . $(VENV_PATH)/bin/activate ; $(PYTHON_BIN) setup.py install
 
-install: apt-deps install-isolate python-apt-deps install-cms
-	echo "SUCCESS"
+install: assert-not-root apt-deps install-isolate python-apt-deps install-cms
+	@echo "SUCCESS"
