@@ -31,7 +31,7 @@ install-isolate:
 
 python-apt-deps:
 	sudo add-apt-repository -y ppa:deadsnakes/ppa
-	sudo apt-get update
+	sudo apt-get update || true
 	sudo $(PACKAGE_MGR_INSTALL) $(PYTHON_BIN) $(PYTHON_BIN)-dev $(PYTHON_BIN)-venv \
 	python3-pip
 
