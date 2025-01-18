@@ -37,7 +37,7 @@ install-isolate:
 	cd isolate && sudo cp ./default.cf $(USR_ROOT)/etc/isolate
 	sudo chgrp $(CMS_USER_GROUP) $(USR_ROOT)/etc/isolate
 	sudo chmod 640 $(USR_ROOT)/etc/isolate
-	echo $(isolate --version)
+	echo $(shell isolate --version)
 
 
 python-apt-deps:
@@ -50,7 +50,7 @@ apt-deps:
 	sudo $(PACKAGE_MGR_INSTALL) build-essential openjdk-17-jdk-headless fp-compiler \
     postgresql postgresql-client cppreference-doc-en-html \
     cgroup-lite libcap-dev zip libpq-dev libcups2-dev libyaml-dev \
-    libffi-dev 
+    libffi-dev
 
 install-cms:
 	$(PYTHON_BIN) -m venv $(VENV_PATH)
