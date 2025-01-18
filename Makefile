@@ -17,7 +17,10 @@ clean:
 	rm -rf isolate
 
 install-isolate:
-	sudo $(PACKAGE_MGR_INSTALL) libsystemd-dev
+	sudo apt update
+	sudo $(PACKAGE_MGR_INSTALL) libcap-dev libsystemd-dev
+	sudo groupadd $(CMS_USER_GROUP) || true
+	sudo usermod -a -G cmsuser $(whoami)
 	git clone https://github.com/ioi/isolate.git
 	cd isolate && make isolate
 	cd isolate && sudo cp ./isolate $(USR_ROOT)/bin/isolate
@@ -31,7 +34,7 @@ install-isolate:
 
 python-apt-deps:
 	sudo add-apt-repository -y ppa:deadsnakes/ppa
-	sudo apt-get update || true
+	sudo apt-get update
 	sudo $(PACKAGE_MGR_INSTALL) $(PYTHON_BIN) $(PYTHON_BIN)-dev $(PYTHON_BIN)-venv \
 	python3-pip
 
@@ -46,5 +49,5 @@ install-cms:
 	export SETUPTOOLS_USE_DISTUTILS="stdlib" ; . $(VENV_PATH)/bin/activate ; pip3 install -r requirements.txt
 	export SETUPTOOLS_USE_DISTUTILS="stdlib" ; . $(VENV_PATH)/bin/activate ; $(PYTHON_BIN) setup.py install
 
-install: install-isolate apt-deps python-apt-deps install-cms
+install: apt-deps install-isolate python-apt-deps install-cms
 	echo "SUCCESS"
