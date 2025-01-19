@@ -15,8 +15,7 @@ help: ## Show this help message
 
 ifeq "$(shell whoami)" "root"
 assert-not-root:
-	@echo "Do not use sudo before make"
-	exit 1
+	$(error Do not use sudo before make)
 else
 assert-not-root:
 endif
