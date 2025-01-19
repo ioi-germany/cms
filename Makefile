@@ -66,7 +66,9 @@ install-network: ## Install network packages for web server
 	sudo $(PACKAGE_MGR_INSTALL) nginx-full
 
 install-tex: ## Install latex related packages for statement compilation 
-	sudo $(PACKAGE_MGR_INSTALL) texlive-latex-base
+	sudo $(PACKAGE_MGR_INSTALL) texlive-latex-recommended texlive-fonts-extra \
+	texlive-fonts-recommended texlive-formats-extra texlive-lang-english \
+	texlive-lang-german texlive-luatex texlive-science
 
 install-full: install install-network install-tex ## Install the complete cms suite including web server and statement compilation capability
 
