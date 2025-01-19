@@ -1,17 +1,17 @@
 PACKAGE_MGR=apt-get
 PACKAGE_MGR_INSTALL_OPT=install -y
 PACKAGE_MGR_INSTALL=$(PACKAGE_MGR) $(PACKAGE_MGR_INSTALL_OPT)
+
 PYTHON_VER=3.9
 PYTHON_BIN=python$(PYTHON_VER)
 VENV_PATH=./cmsvenv
+
 USR_ROOT=/usr/local
 CMS_USER_GROUP=cmsuser
 
-#Isolate: libsystemd-dev
-# create group, copy, set perms
-
-help:
-	echo TODO
+help: ## Show this help message
+	@echo "Help: Build and install cms on the current machine"
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m\033[0m\n"} /^[$$()% a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ifeq "$(shell whoami)" "root"
 assert-not-root:
@@ -38,7 +38,6 @@ install-isolate:
 	isolate --version
 	sudo rm -rf isolate
 
-
 python-apt-deps:
 	sudo add-apt-repository -y ppa:deadsnakes/ppa
 	sudo apt-get update
@@ -61,5 +60,14 @@ assert-isolate-functional:
 	sudo -E -u $(shell whoami) isolate --cg --cleanup
 	@echo isolate is functional
 
-install: assert-not-root apt-deps install-isolate python-apt-deps install-cms assert-isolate-functional
+install: assert-not-root apt-deps install-isolate python-apt-deps install-cms assert-isolate-functional ## Install cms (inclduing isolate v2) in virtual environment
 	@echo "SUCCESS"
+
+install-network: ## Install network packages for web server
+	sudo $(PACKAGE_MGR_INSTALL) nginx-full
+
+install-tex: ## Install latex related packages for statement compilation 
+	sudo $(PACKAGE_MGR_INSTALL) texlive-latex-base
+
+install-full: install install-network install-tex ## Install the complete cms suite including web server and statement compilation capability
+
