@@ -1,0 +1,11 @@
+[Unit]
+Description=CMS Ranking Service
+
+[Service]
+Type=Simple
+ExecStart=$CMS_VENV_INSTALLATION_DIR/bin/cmsRankingWebServer
+User=$CMS_USER
+Slice=cms.slice
+
+[Install]
+WantedBy=multi-user.target

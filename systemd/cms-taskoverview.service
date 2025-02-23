@@ -1,0 +1,13 @@
+[Unit]
+Description=CMS Task Overview Web Server Service
+Requires=cms-log.service
+After=cms-log.service
+
+[Service]
+Type=simple
+ExecStart=$CMS_VENV_INSTALLATION_DIR/bin/cmsTaskOverviewWebServer
+User=$CMS_USER
+Slice=cms.slice
+
+[Install]
+WantedBy=multi-user.target

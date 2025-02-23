@@ -1,0 +1,13 @@
+[Unit]
+Description=CMS Resource Service
+Requires=cms-log.service postgresql.service
+After=cms-log.service postgresql.service
+
+[Service]
+Type=simple
+ExecStart=$CMS_VENV_INSTALLATION_DIR/bin/cmsResourceService
+User=$CMS_USER
+Slice=cms.slice
+
+[Install]
+WantedBy=multi-user.target
