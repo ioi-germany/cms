@@ -164,7 +164,8 @@ setup(
              "scripts/cmsGerTranslateWebServer",
              "scripts/cmsInitDB",
              "scripts/cmsDropDB",
-             "scripts/cmsTelegramBotService"],
+             "scripts/cmsTelegramBotService",
+             "scripts/cmsDiscordBotService"],
     entry_points={
         "console_scripts": [
             "cmsRunFunctionalTests=cmstestsuite.RunFunctionalTests:main",

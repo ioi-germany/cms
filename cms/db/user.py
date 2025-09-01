@@ -494,7 +494,7 @@ class Question(Base):
         Unicode,
         nullable=True)
 
-    # Source of the answer (web / telegram)
+    # Source of the answer (web / telegram / discord)
     reply_source = Column(
         Unicode,
         nullable=True)
