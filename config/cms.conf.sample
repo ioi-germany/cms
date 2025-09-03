@@ -226,6 +226,9 @@
     "_help": "Password for startup (choose this yourself)",
     "discord_bot_pwd": "pwd",
 
+    "_help": "List of Discord role names that can start the bot without password",
+    "discord_bot_admin_roles": [],
+
     "_help": "Maximum number of error messages before shutting down",
     "discord_bot_max_error_messages": 10,
 
