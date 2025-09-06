@@ -32,6 +32,9 @@ PyPDF2>=1.26,<1.27  # https://github.com/mstamy2/PyPDF2/blob/master/CHANGELOG
 # Only for telegram-bot
 python-telegram-bot>=13.0.0 # https://github.com/python-telegram-bot/python-telegram-bot
 
+# Only for discord-bot
+discord.py>=2.6.0 # https://discordpy.readthedocs.io/en/stable/
+
 # Only for captcha
 cairosvg # https://pypi.org/project/CairoSVG
 

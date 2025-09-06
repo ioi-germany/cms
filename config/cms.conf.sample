@@ -40,7 +40,8 @@
         "AdminWebServer":     [["localhost", 21100]],
         "ProxyService":       [["localhost", 28600]],
         "PrintingService":    [["localhost", 25123]],
-        "TelegramBotService": [["localhost", 25124]]
+        "TelegramBotService": [["localhost", 25124]],
+        "DiscordBotService":  [["localhost", 25125]]
         },
 
     "other_services":
@@ -214,6 +215,22 @@
 
     "_help": "Password for startup (choose this yourself)",
     "bot_pwd": "pwd",
+
+
+
+    "_section": "DiscordBot",
+
+    "_help": "Discord bot token for this bot",
+    "discord_bot_token": "",
+
+    "_help": "Password for startup (choose this yourself)",
+    "discord_bot_pwd": "pwd",
+
+    "_help": "List of Discord role names that can start the bot without password",
+    "discord_bot_admin_roles": [],
+
+    "_help": "Maximum number of error messages before shutting down",
+    "discord_bot_max_error_messages": 10,
 
     "_help": "This is the end of this file."
 }
