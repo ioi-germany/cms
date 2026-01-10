@@ -473,7 +473,6 @@ class MyGroup(Scope):
             # different places.
             return
 
-        self.task.current_group = self
         checkers = self._get_checkers()
         if len(checkers) == 0 and must_still_be_checked:
             self.task.everything_checked = False
@@ -573,8 +572,6 @@ class MyGroup(Scope):
             if desc not in self.soft_spec_stats:
                 self.soft_spec_stats[desc] = [(None, gray)] * len(self.cases)
             self.soft_spec_stats[desc].append((result, mycolor))
-
-        self.task.current_group = None
 
         if name is None:
             name = "t" + str(len(self.cases))
@@ -932,7 +929,6 @@ class TaskConfig(CommonConfig, Scope):
         self.cases_by_codename = {}
         self.cases_hashnames = set()
         self.group_stack = []
-        self.current_group = None
         self.output_generator = None
         self.testsubmissions = []
         self.attachments = {}
@@ -1069,10 +1065,10 @@ class TaskConfig(CommonConfig, Scope):
             else:
                 return "(string)\"{}\"".format(x)
 
-        if self.current_group is None:
+        if self.curr_scope() is None:
             return ""
         hard_constraints, soft_constraints = \
-            self.current_group._collect_constraints()
+            self.curr_scope()._collect_constraints()
 
         s =  '#define CONSTRAINTS_INCLUDED\n'
         s += '#include <checkutil.h>\n'
@@ -1094,7 +1090,7 @@ class TaskConfig(CommonConfig, Scope):
                     s += '\t\t\tSOFT_CONSTRAINT_VAR(("{}"));\n'.format(var.val)
 
         special_cases, soft_special_cases = \
-            self.current_group._get_special_cases()
+            self.curr_scope()._get_special_cases()
 
         for desc in special_cases:
             s += '\tadd_special_case("{}");\n'.format(desc)
