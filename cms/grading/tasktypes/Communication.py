@@ -384,8 +384,9 @@ class Communication(TaskType):
             if self._uses_fifos():
                 args.extend([sandbox_fifo_manager_to_user[i],
                              sandbox_fifo_user_to_manager[i]])
-            stdin_redirect = sandbox_fifo_manager_to_user[i]
-            stdout_redirect = sandbox_fifo_user_to_manager[i]
+            else:
+                stdin_redirect = sandbox_fifo_manager_to_user[i]
+                stdout_redirect = sandbox_fifo_user_to_manager[i]
             if self.num_processes != 1:
                 args.append(str(i))
             if self._uses_stub():

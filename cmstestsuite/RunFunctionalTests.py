@@ -232,7 +232,9 @@ def main():
         write_test_case_list(
             [(test, lang) for test, lang, _ in failures],
             FAILED_TEST_FILENAME)
-    except TestException:
+    except TestException as e:
+        print("\n\n===== FAILURE =====")
+        print(e)
         if os.path.exists("./log/cms/last.log"):
             print("\n\n===== START OF LOG DUMP =====\n\n")
             with open("./log/cms/last.log", "rt", encoding="utf-8") as f:
