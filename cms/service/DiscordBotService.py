@@ -695,7 +695,7 @@ class QuestionView(discord.ui.View):
 
     @discord.ui.button(label='Answered in task description', style=discord.ButtonStyle.secondary)
     async def task_desc_button(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
-        await self._handle_reply(interaction, "Answered in task desc")
+        await self._handle_reply(interaction, "Answered in task description")
 
     @discord.ui.button(label='No comment', style=discord.ButtonStyle.secondary)
     async def no_comment_button(self, interaction: discord.Interaction, _: discord.ui.Button) -> None:
