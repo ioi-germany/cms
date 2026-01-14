@@ -192,11 +192,16 @@
     "_section": "TaskOverviewWebServer",
 
     "_help": "Listening port and address for TaskOverviewWebServer.",
-    "listen_address": "127.0.0.1",
-    "listen_port": 8891,
+    "overview_listen_address": "0.0.0.0",
+    "overview_listen_port": 8891,
 
-    "_help": "Directory to search for tasks (you have to fill this yourself!).",
+    "_help": "Repository to search for tasks (you have to fill this yourself!).",
     "task_repository": "",
+    "_help": "Directories relative to the repository to search for tasks.",
+    "tasks_folders": ["tasks"],
+    "_help": "Directories relative to the repository where contests are configured.",
+    "_help": "Used to automatically collect usage data for tasks.",
+    "contests_folders": ["contests"],
 
     "_help": "Whether to automatically sync the task repository (only use this",
     "_help": "for git repositories).",

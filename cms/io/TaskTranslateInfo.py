@@ -31,7 +31,7 @@ from pathlib import Path
 from multiprocessing import Process, Manager
 from sys import exc_info
 from traceback import format_exception
-from time import sleep, time
+from time import time
 from copy import deepcopy
 from math import sqrt
 
@@ -42,9 +42,7 @@ from cms.io.BackgroundScheduler import BackgroundScheduler
 
 logger = logging.getLogger(__name__)
 
-# TODO Delete this from this file?
-
-
+#TODO Delete this from this file?
 class DateEntry:
     def __init__(self, date_code, info):
         self.date = datetime.strptime(date_code, "%Y-%m-%d").date()
@@ -89,7 +87,7 @@ class SingleTaskTranslateInfo:
 
                     if len(missing) > 0:
                         i["error"] = "Some important entries are missing: " + \
-                            ", ".join(missing) + "."
+                                    ", ".join(missing) + "."
 
         info.update(i)
 
@@ -183,9 +181,8 @@ class TaskTranslateInfo:
                 logger.error("The languages.json file is missing.")
                 return
             try:
-                # TODO Languages are never deleted (and neither are contests)
-                language_list = json.loads(open(languages_path).read())[
-                    "languages"]
+                #TODO Languages are never deleted (and neither are contests)
+                language_list = json.loads(open(languages_path).read())["languages"]
                 for l in language_list:
                     languages[l] = l
 

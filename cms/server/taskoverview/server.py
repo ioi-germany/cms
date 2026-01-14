@@ -109,7 +109,7 @@ class TaskOverviewWebServer:
         repository = Repository(config.task_repository, config.auto_sync)
 
         TaskFetch.init(repository, config.max_compilations)
-        TaskInfo.init(repository)
+        TaskInfo.init(repository, config.tasks_folders)
 
         self.app = Application(handlers, **params)
 

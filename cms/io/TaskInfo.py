@@ -30,13 +30,15 @@ from pathlib import Path
 from multiprocessing import Process, Manager
 from sys import exc_info
 from traceback import format_exception
-from time import sleep, time
+from time import time
 from copy import deepcopy
 from math import sqrt
+from typing import Collection
 
 from six import iteritems
 
 from cms.io.BackgroundScheduler import BackgroundScheduler
+from cms.io.Repository import Repository
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +57,7 @@ class DateEntry:
 
 
 class SingleTaskInfo:
-    def __init__(self, code, path):
+    def __init__(self, code: str, path: Path):
         info = {"code":           code,
                 "title":          "???",
                 "source":         "N/A",
@@ -141,42 +143,49 @@ class TaskInfo:
     tasks = Manager().dict()
 
     @staticmethod
-    def init(repository):
-        def load(directory, tasks):
-            # Load all available tasks
-            for d in directory.iterdir():
-                if not d.is_dir():
+    def init(repository: Repository, tasks_folders: Collection[str]):
+        def load(repository_root: Path, tasks_folders: Collection[str], tasks):
+            for folder in tasks_folders:
+                directory = repository_root / folder
+                if not directory.exists() or not directory.is_dir():
+                    logger.warn("Task folder {} does not exist or is not"
+                                " a directory, skipping.".format(directory))
                     continue
+                # Load all available tasks
+                for d in directory.iterdir():
+                    if not d.is_dir():
+                        continue
 
-                # We catch all exceptions since the main loop must go on
-                try:
-                    info_path = d / "info.json"
+                    # We catch all exceptions since the main loop must go on
+                    try:
+                        info_path = d / "info.json"
 
-                    code = d.parts[-1]
-                    info = SingleTaskInfo(code, info_path).to_dict()
+                        code = d.parts[-1]
+                        info = SingleTaskInfo(code, info_path).to_dict()
 
-                    old = tasks.get(code, {"timestamp": 0})
-                    info["timestamp"] = old["timestamp"]
+                        old = tasks.get(code, {"timestamp": 0})
+                        info["timestamp"] = old["timestamp"]
+                        info["folder"] = folder
 
-                    if old != info:
-                        info["timestamp"] = time()
-                        tasks[code] = info
+                        if old != info:
+                            info["timestamp"] = time()
+                            tasks[code] = info
 
-                except:
-                    logger.info("\n".join(format_exception(*exc_info())))
+                    except:
+                        logger.info("\n".join(format_exception(*exc_info())))
 
-        def update_tasklist(repository, tasks):
-            directory = Path(repository.path)
+        def update_tasklist(repository: Repository, tasks_folders: Collection[str], tasks):
+            repository_root = Path(repository.path)
             start = time()
             with repository:
                 # Remove tasks that are no longer available
                 for t in tasks.keys():
-                    info_path = directory / t
+                    info_path = repository_root / tasks[t]["folder"] / t
 
                     if not info_path.exists():
                         del tasks[t]
 
-                load(directory, tasks)
+                load(repository_root, tasks_folders, tasks)
 
             logger.info("finished iteration of TaskInfo.update_tasklist in {}ms".
                         format(int(1000 * (time() - start))))
@@ -189,10 +198,10 @@ class TaskInfo:
         # Load data once on start-up (otherwise tasks might get removed when
         # the server is restarted)
         with repository:
-            load(Path(repository.path), TaskInfo.tasks)
+            load(Path(repository.path), tasks_folders, TaskInfo.tasks)
 
-        TaskInfo.info_process = Process(
-            target=run, args=(repository, TaskInfo.tasks))
+        TaskInfo.info_process = Process(target=run,
+                                        args=(repository, tasks_folders, TaskInfo.tasks))
         TaskInfo.info_process.daemon = True
         TaskInfo.info_process.start()
 
