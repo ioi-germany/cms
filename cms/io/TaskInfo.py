@@ -36,6 +36,8 @@ from math import sqrt
 
 from six import iteritems
 
+from cms.io.BackgroundScheduler import BackgroundScheduler
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,7 +59,7 @@ class SingleTaskInfo:
         info = {"code":           code,
                 "title":          "???",
                 "source":         "N/A",
-                "algorithm":      -1,
+                "algorithm": -1,
                 "implementation": -1,
                 "keywords":       [],
                 "uses":           [],
@@ -163,35 +165,34 @@ class TaskInfo:
                 except:
                     logger.info("\n".join(format_exception(*exc_info())))
 
-        def main_loop(repository, tasks, waiting_time):
+        def update_tasklist(repository, tasks):
             directory = Path(repository.path)
+            start = time()
+            with repository:
+                # Remove tasks that are no longer available
+                for t in tasks.keys():
+                    info_path = directory / t
 
-            while True:
-                start = time()
+                    if not info_path.exists():
+                        del tasks[t]
 
-                with repository:
-                    # Remove tasks that are no longer available
-                    for t in tasks.keys():
-                        info_path = directory / t
+                load(directory, tasks)
 
-                        if not info_path.exists():
-                            del tasks[t]
+            logger.info("finished iteration of TaskInfo.update_tasklist in {}ms".
+                        format(int(1000 * (time() - start))))
 
-                    load(directory, tasks)
-
-                logger.info("finished iteration of TaskInfo.main_loop in {}ms".
-                            format(int(1000 * (time() - start))))
-
-                sleep(waiting_time)
+        def run(*args):
+            scheduler = BackgroundScheduler()
+            scheduler.every(.5 * (1 + sqrt(5)), update_tasklist, args=args)
+            scheduler.run(blocking=True)
 
         # Load data once on start-up (otherwise tasks might get removed when
         # the server is restarted)
         with repository:
             load(Path(repository.path), TaskInfo.tasks)
 
-        TaskInfo.info_process = Process(target=main_loop,
-                                        args=(repository, TaskInfo.tasks,
-                                              .5 * (1 + sqrt(5))))
+        TaskInfo.info_process = Process(
+            target=run, args=(repository, TaskInfo.tasks))
         TaskInfo.info_process.daemon = True
         TaskInfo.info_process.start()
 

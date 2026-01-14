@@ -38,9 +38,13 @@ from math import sqrt
 from six import iteritems
 from babel.core import Locale
 
+from cms.io.BackgroundScheduler import BackgroundScheduler
+
 logger = logging.getLogger(__name__)
 
-#TODO Delete this from this file?
+# TODO Delete this from this file?
+
+
 class DateEntry:
     def __init__(self, date_code, info):
         self.date = datetime.strptime(date_code, "%Y-%m-%d").date()
@@ -85,7 +89,7 @@ class SingleTaskTranslateInfo:
 
                     if len(missing) > 0:
                         i["error"] = "Some important entries are missing: " + \
-                                    ", ".join(missing) + "."
+                            ", ".join(missing) + "."
 
         info.update(i)
 
@@ -101,7 +105,7 @@ class SingleTaskTranslateInfo:
             info["locked"] = [l.name[:-5]
                               for l in path.parent.iterdir()
                               if l.is_file() and l.name.endswith(".lock")]
-            if info["filename"]==None:
+            if info["filename"] == None:
                 info["filename"] = "statement"
             info["translated"] = [l.name[len(info["filename"])+1:-4]
                                   for l in path.parent.iterdir()
@@ -137,9 +141,9 @@ class TaskTranslateInfo:
     def init(repository):
         def load_single(d, tasks, contests, is_contest):
             if not d.is_dir() \
-                or d.name.startswith('.') \
-                or (d.is_symlink() and d.name=="general")\
-                or d.name=="build":
+                    or d.name.startswith('.') \
+                    or (d.is_symlink() and d.name == "general")\
+                    or d.name == "build":
                 return False
 
             # We catch all exceptions since the main loop must go on
@@ -157,7 +161,8 @@ class TaskTranslateInfo:
                 else:
                     contest = d.parts[-2]
                     code = d.parts[-1]
-                info = SingleTaskTranslateInfo(code, info_path, contest).to_dict()
+                info = SingleTaskTranslateInfo(
+                    code, info_path, contest).to_dict()
 
                 old = tasks.get(code, {"timestamp": 0})
                 info["timestamp"] = old["timestamp"]
@@ -178,8 +183,9 @@ class TaskTranslateInfo:
                 logger.error("The languages.json file is missing.")
                 return
             try:
-                #TODO Languages are never deleted (and neither are contests)
-                language_list = json.loads(open(languages_path).read())["languages"]
+                # TODO Languages are never deleted (and neither are contests)
+                language_list = json.loads(open(languages_path).read())[
+                    "languages"]
                 for l in language_list:
                     languages[l] = l
 
@@ -194,41 +200,43 @@ class TaskTranslateInfo:
                     for e in d.iterdir():
                         load_single(e, tasks, contests, is_contest=False)
 
-        def main_loop(repository, tasks, contests, languages, waiting_time):
+        def update_tasklist(repository, tasks, contests, languages):
             directory = Path(repository.path)
 
-            while True:
-                start = time()
+            start = time()
 
-                with repository:
-                    # Remove tasks that are no longer available
-                    for t in tasks.keys():
-                        if t.endswith("-overview"):
-                            p = t[:-9]
-                        elif tasks[t]["contest"] == "":
-                            p = t
-                        else:
-                            p = Path(tasks[t]["contest"]) / t
-                        info_path = directory / p
+            with repository:
+                # Remove tasks that are no longer available
+                for t in tasks.keys():
+                    if t.endswith("-overview"):
+                        p = t[:-9]
+                    elif tasks[t]["contest"] == "":
+                        p = t
+                    else:
+                        p = Path(tasks[t]["contest"]) / t
+                    info_path = directory / p
 
-                        if not info_path.exists():
-                            del tasks[t]
+                    if not info_path.exists():
+                        del tasks[t]
 
-                    load(directory, tasks, contests, languages)
+                load(directory, tasks, contests, languages)
 
-                logger.info("finished iteration of TaskTranslateInfo.main_loop in {}ms".
-                            format(int(1000 * (time() - start))))
+            logger.info("finished iteration of TaskTranslateInfo.update_tasklist in {}ms".
+                        format(int(1000 * (time() - start))))
 
-                sleep(waiting_time)
+        def run(*args):
+            scheduler = BackgroundScheduler()
+            scheduler.every(.5 * (1 + sqrt(5)), update_tasklist, args=args)
+            scheduler.run(blocking=True)
 
         # Load data once on start-up (otherwise tasks might get removed when
         # the server is restarted)
         with repository:
-            load(Path(repository.path), TaskTranslateInfo.tasks, TaskTranslateInfo.contests, TaskTranslateInfo.languages)
+            load(Path(repository.path), TaskTranslateInfo.tasks,
+                 TaskTranslateInfo.contests, TaskTranslateInfo.languages)
 
-        TaskTranslateInfo.info_process = Process(target=main_loop,
-                                        args=(repository, TaskTranslateInfo.tasks, TaskTranslateInfo.contests, TaskTranslateInfo.languages,
-                                              .5 * (1 + sqrt(5))))
+        TaskTranslateInfo.info_process = Process(target=run, args=(
+            repository, TaskTranslateInfo.tasks, TaskTranslateInfo.contests, TaskTranslateInfo.languages,))
         TaskTranslateInfo.info_process.daemon = True
         TaskTranslateInfo.info_process.start()
 
@@ -253,31 +261,31 @@ class TaskTranslateInfo:
     def gertranslate_entries():
         return ["contest", "code", "title",
                 "keywords", "remarks", "pdf", "tex"] +\
-               ["pdf-"+l for l in TaskTranslateInfo.languages] +\
-               ["tex-"+l for l in TaskTranslateInfo.languages] +\
-               ["log-"+l for l in TaskTranslateInfo.languages] +\
-               ["upload-"+l for l in TaskTranslateInfo.languages] +\
-               ["mark-"+l for l in TaskTranslateInfo.languages] +\
-               ["pdf-ALL"]
+            ["pdf-"+l for l in TaskTranslateInfo.languages] +\
+            ["tex-"+l for l in TaskTranslateInfo.languages] +\
+            ["log-"+l for l in TaskTranslateInfo.languages] +\
+            ["upload-"+l for l in TaskTranslateInfo.languages] +\
+            ["mark-"+l for l in TaskTranslateInfo.languages] +\
+            ["pdf-ALL"]
 
     @staticmethod
     def gertranslate_desc():
         return {
-                **{"contest": "Contest",
-                "code": "Code",
-                "title": "Title",
-                "keywords": "Keywords",
-                "remarks": "Remarks / Changelog",
-                "pdf": "PDF [en]",
-                "tex": "TeX [en]",
-                "log": "Log [en]",
-                "pdf-ALL": "PDF [ALL]"},
-                **{"pdf-"+l: "PDF ["+l+"]" for l in TaskTranslateInfo.languages},
-                **{"tex-"+l: "TeX ["+l+"]" for l in TaskTranslateInfo.languages},
-                **{"log-"+l: "Log ["+l+"]" for l in TaskTranslateInfo.languages},
-                **{"upload-"+l: "Upload TeX ["+l+"]" for l in TaskTranslateInfo.languages},
-                **{"mark-"+l: "Finalize ["+l+"]" for l in TaskTranslateInfo.languages}
-               }
+            **{"contest": "Contest",
+               "code": "Code",
+               "title": "Title",
+               "keywords": "Keywords",
+               "remarks": "Remarks / Changelog",
+               "pdf": "PDF [en]",
+               "tex": "TeX [en]",
+               "log": "Log [en]",
+               "pdf-ALL": "PDF [ALL]"},
+            **{"pdf-"+l: "PDF ["+l+"]" for l in TaskTranslateInfo.languages},
+            **{"tex-"+l: "TeX ["+l+"]" for l in TaskTranslateInfo.languages},
+            **{"log-"+l: "Log ["+l+"]" for l in TaskTranslateInfo.languages},
+            **{"upload-"+l: "Upload TeX ["+l+"]" for l in TaskTranslateInfo.languages},
+            **{"mark-"+l: "Finalize ["+l+"]" for l in TaskTranslateInfo.languages}
+        }
 
     @staticmethod
     def languages_desc():
