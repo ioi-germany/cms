@@ -22,8 +22,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import contextlib
 import json
 import logging
+import re
 
 from datetime import datetime
 from pathlib import Path
@@ -39,6 +41,8 @@ from six import iteritems
 
 from cms.io.BackgroundScheduler import BackgroundScheduler
 from cms.io.Repository import Repository
+from cmscontrib.gerpythonformat.ContestConfig import ContestConfig
+from cmscontrib.gerpythonformat.LocationStack import chdir
 
 logger = logging.getLogger(__name__)
 
@@ -58,16 +62,19 @@ class DateEntry:
 
 class SingleTaskInfo:
     def __init__(self, code: str, path: Path):
-        info = {"code":           code,
-                "title":          "???",
-                "source":         "N/A",
-                "algorithm": -1,
-                "implementation": -1,
-                "keywords":       [],
-                "uses":           [],
-                "remarks":        "",
-                "public":         False,
-                "old":            None}
+        self.code = code
+        self.title = "???"
+        self.source = "N/A"
+        self.algorithm = -1
+        self.implementation = -1
+        self.keywords = []
+        self.uses: Collection[DateEntry] = []
+        self.remarks = ""
+        self.public = False
+        self.old = None
+        self.folder = ""
+        self.timestamp = 0
+        self.error = None
 
         if not path.exists():
             i = {"error": "The info.json file is missing."}
@@ -104,36 +111,40 @@ class SingleTaskInfo:
                         i["error"] = "Invalid value for \"implementation\": " \
                                      "expected an integer between 0 and 10."
 
-        info.update(i)
+        self.update(i)
 
-        if info["old"] is None:
-            info["old"] = len(info["uses"]) > 0 or info["public"]
+        if self.old is None:
+            self.old = len(self.uses) > 0 or self.public
 
-        try:
-            info["uses"] = [DateEntry(e[0], e[1]) for e in info["uses"]]
-        except ValueError:
-            info["uses"] = []
+    def update(self, i):
+        for key, value in iteritems(i):
+            if key == "uses":
+                try:
+                    self.uses = [DateEntry(e[0], e[1]) for e in i["uses"]]
+                except ValueError:
+                    self.uses = []
 
-            if "error" not in info:
-                info["error"] = "I couldn't parse the dates for " \
-                                "\"(previous) uses\"."
-
-        for key, value in iteritems(info):
-            setattr(self, key, value)
+                    if self.error is not None:
+                        self.error = "I couldn't parse the dates for " \
+                                        "\"(previous) uses\"."
+            else:
+                setattr(self, key, value)
 
     def to_dict(self):
-        result = {"code":           self.code,
-                  "title":          self.title,
-                  "source":         self.source,
-                  "algorithm":      self.algorithm,
-                  "implementation": self.implementation,
-                  "keywords":       self.keywords,
-                  "uses":           [e.to_dict() for e in self.uses],
-                  "remarks":        self.remarks,
-                  "public":         self.public,
-                  "old":            self.old}
+        result = {
+            "code": self.code,
+            "title": self.title,
+            "source": self.source,
+            "algorithm": self.algorithm,
+            "implementation": self.implementation,
+            "keywords": self.keywords,
+            "uses": [e.to_dict() for e in self.uses],
+            "remarks": self.remarks,
+            "public": self.public,
+            "old": self.old,
+        }
 
-        if hasattr(self, "error"):
+        if self.error is not None:
             result["error"] = self.error
 
         return result
@@ -143,13 +154,19 @@ class TaskInfo:
     tasks = Manager().dict()
 
     @staticmethod
-    def init(repository: Repository, tasks_folders: Collection[str]):
+    def init(
+        repository: Repository,
+        tasks_folders: Collection[str],
+        contests_folders: Collection[str],
+    ):
         def load(repository_root: Path, tasks_folders: Collection[str], tasks):
             for folder in tasks_folders:
                 directory = repository_root / folder
                 if not directory.exists() or not directory.is_dir():
-                    logger.warn("Task folder {} does not exist or is not"
-                                " a directory, skipping.".format(directory))
+                    logger.warning(
+                        'Task folder "{}" does not exist or is not '
+                        "a directory, skipping.".format(directory)
+                    )
                     continue
                 # Load all available tasks
                 for d in directory.iterdir():
@@ -190,9 +207,172 @@ class TaskInfo:
             logger.info("finished iteration of TaskInfo.update_tasklist in {}ms".
                         format(int(1000 * (time() - start))))
 
-        def run(*args):
+        def is_same_contest(
+            contest_code: str, contestconfig: ContestConfig, info
+        ) -> bool:
+            if contestconfig.defaultgroup is None:
+                return False
+            start = contestconfig.defaultgroup.start.toordinal()
+            stop = contestconfig.defaultgroup.stop.toordinal()
+            if start <= info["timestamp"] and info["timestamp"] <= stop:
+                return True
+            # date in old info.json files might be off by a few days
+            # => try to match info.info with contest_code / config
+            if info["timestamp"] < start - 42 or stop + 42 < info["timestamp"]:
+                return False
+            description = re.sub(r" \d+$", "", info["info"]).lower()
+            clean_info = make_clean_info(contest_code).lower()
+            if (clean_info in description) or (description in clean_info):
+                return True
+
+            olympiad = re.search(
+                r"^(.{1,4}oi)\d+[-_].*", contest_code, flags=re.IGNORECASE
+            )
+            if olympiad is None:
+                return False
+            olympiad = olympiad.group()
+            if hasattr(contestconfig, "_short_name"):
+                short_name = re.sub(r" \d+$", "", contestconfig._short_name).lower()
+                if (short_name in description) or (description in short_name):
+                    return True
+            return False
+
+        def should_track_usage(contest_code: str) -> bool:
+            """Returns wheter the usage of a task in this contest should be tracked
+            in the info.json
+
+            """
+            if "test" in contest_code.lower():
+                # ignore technical tests
+                return False
+            return True
+
+        def make_clean_info(contest_code: str) -> str:
+            """Returns a "clean" description of the contest from its
+            contest_code to be used in the weboverview.
+            For example "ioiYYYY_1-1" => "lg1"
+
+            """
+            match = re.match(
+                r"^(.{1,4}oi)\d+[-_](.*)", contest_code, flags=re.IGNORECASE
+            )
+            if match is None:
+                return contest_code
+            olympiad, usage = map(lambda s: s.lower(), match.groups())
+            # remove enumerating suffix "-1", "-2", ..., usually campname-dayX
+            usage = re.sub(r"[-_]?\d$", "", usage)
+            info = ""
+            if olympiad == "ioi" and re.match(r"\d", usage):
+                info = olympiad + " lg" + usage
+            else:
+                info = olympiad + " " + usage
+            return info
+
+        def update_usage(
+            repository: Repository,
+            contests_folders: Collection[str],
+            tasks,
+        ):
+            repository_root = Path(repository.path)
+            start = time()
+            with repository:
+                for folder in contests_folders:
+                    directory = repository_root / folder
+                    if not directory.exists() or not directory.is_dir():
+                        logger.warning(
+                            'Contest folder "{}" does not exist or is not'
+                            " a directory, skipping.".format(directory)
+                        )
+                        continue
+                    for d in directory.iterdir():
+                        try:
+                            if not d.is_dir():
+                                continue
+                            contest_code = d.parts[-1]
+                            if not should_track_usage(contest_code):
+                                continue
+                            config_path = d / "contest-config.py"
+                            if not config_path.exists():
+                                logger.info(
+                                    'Contest "{}" has no contest-config,'
+                                    " ignoring.".format(d)
+                                )
+                                continue
+                            with chdir(d):
+                                contestconfig = ContestConfig(
+                                    d / ".rules",
+                                    contest_code,
+                                    ignore_latex=True,
+                                    minimal=True,
+                                )
+                                with contextlib.redirect_stdout(None):
+                                    # _parseconfig doesn't perform any actions, so we suppress
+                                    # log messages like "Creating ..."
+                                    contestconfig._parseconfig("contest-config.py")
+                            if contestconfig.defaultgroup is None:
+                                logger.info(
+                                    'Contest "{}" has no default group, '
+                                    "ignoring.".format(d)
+                                )
+                                continue
+                            # only update the usage after the contest ended
+                            if datetime.now() < contestconfig.defaultgroup.stop:
+                                continue
+                            for t in contestconfig.tasks.keys():
+                                task_code = t
+                                task_path = d / t
+                                # if the symlink to the task got deleted, we still try to
+                                # update usage with the task code that was used in the contest
+                                if task_path.exists():
+                                    task_code = task_path.resolve().parts[-1]
+                                if task_code not in tasks:
+                                    continue
+                                task_info = tasks[task_code]
+                                if any(
+                                    is_same_contest(contest_code, contestconfig, x)
+                                    for x in task_info["uses"]
+                                ):
+                                    continue
+                                contest_day = contestconfig.defaultgroup.start.strftime(
+                                    "%Y-%m-%d"
+                                )
+                                info = make_clean_info(contest_code)
+                                task_info["uses"].append(
+                                    DateEntry(contest_day, info).to_dict()
+                                )
+                                logger.info(
+                                    "found usage for task {} in {} ({})".format(
+                                        task_code, contest_code, info
+                                    )
+                                )
+                        except:
+                            logger.error("Failed to process contest {}".format(d))
+                            logger.error("\n".join(format_exception(*exc_info())))
+
+                load(repository_root, tasks_folders, tasks)
+
+            logger.info(
+                "finished iteration of TaskInfo.update_usage in {}ms".format(
+                    int(1000 * (time() - start))
+                )
+            )
+
+        def run(repository, tasks_folders, contests_folders, tasks):
             scheduler = BackgroundScheduler()
-            scheduler.every(.5 * (1 + sqrt(5)), update_tasklist, args=args)
+            scheduler.every(
+                0.5 * (1 + sqrt(5)),
+                update_tasklist,
+                args=(repository, tasks_folders, tasks),
+            )
+            # Usage data will be updated after a contest ended
+            # so we can query less frequent
+            scheduler.every(
+                3600,
+                update_usage,
+                args=(repository, contests_folders, tasks),
+                skip_first=False,
+                priority=1,
+            )
             scheduler.run(blocking=True)
 
         # Load data once on start-up (otherwise tasks might get removed when
@@ -200,8 +380,10 @@ class TaskInfo:
         with repository:
             load(Path(repository.path), tasks_folders, TaskInfo.tasks)
 
-        TaskInfo.info_process = Process(target=run,
-                                        args=(repository, tasks_folders, TaskInfo.tasks))
+        TaskInfo.info_process = Process(
+            target=run,
+            args=(repository, tasks_folders, contests_folders, TaskInfo.tasks),
+        )
         TaskInfo.info_process.daemon = True
         TaskInfo.info_process.start()
 

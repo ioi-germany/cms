@@ -165,9 +165,11 @@ class ContestConfig(CommonConfig):
 
         # a standard tokenwise comparator (specified here so that it has to be
         # compiled at most once per contest)
-        shutil.copy(os.path.join(self._get_ready_dir(), "tokens.cpp"),
-                    "tokens.cpp")
-        self.token_equ_fp = self.compile("tokens")
+        if not self.minimal:
+            shutil.copy(os.path.join(self._get_ready_dir(), "tokens.cpp"), "tokens.cpp")
+            self.token_equ_fp = self.compile("tokens")
+        else:
+            self.token_equ_fp = None
 
         # there is no upstream for contest
         self.bequeathing = False
@@ -186,6 +188,35 @@ class ContestConfig(CommonConfig):
 
         super(ContestConfig, self)._readconfig(filename)
         self._initialize_ranking()
+
+    def _parseconfig(self, filename):
+        """attempts to parse a contest-config file and extract metadata without
+        performing any build/compile tasks
+
+        """
+
+        def dummy_func(*args, **kwargs):
+            pass
+
+        original_exported = copy.deepcopy(self.exported)
+        for k in self.exported:
+            if k not in ["time", "timezone", "team", "user_group"]:
+                self.exported[k] = dummy_func
+
+        def new_load_template(name, *args, **kwargs):
+            if "short_name" in kwargs:
+                setattr(self, "_short_name", kwargs["short_name"])
+
+        def new_task(s, *args, **kwargs):
+            self.tasks[s] = ""
+
+        self.exported["task"] = new_task
+        self.exported["load_template"] = new_load_template
+        try:
+            super(ContestConfig, self)._readconfig(filename)
+        except Exception as e:
+            print("Failed to parse contest-config with error", e)
+        self.exported = original_exported
 
     def finish(self):
         asy_cnt = self.asy_warnings + sum(t.asy_warnings
