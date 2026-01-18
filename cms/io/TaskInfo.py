@@ -81,7 +81,7 @@ class SingleTaskInfo:
         else:
             try:
                 i = json.loads(path.open().read())
-            except:
+            except Exception:
                 i = {"error": "The info.json file is corrupt."}
             else:
                 missing = []
@@ -96,7 +96,7 @@ class SingleTaskInfo:
                     def bad(x):
                         try:
                             y = int(x)
-                        except:
+                        except Exception:
                             return True
                         else:
                             return y < 0 or y > 10
@@ -188,7 +188,7 @@ class TaskInfo:
                             info["timestamp"] = time()
                             tasks[code] = info
 
-                    except:
+                    except Exception:
                         logger.info("\n".join(format_exception(*exc_info())))
 
         def update_tasklist(repository: Repository, tasks_folders: Collection[str], tasks):
@@ -220,7 +220,7 @@ class TaskInfo:
             # => try to match info.info with contest_code / config
             if info["timestamp"] < start - 42 or stop + 42 < info["timestamp"]:
                 return False
-            description = re.sub(r" \d+$", "", info["info"]).lower()
+            description = re.sub(r"\s+\d+$", "", info["info"]).lower()
             clean_info = make_clean_info(contest_code).lower()
             if (clean_info in description) or (description in clean_info):
                 return True
@@ -232,7 +232,7 @@ class TaskInfo:
                 return False
             olympiad = olympiad.group()
             if hasattr(contestconfig, "_short_name"):
-                short_name = re.sub(r" \d+$", "", contestconfig._short_name).lower()
+                short_name = re.sub(r"\s+\d+$", "", contestconfig._short_name).lower()
                 if (short_name in description) or (description in short_name):
                     return True
             return False
@@ -272,10 +272,37 @@ class TaskInfo:
             repository: Repository,
             contests_folders: Collection[str],
             tasks,
-        ):
+        ) -> None:
             repository_root = Path(repository.path)
             start = time()
             with repository:
+                old_processed = {}
+                try:
+                    with open(repository_root / ".unconfirmed_usage.json", "r") as f:
+                        data = f.read().splitlines()
+                    for line in data:
+                        parsed_line = json.loads(line)
+                        if "task" not in parsed_line or "uses" not in parsed_line:
+                            logger.warning("skipping corrupted line {}".format(line))
+                            continue
+                        task_code = parsed_line["task"]
+                        if task_code not in old_processed:
+                            old_processed[task_code] = []
+                        confirmed = (
+                            parsed_line["confirmed"]
+                            if "confirmed" in parsed_line
+                            else False
+                        )
+                        old_processed[task_code].append(
+                            {"uses": parsed_line["uses"], "confirmed": confirmed}
+                        )
+                except FileNotFoundError:
+                    pass
+                except Exception:
+                    logger.warning("file .unconfirmed_usage.json is corrupt")
+                    logger.warning("\n".join(format_exception(*exc_info())))
+                logger.info("loaded old data: {}".format(old_processed))
+                untracked = []
                 for folder in contests_folders:
                     directory = repository_root / folder
                     if not directory.exists() or not directory.is_dir():
@@ -332,24 +359,65 @@ class TaskInfo:
                                     is_same_contest(contest_code, contestconfig, x)
                                     for x in task_info["uses"]
                                 ):
+                                    # usage is already stored in the info.json
+                                    continue
+                                if task_code in old_processed and any(
+                                    is_same_contest(contest_code, contestconfig, x["uses"])
+                                    for x in old_processed[task_code]
+                                ):
+                                    # at this point the usage was detected and stored
+                                    # in a previous run, but marked as false positive,
+                                    # so we ignore it
                                     continue
                                 contest_day = contestconfig.defaultgroup.start.strftime(
                                     "%Y-%m-%d"
                                 )
                                 info = make_clean_info(contest_code)
-                                task_info["uses"].append(
-                                    DateEntry(contest_day, info).to_dict()
-                                )
+                                usage = DateEntry(contest_day, info).to_dict()
+                                untracked.append({"task": task_code, "usage": usage})
+                                task_info["uses"].append(usage)
+                                task_info["timestamp"] = time()
                                 logger.info(
-                                    "found usage for task {} in {} ({})".format(
-                                        task_code, contest_code, info
-                                    )
+                                    f"found usage for task {task_code} in {info}"
                                 )
-                        except:
+                        except Exception:
                             logger.error("Failed to process contest {}".format(d))
                             logger.error("\n".join(format_exception(*exc_info())))
-
-                load(repository_root, tasks_folders, tasks)
+                for v in untracked:
+                    try:
+                        task_code, usage = v["task"], v["usage"]
+                        task = tasks[task_code]
+                        usage_time = datetime.fromordinal(usage["timestamp"])
+                        usage_time = usage_time.strftime("%Y-%m-%d")
+                        # remove trailing year
+                        usage_info = re.sub(r"\s+\d+$", "", usage["info"])
+                        info_path = (
+                            repository_root
+                            / Path(task["folder"])
+                            / task_code
+                            / "info.json"
+                        )
+                        info_path = info_path.resolve()
+                        old_data = json.loads(info_path.open().read())
+                        if "uses" not in old_data:
+                            old_data["uses"] = []
+                        old_data["uses"].append([usage_time, usage_info])
+                        open(info_path, "w").write(json.dumps(old_data, indent=4))
+                        repository.commit(
+                            str(info_path.resolve()),
+                            commit_message=f"Add usage in contest {usage['info']} "
+                            "to task {task_code}, from TaskOverviewBackend",
+                            author='"cmsTaskOverviewWebserver <cmsTaskOverviewWebserver@localhost>"',
+                        )
+                        with open(repository_root / ".unconfirmed_usage.json", "a") as f:
+                            f.write(
+                                f'{{"task":"{task_code}", \
+                                "uses":["{usage_time}", "{usage_info}"], \
+                                "confirmed":false}}\n'
+                            )
+                    except Exception:
+                        logger.error("Failed to update task {}".format(task_code))
+                        logger.error("\n".join(format_exception(*exc_info())))
 
             logger.info(
                 "finished iteration of TaskInfo.update_usage in {}ms".format(

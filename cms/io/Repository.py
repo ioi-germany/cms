@@ -91,9 +91,11 @@ class Repository:
                 logger.info("Finished pushing: " +
                             "{}".format(gitout))
 
-    # For GerTranslate
+    # For GerTranslate/cmsTaskOverview
     # TODO Show errors in web overview
-    def commit(self, file_path, file_identifier):
+    def commit(self, file_path, commit_message="", author=""):
+        if commit_message == "" or author == "":
+            raise Exception("Missing commit message or author")
         # TODO Only do this if it's a git repository
         # if self.auto_sync:
         logger.info("Committing {} in {}".format(file_path, self.path))
@@ -117,13 +119,8 @@ class Repository:
                         check_output(
                             ["git", "commit",
                              "-o", file_path,
-                             # TODO Provide meaningful commit message and
-                             # author
-                             "-m", "Changes to " +
-                             file_identifier +
-                             ", uploaded via GerTranslate web "
-                             "interface",
-                             "--author", '"GerTranslate <GerTranslate@localhost>"']
+                             "-m", commit_message,
+                             "--author", author]
                         )
                 except:
                     logger.error("Couldn't commit in repository: " +

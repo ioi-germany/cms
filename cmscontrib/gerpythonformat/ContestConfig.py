@@ -165,7 +165,7 @@ class ContestConfig(CommonConfig):
 
         # a standard tokenwise comparator (specified here so that it has to be
         # compiled at most once per contest)
-        if not self.minimal:
+        if not minimal:
             shutil.copy(os.path.join(self._get_ready_dir(), "tokens.cpp"), "tokens.cpp")
             self.token_equ_fp = self.compile("tokens")
         else:
