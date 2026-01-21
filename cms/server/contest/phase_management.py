@@ -28,7 +28,7 @@ from functools import wraps
 
 def compute_actual_phase(timestamp, contest_start, contest_stop,
                          analysis_start, analysis_stop, per_user_time,
-                         starting_time, delay_time, extra_time):
+                         starting_time, restricted_time, delay_time, extra_time):
     """Determine the current phase and when the active phase is.
 
     The "actual phase" of the contest for a certain user is the status
@@ -43,7 +43,9 @@ def compute_actual_phase(timestamp, contest_start, contest_stop,
           already started, its per-user time frame hasn't yet (this
           usually means the user still has to click on the "start!"
           button in USACO-like contests);
-    * 0: the user can compete;
+    * 0:  the user can compete;
+    * 0.5:the user can still compete and the interval restriction between 
+          submissions is lifted 
     * +1: the user cannot compete because, even if the contest hasn't
           stopped yet, its per-user time frame already has (again, this
           should normally happen only in USACO-like contests);
@@ -134,8 +136,14 @@ def compute_actual_phase(timestamp, contest_start, contest_stop,
 
         if actual_start <= timestamp <= actual_stop:
             actual_phase = 0
-            current_phase_begin = actual_start
-            current_phase_end = actual_stop
+            if restricted_time is not None:
+                if restricted_time > timedelta():
+                    lift_time = min(actual_stop, actual_start + restricted_time)
+                else:
+                    lift_time = max(actual_start, actual_stop + restricted_time)
+                actual_phase = 0 if timestamp <= lift_time else 0.5
+            current_phase_begin = actual_start if actual_phase == 0 else lift_time
+            current_phase_end = actual_stop if actual_phase == .5 or restricted_time is None else lift_time
         elif contest_start <= timestamp < actual_start:
             # This also includes a funny corner case: the user's start
             # is known but is in the future (the admin either set it

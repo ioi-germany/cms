@@ -146,7 +146,7 @@
     {% elif actual_phase == -1 %}
         {% trans %}By clicking on the button below you can start your time frame.{% endtrans %}
         {%+ trans %}Once you start, you can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.{% endtrans %}
-    {% elif actual_phase == 0 %}
+    {% elif actual_phase == 0 or actual_phase == 0.5 %}
         {% trans start_time=participation.starting_time|format_datetime_smart %}You started your time frame at {{ start_time }}.{% endtrans %}
         {%+ trans %}You can submit solutions until the end of the time frame or until the end of the contest, whatever comes first.{% endtrans %}
     {% elif actual_phase == +1 %}
@@ -179,7 +179,7 @@
 
 
 
-{% if actual_phase == 0 or actual_phase == 3%}
+{% if actual_phase == 0 or actual_phase == 0.5 or actual_phase == 3%}
 <h2>{% trans %}Task overview{% endtrans %}</h2>
 
 <table class="table table-bordered table-striped">
