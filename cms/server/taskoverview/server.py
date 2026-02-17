@@ -106,7 +106,9 @@ class TaskOverviewWebServer:
                   "static_path": resource_filename("cms.server",
                                                    "taskoverview/static")}
 
-        repository = Repository(config.task_repository, config.auto_sync)
+        repository = Repository(
+            config.task_repository, config.auto_sync, auto_push=True
+        )
 
         TaskFetch.init(repository, config.max_compilations)
         TaskInfo.init(repository, config.tasks_folders, config.contests_folders)

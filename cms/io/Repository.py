@@ -26,6 +26,7 @@ import logging
 
 from multiprocessing import Manager
 from subprocess import check_output
+from typing import Optional
 
 from cmscontrib.gerpythonformat.LocationStack import chdir
 
@@ -93,7 +94,11 @@ class Repository:
 
     # For GerTranslate/cmsTaskOverview
     # TODO Show errors in web overview
-    def commit(self, file_path, commit_message="", author=""):
+    def commit(self, file_path, commit_message="", author="") -> Optional[str]:
+        '''Commits the changes in file_path as `author` with given `commit_message`.
+        If an error occurs, the error message will be returned.
+
+        '''
         if commit_message == "" or author == "":
             raise Exception("Missing commit message or author")
         # TODO Only do this if it's a git repository
@@ -102,32 +107,33 @@ class Repository:
 
         with chdir(self.path):
             gitout = ""
-
             try:
-                gitout = check_output(["git", "add",
-                                       file_path])
-            except:
-                logger.error("Couldn't add file to git staging area: " +
-                             "{}".format(gitout))
-            else:
+                gitout = check_output(["git", "add", file_path])
+            except Exception as e:
+                logger.error("Couldn't add file to git staging area: {}".format(e))
+                return str(e)
+            try:
+                gitout = ""
+                # NOTE file_path is relative to self.path, which isn't
+                # necessarily the root of the git repo. So the commit
+                # message might be confusing.
+                gitout = \
+                    check_output(
+                        ["git", "commit",
+                            "-o", file_path,
+                            "-m", commit_message,
+                            "--author", author]
+                    )
+            except Exception as e:
+                logger.error("Couldn't commit in repository: {}".format(e))
                 try:
-                    gitout = ""
-                    # NOTE file_path is relative to self.path, which isn't
-                    # necessarily the root of the git repo. So the commit
-                    # message might be confusing.
-                    gitout = \
-                        check_output(
-                            ["git", "commit",
-                             "-o", file_path,
-                             "-m", commit_message,
-                             "--author", author]
-                        )
-                except:
-                    logger.error("Couldn't commit in repository: " +
-                                 "{}".format(gitout))
-                else:
-                    logger.info("Committed: " +
-                                "{}".format(gitout))
+                    # try to unstage files if committing failed
+                    check_output(["git", "restore", "--staged", file_path])
+                except Exception as e:
+                    logger.warning("unable to unstage files: {}".format(e))
+                return str(e)
+            logger.info("Committed: {}".format(gitout))
+
 
     # For GerTranslate
     # TODO Show errors in web overview
