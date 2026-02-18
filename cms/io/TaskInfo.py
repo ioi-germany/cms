@@ -220,16 +220,19 @@ class TaskInfo:
                         logger.warning("skipping corrupted line {}".format(line))
                         continue
                     task_code = parsed_line["task"]
-                    if task_code not in data:
+                    if task_code not in unconfirmed_usage:
                         unconfirmed_usage[task_code] = []
                     confirmed = (
                         parsed_line["confirmed"]
                         if "confirmed" in parsed_line
                         else False
                     )
-                    unconfirmed_usage[task_code].append(
-                        {"uses": parsed_line["uses"], "confirmed": confirmed}
-                    )
+                    unconfirmed_usage[task_code] += [
+                        {
+                            "uses": DateEntry(*parsed_line["uses"]).to_dict(),
+                            "confirmed": confirmed,
+                        }
+                    ]
             except FileNotFoundError:
                 pass
             except Exception:
@@ -261,7 +264,9 @@ class TaskInfo:
                 return False
             olympiad = olympiad.group()
             if hasattr(contestconfig, "_short_name"):
-                short_name = re.sub(r"\s+\d+$", "", contestconfig._short_name).lower()
+                short_name = re.sub(
+                    r"\s+\d+$", "", getattr(contestconfig, "_short_name")
+                ).lower()
                 if (short_name in description) or (description in short_name):
                     return True
             return False
@@ -376,15 +381,15 @@ class TaskInfo:
                             info = make_clean_info(contest_code)
                             usage = DateEntry(contest_day, info).to_dict()
                             untracked.append({"task": task_code, "usage": usage})
-                            task_info["uses"].append(usage)
-                            task_info["timestamp"] = time()
                             logger.info(f"found usage for task {task_code} in {info}")
                     except Exception:
                         logger.error("Failed to process contest {}".format(d))
                         logger.error("\n".join(format_exception(*exc_info())))
             return untracked
 
-        def store_usage(repository: Repository, untracked: list, tasks) -> None:
+        def store_usage(
+            repository: Repository, untracked: list, tasks, unconfirmed_usage
+        ) -> None:
             repository_root = Path(repository.path)
             for v in untracked:
                 try:
@@ -424,6 +429,13 @@ class TaskInfo:
                                 )
                             )
                         continue
+                    task["uses"] += [usage]
+                    task["timestamp"] = time()
+                    if task_code not in unconfirmed_usage:
+                        unconfirmed_usage[task_code] = []
+                    unconfirmed_usage[task_code] += [
+                        {"uses": usage, "confirmed": False}
+                    ]
                     with open(repository_root / ".unconfirmed_usage.json", "a") as f:
                         f.write(
                             f'{{"task":"{task_code}", \
@@ -439,16 +451,17 @@ class TaskInfo:
             contests_folders: Collection[str],
             tasks,
             unconfirmed_usage,
+            only_load=False,
         ) -> None:
             repository_root = Path(repository.path)
             start = time()
             with repository:
                 load_usage(repository_root, unconfirmed_usage)
-                logger.info("loaded old data: {}".format(unconfirmed_usage))
-                untracked = parse_contests(
-                    repository_root, contests_folders, tasks, unconfirmed_usage
-                )
-                store_usage(repository, untracked, tasks)
+                if not only_load:
+                    untracked = parse_contests(
+                        repository_root, contests_folders, tasks, unconfirmed_usage
+                    )
+                    store_usage(repository, untracked, tasks, unconfirmed_usage)
 
             logger.info(
                 "finished iteration of TaskInfo.update_usage in {}ms".format(
@@ -463,7 +476,13 @@ class TaskInfo:
                 update_tasklist,
                 args=(repository, tasks_folders, tasks),
             )
-            # Usage data will be updated after a contest ended
+            scheduler.every(
+                0.5 * (1 + sqrt(5)),
+                update_usage,
+                args=(repository, contests_folders, tasks, unconfirmed_usage),
+                only_load=True,
+            )
+            # Usage data will be updated only after a contest ended
             # so we can query less frequent
             scheduler.every(
                 3600,
@@ -501,9 +520,20 @@ class TaskInfo:
 
     @staticmethod
     def get_info(keys):
-        data = deepcopy(TaskInfo.tasks)
-
-        return {x: data[x] for x in keys if x in data}
+        task_data = deepcopy(TaskInfo.tasks)
+        usage_data = deepcopy(TaskInfo.unconfirmed_usage)
+        res = {}
+        for t in keys:
+            if t not in task_data:
+                continue
+            res[t] = task_data[t]
+            if t in usage_data:
+                for u in res[t]["uses"]:
+                    for v in usage_data[t]:
+                        if u == v["uses"]:
+                            u["confirmed"] = v["confirmed"]
+                            break
+        return res
 
     @staticmethod
     def entries():
