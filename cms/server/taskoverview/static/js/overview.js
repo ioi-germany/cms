@@ -12,7 +12,7 @@ function parse_info(info)
     for (const k of ["keywords", "tags"]) {
         info[k] ??= [];
         info[k] = info[k]
-            .map(tag => tag.trim().toUpperCase())
+            .map(tag => tag.replace(/[^\w ]/g, " ").trim().toUpperCase())
             .filter(tag => tag.length > 0);
     }
     return info;
