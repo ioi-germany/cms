@@ -381,7 +381,7 @@ class TaskInfo:
                             info = make_clean_info(contest_code)
                             usage = DateEntry(contest_day, info).to_dict()
                             untracked.append({"task": task_code, "usage": usage})
-                            logger.info(f"found usage for task {task_code} in {info}")
+                            logger.info(f"found usage for task {task_code} in {info} ({contest_code})")
                     except Exception:
                         logger.error("Failed to process contest {}".format(d))
                         logger.error("\n".join(format_exception(*exc_info())))
@@ -421,7 +421,8 @@ class TaskInfo:
                         # committing changes failed, so we try to restore the changes
                         # and retry in the next iteration
                         try:
-                            check_output(["git", "checkout", "--", str(info_path)])
+                            with chdir(repository.path):
+                                check_output(["git", "checkout", "--", str(info_path)])
                         except Exception as e:
                             logger.error(
                                 "restoring old version of {} failed with error {}".format(
@@ -440,6 +441,7 @@ class TaskInfo:
                         f.write(
                             f'{{"task":"{task_code}", \
                             "uses":["{usage_time}", "{usage_info}"], \
+                            "last_update": "{datetime.now().isoformat()}", \
                             "confirmed":false}}\n'
                         )
                 except Exception:
