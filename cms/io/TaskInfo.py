@@ -1,9 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Programming contest management system
 # Copyright © 2016-2017 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2016 Simon Bürger <simon.buerger@rwth-aachen.de>
+# Copyright © 2026 Erik Sünderhauf <erik.suenderhauf@gmx.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -36,7 +37,7 @@ from traceback import format_exception
 from time import time
 from copy import deepcopy
 from math import sqrt
-from typing import Collection
+from typing import Collection, List
 
 from six import iteritems
 
@@ -51,7 +52,7 @@ logger = logging.getLogger(__name__)
 class DateEntry:
     def __init__(self, date_code, info):
         self.date = datetime.strptime(date_code, "%Y-%m-%d").date()
-        self.info = info + " {}".format(self.date.year)
+        self.info = info + " {}".format(self.date.year + (1 if self.date.month >= 8 else 0))
 
     def timestamp(self):
         return self.date.toordinal()
@@ -62,7 +63,10 @@ class DateEntry:
 
 
 class SingleTaskInfo:
-    def __init__(self, code: str, path: Path):
+    PUBLIC_TAG = "public"
+    PRIVATE_TAG = "private"
+
+    def __init__(self, code: str, path: Path, folder: Path):
         self.code = code
         self.title = "???"
         self.source = "N/A"
@@ -71,9 +75,10 @@ class SingleTaskInfo:
         self.keywords = []
         self.uses: Collection[DateEntry] = []
         self.remarks = ""
-        self.public = False
+        self.public = None
+        self.tags: List[str] = []
         self.old = None
-        self.folder = ""
+        self.folder = folder
         self.timestamp = 0
         self.error = None
 
@@ -86,7 +91,7 @@ class SingleTaskInfo:
                 i = {"error": "The info.json file is corrupt."}
             else:
                 missing = []
-                for e in ["title", "algorithm", "implementation", "public"]:
+                for e in ["title", "algorithm", "implementation"]:
                     if e not in i:
                         missing.append(e)
 
@@ -130,6 +135,14 @@ class SingleTaskInfo:
                                         "\"(previous) uses\"."
             else:
                 setattr(self, key, value)
+        if self.public and self.PUBLIC_TAG not in map(str.lower, self.tags):
+            self.tags.append(self.PUBLIC_TAG)
+        if (
+            self.public is not None # for legacy tags
+            and not self.public
+            and self.PRIVATE_TAG not in map(str.lower, self.tags)
+        ):
+            self.tags.append(self.PRIVATE_TAG)
 
     def to_dict(self):
         result = {
@@ -141,8 +154,9 @@ class SingleTaskInfo:
             "keywords": self.keywords,
             "uses": [e.to_dict() for e in self.uses],
             "remarks": self.remarks,
-            "public": self.public,
+            "tags": self.tags,
             "old": self.old,
+            "folder": str(self.folder),
         }
 
         if self.error is not None:
@@ -180,11 +194,10 @@ class TaskInfo:
                         info_path = d / "info.json"
 
                         code = d.parts[-1]
-                        info = SingleTaskInfo(code, info_path).to_dict()
+                        info = SingleTaskInfo(code, info_path, Path(folder)).to_dict()
 
                         old = tasks.get(code, {"timestamp": 0})
                         info["timestamp"] = old["timestamp"]
-                        info["folder"] = folder
 
                         if old != info:
                             info["timestamp"] = time()
@@ -521,11 +534,11 @@ class TaskInfo:
                 for t in data]
 
     @staticmethod
-    def get_info(keys):
+    def get_info(keys, all_tasks = False):
         task_data = deepcopy(TaskInfo.tasks)
         usage_data = deepcopy(TaskInfo.unconfirmed_usage)
         res = {}
-        for t in keys:
+        for t in (task_data if all_tasks else keys):
             if t not in task_data:
                 continue
             res[t] = task_data[t]
@@ -540,7 +553,7 @@ class TaskInfo:
     @staticmethod
     def entries():
         return ["code", "title", "source", "algorithm", "implementation",
-                "keywords", "uses", "remarks", "public", "download"]
+                "keywords", "uses", "remarks", "tags", "download"]
 
     @staticmethod
     def desc():
@@ -552,5 +565,5 @@ class TaskInfo:
                 "keywords": "Keywords",
                 "uses": "Previous uses",
                 "remarks": "Remarks",
-                "public": "Public?",
+                "tags": "Tags",
                 "download": "PDF"}

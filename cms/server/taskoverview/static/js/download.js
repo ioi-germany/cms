@@ -98,13 +98,8 @@ function retry_compilation()
 
 var __mouse_up_initialized = false;
 
-function init_download_icon(task)
+function init_download_icons()
 {
-    var d = window.document.getElementById("download-" + task);
-
-    d.addEventListener("mousedown", _pdf_mouse_down);
-    d.addEventListener("click", _pdf_mouse_click);
-
     if(!__mouse_up_initialized)
         window.addEventListener("mouseup", _pdf_mouse_up);
     __mouse_up_initialized = true;

@@ -13,7 +13,7 @@ body {
 @media (min-width: 980px) {
     #main {
         position: relative;
-        padding-top: 20px;
+        /*padding-top: 20px;*/
     }
 }
 

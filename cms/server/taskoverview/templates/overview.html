@@ -18,6 +18,7 @@
         <link rel="stylesheet" href="static/css/rangeslider.css">
         <link rel="stylesheet" href="static/css/checkbox.css">
 
+        <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
         <script src="static/jq/jquery-1.7.1.min.js"></script>
         <script src="static/js/slider.js"></script>
         <script src="static/js/dateslider.js"></script>
@@ -25,16 +26,16 @@
         <script src="static/js/modal.js"></script>
         <script src="static/js/download.js"></script>
         <script src="static/js/overview.js"></script>
+        <script src="static/js/table.js"></script>
 
         <script>
             var __url_root = ".";
             var entries = {% raw json.dumps(TaskInfo.entries()) %};
             var desc = {% raw json.dumps(TaskInfo.desc()) %};
             var show_col = {};
+            for(var i = 0; i < entries.length; ++i) show_col[entries[i]] = true;
             var criteria = { alg_diff:     { lower: 0, upper: 10 },
                              impl_diff:    { lower: 0, upper: 10 },
-                             show_public:  true,
-                             show_private: true,
                              only_before:  Infinity };
 
             function open_col_select()
@@ -51,13 +52,18 @@
 
                 for(var i = 0; i < entries.length; ++i)
                     show_col[entries[i]] = window.document.getElementById("col-" + entries[i]).checked;
-                update();
+                fill_table([], [], {}, show_col, null, false);
                 //update_table(entries, desc, show_col, criteria);
 
             }
 
             function open_row_select()
             {
+                const has_public = criteria.tags?.has(PUBLIC_TAG);
+                const has_private = criteria.tags?.has(PRIVATE_TAG);
+                window.document.getElementById("public").checked = has_public ^ (has_public === has_private);
+                window.document.getElementById("private").checked = has_private ^ (has_public === has_private);
+
                 open_modal('row-select');
 
                 update_sliders();
@@ -71,11 +77,18 @@
 
                 criteria.alg_diff = range_slider_get("alg-diff");
                 criteria.impl_diff = range_slider_get("impl-diff");
-                criteria.show_public = window.document.getElementById("public").checked;
-                criteria.show_private = window.document.getElementById("private").checked;
+                criteria.tags = new Set();
+                const show_public = window.document.getElementById("public").checked;
+                const show_private = window.document.getElementById("private").checked;
+                if (show_public ^ show_private) {
+                    criteria.tags.add(show_public ? PUBLIC_TAG : PRIVATE_TAG);
+                } else if (!show_public && !show_private) {
+                    criteria.tags.add(PUBLIC_TAG);
+                    criteria.tags.add(PRIVATE_TAG);
+                }
                 criteria.only_before = date_slider_get_val("uses");
 
-                update();
+                fill_table([], [], {}, null, criteria, false);
             }
 
             function init()
@@ -83,15 +96,8 @@
                 if(__url_root[__url_root.length - 1] == '/')
                     __url_root = __url_root.substring(0, __url_root.length - 1);
 
-                update(true, true);
-
-                for(var i = 0; i < entries.length; ++i) show_col[entries[i]] = true;
-
                 init_range_sliders();
-
-                close_modal('col-select');
-                close_modal('row-select');
-                close_modal('error');
+                init_download_icons();
 
                 window.setInterval(function() { if(!is_modal_opened()) update(); }, 5000);
             }
@@ -107,12 +113,10 @@
         <div class="navbar header">
             <div class="navbar-inner header-inner">
                 <div style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;">
-                    <div>
-                        <a class="brand" href="./">
-                            Overview of Available Tasks
-                        </a>
-                    </div>
-                    <div>
+                    <a class="brand" href="./" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:105px;">
+                        Overview of Available Tasks
+                    </a>
+                    <div style="flex-shrink:0;">
                         <button class="btn btn-primary btn-large" onclick="open_col_select()">
                             Select columns
                         </button>
@@ -125,7 +129,7 @@
             </div>
         </div>
 
-        <div class="modal wide" id="error-dialog">
+        <div class="modal wide hide" id="error-dialog">
             <div class="modal-header">
                 <button type="button" class="close" onClick="close_modal('error')">&#xD7;</button>
                 <h3>An error has occured...</h3>
@@ -147,7 +151,7 @@
             </div>
         </div>
 
-        <div class="modal wide" id="col-select-dialog">
+        <div class="modal wide hide" id="col-select-dialog">
             <div class="modal-header unselectable">
                 <button type="button" class="close" onClick="close_modal('col-select')">&#xD7;</button>
                 <h3>Select Columns</h3>
@@ -190,12 +194,12 @@
             </div>
         </div>
 
-        <div class="modal wide unselectable" id="row-select-dialog">
+        <div class="modal wide hide unselectable" id="row-select-dialog" style="top:calc(50% - 200px)">
             <div class="modal-header">
                 <button type="button" class="close" onClick="close_modal('row-select')">&#xD7;</button>
                 <h3>Add/Remove Search Criteria</h3>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="max-height:510px">
                 <form name="row-select">
                     <div class="control-table">
                         <div class="two-cols">
@@ -259,16 +263,127 @@
             </div>
         </div>
 
-        <table class="table table-bordered overview" id="overview">
-            <!-- data insert via javascript:fill_table() -->
-        </table>
+        <div id="main">
+            <table class="table table-bordered overview" id="overview">
+                <thead>
+                    <tr id="overview-heading" class="odd">
+                        <template v-for="col in columns" :key="col.id">
+                            <th
+                                :id="`overview-heading-${col.id}`"
+                                class="th"
+                                :class="{ [col.id]: true }"
+                            >
+                                <span v-html="col.desc"></span>
+                            </th>
+                        </template>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr
+                        v-for="t in tasks"
+                        :id="`row-${t.id}`"
+                        :class="{
+                            new: !t.info.old && !t.info.error,
+                            fresh: t.is_new,
+                            odd: t.odd,
+                            updated: t.is_updated
+                        }"
+                        v-show="!t.hidden"
+                        :key="t.info"
+                    >
+                        <template v-for="col in columns" v-if="!t.info.error" :key="`${col.id}-${criteria[col.id]}`">
+                            <td is="vue:cell" :col="col" :criteria="criteria" :info="t.info"></td>
+                        </template>
+                        <template v-else>
+                            <td is="vue:cell" :col="columns[0]" :info="t.info" v-if="columns.length > 0 && columns[0].id === 'code'"></td>
+                            <td :id="`cell-${t.id}-error-msg`" class="error-msg" :colspan="num_interesting_columns" v-if="num_interesting_columns > 0">
+                                <b>ERROR!</b> [[ t.info.error ]]
+                            </td>
+                            <td is="vue:cell" :col="columns.at(-1)" :info="t.info" v-if="columns.length > 0 && columns.at(-1).id === 'download'"></td>
+                        </template>
+                    </tr>
+                </tbody>
+            </table>
 
-        <div id = "json-errors" class="alert alert-block alert-error notification json-info no-errors">
-            <h4 class="alert-heading"> WARNING! </h4>
-            <p style="margin-top:5px;"> The info.json files for the following tasks have issues:</p>
-            <span id="tasks-with-issues">
-                <!-- data insert in javascript:fill_table() -->
-            </span>
+            <div id="json-errors" class="alert alert-block alert-error notification json-info" v-show="json_issues.length > 0">
+                <h4 class="alert-heading"> WARNING! </h4>
+                <p style="margin-top:5px;"> The info.json files for the following tasks have issues:</p>
+                <span id="tasks-with-issues">
+                    [[ json_issues.join(", ") ]]
+                </span>
+            </div>
         </div>
+
+        <template id="cell">
+            <td
+                :id="`cell-${info.code}-${col.id}`"
+                :class="{ [col.id]: true }"
+            >
+                <template v-if="col.id === 'download'">
+                    <div
+                        class="download-icon"
+                        :id="`download-${info.code}`"
+                        :data-code="info.code"
+                        @mousedown="_pdf_mouse_down"
+                        @click="_pdf_mouse_click"
+                    ></div>
+                </template>
+                <template v-else-if="col.id === 'keywords' || col.id === 'tags'">
+                    <div :class="{ [col.id]: true }" class="pill-container">
+                        <template v-if="data.length === 0">
+                            &mdash;
+                        </template>
+                        <template v-else>
+                            <div
+                                is="vue:pill"
+                                v-for="tag in data"
+                                :filters="filters"
+                                :tag="tag"
+                                :key="tag"
+                                @filter-tag="update_filter"
+                            ></div>
+                        </template>
+                    </div>
+                </template>
+                <template v-else-if="col.id === 'uses'">
+                    <ul class="embedded">
+                        <template v-if="data.length === 0">
+                            &mdash;
+                        </template>
+                        <template v-else>
+                            <li v-for="use in data" :key="use">
+                                [[ use.info ]]
+                                <template v-if="Object.hasOwn(use, 'confirmed') && !use.confirmed">*</template>
+                            </li>
+                        </template>
+                    </ul>
+                </template>
+                <template v-else>
+                    <span v-html="data"></span>
+                </template>
+            </td>
+        </template>
+
+        <template id="pill">
+            <div
+                :style="{ background }"
+                class="pill unselectable"
+                :class="{ filtered }"
+                :title="tag"
+                @click="toggle_filter"
+            >
+                [[ tag ]]
+            </div>
+        </template>
+
+        <script>
+            const { createApp } = Vue
+            createApp(OverviewTable).mount('#main');
+
+            init_table(
+                {% raw json.dumps(TaskInfo.task_list()) %},
+                {% raw json.dumps(TaskInfo.get_info([], all_tasks = True)) %}
+            );
+        </script>
     </body>
 </html>

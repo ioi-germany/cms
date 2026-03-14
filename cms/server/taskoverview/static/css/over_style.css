@@ -36,12 +36,58 @@ table.overview tr.new > td:first-child::after {
     transform:rotate(45deg);
 }
 
+table.overview thead {
+    position:sticky;
+    top:60px;
+    z-index:10;
+}
+
+table.overview thead th {
+    border-bottom: 2px solid #dddddd;
+}
+
 table.overview td:not(.th) {
     height:40px;
 }
 
-td.download {
-    width:30px;
+td.code, th.code {
+    width: 8%;
+}
+
+td.title, th.title {
+    width: 11%;
+}
+
+td.source, th.source {
+    width: 9%;
+}
+
+td.algorithm, th.algorithm {
+    width: 3%;
+}
+
+td.implementation, th.implementation {
+    width: 3%;
+}
+
+td.keywords, th.keywords {
+    width: 15%;
+}
+
+td.uses, th.uses {
+    width: 18%;
+}
+
+td.remarks, th.remarks {
+    width: 23%;
+}
+
+td.tags, th.tags {
+    width: 8%;
+}
+
+td.download, th.download {
+    width: 2%;
 }
 
 table.overview tr.new > td:first-child:hover::after {
@@ -87,6 +133,7 @@ div.header {
 
 div.header-inner {
     border-radius:0px;
+    height:50px;
     padding:5px 10px;
 }
 
@@ -170,7 +217,7 @@ td.th {
     font-weight:bold;
 }
 
-td.download-heading {
+th.download {
     text-align:center;
 }
 
@@ -312,6 +359,44 @@ div.json-info {
     box-shadow:20px 20px 10px 30px white;
 }
 
-div.json-info.no-errors {
-    display:none;
+div.pill-container.keywords {
+    max-width: 15dvw;
+}
+
+div.pill-container.tags {
+    max-width: 8dvw;
+}
+
+div.pill-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+div.pill {
+    padding: 2px 8px;
+    border-radius: 1rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,0.2);
+    overflow: hidden;
+    white-space: nowrap;
+    text-transform: uppercase;
+    text-overflow: ellipsis;
+    color: #333;
+    font-size: 12px;
+    line-height: 1.2;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+div.pill:hover {
+    cursor: pointer;
+}
+
+div.pill.filtered {
+    color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    font-weight: bold;
 }

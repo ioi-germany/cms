@@ -161,7 +161,7 @@ function _tag(color, label, off, id)
     var result = 
         '<div class = "tag ' + color + '" style="top:' + off + 'px;">' +
             '<div class = "tag-body" id = "' + id + '">' +
-                '<label class="tag-label">' +
+                '<label class="tag-label" title="' + label + '">' +
                     label +
                 '</label>' +
             '</div>' +
