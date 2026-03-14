@@ -192,6 +192,8 @@ class Config:
         self.overview_listen_address = "127.0.0.1"
         self.overview_listen_port = 8891
         self.task_repository = None
+        self.tasks_folders = []
+        self.contests_folders = []
         self.auto_sync = False
         self.max_compilations = 1000
 

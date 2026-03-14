@@ -34,6 +34,7 @@ from multiprocessing import Process, Manager
 from six import StringIO
 from ansi2html import Ansi2HTMLConverter
 
+from cms.io.Repository import Repository
 from cms.io.TaskTranslateInfo import TaskTranslateInfo
 
 from cmscontrib.gerpythonformat.ContestConfig import MyGroup
@@ -333,7 +334,7 @@ class TaskTeXYielder:
 
 class TaskTeXReceiver:
     def __init__(self, repository, name):
-        self.repository = repository
+        self.repository: Repository = repository
         self.name = name
 
     def receive(self, f):
@@ -364,15 +365,21 @@ class TaskTeXReceiver:
             else:
                 with open(tex_file, "wb") as target_file:
                     target_file.write(f)
+                # TODO Provide meaningful commit message and
+                # author
                 self.repository.commit(
-                    str(tex_file.resolve()), str(_repository_code))
+                    str(tex_file.resolve()),
+                    commit_message=f"Changes to {str(_repository_code)}, "
+                    "uploaded via GerTranslate web interface",
+                    author='"GerTranslate <GerTranslate@localhost>"',
+                )
 
         return result
 
 
 class TaskMarker:
     def __init__(self, repository, name):
-        self.repository = repository
+        self.repository: Repository = repository
         self.name = name
 
     def mark(self):
@@ -385,8 +392,12 @@ class TaskMarker:
 
         with open(lock_file, "w") as target_file:
             target_file.write("The translation in this language is locked.")
-        self.repository.commit(str(lock_file.resolve()),
-                               str(_repository_lock_file_code))
+        self.repository.commit(
+            str(lock_file.resolve()),
+            commit_message=f"Changes to {str(_repository_lock_file_code)}, "
+            "uploaded via GerTranslate web interface",
+            author='"GerTranslate <GerTranslate@localhost>"',
+        )
 
 
 class TaskGitLog:

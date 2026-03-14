@@ -22,14 +22,17 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import logging
+from pathlib import Path
 import sys
 
 from sys import exc_info
 from traceback import format_exception
 from multiprocessing import Process, Manager
+from typing import Optional
 from six import StringIO
 from ansi2html import Ansi2HTMLConverter
 
+from cms.io.Repository import Repository
 from cms.io.TaskInfo import TaskInfo
 
 from cmscontrib.gerpythonformat.GerMakeTask import GerMakeTask
@@ -39,9 +42,10 @@ logger = logging.getLogger(__name__)
 
 
 class TaskCompileJob:
-    def __init__(self, repository, name, balancer):
+    def __init__(self, repository: Repository, name: str, task_folder: str, balancer):
         self.repository = repository
         self.name = name
+        self.task_folder = task_folder
         self.balancer = balancer
 
         self.current_handle = 1
@@ -61,10 +65,10 @@ class TaskCompileJob:
 
     def _compile(self):
         self._reset_status()
-        logger.info("loading task {} in {}".format(self.name,
-                                                   self.repository.path))
+        directory = Path(self.repository.path) / self.task_folder
+        logger.info("loading task {} in {}".format(self.name, str(directory)))
 
-        def do(status, repository, balancer):
+        def do(status, repository: Repository, directory: str, balancer):
             # stdout is process local in Python, so we can simply use this
             # to redirect all output from GerMakeTask to a string
             sys.stdout = StringIO()
@@ -73,16 +77,16 @@ class TaskCompileJob:
 
             with balancer:
                 try:
-                    comp = GerMakeTask(odir = repository.path,
-                                       task = self.name,
-                                       minimal = True,
-                                       no_test = True,
-                                       submission = None,
-                                       no_latex = False,
-                                       verbose_latex = True,
-                                       language = None,
-                                       clean = False,
-                                       ntcimp = True)
+                    comp = GerMakeTask(odir=directory,
+                                       task=self.name,
+                                       minimal=True,
+                                       no_test=True,
+                                       submission=None,
+                                       no_latex=False,
+                                       verbose_latex=True,
+                                       language=None,
+                                       clean=False,
+                                       ntcimp=True)
 
                     with repository:
                         comp.prepare()
@@ -112,6 +116,7 @@ class TaskCompileJob:
 
         self.compilation_process = Process(target=do, args=(self.status,
                                                             self.repository,
+                                                            str(directory),
                                                             self.balancer))
         self.compilation_process.daemon = True
         self.compilation_process.start()
@@ -174,7 +179,7 @@ class TaskCompileJob:
 
 class TaskFetch:
     jobs = {}
-    repository = None
+    repository: Optional[Repository] = None
     balancer = None
 
     @staticmethod
@@ -187,10 +192,14 @@ class TaskFetch:
 
     @staticmethod
     def compile(name):
+        if TaskFetch.repository is None:
+            raise Exception("tasks repository not initialized")
         if name not in TaskInfo.tasks:
             raise KeyError("No such task")
         if name not in TaskFetch.jobs:
-            TaskFetch.jobs[name] = TaskCompileJob(TaskFetch.repository, name,
+            TaskFetch.jobs[name] = TaskCompileJob(TaskFetch.repository,
+                                                  name,
+                                                  TaskInfo.tasks[name]["folder"],
                                                   TaskFetch.balancer)
         return TaskFetch.jobs[name].join()
 
