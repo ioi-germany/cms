@@ -220,7 +220,7 @@ Subsequently (in :samp:`Rule.ensure()`), we check if the last result (:samp:`Rul
 Compiling
 ---------
 
-You can compile c++, latex and asymptote files using the commands :py:meth:`.compilecpp`, :py:meth:`.compilelatex`, :py:meth:`.compileasy`. Call them with the base name of the file you want to compile (e.g. :samp:`gen` if you want to compile :samp:`gen.cpp` or :samp:`statement` if you want to compile :samp:`statement.tex`). For convenience, you can use the :py:meth:`.compile` function which automatically figures out the corresponding extension.
+You can compile c++ and latex files using the commands :py:meth:`.compilecpp` and :py:meth:`.compilelatex`. Call them with the base name of the file you want to compile (e.g. :samp:`gen` if you want to compile :samp:`gen.cpp` or :samp:`statement` if you want to compile :samp:`statement.tex`). For convenience, you can use the :py:meth:`.compile` function which automatically figures out the corresponding extension.
 
 Supplements
 ^^^^^^^^^^^
