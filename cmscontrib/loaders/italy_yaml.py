@@ -216,6 +216,7 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         load(conf, args, "max_user_test_number")
         load(conf, args, "min_submission_interval", conv=make_timedelta)
         load(conf, args, "min_user_test_interval", conv=make_timedelta)
+        load(conf, args, "restricted_time", conv=make__timedelta)
 
         tasks = load(conf, None, ["tasks", "problemi"])
         participations = load(conf, None, ["users", "utenti"])

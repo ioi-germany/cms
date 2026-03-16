@@ -17,7 +17,7 @@
 {# Whether the user has a token to play (maybe after waiting some time). #}
 {% set can_play_token =
        can_use_tokens
-       and actual_phase == 0
+       and (actual_phase == 0 or actual_phase == 0.5)
        and (tokens_info[0] > 0 or tokens_info[0] == -1) %}
 {# Whether the user can play a token right now (only meaningful when
    can_play_token = true). #}
@@ -316,7 +316,7 @@ $(document).ready(function () {
 
 <h2 style="margin: 40px 0 10px">{% trans %}Previous submissions{% endtrans %}</h2>
 
-{% if can_use_tokens_in_contest and actual_phase == 0 %}
+{% if can_use_tokens_in_contest and (actual_phase == 0 or actual_phase == 0.5) %}
 <div style="padding-bottom:10px">
     {% if score_type.feedback() in ["full", "partial", "no"] %}
     {% elif not can_use_tokens %}
@@ -343,7 +343,7 @@ $(document).ready(function () {
         {% endif %}
     {% else %}
         {% trans %}Right now, you do not have tokens available for this task.{% endtrans %}
-        {% if actual_phase == 0 and tokens_info[1] is not none %}
+        {% if (actual_phase == 0 or actual_phase == 0.5)  and tokens_info[1] is not none %}
             {% trans gen_time=tokens_info[1]|format_datetime_smart %}
                 You will receive a new token at {{ gen_time }}.
             {% endtrans %}
