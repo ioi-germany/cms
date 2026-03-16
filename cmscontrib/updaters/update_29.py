@@ -62,15 +62,15 @@ class Updater:
                     json.loads(v["score_type_parameters"])
 
             if v["_class"] == "SubmissionResult":
-                if v["score_details"] is not None:
+                if v.get("score_details") is not None:
                     v["score_details"] = json.loads(v["score_details"])
-                if v["public_score_details"] is not None:
+                if v.get("public_score_details") is not None:
                     v["public_score_details"] = \
                         json.loads(v["public_score_details"])
-                if v["unit_test_score_details"] is not None:
+                if v.get("unit_test_score_details") is not None:
                     v["unit_test_score_details"] = \
                         json.loads(v["unit_test_score_details"])
-                if v["ranking_score_details"] is not None:
+                if v.get("ranking_score_details") is not None:
                     v["ranking_score_details"] = \
                         json.loads(v["ranking_score_details"])
                 v["compilation_text"] = fix_text(v["compilation_text"])
