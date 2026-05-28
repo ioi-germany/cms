@@ -498,7 +498,7 @@ td.token_rules p:last-child {
     width: 1%;
 }
 
-.submission_list colgroup col.status,
+.submission_list colgroup col.status {
     width: 20%;
 }
 
