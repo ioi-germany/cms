@@ -35,9 +35,12 @@ from cmscommon.datetime import make_timestamp
 from .check import check_max_number, check_min_interval
 from .file_matching import InvalidFilesOrLanguage, match_files_and_language
 from .file_retrieval import InvalidArchive, extract_files_from_tornado
-from .utils import fetch_file_digests_from_previous_submission, StorageFailed, \
-    store_local_copy
-
+from .utils import (
+    fetch_file_digests_from_previous_submission,
+    StorageFailed,
+    store_local_copy,
+)
+from ..phase_management import compute_actual_phase
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +65,7 @@ class UnacceptableSubmission(Exception):
 
 
 def accept_submission(sql_session, file_cacher, participation, task, timestamp,
-                      tornado_files, language_name, official):
+                      tornado_files, language_name, official, check_interval_restriction):
     """Process a contestant's request to submit a submission.
 
     Parse and validate the data that a contestant sent for a submission
@@ -106,20 +109,36 @@ def accept_submission(sql_session, file_cacher, participation, task, timestamp,
                             participation, task=task):
         raise UnacceptableSubmission(
             N_("Too many submissions!"),
-            N_("You have reached the maximum limit of "
-               "at most %d submissions on this task."),
-            task.max_submission_number)
+            N_(
+                "You have reached the maximum limit of "
+                "at most %d submissions on this task."
+            ),
+            task.max_submission_number,
+        )
 
-    if not check_min_interval(sql_session, contest.min_submission_interval,
-                              timestamp, participation, contest=contest):
+    if check_interval_restriction and not check_min_interval(
+        sql_session,
+        contest.min_submission_interval,
+        timestamp,
+        participation,
+        contest=contest,
+    ):
         raise UnacceptableSubmission(
             N_("Submissions too frequent!"),
-            N_("Among all tasks, you can submit again "
-               "after %d seconds from last submission."),
-            contest.min_submission_interval.total_seconds())
+            N_(
+                "Among all tasks, you can submit again "
+                "after %d seconds from last submission."
+            ),
+            contest.min_submission_interval.total_seconds(),
+        )
 
-    if not check_min_interval(sql_session, task.min_submission_interval,
-                              timestamp, participation, task=task):
+    if check_interval_restriction and not check_min_interval(
+        sql_session,
+        task.min_submission_interval,
+        timestamp,
+        participation,
+        task=task,
+    ):
         raise UnacceptableSubmission(
             N_("Submissions too frequent!"),
             N_("For this task, you can submit again "
