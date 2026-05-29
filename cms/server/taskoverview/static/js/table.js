@@ -83,7 +83,7 @@ const OverviewTable = {
 
     function _relevant(task, criteria) {
       const info = window.__info[task];
-      if("error" in info)
+      if (!!info["error"])
         return true;
       for(var i = 0; i < info.uses.length; ++i)
           if(info.uses[i].timestamp > criteria.only_before)
@@ -161,7 +161,7 @@ const OverviewTable = {
 
     provide("criteria", { update_criteria });
 
-    let json_issues = computed(() => tasks.value.filter((t) => "error" in window.__info[t]));
+    let json_issues = computed(() => tasks.value.filter((t) => !!window.__info[t]["error"]));
     const relevant_tasks = computed(() => {
       let i = -1;
       return tasks.value.map((t) => {

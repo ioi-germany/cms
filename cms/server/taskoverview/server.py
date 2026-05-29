@@ -26,7 +26,7 @@ import json
 
 from pkg_resources import resource_filename
 from tornado.ioloop import IOLoop
-from tornado.web import RequestHandler, Application
+from tornado.web import RequestHandler, Application, MissingArgumentError
 
 from cms import config
 from cms.io.TaskInfo import TaskInfo
@@ -44,12 +44,18 @@ class MainHandler(RequestHandler):
 
 class TaskCompileHandler(RequestHandler):
     def get(self):
-        self.write(TaskFetch.query(self.get_argument("code"),
-                                   int(self.get_argument("handle"))))
+        self.write(
+            TaskFetch.query(self.get_argument("code"), int(self.get_argument("handle")))
+        )
         self.flush()
 
     def post(self):
-        handle = TaskFetch.compile(self.get_argument("code"))
+        language = None
+        try:
+            language = self.get_argument("language")
+        except MissingArgumentError:
+            pass
+        handle = TaskFetch.compile(self.get_argument("code"), language)
         self.write({"handle": handle})
 
 

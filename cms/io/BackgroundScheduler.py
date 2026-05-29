@@ -31,7 +31,7 @@ class BackgroundScheduler(scheduler):
     def __init__(self):
         super().__init__()
 
-    def every(self, interval: float, func: Callable, priority: int = 0, skip_first: bool = True, args=(), **kwargs) -> None:
+    def every(self, interval: float, func: Callable, _priority: int = 0, _skip_first: bool = True, args=(), **kwargs) -> None:
         def wrapped():
             try:
                 func(*args, **kwargs)
@@ -39,8 +39,8 @@ class BackgroundScheduler(scheduler):
                 logger.error("Failed to execute background task",
                              "\n".join(format_exception(*exc_info())))
             finally:
-                self.enter(interval, priority, wrapped)
+                self.enter(interval, _priority, wrapped)
         delay = 0
-        if skip_first:
+        if _skip_first:
             delay = interval
-        self.enter(delay, priority, wrapped)
+        self.enter(delay, _priority, wrapped)

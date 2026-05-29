@@ -42,9 +42,17 @@ logger = logging.getLogger(__name__)
 
 
 class TaskCompileJob:
-    def __init__(self, repository: Repository, name: str, task_folder: str, balancer):
+    def __init__(
+        self,
+        repository: Repository,
+        name: str,
+        language,
+        task_folder: str,
+        balancer,
+    ):
         self.repository = repository
         self.name = name
+        self.language = language
         self.task_folder = task_folder
         self.balancer = balancer
 
@@ -66,9 +74,21 @@ class TaskCompileJob:
     def _compile(self):
         self._reset_status()
         directory = Path(self.repository.path) / self.task_folder
-        logger.info("loading task {} in {}".format(self.name, str(directory)))
+        logger.info(
+            "loading task {} in {} with language = {}".format(
+                self.name,
+                str(directory),
+                "default" if self.language is None else self.language,
+            )
+        )
 
-        def do(status, repository: Repository, directory: str, balancer):
+        def do(
+            status,
+            repository: Repository,
+            language,
+            directory: str,
+            balancer,
+        ):
             # stdout is process local in Python, so we can simply use this
             # to redirect all output from GerMakeTask to a string
             sys.stdout = StringIO()
@@ -84,7 +104,7 @@ class TaskCompileJob:
                                        submission=None,
                                        no_latex=False,
                                        verbose_latex=True,
-                                       language=None,
+                                       language=language,
                                        clean=False,
                                        ntcimp=True)
 
@@ -114,10 +134,16 @@ class TaskCompileJob:
             status["log"] = C.convert(sys.stdout.getvalue())
             status["done"] = True
 
-        self.compilation_process = Process(target=do, args=(self.status,
-                                                            self.repository,
-                                                            str(directory),
-                                                            self.balancer))
+        self.compilation_process = Process(
+            target=do,
+            args=(
+                self.status,
+                self.repository,
+                self.language,
+                str(directory),
+                self.balancer,
+            ),
+        )
         self.compilation_process.daemon = True
         self.compilation_process.start()
 
@@ -191,16 +217,19 @@ class TaskFetch:
         TaskFetch.balancer = Manager().BoundedSemaphore(max_compilations)
 
     @staticmethod
-    def compile(name):
+    def compile(name: str, language):
         if TaskFetch.repository is None:
             raise Exception("tasks repository not initialized")
         if name not in TaskInfo.tasks:
             raise KeyError("No such task")
         if name not in TaskFetch.jobs:
-            TaskFetch.jobs[name] = TaskCompileJob(TaskFetch.repository,
-                                                  name,
-                                                  TaskInfo.tasks[name]["folder"],
-                                                  TaskFetch.balancer)
+            TaskFetch.jobs[name] = TaskCompileJob(
+                TaskFetch.repository,
+                name,
+                language,
+                TaskInfo.tasks[name]["folder"],
+                TaskFetch.balancer,
+            )
         return TaskFetch.jobs[name].join()
 
     @staticmethod
