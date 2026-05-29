@@ -30,15 +30,8 @@ master branch, is intended for developers and everyone interested in
 contributing or just curious to see how the code works and wanting to
 hack on it.
 
-Please note that since the sandbox is contained in a
-[git submodule](http://git-scm.com/docs/git-submodule) you should append
-`--recursive` to the standard `git clone` command to obtain it. Or, if
-you have already cloned CMS, simply run the following command from
-inside the repository:
-
-```bash
-git submodule update --init
-```
+> [!warning] isolate v2
+> Starting from isolate v2, we recommend installing [isolate](https://github.com/ioi/isolate) from your package manager or building it yourself. The submodule isolate is removed. For further information, see `docs`.
 
 In the folder `docs` you can find a Vagrant File; copy it to the top level
 if you want to use it. Vagrant is a tool that enables to create the same virtual 
