@@ -58,10 +58,14 @@ const Download = {
       short_name = short_name.toUpperCase();
       if (short_name === "SPOILER")
         return "\u{1f4a1}"; // = light bulb
-      if (short_name === "EN")
-        short_name = "GB";
-      if (short_name === "EN_US")
-        short_name = "US";
+      const LANG_TO_REGION = {
+        "ET": "EE",
+        "UK": "UA",
+        "HE": "IL",
+        "EN": "GB",
+      };
+      if (LANG_TO_REGION[short_name])
+        short_name = LANG_TO_REGION[short_name];
       if (short_name.length !== 2 || !short_name.match(/[A-Z]/i))
         return undefined;
       let res = "";
