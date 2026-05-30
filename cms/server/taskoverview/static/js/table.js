@@ -43,9 +43,94 @@ const Pill = {
   }
 };
 
+const Download = {
+  delimiters: ["[[", "]]"],
+  props: ["info"],
+  template: "#download",
+  setup(props, ctx) {
+    const { info } = toRefs(props);
+    const show_selector = ref(false);
+    const el = ref(null);
+
+    function to_icon(short_name) {
+      if (!short_name)
+        return undefined;
+      short_name = short_name.toUpperCase();
+      if (short_name === "SPOILER")
+        return "\u{1f4a1}"; // = light bulb
+      if (short_name === "EN")
+        short_name = "GB";
+      if (short_name === "EN_US")
+        short_name = "US";
+      if (short_name.length !== 2 || !short_name.match(/[A-Z]/i))
+        return undefined;
+      let res = "";
+      for (let i = 0; i < short_name.length; i++) {
+        const c = short_name.charCodeAt(i);
+        res += String.fromCodePoint(c + 0x1f1a5) // = country flag
+      }
+      return res;
+    }
+
+    const languages = computed(() => {
+      const codes = info.value?.languages || [];
+      return codes.map(short => {
+        const normalized = short.toLowerCase();
+        return {
+          icon: to_icon(short),
+          // uppercase for spoiler, otherwise lowercase ISO format
+          short: normalized === "spoiler" ? short.toUpperCase() : normalized,
+          name: short.toUpperCase() 
+        };
+      });
+    });
+
+    const selected_language = ref(languages.value?.[0]);
+
+    function remove_selector(evt) {
+      if (evt && el.value?.contains(evt.target)) {
+        return;
+      }
+      show_selector.value = false;
+      window.removeEventListener("click", remove_selector);
+      window.removeEventListener("keyup", on_keyup);
+    }
+
+    function on_keyup(evt) {
+      if (evt.key === "Escape") {
+        remove_selector(evt);
+      }
+    }
+
+    function language_selector(evt) {
+      if (show_selector.value) {
+        remove_selector();
+        return;
+      }
+      show_selector.value = true;
+      window.addEventListener("click", remove_selector);
+      window.addEventListener("keyup", on_keyup);
+    }
+
+    function handle_language_change(l) {
+      selected_language.value = l;
+      remove_selector();
+    }
+
+    return {
+      el,
+      languages,
+      selected_language,
+      show_selector,
+      language_selector,
+      handle_language_change,
+    };
+  }
+};
+
 const Cell = {
   delimiters: ["[[", "]]"],
-  components: { Pill },
+  components: { Download, Pill },
   props: ["col", "criteria", "info"],
   template: "#cell",
   setup(props, ctx) {
@@ -56,10 +141,10 @@ const Cell = {
       update_criteria({ [col.value.id]: args });
     }
 
-    return { 
+    return {
       data: info.value[col.value.id],
-      filters: criteria.value?.[col.value.id], 
-      update_filter 
+      filters: criteria.value?.[col.value.id],
+      update_filter
     };
   }
 };
@@ -73,7 +158,7 @@ const OverviewTable = {
       acc[e] = true;
       return acc;
     }, {}));
-    const criteria = ref({ 
+    const criteria = ref({
       alg_diff: { lower: 0, upper: 10 },
       impl_diff: { lower: 0, upper: 10 },
       only_before: Infinity

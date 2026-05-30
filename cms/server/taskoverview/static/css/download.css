@@ -1,5 +1,63 @@
 td.download {
-    position:relative;
+    position: relative;
+}
+
+div.language-indicator {
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    position:absolute;
+    font-size: 10px;
+    line-height: 1;
+    color: #aaa;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: color 0.15s;
+    top: 0;
+    right: 0;
+    margin: auto;
+    cursor: pointer;
+    z-index: 10;
+    height: 16px;
+    width: 100%;
+    text-shadow: -1px 0 #888, 0 1px #888, 1px 0 #888, 0 -1px #888;
+}
+
+div.language-indicator:hover {
+    color: #0073c5;
+}
+
+div.language-selector {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 16px;
+    right: 1px;
+    background: white;
+    padding: 4px;
+    z-index: 20;
+    border-radius: 4px;
+    border: 1px solid #888;
+    gap: 3px;
+}
+
+div.language-row {
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.2;
+    padding: 3px 5px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+div.language-row:hover {
+    background: #e8e8e8;
+}
+
+div.language-row.active {
+    background: #c3c3c3;
 }
 
 div.download-icon {
@@ -96,12 +154,12 @@ div.download-icon.done::before {
         background-size:6px 20px;
         opacity:1;
     }
-    
+
     50% {
         background-size:12px 40px;
         opacity:.2;
     }
-    
+
     100% {
         background-size:18px 60px;
         opacity:0;
@@ -119,5 +177,5 @@ div.download-icon.error:before {
     animation-name:download-error;
     animation-duration:1s;
     animation-timing-function:ease;
-    animation-fill-mode:forwards; 
+    animation-fill-mode:forwards;
 }

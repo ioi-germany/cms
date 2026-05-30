@@ -78,7 +78,7 @@ class TaskCompileJob:
             "loading task {} in {} with language = {}".format(
                 self.name,
                 str(directory),
-                "default" if self.language is None else self.language,
+                "ALL" if self.language is None else self.language,
             )
         )
 
@@ -209,6 +209,10 @@ class TaskFetch:
     balancer = None
 
     @staticmethod
+    def get_key(name, language):
+        return (name, language)
+
+    @staticmethod
     def init(repository, max_compilations):
         logger.info("initializing task compilation in directory {}.".
                     format(repository.path))
@@ -222,19 +226,21 @@ class TaskFetch:
             raise Exception("tasks repository not initialized")
         if name not in TaskInfo.tasks:
             raise KeyError("No such task")
-        if name not in TaskFetch.jobs:
-            TaskFetch.jobs[name] = TaskCompileJob(
+        key = TaskFetch.get_key(name, language)
+        if key not in TaskFetch.jobs:
+            TaskFetch.jobs[key] = TaskCompileJob(
                 TaskFetch.repository,
                 name,
                 language,
                 TaskInfo.tasks[name]["folder"],
                 TaskFetch.balancer,
             )
-        return TaskFetch.jobs[name].join()
+        return TaskFetch.jobs[key].join()
 
     @staticmethod
-    def query(name, handle):
-        if name not in TaskFetch.jobs:
+    def query(name, language, handle):
+        key = TaskFetch.get_key(name, language)
+        if key not in TaskFetch.jobs:
             return {"error": True,
                     "done":  True,
                     "msg":   "I couldn't find your compile job. Usually this "
@@ -242,8 +248,9 @@ class TaskFetch:
                              "meantime. Please try again.",
                     "log":   ""}
 
-        return TaskFetch.jobs[name].info(handle)
+        return TaskFetch.jobs[key].info(handle)
 
     @staticmethod
-    def get(name):
-        return TaskFetch.jobs[name].get()
+    def get(name, language):
+        key = TaskFetch.get_key(name, language)
+        return TaskFetch.jobs[key].get()

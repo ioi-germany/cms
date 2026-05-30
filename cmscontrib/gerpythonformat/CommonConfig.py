@@ -327,7 +327,7 @@ class CommonConfig(object):
             return None
 
         if self.relevant_language is not None and \
-            not basename.endswith(self.relevant_language):
+            not basename.lower().endswith(self.relevant_language.lower()):
             return None
 
         if safe is None:

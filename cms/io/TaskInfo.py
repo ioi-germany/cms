@@ -26,6 +26,7 @@ from __future__ import unicode_literals
 import contextlib
 import json
 import logging
+import os
 import re
 
 from datetime import datetime
@@ -41,8 +42,10 @@ from typing import Collection, Iterator, List
 
 from cms.io.BackgroundScheduler import BackgroundScheduler
 from cms.io.Repository import Repository
+from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 from cmscontrib.gerpythonformat.ContestConfig import ContestConfig
 from cmscontrib.gerpythonformat.LocationStack import chdir
+from cmscontrib.gerpythonformat.TaskConfig import TaskConfig
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +99,7 @@ class SingleTaskInfo:
         if self.public and self.PUBLIC_TAG not in map(str.lower, self.tags):
             self.tags.append(self.PUBLIC_TAG)
         if (
-            self.public is not None # for legacy tags
+            self.public is not None  # for legacy tags
             and not self.public
             and self.PRIVATE_TAG not in map(str.lower, self.tags)
         ):
@@ -117,10 +120,11 @@ class SingleTaskInfo:
             "tags": self.tags,
             "old": self.old,
             "folder": str(self.folder),
-            "error": self.error
+            "error": self.error,
         }
 
         return result
+
 
 class TaskDataSource:
     """Base class representing different data sources for the tasks"""
@@ -178,6 +182,7 @@ class TaskDataSource:
     def schedule(self, scheduler: BackgroundScheduler, repository: Repository) -> None:
         """responsible for registering (recurring) data updates"""
         pass
+
 
 class InfoJsonSource(TaskDataSource):
     REQUIRED_FIELDS = ("title", "algorithm", "implementation")
@@ -277,7 +282,6 @@ class InfoJsonSource(TaskDataSource):
 
 
 class ContestConfigSource(TaskDataSource):
-
     def __init__(self, tasks, contests_folders: Collection[str]) -> None:
         super().__init__(tasks, is_annotator=True)
         self.contests_folders = contests_folders
@@ -571,6 +575,97 @@ class ContestConfigSource(TaskDataSource):
                     logger.error("\n".join(format_exception(*exc_info())))
 
 
+class TaskConfigSource(InfoJsonSource):
+    def __init__(self, tasks, tasks_folders: Collection[str]):
+        super().__init__(tasks, tasks_folders)
+        self._last_revision = None
+
+    def load_once(self, repository: Repository) -> None:
+        pass
+
+    def schedule(self, scheduler: BackgroundScheduler, repository: Repository) -> None:
+        scheduler.every(60, self.update, args=[repository])
+
+    def load(self, repository: Repository) -> dict:
+        repository_root = Path(repository.path)
+        res: dict = {}
+        for task_dir in self.task_iter(repository_root):
+            try:
+                code = task_dir.parts[-1]
+                res[code] = self.parse_single(task_dir)
+            except Exception:
+                logger.info("\n".join(format_exception(*exc_info())))
+        return res
+
+    def parse_single(self, task_dir: Path) -> dict:
+        code = task_dir.parts[-1]
+        config_path = task_dir / "config.py"
+        if not config_path.exists():
+            return {}
+        try:
+            wdir = task_dir / "build"
+            wtdir = wdir / code
+            if not wdir.exists():
+                os.mkdir(wdir)
+            if not wtdir.exists():
+                os.mkdir(wtdir)
+            copyrecursivelyifnecessary(
+                task_dir,
+                wtdir,
+                # avoid copying the build folder recursively and since we don't
+                # collect information about testcases, we can avoid copying them
+                ignore=set(["build", "data", "raw", "cases", "testcases"]),
+                only_ext=set([".cpp", ".py", ".tex", ".json"]),
+            )
+            with chdir(wdir):
+                contestconfig = ContestConfig(
+                    os.path.abspath(wdir / ".rules"),
+                    "hidden contest",
+                    relevant_language=None,
+                    ignore_latex=False,
+                    verbose_latex=False,
+                    minimal=True,
+                )
+                with chdir(code):
+                    with TaskConfig(
+                        contestconfig,
+                        os.path.abspath(wdir / ".rules"),
+                        "task name",
+                        0,
+                        "full",
+                        None,
+                        ignore_latex=False,
+                        verbose_latex=False,
+                        relevant_language=None,
+                        minimal=True,
+                        standalone_task=True,
+                    ) as taskconfig:
+                        with contextlib.redirect_stdout(None):
+                            # _parseconfig doesn't perform any actions, so we suppress
+                            # all log messages
+                            taskconfig._parseconfig("config.py")
+                            languages = list(taskconfig._statements.keys())
+                            if taskconfig.spoilers:
+                                languages.append("spoiler")
+                            return {"languages": languages}
+        except Exception as e:
+            print(f"failed to parse config for task {code}, error: {e}")
+            logger.warning("\n".join(format_exception(*exc_info())))
+            return {}
+        return {}
+
+    def update(self, repository: Repository) -> None:
+        start = time()
+        with repository:
+            current_revision = repository.getHEAD()
+            if current_revision != self._last_revision:
+                self._last_revision = current_revision
+                self.apply(self.load(repository))
+        logger.info(
+            "Parsed all config.py's in {}ms".format(int(1000 * (time() - start)))
+        )
+
+
 class TaskInfo:
     tasks = Manager().dict()
 
@@ -588,7 +683,8 @@ class TaskInfo:
 
         sources: List[TaskDataSource] = [
             InfoJsonSource(TaskInfo.tasks, tasks_folders),
-            ContestConfigSource(TaskInfo.tasks, contests_folders)
+            ContestConfigSource(TaskInfo.tasks, contests_folders),
+            TaskConfigSource(TaskInfo.tasks, tasks_folders),
         ]
 
         # Load data once on start-up (otherwise tasks might get removed when
@@ -611,10 +707,10 @@ class TaskInfo:
         ]
 
     @staticmethod
-    def get_info(keys, all_tasks = False) -> dict:
+    def get_info(keys, all_tasks=False) -> dict:
         task_data = deepcopy(TaskInfo.tasks)
         res = {}
-        for t in (task_data if all_tasks else keys):
+        for t in task_data if all_tasks else keys:
             if t not in task_data:
                 continue
             res[t] = task_data[t]
@@ -622,8 +718,18 @@ class TaskInfo:
 
     @staticmethod
     def entries() -> list:
-        return ["code", "title", "source", "algorithm", "implementation",
-                "keywords", "uses", "remarks", "tags", "download"]
+        return [
+            "code",
+            "title",
+            "source",
+            "algorithm",
+            "implementation",
+            "keywords",
+            "uses",
+            "remarks",
+            "tags",
+            "download",
+        ]
 
     @staticmethod
     def desc() -> dict:

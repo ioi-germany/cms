@@ -146,7 +146,7 @@
                 <iframe id="error-log" width="100%"></iframe>
             </div>
             <div class="modal-footer">
-            <button class="btn btn-primary" style="float:left;" id="retry-compilation" onClick="retry_compilation()">Retry</button>
+                <button class="btn btn-primary" style="float:left;" id="retry-compilation" onClick="retry_compilation()">Retry</button>
                 <button class="btn btn-secondary" onClick="close_modal('error')">Exit</button>
             </div>
         </div>
@@ -189,8 +189,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                    <button class="btn btn-success" style="float:left;" onclick="apply_col_select()">Apply</button>
-                    <button class="btn btn-secondary" onClick="close_modal('col-select')">Cancel</button>
+                <button class="btn btn-success" style="float:left;" onclick="apply_col_select()">Apply</button>
+                <button class="btn btn-secondary" onClick="close_modal('col-select')">Cancel</button>
             </div>
         </div>
 
@@ -215,7 +215,7 @@
                             <div>
                                 <div class="control-panel">
                                     <h6> Implementation Difficulty </h6>
-                                    <div class="range-slider" id="impl-diff"  data-maxval="10">
+                                    <div class="range-slider" id="impl-diff" data-maxval="10">
                                     </div>
                                     <div class="range-slider-info" data-for="impl-diff">
                                     </div>
@@ -224,42 +224,42 @@
                         </div>
                     </div>
 
-                            <div>
-                                <div class="control-panel">
-                                    <h6> Last used </h6>
-                                    <label> All tasks used in the selected contests will be hidden. </label>
-                                    <div class="dateslider" id="uses">
-                                    </div>
-                                </div>
+                    <div>
+                        <div class="control-panel">
+                            <h6> Last used </h6>
+                            <label> All tasks used in the selected contests will be hidden. </label>
+                            <div class="dateslider" id="uses">
                             </div>
+                        </div>
+                    </div>
 
-                            <div>
-                                <div class="control-panel">
-                                    <h6> Public vs. private </h6>
-                                    <div class="mini-table">
-                                        <div class="two-cols">
-                                            <div class="checkbox">
-                                                <input type="checkbox" id="private" value="private" checked>
-                                                <label for="private">
-                                                    Show private tasks
-                                                </label>
-                                            </div>
-                                            <div class="checkbox">
-                                                <input type="checkbox" id="public" value="public" checked>
-                                                <label for="public">
-                                                    Show public tasks
-                                                </label>
-                                            </div>
-                                        </div>
+                    <div>
+                        <div class="control-panel">
+                            <h6> Public vs. private </h6>
+                            <div class="mini-table">
+                                <div class="two-cols">
+                                    <div class="checkbox">
+                                        <input type="checkbox" id="private" value="private" checked>
+                                        <label for="private">
+                                            Show private tasks
+                                        </label>
+                                    </div>
+                                    <div class="checkbox">
+                                        <input type="checkbox" id="public" value="public" checked>
+                                        <label for="public">
+                                            Show public tasks
+                                        </label>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
                 </form>
             </div>
             <div class="modal-footer">
-                    <button class="btn btn-success" style="float:left;" onclick="apply_row_select()">Apply</button>
-                    <button class="btn btn-secondary" onclick="close_modal('row-select')">Cancel</button>
+                <button class="btn btn-success" style="float:left;" onclick="apply_row_select()">Apply</button>
+                <button class="btn btn-secondary" onclick="close_modal('row-select')">Cancel</button>
             </div>
         </div>
 
@@ -320,13 +320,7 @@
                 :class="{ [col.id]: true }"
             >
                 <template v-if="col.id === 'download'">
-                    <div
-                        class="download-icon"
-                        :id="`download-${info.code}`"
-                        :data-code="info.code"
-                        @mousedown="_pdf_mouse_down"
-                        @click="_pdf_mouse_click"
-                    ></div>
+                    <div is="vue:download" :info="info"></div>
                 </template>
                 <template v-else-if="col.id === 'keywords' || col.id === 'tags'">
                     <div :class="{ [col.id]: true }" class="pill-container">
@@ -374,6 +368,34 @@
             >
                 [[ tag ]]
             </div>
+        </template>
+
+        <template id="download">
+            <div ref="el" v-if="languages.length > 0">
+                <div class="language-indicator unselectable" @click="language_selector">
+                    [[ selected_language.icon ?? selected_language.short ]]
+                </div>
+                <template v-if="show_selector">
+                    <div class="language-selector" @click.stop>
+                        <div
+                            v-for="l in languages"
+                            :key="l.short"
+                            class="language-row unselectable"
+                            :class="{ active: l === selected_language }"
+                            @click="handle_language_change(l)"
+                        >
+                            [[ l.name ]]
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <div class="download-icon"
+                :id="`download-${info.code}`"
+                :data-code="info.code"
+                :data-language="selected_language?.short"
+                @mousedown="_pdf_mouse_down"
+                @click="_pdf_mouse_click"
+            ></div>
         </template>
 
         <script>

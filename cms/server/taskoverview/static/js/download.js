@@ -17,7 +17,7 @@ function _pdf_mouse_up(e)
     }
 }
 
-function _compile(p, code)
+function _compile(p, code, language)
 {
     p.classList.remove("done");
     p.classList.remove("error");
@@ -51,24 +51,28 @@ function _compile(p, code)
                         p.classList.remove("loading");
                         p.classList.add("done");
 
-                        window.document.getElementById("fr-download-helper").src = __url_root + "/download/" + code;
+                        let url = __url_root + "/download/" + code;
+                        if (!!language)
+                            url += "?language=" + language;
+                        window.document.getElementById("fr-download-helper").src = url;
                     }
                 }
             }
 
-            $.get(__url_root + "/compile", { "code": code, "handle": handle }, download);
+            $.get(__url_root + "/compile", { "code": code, "language": language, "handle": handle }, download);
         }
 
         __pdf_jobs[code] = window.setInterval(query, 500);
     }
 
-    $.post(__url_root + "/compile", { "code": code }, init);
+    $.post(__url_root + "/compile", { "code": code, "language": language }, init);
 }
 
 function _pdf_mouse_click(e)
 {
     var p = e.target;
     var code = p.dataset.code;
+    var language = p.dataset.language;
 
     if(code in __pdf_result && __pdf_result[code].error)
     {
@@ -76,23 +80,25 @@ function _pdf_mouse_click(e)
         window.document.getElementById("error-log").srcdoc = __pdf_result[code].log;
         window.document.getElementById("task-name").innerHTML = code;
         window.document.getElementById("retry-compilation").dataset.code = code;
+        window.document.getElementById("retry-compilation").dataset.language = language;
         open_modal("error");
         return;
     }
 
     if(code in __pdf_jobs)  return;
 
-    _compile(p, code);
+    _compile(p, code, language);
 }
 
 function retry_compilation()
 {
     var code = window.document.getElementById("retry-compilation").dataset.code;
+    var language = window.document.getElementById("retry-compilation").dataset.language;
     delete __pdf_result[code];
 
     var p = window.document.getElementById("download-" + code);
 
-    _compile(p, code);
+    _compile(p, code, language);
     close_modal("error");
 }
 

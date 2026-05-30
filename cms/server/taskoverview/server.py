@@ -43,38 +43,54 @@ class MainHandler(RequestHandler):
 
 
 class TaskCompileHandler(RequestHandler):
-    def get(self):
-        self.write(
-            TaskFetch.query(self.get_argument("code"), int(self.get_argument("handle")))
-        )
-        self.flush()
-
-    def post(self):
+    def get_language(self):
         language = None
         try:
             language = self.get_argument("language")
         except MissingArgumentError:
             pass
+        return language
+
+    def get(self):
+        language = self.get_language()
+        self.write(
+            TaskFetch.query(
+                self.get_argument("code"), language, int(self.get_argument("handle"))
+            )
+        )
+        self.flush()
+
+    def post(self):
+        language = self.get_language()
         handle = TaskFetch.compile(self.get_argument("code"), language)
         self.write({"handle": handle})
 
 
 class DownloadHandler(RequestHandler):
+    def get_language(self):
+        language = None
+        try:
+            language = self.get_argument("language")
+        except MissingArgumentError:
+            pass
+        return language
+
     def share(self, statement, code):
         self.set_header("Content-Type", "application/pdf")
         self.set_header(
-            "Content-Disposition",
-            "attachment;filename=\"statement-{}.pdf\"".format(code))
+            "Content-Disposition", 'attachment;filename="statement-{}.pdf"'.format(code)
+        )
         self.write(statement)
         self.flush()
 
     def get(self, code):
         try:
-            statement = TaskFetch.get(code)
+            language = self.get_language()
+            statement = TaskFetch.get(code, language)
 
             if statement is None:
                 raise ValueError
-        except:
+        except Exception:
             logger.error("could not download statement for {}".format(code))
             self.render("error.html")
         else:

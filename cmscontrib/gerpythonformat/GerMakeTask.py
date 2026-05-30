@@ -117,6 +117,15 @@ class GerMakeTask:
         if self.language is not None:
             if self.language in statements:
                 return os.path.abspath(statements[self.language].file_)
+            elif self.language == "SPOILER":
+                spoilers = list(contestconfig.tasks.values())[0].spoilers
+                spoilers = [s for s in list(spoilers.values()) if not s.endswith(".zip")]
+                if len(spoilers) == 0:
+                    return None
+                elif len(spoilers) == 1:
+                    return os.path.abspath(spoilers[0])
+                else:
+                    raise Exception("More than one spoiler")
             else:
                 return None
 

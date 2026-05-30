@@ -34,17 +34,18 @@ from cmscontrib.gerpythonformat.Executable import ExitCodeException, \
 from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, \
     merge_constraints, read_frequency, check_bounds
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
-    SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK
+    SCORE_MODE_MAX_SUBTASK
 from cms import FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
 from cms.db import Task, Statement, Testcase, Dataset, \
     Attachment, Spoiler, Manager, Submission, File, \
     SubmissionResult
-from cms.grading.tasktypes import get_task_type, Communication
-from cms.grading.languagemanager import filename_to_language, get_language
+from cms.grading.tasktypes import get_task_type
+from cms.grading.languagemanager import get_language
 from cms.grading.Job import CompilationJob, EvaluationJob
 from cms.rules.Rule import JobRule, ZipRule
 from cms.service.esoperations import ESOperation
 from datetime import datetime
+import copy
 import json
 import os
 import shutil
@@ -1024,6 +1025,68 @@ class TaskConfig(CommonConfig, Scope):
 
         if self.tasktype is None:
             raise Exception("You have to specify a task type")
+
+    def _parseconfig(self, filename):
+        """attempts to parse a config file and extract metadata without
+        performing any build/compile tasks
+
+        """
+
+        def dummy_func(*args, **kwargs):
+            pass
+
+        original_exported = copy.deepcopy(self.exported)
+        for k in self.exported:
+            if k not in ["statement", "spoiler", "task"]:
+                self.exported[k] = dummy_func
+
+        def new_compilelatex(basename, *args, **kwargs):
+            return basename + ".pdf"
+
+        def new_compileasy(basename, *args, output=None, **kwargs):
+            if output is None:
+                output = basename + ".pdf"
+            return output
+
+        def new_compile(filename, **kwargs):
+            extmap = {
+                ".tex": new_compilelatex,
+                ".asy": new_compileasy,
+            }
+
+            basename, extension = os.path.splitext(filename)
+            if extension in extmap:
+                return extmap[extension](basename, **kwargs)
+            return basename
+
+        class SilenceExceptions:
+            def __init__(self):
+                pass
+
+            def __enter__(self):
+                pass
+
+            def __exit__(self, exc_type, exc, tb):
+                return True
+
+        def new_subtask(*args, **kwargs):
+            # replacing functions with dummy functions can cause some runtime errors
+            # inside a `with subtask()` only testcases are generated => we simply ignore
+            # those errors
+            return SilenceExceptions()
+
+        self.exported["compile"] = new_compile
+        self.exported["compileasy"] = new_compileasy
+        self.exported["compilelatex"] = new_compilelatex
+        self.exported["subtask"] = new_subtask
+
+        try:
+            super(TaskConfig, self)._readconfig(filename)
+        except AttributeError:
+            pass
+        except Exception as e:
+            print("Failed to parse config with error", e)
+        self.exported = original_exported
 
     def curr_scope(self):
         if len(self.group_stack) > 0:
