@@ -39,7 +39,16 @@ from psutil import virtual_memory
 
 class GerMakeTask:
     def __init__(self, odir, task, minimal, no_test, submission, no_latex,
-                 verbose_latex, language, clean, ntcimp):
+                 verbose_latex, language, clean, ntcimp, relevant_language=None):
+        '''
+        Initialize.
+
+        language (string): language of the statement returned by build. If None or "ALL",
+            then all statements are returned
+
+        relevant_language (string): optional, used to filter which statements are compiled
+            during the build step. Defaults to the value specified by `language`
+        '''
         self.odir = odir
         self.task = task
         self.minimal = minimal
@@ -48,7 +57,11 @@ class GerMakeTask:
             self.local_test = submission
         self.no_latex = no_latex
         self.verbose_latex = verbose_latex
+
         self.language = language
+        _lang = language if relevant_language is None else relevant_language
+        self.relevant_language = _lang if _lang != "ALL" else None
+
         self.clean = clean
         self.tcimp = not ntcimp
 
@@ -80,7 +93,7 @@ class GerMakeTask:
             contestconfig = ContestConfig(
                 os.path.join(self.wdir, ".rules"),
                 "hidden contest",
-                relevant_language=(self.language if self.language!="ALL" else None),
+                relevant_language=self.relevant_language,
                 ignore_latex=self.no_latex,
                 verbose_latex=self.verbose_latex,
                 minimal=self.minimal)

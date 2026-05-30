@@ -97,21 +97,31 @@ class TaskCompileJob:
 
             with balancer:
                 try:
-                    comp = GerMakeTask(odir=directory,
-                                       task=self.name,
-                                       minimal=True,
-                                       no_test=True,
-                                       submission=None,
-                                       no_latex=False,
-                                       verbose_latex=True,
-                                       language=language,
-                                       clean=False,
-                                       ntcimp=True)
+                    task_kwargs = {
+                        "odir": directory,
+                        "task": self.name,
+                        "minimal": True,
+                        "no_test": True,
+                        "submission": None,
+                        "no_latex": False,
+                        "verbose_latex": True,
+                        "language": language,
+                        "clean": False,
+                        "ntcimp": True,
+                    }
+                    comp = GerMakeTask(**task_kwargs)
 
                     with repository:
                         comp.prepare()
 
                     statement_file = comp.build()
+                    if statement_file is None and language not in ("ALL", None):
+                        # the language filter heuristic failed to find a spoiler/language
+                        # => try again without filtering
+                        comp = GerMakeTask(**task_kwargs, relevant_language="ALL")
+                        with repository:
+                            comp.prepare()
+                        statement_file = comp.build()
 
                     if statement_file is None:
                         status["error"] = True

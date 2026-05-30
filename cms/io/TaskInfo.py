@@ -658,9 +658,12 @@ class TaskConfigSource(InfoJsonSource):
         start = time()
         with repository:
             current_revision = repository.getHEAD()
-            if current_revision != self._last_revision:
-                self._last_revision = current_revision
-                self.apply(self.load(repository))
+            if repository.auto_sync and current_revision == self._last_revision:
+                # the parse is doing a lot of IO -> if there are no updates
+                # we can immediately return
+                return
+            self._last_revision = current_revision
+            self.apply(self.load(repository))
         logger.info(
             "Parsed all config.py's in {}ms".format(int(1000 * (time() - start)))
         )
