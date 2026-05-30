@@ -183,22 +183,26 @@ const OverviewTable = {
       input_el.value = "";
     }
 
+    let filter_timeout = null;
     window.setExprFilter = function(val, input_el) {
+      clearTimeout(filter_timeout);
       if (!val) {
         clearFilterInput(input_el);
         return;
       }
-      if (compile_expr(val) === null) {
-        input_el?.classList.add("expr-error");
-        return;
-      }
-      input_el?.classList.remove("expr-error");
-      filter_expr.value = val;
-      for (const col of ["keywords", "tags"]) {
-        if (criteria.value[col])
-          criteria.value[col].clear();
-      }
-      syncTagsWithModal();
+      filter_timeout = setTimeout(() => {
+        if (compile_expr(val) === null) {
+          input_el?.classList.add("expr-error");
+          return;
+        }
+        input_el?.classList.remove("expr-error");
+        filter_expr.value = val;
+        for (const col of ["keywords", "tags"]) {
+          if (criteria.value[col])
+            criteria.value[col].clear();
+        }
+        syncTagsWithModal();
+      }, 200);
     };
 
     function _updateTaskRows(new_tasks, updated_tasks, removed_tasks, _show_col, _criteria, init) {
