@@ -404,3 +404,13 @@ div.pill.filtered {
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     font-weight: bold;
 }
+
+#filter-expr-input {
+    width: 200px;
+    font-family: monospace;
+    font-size: 13px;
+    border-radius: 4px;
+}
+#filter-expr-input.expr-error {
+    border-color: #f00;
+}

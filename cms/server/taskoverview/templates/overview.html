@@ -26,6 +26,7 @@
         <script src="static/js/modal.js"></script>
         <script src="static/js/download.js"></script>
         <script src="static/js/overview.js"></script>
+        <script src="static/js/filter.js"></script>
         <script src="static/js/table.js"></script>
 
         <script>
@@ -117,6 +118,13 @@
                         Overview of Available Tasks
                     </a>
                     <div style="flex-shrink:0;">
+                        <input
+                            id="filter-expr-input"
+                            type="text"
+                            placeholder='"dp" &amp;&amp; !"graph"'
+                            oninput="window.setExprFilter(this.value, this)"
+                        >
+
                         <button class="btn btn-primary btn-large" onclick="open_col_select()">
                             Select columns
                         </button>

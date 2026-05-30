@@ -80,7 +80,7 @@ const Download = {
           icon: to_icon(short),
           // uppercase for spoiler, otherwise lowercase ISO format
           short: normalized === "spoiler" ? short.toUpperCase() : normalized,
-          name: short.toUpperCase() 
+          name: short.toUpperCase()
         };
       });
     });
@@ -166,25 +166,36 @@ const OverviewTable = {
     const is_new = ref({});
     const is_updated = ref({});
 
-    function _relevant(task, criteria) {
-      const info = window.__info[task];
-      if (!!info["error"])
-        return true;
-      for(var i = 0; i < info.uses.length; ++i)
-          if(info.uses[i].timestamp > criteria.only_before)
-              return false;
-      if (info.algorithm > criteria.alg_diff.upper || criteria.alg_diff.lower > info.algorithm)
-        return false;
-      if (info.implementation > criteria.impl_diff.upper || criteria.impl_diff.lower > info.implementation)
-        return false;
-      for (const col of ["keywords", "tags"]) {
-        for (const v of criteria[col] || []) {
-          if (!(info[col] || []).some((c) => c.toUpperCase() === v.toUpperCase()))
-            return false;
-        }
-      }
-      return true;
+    const filter_expr = ref("");
+    const compiled_filter = computed(() => compile_expr(filter_expr.value));
+
+    function syncTagsWithModal() {
+      window.criteria.tags = criteria.value.tags;
     }
+
+    function clearFilterInput(input_el) {
+      filter_expr.value = "";
+      input_el?.classList.remove("expr-error");
+      input_el.value = "";
+    }
+
+    window.setExprFilter = function(val, input_el) {
+      if (!val) {
+        clearFilterInput(input_el);
+        return;
+      }
+      if (compile_expr(val) === null) {
+        input_el?.classList.add("expr-error");
+        return;
+      }
+      input_el?.classList.remove("expr-error");
+      filter_expr.value = val;
+      for (const col of ["keywords", "tags"]) {
+        if (criteria.value[col])
+          criteria.value[col].clear();
+      }
+      syncTagsWithModal();
+    };
 
     function _updateTaskRows(new_tasks, updated_tasks, removed_tasks, _show_col, _criteria, init) {
       if (_criteria !== null) {
@@ -231,6 +242,7 @@ const OverviewTable = {
     }
 
     function update_criteria(arg) {
+      clearFilterInput(document.getElementById("filter-expr-input"));
       for (const [k, v] of Object.entries(arg)) {
         if (criteria.value[k]?.has(v))
           criteria.value[k].delete(v);
@@ -240,8 +252,7 @@ const OverviewTable = {
           criteria.value[k].add(v);
         }
       }
-      // symc with the modal
-      window.criteria.tags = criteria.value.tags;
+      syncTagsWithModal();
     }
 
     provide("criteria", { update_criteria });
@@ -250,7 +261,7 @@ const OverviewTable = {
     const relevant_tasks = computed(() => {
       let i = -1;
       return tasks.value.map((t) => {
-        const hidden = !_relevant(t, criteria.value);
+        const hidden = !_relevant(t, criteria.value, compiled_filter.value);
         if (!hidden)
           i++;
         return {
