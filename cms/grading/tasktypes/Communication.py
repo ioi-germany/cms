@@ -414,12 +414,6 @@ class Communication(TaskType):
         if not self._uses_stub():
             # Manager still running but wants to quit
             if solution_quitter.read() == "<3":
-                # we wait a short amount of time to avoid interrupting the user
-                # process to early (which might lead to runtime errors going
-                # undetected and instead being shown as "wrong answer")
-                time.sleep(.01)
-                for i in indices:
-                    processes[i].send_signal(signal.SIGINT)  # Kill user
                 wait_without_std(processes)
                 manager_quitter.close()
                 manager_quitter_open = False
