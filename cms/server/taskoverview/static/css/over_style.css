@@ -39,7 +39,7 @@ table.overview tr.new > td:first-child::after {
 table.overview thead {
     position:sticky;
     top:60px;
-    z-index:10;
+    z-index:999;
 }
 
 table.overview thead th {
@@ -47,7 +47,7 @@ table.overview thead th {
 }
 
 table.overview td:not(.th) {
-    height:40px;
+    height:50px;
 }
 
 td.code, th.code {
@@ -98,8 +98,11 @@ table.overview tr.odd {
     background-color:#f9f9f9;
 }
 
-table.overview tr:hover {
+table.overview tr:hover:not(:has(.language-selector:hover)) {
     background-color:#f5f5f5;
+}
+table.overview tbody tr:has(.language-selector) td {
+    background-color: unset;
 }
 
 table.overview td.lower-left {
@@ -237,19 +240,19 @@ pre.short code {
 
 @keyframes
 blink-fresh {
-    0% { 
+    0% {
         background:rgba(85, 172, 85, 0);
     }
-    
-    
+
+
     20% {
         background:rgba(85, 172, 85, .25);
     }
-    
+
     50% {
         background:rgba(85, 172, 85, .25);
     }
-    
+
     100% {
         background:rgba(85, 172, 85, 0);
     }
@@ -263,19 +266,19 @@ tr.fresh td {
 
 @keyframes
 blink-updated {
-    0% { 
+    0% {
         background:rgba(0, 112, 204, 0);
     }
-    
-    
+
+
     20% {
         background:rgba(0, 112, 204, .25);
     }
-    
+
     50% {
         background:rgba(0, 112, 204, .25);
     }
-    
+
     100% {
         background:rgba(0, 112, 204, 0);
     }
@@ -290,19 +293,19 @@ tr.updated td {
 
 @keyframes
 blink-removed {
-    0% { 
+    0% {
         background:rgba(189, 54, 47, 0);
     }
-    
-    
+
+
     20% {
         background:rgba(189, 54, 47, .25);
     }
-    
+
     50% {
         background:rgba(189, 54, 47, .25);
     }
-    
+
     100% {
         background:rgba(189, 54, 47, 0);
     }
@@ -319,9 +322,9 @@ vanish {
     0% {
         opacity:1;
     }
-    
+
     100% {
-    
+
     }
 }
 
@@ -357,6 +360,7 @@ div.json-info {
     bottom:.25%;
     max-width:400px;
     box-shadow:20px 20px 10px 30px white;
+    z-index:20;
 }
 
 div.pill-container.keywords {
@@ -399,4 +403,14 @@ div.pill.filtered {
     color: white;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     font-weight: bold;
+}
+
+#filter-expr-input {
+    width: 200px;
+    font-family: monospace;
+    font-size: 13px;
+    border-radius: 4px;
+}
+#filter-expr-input.expr-error {
+    border-color: #f00;
 }

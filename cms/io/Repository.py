@@ -159,3 +159,15 @@ class Repository:
             else:
                 gitout = gitout.decode("utf-8")
                 return gitout
+
+    def getHEAD(self):
+        """returns the current HEAD of the repository
+        """
+        with chdir(self.path):
+            try:
+                gitout = check_output(["git", "rev-parse", "HEAD"])
+            except Exception as e:
+                logger.error("Couldn't get HEAD: {}".format(e))
+                return None
+            else:
+                return gitout.decode("utf-8").strip()

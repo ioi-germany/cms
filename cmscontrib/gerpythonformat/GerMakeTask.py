@@ -39,7 +39,16 @@ from psutil import virtual_memory
 
 class GerMakeTask:
     def __init__(self, odir, task, minimal, no_test, submission, no_latex,
-                 verbose_latex, language, clean, ntcimp):
+                 verbose_latex, language, clean, ntcimp, relevant_language=None):
+        '''
+        Initialize.
+
+        language (string): language of the statement returned by build. If None or "ALL",
+            then all statements are returned
+
+        relevant_language (string): optional, used to filter which statements are compiled
+            during the build step. Defaults to the value specified by `language`
+        '''
         self.odir = odir
         self.task = task
         self.minimal = minimal
@@ -48,7 +57,11 @@ class GerMakeTask:
             self.local_test = submission
         self.no_latex = no_latex
         self.verbose_latex = verbose_latex
+
         self.language = language
+        _lang = language if relevant_language is None else relevant_language
+        self.relevant_language = _lang if _lang != "ALL" else None
+
         self.clean = clean
         self.tcimp = not ntcimp
 
@@ -80,7 +93,7 @@ class GerMakeTask:
             contestconfig = ContestConfig(
                 os.path.join(self.wdir, ".rules"),
                 "hidden contest",
-                relevant_language=(self.language if self.language!="ALL" else None),
+                relevant_language=self.relevant_language,
                 ignore_latex=self.no_latex,
                 verbose_latex=self.verbose_latex,
                 minimal=self.minimal)
@@ -117,6 +130,15 @@ class GerMakeTask:
         if self.language is not None:
             if self.language in statements:
                 return os.path.abspath(statements[self.language].file_)
+            elif self.language == "SPOILER":
+                spoilers = list(contestconfig.tasks.values())[0].spoilers
+                spoilers = [s for s in list(spoilers.values()) if not s.endswith(".zip")]
+                if len(spoilers) == 0:
+                    return None
+                elif len(spoilers) == 1:
+                    return os.path.abspath(spoilers[0])
+                else:
+                    raise Exception("More than one spoiler")
             else:
                 return None
 

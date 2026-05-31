@@ -47,7 +47,8 @@ def copyifnecessary(source, destination, mode=None):
 
 
 def copyrecursivelyifnecessary(source, destination, ignore=set(),
-                               ignore_ext=set(), do_copy=set(), mode=None):
+                               ignore_ext=set(), do_copy=set(), mode=None,
+                               only_ext=None):
     """Copy the directory or file source to destination recursively.
     Files are only touched if their contents differ.
 
@@ -55,8 +56,14 @@ def copyrecursivelyifnecessary(source, destination, ignore=set(),
 
     destination (string): destination file/directory name
 
+    only_ext (set): If provided, only files matching these extensions are copied.
+
     """
     if os.path.isfile(source):
+        if only_ext is not None:
+            _, ext = os.path.splitext(source)
+            if ext not in only_ext:
+                return
         copyifnecessary(source, destination, mode)
     elif os.path.isdir(source):
         if not os.path.isdir(destination):
@@ -70,6 +77,7 @@ def copyrecursivelyifnecessary(source, destination, ignore=set(),
                 continue
             copyrecursivelyifnecessary(os.path.join(source, name),
                                        os.path.join(destination, name),
-                                       ignore, ignore_ext, do_copy, mode)
+                                       ignore, ignore_ext, do_copy, mode,
+                                       only_ext)
     else:
         raise Exception("Node {} cannot be copied (wrong type)".format(source))

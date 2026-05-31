@@ -43,9 +43,98 @@ const Pill = {
   }
 };
 
+const Download = {
+  delimiters: ["[[", "]]"],
+  props: ["info"],
+  template: "#download",
+  setup(props, ctx) {
+    const { info } = toRefs(props);
+    const show_selector = ref(false);
+    const el = ref(null);
+
+    function to_icon(short_name) {
+      if (!short_name)
+        return undefined;
+      short_name = short_name.toUpperCase();
+      if (short_name === "SPOILER")
+        return "\u{1f4a1}"; // = light bulb
+      const LANG_TO_REGION = {
+        "ET": "EE",
+        "UK": "UA",
+        "HE": "IL",
+        "EN": "GB",
+      };
+      if (LANG_TO_REGION[short_name])
+        short_name = LANG_TO_REGION[short_name];
+      if (short_name.length !== 2 || !short_name.match(/[A-Z]/i))
+        return undefined;
+      let res = "";
+      for (let i = 0; i < short_name.length; i++) {
+        const c = short_name.charCodeAt(i);
+        res += String.fromCodePoint(c + 0x1f1a5) // = country flag
+      }
+      return res;
+    }
+
+    const languages = computed(() => {
+      const codes = info.value?.languages || [];
+      return codes.map(short => {
+        const normalized = short.toLowerCase();
+        return {
+          icon: to_icon(short),
+          // uppercase for spoiler, otherwise lowercase ISO format
+          short: normalized === "spoiler" ? short.toUpperCase() : normalized,
+          name: short.toUpperCase()
+        };
+      });
+    });
+
+    const selected_language = ref(languages.value?.[0]);
+
+    function remove_selector(evt) {
+      if (evt && el.value?.contains(evt.target)) {
+        return;
+      }
+      show_selector.value = false;
+      window.removeEventListener("click", remove_selector);
+      window.removeEventListener("keyup", on_keyup);
+    }
+
+    function on_keyup(evt) {
+      if (evt.key === "Escape") {
+        remove_selector(evt);
+      }
+    }
+
+    function language_selector(evt) {
+      if (show_selector.value) {
+        remove_selector();
+        return;
+      }
+      show_selector.value = true;
+      window.addEventListener("click", remove_selector);
+      window.addEventListener("keyup", on_keyup);
+    }
+
+    function handle_language_change(l) {
+      selected_language.value = l;
+      remove_selector();
+    }
+
+    return {
+      el,
+      languages,
+      selected_language,
+      show_selector,
+      language_selector,
+      handle_language_change,
+    };
+  }
+};
+
 const Cell = {
   delimiters: ["[[", "]]"],
-  components: { Pill },
+  components: { Download, Pill },
   props: ["col", "criteria", "info"],
   template: "#cell",
   setup(props, ctx) {
@@ -56,10 +145,10 @@ const Cell = {
       update_criteria({ [col.value.id]: args });
     }
 
-    return { 
+    return {
       data: info.value[col.value.id],
-      filters: criteria.value?.[col.value.id], 
-      update_filter 
+      filters: criteria.value?.[col.value.id],
+      update_filter
     };
   }
 };
@@ -73,7 +162,7 @@ const OverviewTable = {
       acc[e] = true;
       return acc;
     }, {}));
-    const criteria = ref({ 
+    const criteria = ref({
       alg_diff: { lower: 0, upper: 10 },
       impl_diff: { lower: 0, upper: 10 },
       only_before: Infinity
@@ -81,25 +170,40 @@ const OverviewTable = {
     const is_new = ref({});
     const is_updated = ref({});
 
-    function _relevant(task, criteria) {
-      const info = window.__info[task];
-      if("error" in info)
-        return true;
-      for(var i = 0; i < info.uses.length; ++i)
-          if(info.uses[i].timestamp > criteria.only_before)
-              return false;
-      if (info.algorithm > criteria.alg_diff.upper || criteria.alg_diff.lower > info.algorithm)
-        return false;
-      if (info.implementation > criteria.impl_diff.upper || criteria.impl_diff.lower > info.implementation)
-        return false;
-      for (const col of ["keywords", "tags"]) {
-        for (const v of criteria[col] || []) {
-          if (!(info[col] || []).some((c) => c.toUpperCase() === v.toUpperCase()))
-            return false;
-        }
-      }
-      return true;
+    const filter_expr = ref("");
+    const compiled_filter = computed(() => compile_expr(filter_expr.value));
+
+    function syncTagsWithModal() {
+      window.criteria.tags = criteria.value.tags;
     }
+
+    function clearFilterInput(input_el) {
+      filter_expr.value = "";
+      input_el?.classList.remove("expr-error");
+      input_el.value = "";
+    }
+
+    let filter_timeout = null;
+    window.setExprFilter = function(val, input_el) {
+      clearTimeout(filter_timeout);
+      if (!val) {
+        clearFilterInput(input_el);
+        return;
+      }
+      filter_timeout = setTimeout(() => {
+        if (compile_expr(val) === null) {
+          input_el?.classList.add("expr-error");
+          return;
+        }
+        input_el?.classList.remove("expr-error");
+        filter_expr.value = val;
+        for (const col of ["keywords", "tags"]) {
+          if (criteria.value[col])
+            criteria.value[col].clear();
+        }
+        syncTagsWithModal();
+      }, 200);
+    };
 
     function _updateTaskRows(new_tasks, updated_tasks, removed_tasks, _show_col, _criteria, init) {
       if (_criteria !== null) {
@@ -146,6 +250,7 @@ const OverviewTable = {
     }
 
     function update_criteria(arg) {
+      clearFilterInput(document.getElementById("filter-expr-input"));
       for (const [k, v] of Object.entries(arg)) {
         if (criteria.value[k]?.has(v))
           criteria.value[k].delete(v);
@@ -155,17 +260,16 @@ const OverviewTable = {
           criteria.value[k].add(v);
         }
       }
-      // symc with the modal
-      window.criteria.tags = criteria.value.tags;
+      syncTagsWithModal();
     }
 
     provide("criteria", { update_criteria });
 
-    let json_issues = computed(() => tasks.value.filter((t) => "error" in window.__info[t]));
+    let json_issues = computed(() => tasks.value.filter((t) => !!window.__info[t]["error"]));
     const relevant_tasks = computed(() => {
       let i = -1;
       return tasks.value.map((t) => {
-        const hidden = !_relevant(t, criteria.value);
+        const hidden = !_relevant(t, criteria.value, compiled_filter.value);
         if (!hidden)
           i++;
         return {

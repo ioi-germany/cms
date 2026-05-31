@@ -42,9 +42,17 @@ logger = logging.getLogger(__name__)
 
 
 class TaskCompileJob:
-    def __init__(self, repository: Repository, name: str, task_folder: str, balancer):
+    def __init__(
+        self,
+        repository: Repository,
+        name: str,
+        language,
+        task_folder: str,
+        balancer,
+    ):
         self.repository = repository
         self.name = name
+        self.language = language
         self.task_folder = task_folder
         self.balancer = balancer
 
@@ -66,9 +74,21 @@ class TaskCompileJob:
     def _compile(self):
         self._reset_status()
         directory = Path(self.repository.path) / self.task_folder
-        logger.info("loading task {} in {}".format(self.name, str(directory)))
+        logger.info(
+            "loading task {} in {} with language = {}".format(
+                self.name,
+                str(directory),
+                "ALL" if self.language is None else self.language,
+            )
+        )
 
-        def do(status, repository: Repository, directory: str, balancer):
+        def do(
+            status,
+            repository: Repository,
+            language,
+            directory: str,
+            balancer,
+        ):
             # stdout is process local in Python, so we can simply use this
             # to redirect all output from GerMakeTask to a string
             sys.stdout = StringIO()
@@ -77,21 +97,31 @@ class TaskCompileJob:
 
             with balancer:
                 try:
-                    comp = GerMakeTask(odir=directory,
-                                       task=self.name,
-                                       minimal=True,
-                                       no_test=True,
-                                       submission=None,
-                                       no_latex=False,
-                                       verbose_latex=True,
-                                       language=None,
-                                       clean=False,
-                                       ntcimp=True)
+                    task_kwargs = {
+                        "odir": directory,
+                        "task": self.name,
+                        "minimal": True,
+                        "no_test": True,
+                        "submission": None,
+                        "no_latex": False,
+                        "verbose_latex": True,
+                        "language": language,
+                        "clean": False,
+                        "ntcimp": True,
+                    }
+                    comp = GerMakeTask(**task_kwargs)
 
                     with repository:
                         comp.prepare()
 
                     statement_file = comp.build()
+                    if statement_file is None and language not in ("ALL", None):
+                        # the language filter heuristic failed to find a spoiler/language
+                        # => try again without filtering
+                        comp = GerMakeTask(**task_kwargs, relevant_language="ALL")
+                        with repository:
+                            comp.prepare()
+                        statement_file = comp.build()
 
                     if statement_file is None:
                         status["error"] = True
@@ -114,10 +144,16 @@ class TaskCompileJob:
             status["log"] = C.convert(sys.stdout.getvalue())
             status["done"] = True
 
-        self.compilation_process = Process(target=do, args=(self.status,
-                                                            self.repository,
-                                                            str(directory),
-                                                            self.balancer))
+        self.compilation_process = Process(
+            target=do,
+            args=(
+                self.status,
+                self.repository,
+                self.language,
+                str(directory),
+                self.balancer,
+            ),
+        )
         self.compilation_process.daemon = True
         self.compilation_process.start()
 
@@ -183,6 +219,10 @@ class TaskFetch:
     balancer = None
 
     @staticmethod
+    def get_key(name, language):
+        return (name, language)
+
+    @staticmethod
     def init(repository, max_compilations):
         logger.info("initializing task compilation in directory {}.".
                     format(repository.path))
@@ -191,21 +231,26 @@ class TaskFetch:
         TaskFetch.balancer = Manager().BoundedSemaphore(max_compilations)
 
     @staticmethod
-    def compile(name):
+    def compile(name: str, language):
         if TaskFetch.repository is None:
             raise Exception("tasks repository not initialized")
         if name not in TaskInfo.tasks:
             raise KeyError("No such task")
-        if name not in TaskFetch.jobs:
-            TaskFetch.jobs[name] = TaskCompileJob(TaskFetch.repository,
-                                                  name,
-                                                  TaskInfo.tasks[name]["folder"],
-                                                  TaskFetch.balancer)
-        return TaskFetch.jobs[name].join()
+        key = TaskFetch.get_key(name, language)
+        if key not in TaskFetch.jobs:
+            TaskFetch.jobs[key] = TaskCompileJob(
+                TaskFetch.repository,
+                name,
+                language,
+                TaskInfo.tasks[name]["folder"],
+                TaskFetch.balancer,
+            )
+        return TaskFetch.jobs[key].join()
 
     @staticmethod
-    def query(name, handle):
-        if name not in TaskFetch.jobs:
+    def query(name, language, handle):
+        key = TaskFetch.get_key(name, language)
+        if key not in TaskFetch.jobs:
             return {"error": True,
                     "done":  True,
                     "msg":   "I couldn't find your compile job. Usually this "
@@ -213,8 +258,9 @@ class TaskFetch:
                              "meantime. Please try again.",
                     "log":   ""}
 
-        return TaskFetch.jobs[name].info(handle)
+        return TaskFetch.jobs[key].info(handle)
 
     @staticmethod
-    def get(name):
-        return TaskFetch.jobs[name].get()
+    def get(name, language):
+        key = TaskFetch.get_key(name, language)
+        return TaskFetch.jobs[key].get()
