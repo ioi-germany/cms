@@ -28,7 +28,7 @@ from cmscontrib.gerpythonformat.Executable import CPPProgram, InternalPython, Ex
     ExternalPython, asy_keyword_list
 from cms.rules.Rule import LaTeXRule, SafeLaTeXRule, CommandRule, ZipRule
 from cms.grading.languages.c11_gcc import C11Gcc
-from cms.grading.languages.cpp17_gpp import Cpp17Gpp
+from cms.grading.languages.cpp20_gpp import Cpp20Gpp
 from cms.grading.languages.java_jdk import JavaJDK
 from cms.grading.languages.pascal_fpc import PascalFpc
 from cms.grading.languages.python3_pypy import Python3PyPy
@@ -578,5 +578,5 @@ class CommonConfig(object):
         self.min_user_test_interval = min_interval
 
     def _usual_languages(self):
-        return [C11Gcc().name, Cpp17Gpp().name, JavaJDK().name,
+        return [C11Gcc().name, Cpp20Gpp().name, JavaJDK().name,
                 PascalFpc().name, Python3PyPy().name]
