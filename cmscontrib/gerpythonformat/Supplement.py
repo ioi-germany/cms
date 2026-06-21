@@ -60,22 +60,4 @@ def input_latex(x):
     return f
 
 
-def escape_asy(x):
-    """Return a function returning the result of f escaped for asymptote.
-    """
-    def f():
-        return str(easycall(x)).replace("\\", "\\\\").replace("\n", "\\n")
-    return f
-
-
-def def_asy(name, x):
-    """Return a function returning an asymptote command defining name to be
-    the result of f (where the result of f is a string).
-    """
-    # TODO automatically guess type of variable
-    def f():
-        return 'string %s = "%s";\n' % (name, easycall(x))
-    return f
-
-
-__all__ = ["escape_latex", "def_latex", "input_latex", "escape_asy", "def_asy"]
+__all__ = ["escape_latex", "def_latex", "input_latex"]
