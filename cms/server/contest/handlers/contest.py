@@ -195,14 +195,15 @@ class ContestHandler(BaseHandler):
                 group.analysis_stop if group.analysis_enabled
                 else None,
                 group.per_user_time, participation.starting_time,
+                self.contest.restricted_time,
                 participation.delay_time, participation.extra_time)
 
             ret["actual_phase"], ret["current_phase_begin"], \
                 ret["current_phase_end"], ret["valid_phase_begin"], \
                 ret["valid_phase_end"] = res
 
-            if ret["actual_phase"] == 0:
-                ret["phase"] = 0
+            if ret["actual_phase"] == 0 or ret["actual_phase"] == .5:
+                ret["phase"] = ret["actual_phase"]
 
             # set the timezone used to format timestamps
             ret["timezone"] = get_timezone(participation.user, self.contest)

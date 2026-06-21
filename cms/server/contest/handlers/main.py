@@ -382,7 +382,7 @@ class PrintingHandler(ContestHandler):
 
     """
     @tornado_web.authenticated
-    @actual_phase_required(0)
+    @actual_phase_required(0, 0.5)
     @multi_contest
     def get(self):
         participation = self.current_user
@@ -404,7 +404,7 @@ class PrintingHandler(ContestHandler):
                     **self.r_params)
 
     @tornado_web.authenticated
-    @actual_phase_required(0)
+    @actual_phase_required(0, 0.5)
     @multi_contest
     def post(self):
         try:
