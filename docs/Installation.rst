@@ -71,6 +71,22 @@ All dependencies can be installed automatically on most Linux distributions.
 Ubuntu
 ------
 
+For Ubuntu 24.4 (and probably also 22.*), there is a Makefile for cms 
+installation. 
+
+.. sourcecode:: bash
+
+    make install
+
+This should compile and install isolate v2, install dependencies for cms, create
+the virtual environment for cms and install cms in this virtual environment. 
+After installation, you should be able to run cms After
+
+.. sourcecode:: bash
+
+    . ./cmsvenv/bin/activate
+
+
 .. warning::
    The instructions below may be outdated.
 
