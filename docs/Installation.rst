@@ -213,9 +213,8 @@ version. So, you can install python dependencies by issuing:
 
 .. sourcecode:: bash
 
-    export SETUPTOOLS_USE_DISTUTILS="stdlib"
-    pip3 install -r requirements.txt
-    python3 setup.py install
+    pip install -r requirements.txt
+    pip install .
 
 .. note::
 
@@ -246,17 +245,15 @@ Assuming you have ``pip`` installed, you can do this:
 
 .. sourcecode:: bash
 
-    export SETUPTOOLS_USE_DISTUTILS="stdlib"
-    sudo --preserve-env=SETUPTOOLS_USE_DISTUTILS pip3 install -r requirements.txt
-    sudo --preserve-env=SETUPTOOLS_USE_DISTUTILS python3 setup.py install
+    sudo pip3 install -r requirements.txt
+    sudo pip3 install .
 
 This command installs python dependencies globally. Note that on some distros, like Arch Linux, this might interfere with the system package manager. If you want to perform the installation in your home folder instead, then you can do this instead:
 
 .. sourcecode:: bash
 
-    export SETUPTOOLS_USE_DISTUTILS="stdlib"
     pip3 install --user -r requirements.txt
-    python3 setup.py install --user
+    pip3 install --user .
 
 Method 4: Using your distribution's system packages
 ---------------------------------------------------
