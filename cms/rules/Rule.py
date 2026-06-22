@@ -24,14 +24,12 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import hashlib
-import imp
 import io
 import json
 import os
 import stat
 import subprocess
 import time
-import shlex
 
 from cms import config
 from cmscontrib.gerpythonformat.LaTeXSandbox import LaTeXSandbox
@@ -42,7 +40,21 @@ from cmscontrib.gerpythonformat.LocationStack import chdir
 from six import iteritems
 from copy import copy
 
-from cms import config
+import importlib.util
+import importlib.machinery
+
+
+# from https://docs.python.org/3/whatsnew/3.12.html#whatsnew312-removed-imp
+def load_source(modname, filename):
+    loader = importlib.machinery.SourceFileLoader(modname, filename)
+    spec = importlib.util.spec_from_file_location(modname, filename, loader=loader)
+    module = importlib.util.module_from_spec(spec)
+    # The module is always executed and not cached in sys.modules.
+    # Uncomment the following line to cache the module.
+    # sys.modules[module.__name__] = module
+    loader.exec_module(module)
+    return module
+
 
 def compute_file_hash(filename):
     """Return the sha256 sum of the given file.
@@ -804,7 +816,7 @@ class PythonFunctionRule(Rule):
                 'outputs': self.outputs}
 
     def run(self):
-        module = imp.load_source(self.name, self.source)
+        module = load_source(self.name, self.source)
 
         kwargs = dict(self.kwargs)
 

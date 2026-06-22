@@ -27,6 +27,7 @@ __all__ = ["Cpp20Gpp"]
 class Cpp20Gpp(CompiledLanguage):
     """This defines the C++ programming language, compiled with g++ (the
     version available on the system) using the C++20 standard.
+
     """
 
     @property

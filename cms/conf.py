@@ -162,7 +162,7 @@ class Config:
         self.max_submission_length = 100_000  # 100 KB
         self.max_input_length = 5_000_000  # 5 MB
         self.stl_path = "/usr/share/cppreference/doc/html/"
-        self.py_sl_path = "/usr/share/pyreference/"
+        self.docs_path = None
         # Prefix of 'shared-mime-info'[1] installation. It can be found
         # out using `pkg-config --variable=prefix shared-mime-info`, but
         # it's almost universally the same (i.e. '/usr') so it's hardly
@@ -206,7 +206,7 @@ class Config:
         # the prefix (or real_prefix to accommodate virtualenvs).
         bin_path = os.path.join(os.getcwd(), sys.argv[0])
         bin_name = os.path.basename(bin_path)
-        bin_is_python = bin_name in ["ipython", "python", "python2", "python3"]
+        bin_is_python = bin_name in ["ipython", "python", "python3"]
         bin_in_installed_path = bin_path.startswith(sys.prefix) or (
             hasattr(sys, 'real_prefix')
             and bin_path.startswith(sys.real_prefix))

@@ -41,16 +41,15 @@
         "ProxyService":       [["localhost", 28600]],
         "PrintingService":    [["localhost", 25123]],
         "TelegramBotService": [["localhost", 25124]],
-        "DiscordBotService":  [["localhost", 25125]]
-        },
+        "DiscordBotService":  [["localhost", 25125]],
+        "PrometheusExporter": []
+    },
 
     "other_services":
     {
         "TestFileCacher":    [["localhost", 27501]],
         "GerImport":         [["localhost", 25217]]
-        },
-
-
+    },
 
     "_section": "Database",
 
@@ -129,10 +128,10 @@
     "max_submission_length": 100000,
     "max_input_length": 5000000,
 
-    "_help": "STL documentation path in the system (exposed in CWS).",
-    "stl_path": "/usr/share/cppreference/doc/html/",
-    "_help": "Python SL documentation path in the system (exposed in CWS).",
-    "py_sl_path": "/usr/share/pyreference/",
+    "_help": "Path to the documentation exposed by CWS. To show a documentation",
+    "_help": "link add a folder for each language with index.html inside. For",
+    "_help": "example for C++ add 'cpp/index.html', for Java 'java/index.html'.",
+    "docs_path": "/usr/share/cms/docs",
 
 
 
@@ -141,7 +140,7 @@
     "_help": "Listening HTTP address and port for the AWS. If you access",
     "_help": "it through a proxy running on the same host you could put",
     "_help": "127.0.0.1 here for additional security.",
-    "admin_listen_address": "",
+    "admin_listen_address": "0.0.0.0",
     "admin_listen_port":    8889,
 
     "_help": "Login cookie duration for admins in seconds.",
@@ -187,6 +186,13 @@
     "max_jobs_per_user": 10,
     "pdf_printing_allowed": false,
 
+
+    "_section": "PrometheusExporter",
+
+    "_help": "Listening HTTP address and port for the exporter. If exposed",
+    "_help": "this may leak private information, make sure to secure this endpoint.",
+    "prometheus_listen_address": "127.0.0.1",
+    "prometheus_listen_port": 8811,
 
 
     "_section": "TaskOverviewWebServer",
