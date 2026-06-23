@@ -198,7 +198,7 @@ $(document).ready(function () {
         and (can_use_tokens or score_type.feedback() == "full")%}
 <div class="task_score_container row-fluid">
 
-    {% if score_type.max_public_score > 0 %}
+    {% if score_type.max_public_score > 0 and score_type.public_score_header is defined %}
         {# Show the public score (alone, if everything is public or tokens are disabled, or together with the tokened score). #}
     <div id="task_score_public"
          class="{{ "span6" if two_task_scores else "span12" }} well well-small task_score {{ get_score_class(public_score, score_type.max_public_score, task.score_precision) }}">

@@ -371,8 +371,9 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         sandbox_mgr.create_file_from_storage.assert_has_calls([
             call("manager", "digest of manager", executable=True),
             call("input.txt", "digest of input"),
+            call("ok.txt", "digest of correct output"),
         ], any_order=True)
-        self.assertEqual(sandbox_mgr.create_file_from_storage.call_count, 2)
+        self.assertEqual(sandbox_mgr.create_file_from_storage.call_count, 3)
         sandbox_usr.create_file_from_storage.assert_has_calls([
             call("foo", "digest of foo", executable=True),
         ], any_order=True)
@@ -391,8 +392,8 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
                  stdin_redirect="input.txt", multiprocess=True),
             call(sandbox_usr, cmdline_usr, 2.5, 123 * 1024 * 1024,
                  dirs_map={os.path.join(self.base_dir, "0"): ("/fifo0", "rw")},
-                 stdin_redirect=None,
-                 stdout_redirect=None,
+                 stdin_redirect="/fifo0/m_to_u0",
+                 stdout_redirect="/fifo0/u0_to_m",
                  multiprocess=True),
         ], any_order=True)
         self.assertEqual(self.evaluation_step_before_run.call_count, 2)
@@ -617,8 +618,9 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         sandbox_mgr.create_file_from_storage.assert_has_calls([
             call("manager", "digest of manager", executable=True),
             call("input.txt", "digest of input"),
+            call("ok.txt", "digest of correct output"),
         ], any_order=True)
-        self.assertEqual(sandbox_mgr.create_file_from_storage.call_count, 2)
+        self.assertEqual(sandbox_mgr.create_file_from_storage.call_count, 3)
         # Same content in both user sandboxes.
         for s in [sandbox_usr0, sandbox_usr1]:
             s.create_file_from_storage.assert_has_calls([
@@ -645,13 +647,13 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
                  stdin_redirect="input.txt", multiprocess=True),
             call(sandbox_usr0, cmdline_usr0, 2.5, 123 * 1024 * 1024,
                  dirs_map={os.path.join(self.base_dir, "0"): ("/fifo0", "rw")},
-                 stdin_redirect=None,
-                 stdout_redirect=None,
+                 stdin_redirect="/fifo0/m_to_u0",
+                 stdout_redirect="/fifo0/u0_to_m",
                  multiprocess=True),
             call(sandbox_usr1, cmdline_usr1, 2.5, 123 * 1024 * 1024,
                  dirs_map={os.path.join(self.base_dir, "1"): ("/fifo1", "rw")},
-                 stdin_redirect=None,
-                 stdout_redirect=None,
+                 stdin_redirect="/fifo1/m_to_u1",
+                 stdout_redirect="/fifo1/u1_to_m",
                  multiprocess=True),
         ], any_order=True)
         self.assertEqual(self.evaluation_step_before_run.call_count, 3)
