@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Programming contest management system
 # Copyright © 2023 Tobias Lenz <t_lenz94@web.de>
@@ -18,16 +17,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from cmscontrib.gerpythonformat.templates.boi.BOITemplate \
-    import BOITemplate
+from cmscontrib.gerpythonformat.templates.boi.BOITemplate import BOITemplate
 
 import os
-import shutil
 
 
 # This is the template for CEOI 2023 (identical with BOI template)
 class CEOITemplate(BOITemplate):
     def __init__(self, contest, short_name, year):
-        super(CEOITemplate, self).__init__(contest, short_name, year,
-                                           "header", "pdf",
-                                           os.path.dirname(__file__))
+        super(CEOITemplate, self).__init__(
+            contest, short_name, year, "header", "pdf", os.path.dirname(__file__)
+        )

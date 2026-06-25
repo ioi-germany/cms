@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Programming contest management system
 # Copyright © 2013-2022 Tobias Lenz <t_lenz94@web.de>

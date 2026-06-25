@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Programming contest management system
 # Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
@@ -18,16 +17,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 """ Plain template
 Commands for standard tasks
 """
 from cmscontrib.gerpythonformat.templates.Template import Template
 from cmscontrib.gerpythonformat.Supplement import def_latex, input_latex
-from cmscontrib.gerpythonformat.ConstraintParser import Constraint, merge
+from cmscontrib.gerpythonformat.ConstraintParser import Constraint
 
 from collections import OrderedDict
 
