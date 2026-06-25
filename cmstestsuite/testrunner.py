@@ -140,6 +140,7 @@ class TestRunner:
             name="testcontest_%s" % self.suffix,
             description="A test contest #%s." % self.suffix,
             languages=list(ALL_LANGUAGES),
+            main_group_id=1,
             allow_password_authentication="checked",
             start=start_time.strftime("%Y-%m-%d %H:%M:%S.%f"),
             stop=stop_time.strftime("%Y-%m-%d %H:%M:%S.%f"),

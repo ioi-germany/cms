@@ -4,8 +4,11 @@
 import io
 import sys
 
-fifo_path_from_user, fifo_path_to_user = sys.argv[1:]
+fifo_path_from_user, fifo_path_to_user, sq_path, mq_path = sys.argv[1:]
 
+
+sq = io.open(sq_path, "wb", buffering=0)
+mq = io.open(mq_path, "rb", buffering=0)
 # When the sandbox opens the other endpoints of these fifos to redirect
 # them to to stdin/out it does so first for stdin and then for stdout.
 # We must match that order as otherwise we would deadlock.
@@ -40,6 +43,9 @@ else:
 
 # This file exists just for convenience.
 io.open("output.txt", "wb").write(l + b"\n")
+
+sq.write(b"<3")
+sq.close()
 
 # This is the final score.
 if correct:
