@@ -18,14 +18,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-import json
 import traceback
 import os
 import signal
-import sys
 
 from threading import Thread
 from time import sleep
+
+import collections
+
+try:
+    collections.MutableMapping
+except:
+    # Monkey-patch: Tornado 4.5.3 does not work on Python 3.11 by default
+    collections.MutableMapping = collections.abc.MutableMapping
 
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton, bot
 from telegram.ext import *
