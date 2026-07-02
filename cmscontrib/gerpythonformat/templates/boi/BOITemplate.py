@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Programming contest management system
 # Copyright © 2013-2021 Tobias Lenz <t_lenz94@web.de>
@@ -19,10 +18,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 from cms import FEEDBACK_LEVEL_RESTRICTED
 from cms.rules.Rule import ZipRule
 from cmscommon.constants import SCORE_MODE_MAX_SUBTASK
@@ -34,8 +29,7 @@ from cmscontrib.gerpythonformat.Supplement import def_latex, input_latex
 from cmscontrib.gerpythonformat.Messenger import print_msg
 import os
 import shutil
-import filecmp
-from PyPDF2 import PdfFileMerger, PdfFileReader, PdfFileWriter
+from PyPDF2 import PdfFileReader, PdfFileWriter
 
 
 # This is the template for BOI 2021 and 2022 (an only slightly modified lg template)

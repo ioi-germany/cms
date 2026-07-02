@@ -198,7 +198,7 @@ $(document).ready(function () {
         and (can_use_tokens or score_type.feedback() == "full")%}
 <div class="task_score_container row-fluid">
 
-    {% if score_type.max_public_score > 0 %}
+    {% if score_type.max_public_score > 0 and score_type.public_score_header is defined %}
         {# Show the public score (alone, if everything is public or tokens are disabled, or together with the tokened score). #}
     <div id="task_score_public"
          class="{{ "span6" if two_task_scores else "span12" }} well well-small task_score {{ get_score_class(public_score, score_type.max_public_score, task.score_precision) }}">
@@ -220,7 +220,9 @@ $(document).ready(function () {
     <div id="task_score_tokened"
          class="{{ "span6" if two_task_scores else "span12" }}  well well-small task_score {{ get_score_class(actual_score if score_type.feedback() == "full" or actual_phase == 3 else tokened_score, score_type.max_score, task.score_precision) if can_use_tokens or score_type.feedback() == "full" or actual_phase == 3 else "undefined" }}">
         <span>
-        {{ score_type.private_score_header }}
+        {% if score_type.private_score_header is defined %}
+          {{ score_type.private_score_header }}
+        {% endif %}
         </span>
       <br/>
         <span class="score">
@@ -330,30 +332,30 @@ $(document).ready(function () {
             {% trans tokens=tokens_info[0] %}Right now, you have {{ tokens }} tokens available on this task.{% endtrans %}
         {% endif %}
         {% if not can_play_token_now %}
-            {% trans expiration_time=tokens_info[2]|format_datetime_smart %}
+            {%+ trans expiration_time=tokens_info[2]|format_datetime_smart %}
                 But you have to wait until {{ expiration_time }} to use them.
             {% endtrans %}
         {% endif %}
         {% if tokens_info[1] is not none %}
-            {% trans gen_time=tokens_info[1]|format_datetime_smart %}
+            {%+ trans gen_time=tokens_info[1]|format_datetime_smart %}
                 You will receive a new token at {{ gen_time }}.
             {% endtrans %}
         {% else %}
-            {% trans %}In the current situation, no more tokens will be generated.{% endtrans %}
+            {%+ trans %}In the current situation, no more tokens will be generated.{% endtrans %}
         {% endif %}
     {% else %}
         {% trans %}Right now, you do not have tokens available for this task.{% endtrans %}
         {% if actual_phase == 0 and tokens_info[1] is not none %}
-            {% trans gen_time=tokens_info[1]|format_datetime_smart %}
+            {%+ trans gen_time=tokens_info[1]|format_datetime_smart %}
                 You will receive a new token at {{ gen_time }}.
             {% endtrans %}
             {% if tokens_info[2] is not none and tokens_info[2] > tokens_info[1] %}
-                {% trans expiration_time=tokens_info[2]|format_datetime_smart %}
+                {%+ trans expiration_time=tokens_info[2]|format_datetime_smart %}
                     But you will have to wait until {{ expiration_time }} to use it.
                 {% endtrans %}
             {% endif %}
         {% else %}
-            {% trans %}In the current situation, no more tokens will be generated.{% endtrans %}
+            {%+ trans %}In the current situation, no more tokens will be generated.{% endtrans %}
         {% endif %}
     {% endif %}
 </div>

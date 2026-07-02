@@ -34,7 +34,7 @@ import os
 import re
 
 from setuptools import setup, find_packages
-from setuptools.command.build_py import build_py
+from setuptools.command.build import build
 
 
 PACKAGE_DATA = {
@@ -124,17 +124,11 @@ def find_version():
     raise RuntimeError("Unable to find version string.")
 
 
-# We piggyback the translation catalogs compilation onto build_py since
+# We piggyback the translation catalogs compilation onto build since
 # the po and mofiles will be part of the package data for cms.locale,
 # which is collected at this stage.
-class build_py_and_l10n(build_py):
-    def run(self):
-        self.run_command("compile_catalog")
-        # The build command of distutils/setuptools searches the tree
-        # and compiles a list of data files before run() is called and
-        # then stores that value. Hence we need to refresh it.
-        self.data_files = self._get_data_files()
-        super().run()
+class build_with_l10n(build):
+    sub_commands = [('compile_catalog', None)] + build.sub_commands
 
 
 setup(
@@ -143,29 +137,29 @@ setup(
     author="The CMS development team",
     author_email="contestms@googlegroups.com",
     url="https://github.com/cms-dev/cms",
-    download_url="https://github.com/cms-dev/cms/archive/master.tar.gz",
-    description="A contest management system and grader "
-                "for IOI-like programming competitions",
+    description="A contest management system and grader for IOI-like programming competitions",
     packages=find_packages(),
     package_data=PACKAGE_DATA,
-    cmdclass={"build_py": build_py_and_l10n},
-    scripts=["scripts/cmsLogService",
-             "scripts/cmsScoringService",
-             "scripts/cmsEvaluationService",
-             "scripts/cmsWorker",
-             "scripts/cmsResourceService",
-             "scripts/cmsChecker",
-             "scripts/cmsContestWebServer",
-             "scripts/cmsAdminWebServer",
-             "scripts/cmsProxyService",
-             "scripts/cmsPrintingService",
-             "scripts/cmsRankingWebServer",
-             "scripts/cmsTaskOverviewWebServer",
-             "scripts/cmsGerTranslateWebServer",
-             "scripts/cmsInitDB",
-             "scripts/cmsDropDB",
-             "scripts/cmsTelegramBotService",
-             "scripts/cmsDiscordBotService"],
+    cmdclass={"build": build_with_l10n},
+    scripts=[
+        "scripts/cmsLogService",
+        "scripts/cmsScoringService",
+        "scripts/cmsEvaluationService",
+        "scripts/cmsWorker",
+        "scripts/cmsResourceService",
+        "scripts/cmsChecker",
+        "scripts/cmsContestWebServer",
+        "scripts/cmsAdminWebServer",
+        "scripts/cmsProxyService",
+        "scripts/cmsPrintingService",
+        "scripts/cmsRankingWebServer",
+        "scripts/cmsTaskOverviewWebServer",
+        "scripts/cmsGerTranslateWebServer",
+        "scripts/cmsInitDB",
+        "scripts/cmsDropDB",
+        "scripts/cmsTelegramBotService",
+        "scripts/cmsDiscordBotService",
+    ],
     entry_points={
         "console_scripts": [
             "cmsRunFunctionalTests=cmstestsuite.RunFunctionalTests:main",
@@ -195,6 +189,7 @@ setup(
             "cmsRemoveUser=cmscontrib.RemoveUser:main",
             "cmsSpoolExporter=cmscontrib.SpoolExporter:main",
             "cmsMake=cmstaskenv.cmsMake:main",
+            "cmsPrometheusExporter=cmscontrib.PrometheusExporter:main",
             "cmsGerMake=cmscontrib.gerpythonformat.GerMake:main",
             "cmsGerMakeTask=cmscontrib.gerpythonformat.GerMakeTask:main",
             "cmsGerImport=cmscontrib.gerpythonformat.GerImport:main",
@@ -225,20 +220,17 @@ setup(
             "Java / JDK=cms.grading.languages.java_jdk:JavaJDK",
             "Pascal / fpc=cms.grading.languages.pascal_fpc:PascalFpc",
             "PHP=cms.grading.languages.php:Php",
-            "Python 2 / CPython=cms.grading.languages.python2_cpython:Python2CPython",
             "Python 3 / CPython=cms.grading.languages.python3_cpython:Python3CPython",
             "Python 3 / PyPy=cms.grading.languages.python3_pypy:Python3PyPy",
             "Rust=cms.grading.languages.rust:Rust",
         ],
     },
     keywords="ioi programming contest grader management system",
-    license="Affero General Public License v3",
+    license_expression="AGPL-3.0-or-later",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Natural Language :: English",
         "Operating System :: POSIX :: Linux",
-        "Programming Language :: Python :: 3.8",
-        "License :: OSI Approved :: "
-        "GNU Affero General Public License v3",
-    ]
+        "Programming Language :: Python :: 3.12",
+    ],
 )

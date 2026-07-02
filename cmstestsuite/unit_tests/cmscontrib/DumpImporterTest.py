@@ -385,6 +385,7 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
                 "files": {},
                 "executables": {"exe": "exe_key"},
                 "evaluations": [],
+                "unit_test_score_details": None,
             },
             "sub2_key": {
                 "_class": "Submission",
@@ -396,6 +397,7 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
                 "files": {},
                 "executables": {},
                 "evaluations": [],
+                "unit_test_score_details": None,
             },
             "exe_key": {
                 "_class": "Executable",

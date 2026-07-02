@@ -34,6 +34,13 @@ import json
 import logging
 import re
 
+import collections
+try:
+    collections.MutableMapping
+except:
+    # Monkey-patch: Tornado 4.5.3 does not work on Python 3.11 by default
+    collections.MutableMapping = collections.abc.MutableMapping
+
 try:
     import tornado4.web as tornado_web
 except ImportError:
@@ -285,13 +292,13 @@ class SubmissionStatusHandler(ContestHandler):
                         sr.public_score, score_type.max_public_score,
                         sr.public_score_details, task.score_precision,
                         translation=self.translation)
-            if submission.token is not None or \
-               self.r_params["actual_phase"] == 3 or \
-               score_type.feedback() == "full" or \
-               submission.is_unit_test():
+            if score_type.max_public_score < score_type.max_score \
+                    or submission.is_unit_test():
                 data["max_score"] = \
                     round(score_type.max_score, task.score_precision)
-                if data["status"] == SubmissionResult.SCORED:
+                if data["status"] == SubmissionResult.SCORED \
+                        and (submission.token is not None
+                            or self.r_params["actual_phase"] == 3):
                     data["score"] = \
                         round(sr.score, task.score_precision)
                     data["score_message"] = score_type.format_score(

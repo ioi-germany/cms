@@ -69,7 +69,7 @@ unit_test (boolean): whether to display only the unit tests (true) or
 {% endif %}
             <th class="status">{% trans %}Status{% endtrans %}</th>
 {% if score_type is defined %}
-    {% if 0 < score_type.max_public_score %}
+    {% if 0 < score_type.max_public_score and score_type.public_score_header is defined %}
             <th class="public_score"> {{ score_type.public_score_header }} </th>
     {% endif %}
             <th class="total_score">{% trans %}Actual score{% endtrans %} </th>

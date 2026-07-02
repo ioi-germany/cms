@@ -140,6 +140,7 @@ class TestRunner:
             name="testcontest_%s" % self.suffix,
             description="A test contest #%s." % self.suffix,
             languages=list(ALL_LANGUAGES),
+            main_group_id=1,
             allow_password_authentication="checked",
             start=start_time.strftime("%Y-%m-%d %H:%M:%S.%f"),
             stop=stop_time.strftime("%Y-%m-%d %H:%M:%S.%f"),
@@ -188,7 +189,8 @@ class TestRunner:
             logging.info("Using existing user with id %s.", self.user_id)
         else:
             self.user_id = self.framework.add_user(
-                contest_id=str(self.contest_id), **user_create_args)
+                contest_id=str(self.contest_id), group_id=1, **user_create_args
+            )
             logging.info("Created user with id %s.", self.user_id)
         return self.user_id
 

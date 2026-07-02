@@ -1,4 +1,3 @@
-
 #include <iostream>
 
 static_assert(__cplusplus == 202002L, "C++20 expected");
