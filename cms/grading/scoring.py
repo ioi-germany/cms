@@ -499,7 +499,7 @@ class UnitTest:
             return min(UnitTest.judge_score(s, intervals) for s in scores)
 
     @staticmethod
-    def judge_group(results, _extended_results, mandatory, _optional):
+    def judge_subtask(results, _extended_results, mandatory, _optional):
         """Judge a whole group given a concatenated list of the results of
            the individual cases
            extended_results contains results of testcases with explicit
@@ -561,5 +561,5 @@ class UnitTest:
             raise Exception("Undefined behaviour: you specified the outcome of "
                             "a testcase as arbitrary. I don't know what to do")
 
-        a, b, c = UnitTest.judge_group(results, [], mandatory, optional)
+        a, b, c = UnitTest.judge_subtask(results, [], mandatory, optional)
         return a, c

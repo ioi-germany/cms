@@ -7,7 +7,7 @@
 # Copyright © 2013-2016 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2015 wafrelka <wafrelka@gmail.com>
 # Copyright © 2014-2015 Fabian Gundlach <320pointsguy@gmail.com>
-# Copyright © 2014 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2014-2026 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -43,6 +43,8 @@ from cms.db import SubmissionResult
 from cms.grading.steps import EVALUATION_MESSAGES
 from cms.locale import Translation, DEFAULT_TRANSLATION
 from cms.server.jinja2_toolbox import GLOBAL_ENVIRONMENT
+from cms.grading import format_status_text
+from cms.grading.scoring import UnitTest
 from jinja2 import Template
 
 
@@ -206,7 +208,7 @@ class ScoreType(metaclass=ABCMeta):
         """
         You might want to override this
         """
-        return json.dumps({})
+        return {}
 
     def feedback(self):
         """
@@ -454,8 +456,8 @@ class ScoreTypeGroup(ScoreTypeAlone):
             return t_params
 
         raise ValueError(
-            "In the score type parameters, the second value of each element "
-            "must have the same type (int, unicode or list of strings)")
+            "In the score type parameters, the value of 'testcases' "
+            "entry must have the same type (int, unicode or list of strings)")
 
     def max_scores(self):
         """See ScoreType.max_score."""
@@ -572,6 +574,194 @@ class ScoreTypeGroup(ScoreTypeAlone):
         score = round(score, score_precision)
 
         return score, subtasks, public_score, public_subtasks, ranking_details
+
+    EPS = 1e-4
+    THRESHOLD_LAX = .1
+    THRESHOLD_STRICT = .05
+    THRESHOLD_VERY_STRICT = .01
+
+    def compute_unit_test_score(
+        self, submission_result: SubmissionResult, submission_info: str
+    ):
+        """Compute the score of a unit test.
+
+        Format of the returned details:
+            unit_test: True/False
+            subtasks:
+                name: name of the subtask
+                verdict: (42, "", "")
+                max_runtime: 0.412
+                max_memory: 33659290                      in bytes
+                cases:
+                    line: (,)                             case_line()
+                    verdict: (42, "No expl. exp.")        judge_case()
+                                                    if len(mandatory) != 0
+                    time: 0.412
+                    memory: 33659290                      in bytes
+
+        """
+        eps = ScoreTypeGroup.EPS
+        threshold_lax = ScoreTypeGroup.THRESHOLD_LAX
+        threshold_str = ScoreTypeGroup.THRESHOLD_STRICT
+        threshold_very_str = ScoreTypeGroup.THRESHOLD_VERY_STRICT
+
+        if submission_info is None:
+            return {"unit_test": True, # should this be False?
+                    "verdict": (-1, "Not a Unit Test")}
+
+        submission_info = json.loads(submission_info)
+
+        expected_final_score = submission_info["expected_score"]
+        expected_final_score_info = submission_info["expected_score_info"]
+
+        expectations = {
+            tuple(json.loads(key)): val
+            for key, val in submission_info["expected"].items()
+        }
+        case_expectations = submission_info["expected_case"] # TODO: remove?
+        possible_task = expectations[()]
+
+        useful = set()
+        essential = set()
+        cases_by_subtask = self.retrieve_target_testcases()
+        all_cases = {c for s in cases_by_subtask
+                       for c in s}
+        dominated = {d : {c for c in all_cases if c != d}
+                     for d in all_cases}
+
+        # Actually, this means it didn't even compile
+        if not submission_result.evaluated():
+            subtasks_failed = True
+            subtasks = []
+        else:
+            evaluations = dict((ev.codename, ev)
+                            for ev in submission_result.evaluations)
+
+            subtasks = []
+            subtasks_failed = False
+
+            for subtask, testcases in zip(self.parameters["subtasks"], cases_by_subtask):
+                subtasks.append({
+                    "name": subtask["name"],
+                    "cases": [],
+                    "verdict": (42, "", "")
+                    })
+
+                possible_subtask = expectations[tuple(subtask["key"])]
+                possible = possible_task + possible_subtask
+
+                min_f = 1.0  # Minimum "score" of a test case in this subtask
+                cases_failed = False
+
+                # List of all results of all test cases in this subtask
+                case_results = []
+                extended_results = []
+                curr_st_dict = {} # would be used for testcase utility
+
+                for idx in testcases:
+                    ev = evaluations[idx] # TODO: adjust this if we want to support multiscoring
+                    r = UnitTest.get_result(submission_info["limits"], ev)
+                    this_score = float(ev.outcome)
+                    curr_st_dict[idx] = this_score
+                    min_f = min(min_f, this_score)
+
+                    mandatory = case_expectations[idx]
+
+                    l = UnitTest.case_line(r, mandatory, possible)
+                    v = (42, "No case-specific expectations.")
+
+                    # Test case expectations
+                    if len(mandatory) != 0:
+                        accepted, desc = v = \
+                            UnitTest.judge_case(r, mandatory, possible)
+                        if accepted <= 0:
+                            cases_failed = True
+                        extended_results += r
+                        case_results += \
+                            [x for x in r if not UnitTest.ignore(x, mandatory)
+                            and x not in mandatory]
+                    else:
+                        case_results += r
+
+                    v = (v[0],
+                        v[1] + "\nGrader output: " +
+                        format_status_text((ev.text)).strip())
+
+                    subtasks[-1]["cases"].\
+                        append({"line": l, "verdict": v,
+                                "time": ev.execution_time,
+                                "memory": ev.execution_memory,
+                                "codename": idx})
+
+                status, short, desc = \
+                    UnitTest.judge_subtask(case_results, extended_results,
+                                           possible, [])
+
+                if cases_failed:
+                    if status > 0:
+                        desc = ""
+                    else:
+                        desc += "\n\n"
+
+                    status = -1
+                    desc += "At least one testcase did not behave as " \
+                            "expected, cf. the \"test verdict\" column."
+                    short = "failed"
+
+                subtasks[-1]["verdict"] = (status, short, desc)
+                subtasks[-1]["max_runtime"] = \
+                    max((c["time"] for c in subtasks[-1]["cases"]),
+                        default=None)
+                subtasks[-1]["max_memory"] = \
+                    max((c["memory"] for c in subtasks[-1]["cases"]),
+                        default=None)
+
+                """
+                Check testcase utility
+                """
+                if subtask["points"] == 0: # used to be subtask["sample"]
+                    continue
+                st_scores = sorted(curr_st_dict.values())
+
+                for idx, s in curr_st_dict.items():
+                    # is this the unique worst testcase in this subtask for this submission?
+                    if len(st_scores) == 1 or (1 + threshold_str) * s + eps < st_scores[1]:
+                        essential.add(idx)
+
+                    # if not, did the submission still get a low score on it?
+                    elif s < min((1 + threshold_lax) * st_scores[0] + eps, 1 - eps):
+                        useful.add(idx)
+
+                    # on which cases in this subtask did the submission get a lower score?
+                    dominated[idx] &= {c for c, p in curr_st_dict.items()
+                                         if p < (1 + threshold_very_str) * s + eps}
+
+
+        score_precision = submission_info["score_precision"]
+
+        def is_in(x, l):
+            return round(l[0], score_precision) <= round(x, score_precision) \
+                                                <= round(l[1], score_precision)
+
+        final_score = self.compute_score(submission_result)[0]
+        final_score_okay = is_in(final_score, expected_final_score)
+        okay = final_score_okay and not subtasks_failed
+
+        details = {
+            "unit_test": True,
+            "unit_test_name": submission_result.submission.comment,
+            "subtasks": subtasks,
+            "verdict": (1, "Okay") if okay else (0, "Failed"),
+            "score_okay": final_score_okay,
+            "score": final_score,
+            "expected_score": expected_final_score_info,
+
+            "dominated": {d: list(u) for d, u in dominated.items()},
+            "essential": list(essential),
+            "useful": list(useful)
+        }
+
+        return details
 
     @abstractmethod
     def get_public_outcome(self, outcome: float, parameter: ScoreTypeGroupParameters) -> str:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Programming contest management system
-# Copyright © 2013-2023 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2013-2026 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2022 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
@@ -149,21 +149,28 @@ class MySubtask(Scope):
     :ivar scorestyle: score style (for multiscoring)
     """
 
-    def __init__(self, task, description, name, sample, foldername, scorestyle,
-                 individual):
+    def __init__(self, task, description, name, points, sample, foldername,
+                 scorestyle, individual):
         super(MySubtask, self).__init__(task)
         self.task = task
         self.description = description
         self.name = name
+        self.points = points
         self.sample = sample
         self.foldername = foldername
         self.groups = []
-        self.feedbackcases = []
         self.checkers = []
         self.scorestyle = scorestyle
         self.individual = individual
         if not os.path.exists(self.directory):
             os.mkdir(self.directory)
+        # List of test cases in this group
+        self.cases = []
+        self.cases_set = set()
+        # how often is each soft constraint satisfied in this group?
+        self.soft_constraints_stats = []
+        self.soft_constraints_stats_acc = []
+        self.soft_spec_stats = {}
 
     def __enter__(self):
         self.indenter = header("Subtask {}".format(self.description),
@@ -174,6 +181,7 @@ class MySubtask(Scope):
         return self
 
     def __exit__(self, type, value, traceback):
+        self._print_stats(type)
         self.indenter.stop()
         self.task.subtask_stack.pop()
 
@@ -238,21 +246,261 @@ class MySubtask(Scope):
     def _level(self):
         return 1
 
-    def max_score(self):
-        return sum(g.points for g in self.groups)
-
     def scoreinfo(self):
         def mystr(f):
             i = int(f + .5)
             assert abs(i - f) < 1e-4
             return "{}".format(i)
 
-        if self.individual:
-            return " + ".join(mystr(g.points) for g in self.groups)
+        return mystr(self.points)
+
+    @exported_function
+    def add_testcase(self, case, save=False, name=None, still_to_check=True):
+        """
+        Add a previously generated test case to the current subtask.
+        The testcase will be checked with the current test case checkers.
+
+        case (MyCase): the test case to add
+
+        save (bool): TODO
+
+        name (string): name of this test case; the test case object will be
+                       accessible as an attribute with this name of the 
+                       subtask object; the subtask should not already have a 
+                       field with this name;
+                       by default, we take gNR where NR is the index of this
+                       test case (starting at 0)
+
+        """
+        if case in self.cases_set:
+            # This case has already been added to the subtask. We don't add
+            # it a second time.
+            # With restricted feedback, contestants would see the exact same
+            # thing whether we add the test case or not. With full feedback
+            # they would otherwise see the test case multiple times in
+            # different places.
+            return
+
+        checkers = self._get_checkers()
+        if len(checkers) == 0 and still_to_check:
+            self.task.everything_checked = False
+
+        soft_results = None
+
+        for i, checker in enumerate(checkers):
+            curr = self.task._check(checker, case.infile, case.outfile,
+                                    case.codename, i + 1)
+
+            if curr:
+                if soft_results:
+                    # TODO: should we relax this condition?
+                    raise Exception("only one checker may check (soft) "
+                                    "constraints")
+                soft_results = curr
+
+        soft_results = soft_results or [{}, {}]
+        soft_con_results, soft_spec_results = tuple(soft_results)
+
+        def getcolor(result, lower, upper):
+            mycolor = blue
+            if lower is not None and upper is None:
+                mycolor = green if result else yellow
+            if lower is None and upper is not None:
+                mycolor = yellow if result else green
+            return mycolor
+
+        for i, con_list in enumerate(self.soft_constraints):
+            while i >= len(self.soft_constraints_stats):
+                self.soft_constraints_stats.append([])
+                self.soft_constraints_stats_acc.\
+                    append([(None, gray)] * len(self.cases))
+
+            lower, upper = con_list.how_often
+            desc = con_list.terminal()
+            results = [res for L in soft_con_results[i] for res in L]
+            results_acc = all(results)
+            mycolor = getcolor(results_acc, lower, upper)
+            print_msg(mycolor(bold(desc + ": " + ("✗ not " if not results_acc
+                                                  else "✓ ") + "satisfied")))
+
+            for j, con in enumerate(con_list.constraints):
+                while j >= len(self.soft_constraints_stats[i]):
+                    self.soft_constraints_stats[i].append([])
+
+                for k, var in enumerate(con.variables):
+                    result = soft_con_results[i][j][k]
+
+                    if len(results) > 1:
+                        with IndentManager():
+                            print_msg(mycolor(con.subconstraint(k).terminal() +
+                                              ": " + ("✗ not " if not result
+                                                               else "✓ ") +
+                                              "satisfied"))
+
+                    while k >= len(self.soft_constraints_stats[i][j]):
+                        self.soft_constraints_stats[i][j].\
+                            append([(None, gray)] * len(self.cases))
+
+                    self.soft_constraints_stats[i][j][k].\
+                        append((result, mycolor))
+
+            print_msg("")
+            self.soft_constraints_stats_acc[i].append((results_acc, mycolor))
+
+        for desc, bounds in self.soft_special_cases:
+            result = soft_spec_results[desc]
+            mycolor = getcolor(result, bounds[0], bounds[1])
+
+            print_msg(bold(mycolor(desc + ": " +
+                                   ("✗ not " if not result else "✓ ") +
+                                   "satisfied")))
+
+            if desc not in self.soft_spec_stats:
+                self.soft_spec_stats[desc] = [(None, gray)] * len(self.cases)
+            self.soft_spec_stats[desc].append((result, mycolor))
+
+        if name is None:
+            name = "t" + str(len(self.cases))
+        if hasattr(self, name):
+            raise Exception(
+                "The subtask '{}' already has an attribute called '{}'"
+                .format(self.name, name))
+        setattr(self, name, case)
+
+        dirname = "Case_" + str(len(self.cases)+1)
+        linkname = os.path.join(self.directory, dirname)
+        if os.path.lexists(linkname):
+            os.remove(linkname)
+        rel = os.path.relpath(case.directory, self.directory)
+        os.symlink(rel, linkname)
+
+        print_msg("Added test case {} ({})".format(case.codename, name))
+
+        self.cases.append(case)
+        self.cases_set.add(case)
+
+        if save:
+            self.task.saved.append(case)
+
+        case.locations.append(self.name + "." + name)
+
+    @property
+    def soft_constraints(self):
+        return self._collect_constraints()[1]
+
+    @property
+    def soft_special_cases(self):
+        return self._get_special_cases()[1]
+
+    def _print_stats(self, exception):
+        if len(self.soft_constraints) == 0 and \
+           len(self.soft_special_cases) == 0:
+            return
+
+        if exception is not None:
+            print_msg(gray("(There was an exception, so I won't collect "
+                           "testcase quality statistics for this subtask)"),
+                      use_ellipsis=False)
+            return
+
+        def format_bounds(min, max):
+            if min is None:
+                return "≤ {} times".format(max)
+            elif max is None:
+                return "≥ {} times".format(min)
+            else:
+                return "{}–{} times".format(min, max)
+
+        failed = False
+
+        def print_stats_for(desc, stats, bounds, what):
+            nonlocal failed
+
+            lower, upper = bounds
+            times_satisfied = sum(a[0] for a in stats if a[0] is not None)
+            this_constraint_okay = check_bounds(times_satisfied, lower, upper)
+
+            def cf(f):
+                return green if this_constraint_okay else f
+
+            def sym(x):
+                if x is None:
+                    return "·"
+                elif x:
+                    return "●"
+                else:
+                    return "○"
+
+            bars = "".join(cf(a[1])(sym(a[0])) for a in stats)
+            bars = " ".join(wrap(bars, 5 * len(green("○"))))
+
+            msg_long = "satisfied {} times, expected {}".\
+                format(times_satisfied, format_bounds(lower, upper))
+
+            if this_constraint_okay:
+                msg = green(bold("OKAY"))
+                msg_long = green(msg_long)
+            else:
+                msg = red(bold("FAIL"))
+                msg_long = red(msg_long)
+                failed = True
+
+            space = remaining_line_length() - 20 - len(desc)
+            print_msg("─── " + desc + " " + (space - 2) * "─" + " " + msg +
+                      " ──────────")
+            with IndentManager():
+                print_msg(bars, use_ellipsis=False)
+                print_msg(msg_long, use_ellipsis=False)
+
+                if any(a[0] is None for a in stats):
+                    print_msg("This soft " + what + " was only specified "
+                              "after some cases had already been checked—are "
+                              "you sure this is what you want?",
+                              use_ellipsis=False)
+
+        print_msg(bold("\nTestcase quality in this subtask"))
+
+        if len(self.soft_constraints) > len(self.soft_constraints_stats):
+            print_msg(yellow(bold("You specified some soft constraints "
+                                  "(see the list below for details) "
+                                  "after all testcases had already been "
+                                  "added—why?!")), use_ellipsis=False)
+
+            for i in range(len(self.soft_constraints),
+                           len(self.soft_constraints_stats)):
+                self.soft_constraints_stats.append([])
+
+                with IndentManager():
+                    print_msg(self.soft_constraints[i].terminal())
+
+        for stats, c in zip(self.soft_constraints_stats_acc,
+                            self.soft_constraints):
+            print_stats_for(c.terminal(), stats, c.how_often, "constraint")
+
+        special_cases_after = [desc for desc, _ in self.soft_special_cases
+                                    if desc not in self.soft_spec_stats]
+
+        if len(special_cases_after) > 0:
+            print_msg(yellow(bold("You specified some soft special cases "
+                                  "(see the list below for details) "
+                                  "after all testcases had already been "
+                                  "added—why?!")), use_ellipsis=False)
+
+            with IndentManager():
+                for s in special_cases_after:
+                    print_msg(s)
+
+        for desc, bounds in self.soft_special_cases:
+            if desc not in self.soft_spec_stats:
+                continue
+
+            stats = self.soft_spec_stats[desc]
+            print_stats_for(desc, stats, (bounds[0], bounds[1]), "special case")
+
+        if failed:
+            raise Exception("at least one testcase quality check failed")
         else:
-            return mystr(self.max_score())
-
-
+            print_msg(green(bold("...all shall be well\n")))
 
 class MyGroup(Scope):
     """
@@ -275,9 +523,6 @@ class MyGroup(Scope):
         # List of test cases in this group
         self.cases = []
         self.cases_set = set()
-        # List of bools specifying for each test case whether it contributes to
-        # partial feedback.
-        self.feedback = []
         # how often is each soft constraint satisfied in this group?
         self.soft_constraints_stats = []
         self.soft_constraints_stats_acc = []
@@ -439,16 +684,12 @@ class MyGroup(Scope):
         self.cases.append(None)
 
     @exported_function
-    def add_testcase(self, case, feedback=False, save=False, name=None,
-                     must_still_be_checked=True):
+    def add_testcase(self, case, save=False, name=None, still_to_check=True):
         """
         Add a previously generated test case to the current test case group.
         The testcase will be checked with the current test case checkers.
 
         case (MyCase): the test case to add
-
-        feedback (bool): whether this test case should be marked for detailed
-                         feedback inside this subtask
 
         save (bool): TODO
 
@@ -471,7 +712,7 @@ class MyGroup(Scope):
             return
 
         checkers = self._get_checkers()
-        if len(checkers) == 0 and must_still_be_checked:
+        if len(checkers) == 0 and still_to_check:
             self.task.everything_checked = False
 
         soft_results = None
@@ -498,27 +739,6 @@ class MyGroup(Scope):
                 mycolor = yellow if result else green
             return mycolor
 
-        """
-        for var in self.soft_constraints:
-            if var not in self.soft_constraints_stats:
-                self.soft_constraints_stats[var] = []
-
-            for i, (bounds, result) in enumerate(zip(self.soft_constraints[var],
-                                                     soft_con_results[var])):
-                desc = format_constraint(var, bounds[0], bounds[1])
-                mycolor = getcolor(result, bounds[2], bounds[3])
-
-                print_msg(bold(mycolor(desc + ": " +
-                                       ("✗ not " if not result else "✓ ") +
-                                       "satisfied")))
-
-                while i >= len(self.soft_constraints_stats[var]):
-                    self.soft_constraints_stats[var].append([(None, gray)] *
-                                                            len(self.cases))
-
-                self.soft_constraints_stats[var][i].append((result, mycolor))
-
-        """
         for i, con_list in enumerate(self.soft_constraints):
             while i >= len(self.soft_constraints_stats):
                 self.soft_constraints_stats.append([])
@@ -590,25 +810,10 @@ class MyGroup(Scope):
         self.cases.append(case)
         self.cases_set.add(case)
 
-        self.feedback.append(feedback)
-
         if save:
             self.task.saved.append(case)
 
         case.locations.append(self.subtask.name + "." + self.name + "." + name)
-
-    @exported_function
-    def testcase(self, prog, *args, **kwargs):
-        """
-        Generate and add a testcase to this group.
-
-        This is a convenience function calling make_testcase(prog)
-        and add_testcase(args, kwargs).
-        """
-        case = self.task.make_testcase(prog)
-
-        self.add_testcase(case, *args, **kwargs)
-        return case
 
     def _get_cases(self):
         """
@@ -662,7 +867,7 @@ class MyCase(object):
         if not os.path.exists(self.directory):
             os.mkdir(self.directory)
         self._create_link()
-        self.public = False
+        self.public = True
         # Strings specifying in which subtasks/groups this case can be found
         self.locations = []
 
@@ -727,7 +932,6 @@ class MyCase(object):
 
 class MySubmission(object):
     def __init__(self, task, filenames, score, sample_score,
-                 partial_feedback_score=None,
                  expected={},
                  weak_time_limit=None, strong_time_limit=None,
                  weak_mem_limit=None, strong_mem_limit=None):
@@ -737,12 +941,6 @@ class MySubmission(object):
         self.score_info = MySubmission.score_human_readable(score)
         self.sample_score = MySubmission.score_machine_readable(sample_score)
         self.sample_score_info = MySubmission.score_human_readable(sample_score)
-        # By default, we assume that the partial feedback score equals the
-        # final score.
-        if partial_feedback_score is None:
-            partial_feedback_score = score
-        self.partial_feedback_score = MySubmission.score_machine_readable(partial_feedback_score)
-        self.partial_feedback_score_info = MySubmission.score_human_readable(partial_feedback_score)
 
         if weak_time_limit is None:
             weak_time_limit = task.weak_time_limit
@@ -791,9 +989,6 @@ class MySubmission(object):
         for s in self.task.subtasks:
             self.expectations[s.unique_name] = []
 
-            for g in s.groups:
-                self.expectations[g.unique_name] = []
-
         self.case_expectations = {}
 
         for c in self.task.cases:
@@ -805,8 +1000,11 @@ class MySubmission(object):
             for item in items:
                 if isinstance(item, MyCase):
                     self.case_expectations[item.codename] += encode(key)
-                else:
+                elif isinstance(item, MySubtask):
                     self.expectations[item.unique_name] += encode(key)
+                else:
+                    raise ValueError("unit test expectations can only be"
+                                     "specified for subtasks and cases")
 
         # JSON doesn't allow lists nor tuples as keys so we dump them, too
         self.expectations = {
@@ -1492,7 +1690,7 @@ class TaskConfig(CommonConfig, Scope):
         return self.encapsulate(curried, stdoutstring)
 
     @exported_function
-    def subtask(self, description, name=None, sample=False, scorestyle=0, individual=False):
+    def subtask(self, description, points, name=None, sample=False, scorestyle=0, individual=False):
         """
         Specify the start of a new subtask. The number of points awarded
         for a subtask is the sum of the numbers of points awarded for each
@@ -1501,11 +1699,13 @@ class TaskConfig(CommonConfig, Scope):
         You usually use this function in the following way:
         ::
 
-            with subtask("Subtask 1", "small"):
+            with subtask("Subtask 1", 20, "small"):
                 ...
 
         description (string): description of the subtask to be displayed to
                               the contestant
+
+        points (int): maximal possible score for this subtask
 
         name (string): name of this subtask; the subtask object will be
                        accessible as an attribute with this name of the
@@ -1528,7 +1728,7 @@ class TaskConfig(CommonConfig, Scope):
         foldername = "Subtask_" + str(len(self.subtasks))
         if sample:
             foldername += "_Public"
-        subtask = MySubtask(self, description, name, sample, foldername,
+        subtask = MySubtask(self, description, name, points, sample, foldername,
                             scorestyle, individual)
 
         self.subtasks.append(subtask)
@@ -1542,81 +1742,31 @@ class TaskConfig(CommonConfig, Scope):
 
     @exported_function
     def group(self, *args, name=None, **kwargs):
-        """
-        Add a group to the "current" subtask.
+        # TODO: rewrite this so that it fulfills the long-envisioned role of
+        # "testcase batches" (= groups of testcases usable with subsume_group, but
+        # with the grouping having no effect on scoring)
+        raise NotImplemented
 
-        See :py:meth:`cmscontrib.gerpythonformat.TaskConfig.MySubtask.group`.
-
-        You usually use this function in the following way:
-        ::
-
-            with subtask("Subtask 1", "small"):
-                with group(50):
-                    ...
-
-        """
-        if len(self.subtask_stack) == 0:
-            raise Exception("group() called outside subtask")
-
-        kwargs["scorestyle"] = kwargs.get("scorestyle") or self.subtask_stack[-1].scorestyle
-
-        g = self.subtask_stack[-1].group(*args, **kwargs)
-
-        if name is not None:
-            if hasattr(self.subtask_stack[-1], name):
-                raise Exception("This subtask already has an attribute "
-                                "called '{}'".format(name))
-            setattr(self.subtask_stack[-1], name, g)
-
-        return g
-
-
-    @exported_function
-    def multigroup(self, *args, name=None, scorestyle=None, **kwargs):
-        """
-        Add multiple groups with different score styles to the "current" subtask.
-
-        This is meant if you want to grade different aspects of the output
-        separately: all groups have the same testcases, but different score styles
-        (consecutive styles starting with scorestyle or the score style of the
-        subtask).
-
-        You usually use it like this:
-        ::
-
-            with subtask("Subtask 1", name="fancy_partial_scoring_subtask"):
-                with multigroup(10, 6, 4):
-                    ...
-        """
-        if name is None:
-            name = f"__g{len(self.subtask_stack[-1].groups)}_mg"
-
-        kwargs["scorestyle"] = scorestyle or self.subtask_stack[-1].scorestyle
-        points = list(args)
-
-        return MultiGroupProxy(self.group(points[0], **kwargs), points[1:])
-
-    def _subsume_group(self, g, *args, **kwargs):
+    def _subsume_group(self, g, **kwargs):
         for t in g.cases:
-            self.add_testcase(t, *args, **kwargs)
+            self.add_testcase(t, **kwargs)
 
     @exported_function
-    def subsume_subtask(self, subtask_name, *args, **kwargs):
+    def subsume_subtask(self, subtask_name, **kwargs):
         """
-        Add a subtask's testcases to the "current" group.
+        Add a subtask's testcases to the "current" one.
 
         You usually use this function in the following way:
         ::
 
-            with subtask("Subtask 2", "big"):
-                with group(50):
-                    subsume_subtask("small")
-                    ...
+            with subtask("Subtask 2", 50, "big"):
+                subsume_subtask("small")
+                ...
 
         """
-        for g in getattr(self.task, subtask_name).groups:
-            self._subsume_group(g)
-
+        for t in getattr(self.task, subtask_name).cases:
+            self.add_testcase(t, **kwargs)
+            
     @exported_function
     def subsume_group(self, group_name, *args, subtask_name=None, **kwargs):
         """
@@ -1628,14 +1778,6 @@ class TaskConfig(CommonConfig, Scope):
         self._subsume_group(getattr(st, group_name), *args, **kwargs)
 
     @exported_function
-    def subsume_previous_group(self, *args, **kwargs):
-        """
-        Add the testcases of the previous group (of the same subtask) to the
-        current group.
-        """
-        self._subsume_group(self.subtask_stack[-1].groups[-2])
-
-    @exported_function
     def checker(self, *args, **kwargs):
         """
         Register a test case checker for the "current" task, subtask or group.
@@ -1645,6 +1787,7 @@ class TaskConfig(CommonConfig, Scope):
         See :py:meth:`.Scope.add_checker`.
 
         """
+        # TODO: do we want to keep group-specific checkers?
         if len(self.group_stack) > 0:
             self.group_stack[-1].add_checker(*args, **kwargs)
         elif len(self.subtask_stack) > 0:
@@ -1660,6 +1803,7 @@ class TaskConfig(CommonConfig, Scope):
         See :py:meth:`.Scope.add_constraint`.
 
         """
+        # TODO: do we want to keep group-specific checkers?
         if len(self.group_stack) > 0:
             self.group_stack[-1].add_constraint(*args, **kwargs)
         elif len(self.subtask_stack) > 0:
@@ -1679,6 +1823,7 @@ class TaskConfig(CommonConfig, Scope):
         See :py:meth:`.Scope.add_special_case`.
 
         """
+        # TODO: do we want to keep group-specific checkers?
         if len(self.group_stack) > 0:
             self.group_stack[-1].add_special_case(case, frequency)
         elif len(self.subtask_stack) > 0:
@@ -1692,9 +1837,9 @@ class TaskConfig(CommonConfig, Scope):
             self.add_special_case(case, frequency)
 
     @exported_function
-    def add_testcase(self, *args, **kwargs):
+    def add_testcase(self, case, **kwargs):
         """
-        Add a test case to the "current" group.
+        Add a test case to the "current" subtask.
 
         See
         :py:meth:`cmscontrib.gerpythonformat.TaskConfig.MyGroup.add_testcase`.
@@ -1704,42 +1849,44 @@ class TaskConfig(CommonConfig, Scope):
 
             t = make_testcase(...)
             with subtask("Subtask 1", "small"):
-                with group(50):
-                    add_testcase(t, ...)
+                add_testcase(t, ...)
 
         """
         if self.minimal:
             print_msg("Skipping testcase (minimal mode)")
-            self.group_stack[-1]._dummy_case(kwargs.get("name"))
+            if len(self.group_stack) > 0:
+                self.group_stack[-1]._dummy_case(kwargs.get("name"))
+            self.subtask_stack[-1]._dummy_case(kwargs.get("name"))
             return
 
-        if len(self.group_stack) == 0:
-            raise Exception("add_testcase() called outside group")
-        return self.group_stack[-1].add_testcase(*args, **kwargs)
+        if len(self.group_stack) > 0:
+            self.group_stack[-1].add_testcase(case, **kwargs)
+        return self.subtask_stack[-1].add_testcase(case, **kwargs)
 
     @exported_function
-    def testcase(self, *args, **kwargs):
+    def testcase(self, prog, **kwargs):
         """
-        Create and add a test case to the "current" group.
+        Create and add a test case to the "current" subtask.
 
-        See :py:meth:`cmscontrib.gerpythonformat.TaskConfig.MyGroup.testcase`.
+        prog (Executable): a program (+ its input) whose output will be the
+                           desired testcase
 
         You usually use this function in the following way:
         ::
 
-            with subtask("Subtask 1", "small"):
-                with group(50):
-                    testcase(...)
+            with subtask("Subtask 1", 20, "small"):
+                testcase(...)
 
         """
         if not kwargs.get("save") and self.minimal:
             print_msg("Skipping testcase (minimal mode)")
-            self.group_stack[-1]._dummy_case(kwargs.get("name"))
-            return
-
-        if len(self.group_stack) == 0:
-            raise Exception("testcase() called outside group")
-        return self.group_stack[-1].testcase(*args, **kwargs)
+            if len(self.group_stack) > 0:
+                self.group_stack[-1]._dummy_case(kwargs.get("name"))
+            self.subtask_stack[-1]._dummy_case(kwargs.get("name"))
+        else:
+            case = self.make_testcase(prog)
+            self.add_testcase(case, **kwargs)
+        return self.subtask_stack[-1].cases[-1]
 
     def _check(self, checker, infile, outfile, caseno, check_counter):
         if self.minimal:
@@ -1800,10 +1947,6 @@ class TaskConfig(CommonConfig, Scope):
 
         sample_score (float): the expected score in the sample test cases
                               (= in subtasks with sample=True)
-
-        partial_feedback_score (float): the expected score in partial feedback
-                                        mode; by default, this equals the
-                                        expected final score.
 
         expected (dict): the expectations for the test cases;
                          by default, we expect all test cases to succeed
@@ -2029,24 +2172,13 @@ class TaskConfig(CommonConfig, Scope):
                 'name': s.description,
                 'key': list(s.unique_name),
                 'sample': s.sample,
-                'groups': [make_group_parameters(g) for g in s.groups],
+                'points': s.points,
+                'testcases': "|".join(c.codename for c in s.cases),
+                'scorestyle': s.scorestyle
             }
 
-        def make_group_parameters(g):
-            return {
-                'points': g.points,
-                'key': list(g.unique_name),
-                'testcases': [make_case_parameters(c, f)
-                              for c, f in zip(g.cases, g.feedback)],
-                'scorestyle': g.scorestyle
-            }
-
-        def make_case_parameters(c, f):
-            return {
-                'codename': c.codename,
-                'in_partial_feedback': f,
-            }
-        score_type_parameters = {
+        score_type_parameters = \
+        {
             'feedback': self.feedback,
             'multiscore': self.multiscore,
             'subtasks': [make_subtask_parameters(s) for s in self.subtasks],
@@ -2056,7 +2188,7 @@ class TaskConfig(CommonConfig, Scope):
                       description=self._dataset,
                       task_type=self.tasktype,
                       task_type_parameters=self.tasktypeparameters,
-                      score_type="SubtaskGroup",
+                      score_type="GroupMin",
                       score_type_parameters=score_type_parameters)
         ddb.time_limit = float(self._timelimit)
         ddb.memory_limit = self._memorylimit * 1024 * 1024
@@ -2159,12 +2291,10 @@ class TaskConfig(CommonConfig, Scope):
 
             for id in dominated.keys():
                 dominated[id] &= set(details["dominated"][id])
-        samples = {c.codename for s in self.subtasks if s.sample
-                              for g in s.groups
-                              for c in g.cases}
+        samples = {c.codename for s in self.subtasks if s.sample # TODO: s.points == 0?
+                              for c in s.cases}
         private = {c.codename for s in self.subtasks
-                              for g in s.groups
-                              for c in g.cases} - samples
+                              for c in s.cases} - samples
 
         essential_cases = sorted(list(essential))
         potentially_useful_cases = sorted(c for c in useful
@@ -2271,7 +2401,7 @@ class TaskConfig(CommonConfig, Scope):
                 with header(orange("Probably useless"), 3):
                     print_msg("The following testcases are probably useless as "
                               "there are other testcases which are at least as "
-                              "sharp across all submissions (i.e. which always "
+                              "strong across all submissions (i.e. which always "
                               "produce scores which are lower or at least "
                               "close to the score of this testcase)",
                               use_ellipsis=False)
@@ -2419,12 +2549,8 @@ class TaskConfig(CommonConfig, Scope):
              "unit_test": True,
              "expected": submission.expectations,
              "expected_case": submission.case_expectations,
-             "expected_sample_score": submission.sample_score,
-             "expected_sample_score_info": submission.sample_score_info,
-             "expected_partial_feedback_score": submission.partial_feedback_score,
-             "expected_partial_feedback_score_info": submission.partial_feedback_score_info,
-             "expected_final_score": submission.score,
-             "expected_final_score_info": submission.score_info,
+             "expected_score": submission.score,
+             "expected_score_info": submission.score_info,
              "task_name": self.name,
              "score_precision": tdb.score_precision}, sort_keys=True)
 
@@ -2486,19 +2612,12 @@ class TaskConfig(CommonConfig, Scope):
 
         # Judge unit test
         score_type = ddb.score_type_object
-        _, sample_details = \
-            score_type._compute_score(submission_result, "sample")
-        _, partial_details = \
-            score_type._compute_score(submission_result, "partial")
-        _, final_details = \
-            score_type._compute_score(submission_result, "final")
-
         details = score_type.compute_unit_test_score(submission_result,
                                                      sdb.additional_info)
 
         def v(acc_des, z=False):
             (accepted, desc) = acc_des
-            d = desc  # .replace("<br>", "\n")
+            d = desc
 
             if accepted == 1337:
                 return yellow(d)
@@ -2526,75 +2645,45 @@ class TaskConfig(CommonConfig, Scope):
 
         # Present verdict
         for st in details["subtasks"]:
-            with myheader(st["name"], st["status"]):
-                for i, g in enumerate(st["groups"]):
-                    with header("Group {}".format(i + 1), depth=4):
-                        print_block(v(g["verdict"]))
-                        print()
+            with myheader(st["name"], (st["verdict"][0], st["verdict"][1])):
+                print(indent(side_by_side(["Time", "Memory", "Answer", "Verdict"],
+                                          [2, 14, 27, 37])))
 
-                        if not g["cases"]:
-                            print(indent(yellow(
-                                "This group has no testcases.")))
-                            print()
-                            continue
+                for c in st["cases"]:
+                    l = [(b, (a)) for a, b in c["line"]]
+                    ftime = "%.3fs" % c["time"]
+                    if c["memory"] is None:
+                        fmem = "??? MB"
+                    else:
+                        fmem = "%.1fMB" % (float(c["memory"]) / 2**20)
+                    ftime = w(ftime, l[0], 8, z=True)
+                    fmem = w(fmem, l[1], 10, z=True)
+                    fans = v(l[2], z=True)
+                    fverd = add_line_breaks(v(c["verdict"]),
+                                            remaining_line_length() - 37)
+                    print(indent(side_by_side([ftime, fmem, fans, fverd],
+                                              [0, 12, 27, 37])))
 
-                        print(indent(side_by_side(["Time", "Memory",
-                                                   "Answer", "Verdict"],
-                                                  [2, 14, 27, 37])))
-
-                        for c in g["cases"]:
-                            l = [(b, (a)) for a, b in c["line"]]
-                            ftime = "%.3fs" % c["time"]
-                            if c["memory"] is None:
-                                fmem = "??? MB"
-                            else:
-                                fmem = "%.1fMB" % (float(c["memory"]) / 2**20)
-                            ftime = w(ftime, l[0], 8, z=True)
-                            fmem = w(fmem, l[1], 10, z=True)
-                            fans = v(l[2], z=True)
-                            fverd = add_line_breaks(
-                                v(c["verdict"]),
-                                remaining_line_length() - 37)
-                            print(indent(side_by_side([ftime, fmem,
-                                                       fans, fverd],
-                                                      [0, 12, 27, 37])))
-
-                        print()
-                        print(indent("     max. runtime in this group: " +
-                                     bold("%.3fs" % g["max_runtime"])))
-                        print(indent("max. memory usage in this group: " +
-                                     bold("%.1fMB" %
-                                          (float(g["max_memory"]) / 2**20))))
-                    print()
+                print()
+                print(indent("     max. runtime in this group: " +
+                                bold("%.3fs" % st["max_runtime"])))
+                print(indent("max. memory usage in this group: " +
+                                bold("%.1fMB" %
+                                    (float(st["max_memory"]) / 2**20))))
 
             print()
 
         if compile_ok:
             score_precision = sdb.task.score_precision
 
-            def print_score_info(prefix, name):
-                score = details[prefix + "_score"]
-                rounded_score = round(score, score_precision)
+            score = details["score"]
+            rounded_score = round(score, score_precision)
+            if score != rounded_score:
+                score = "{} ({})".format(rounded_score, score)
 
-                if score != rounded_score:
-                    score = "{} ({})".format(rounded_score, score)
-
-                if details[prefix + "_score_okay"]:
-                    score = green(score)
-                else:
-                    score = red(score)
-                expected_score = details["expected_" + prefix + "_score"]
-                print_msg("{} score: {}; expected: {}".
-                          format(name, score, expected_score))
-
-            print_score_info("sample", "Sample")
-
-            if details["partial_feedback_enabled"]:
-                print_score_info("partial_feedback", "Partial feedback")
-
-            print_score_info("final", "Final")
-
-            print()
+            score = green(score) if details["score_okay"] else red(score)
+            expected_score = details["expected_score"]
+            print_msg(f"score: {score}; expected: {expected_score}\n")
 
         verd = details["verdict"]
         box(" Overall verdict ", green(verd[1]) if verd[0] == 1
