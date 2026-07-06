@@ -1,0 +1,11 @@
+[Unit]
+Description=Contest Management System Logging
+
+[Service]
+Type=simple
+WorkingDirectory=@CMS_DIR@
+ExecStart=@CMS_DIR@/bin/cmsLogService
+User=cms
+
+[Install]
+WantedBy=default.target

@@ -26,7 +26,7 @@
 
 import logging
 
-from cms.locale import DEFAULT_TRANSLATION
+from cms.locale import DEFAULT_TRANSLATION, Translation
 from .language import Language, CompiledLanguage
 
 
@@ -55,7 +55,9 @@ class JobException(Exception):
         return "JobException(\"%s\")" % (repr(self.msg))
 
 
-def format_status_text(status, translation=DEFAULT_TRANSLATION):
+def format_status_text(
+    status: list[str], translation: Translation = DEFAULT_TRANSLATION
+):
     """Format the given status text in the given locale.
 
     A status text is the content of SubmissionResult.compilation_text,
@@ -67,8 +69,8 @@ def format_status_text(status, translation=DEFAULT_TRANSLATION):
     the identity function, if not given), completed with the data and
     returned.
 
-    status ([unicode]): a status, as described above.
-    translation (Translation): the translation to use.
+    status: a status, as described above.
+    translation: the translation to use.
 
     """
     _ = translation.gettext

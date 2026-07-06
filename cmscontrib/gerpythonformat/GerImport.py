@@ -32,7 +32,6 @@ from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 from cms.io import Service
 from cmscontrib.importing import update_contest, update_task, update_user, update_team, update_participation, _update_list_with_key, _copy, _to_delete
 
-from six import iteritems
 from psutil import virtual_memory
 
 logger = logging.getLogger(__name__)
@@ -156,7 +155,7 @@ class GerImport(Service):
                                               update_value_fn=update_participation)
                 pdbs = {p.user.username : p for p in pdbs}
 
-                for username, u in iteritems(pdb1s):
+                for username, u in pdb1s.items():
                     if username in contestconfig.users:
                         u.user = udb1s[username]
                         u.group = cdb1.get_group(

@@ -60,7 +60,7 @@ ENTITY_TYPES = ['contest',
                 ]
 
 
-def get_url(shard, entity_type, entity_id):
+def get_url(shard: int, entity_type: str, entity_id: str):
     return urljoin(config.rankings[shard], '%ss/%s' % (entity_type, entity_id))
 
 
@@ -169,7 +169,7 @@ def main():
             continue
 
         if args.action == "get":
-            print(res.content)
+            print(res.content.decode('utf-8'))
 
     if had_error:
         return 1

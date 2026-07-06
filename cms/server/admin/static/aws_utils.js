@@ -69,21 +69,27 @@ CMS.AWSUtils.create_url_builder = function(url_root) {
  * content.
  */
 CMS.AWSUtils.prototype.display_subpage = function(elements) {
+    var content = $("#subpage_content");
+    content.empty();
     // TODO: update jQuery to allow appending of arrays of elements.
     for (var i = 0; i < elements.length; ++i) {
-        elements[i].appendTo($("#subpage_content"));
+        elements[i].appendTo(content);
     }
-    $("#subpage").show();
+    document.getElementById('subpage_popup').show();
 };
 
+// set up some event listeners for the subpage
+window.addEventListener('DOMContentLoaded', () => {
+    $('#subpage_close').on('click', () => {
+        document.getElementById('subpage_popup').close();
+    });
+});
 
-/**
- * Hides a subpage previously displayed.
- */
-CMS.AWSUtils.prototype.hide_subpage = function() {
-    $("#subpage").hide();
-    $("#subpage_content").empty();
-};
+document.addEventListener('keydown', function(event) {
+    if (event.key === "Escape") {
+        document.getElementById('subpage_popup').close();
+    }
+});
 
 
 /**
@@ -108,20 +114,42 @@ CMS.AWSUtils.prototype.file_received = function(response, error) {
             this.display_subpage(elements);
             return;
         }
-        var pre_class = "";
-        // TODO: add more languages.
-        if (file_name.match(/.c(|pp)$/i)) {
-            pre_class = "brush: cpp";
-        } else if (file_name.match(/.pas$/i)) {
-            pre_class = "brush: delphi";
+        // TODO: update if adding a new language to cms
+        // (need to also update the prism bundle then)
+        var extension_to_lang = {
+            'cs': 'csharp',
+            'cpp': 'cpp',
+            'c': 'c',
+            'h': 'c',
+            'go': 'go',
+            'hs': 'haskell',
+            'java': 'java',
+            'js': 'javascript',
+            'php': 'php',
+            'py': 'python',
+            'rs': 'rust',
         }
+        var file_ext = file_name.split('.').pop();
+        var lang_name = extension_to_lang[file_ext] || file_ext;
+
         elements.push($('<h1>').text(file_name));
         elements.push($('<a>').text("Download").prop("href", url));
-        elements.push($('<pre>').text(response).prop("id", "source_container")
-                      .prop("class", pre_class));
-
+        elements.push($('<span>').text(" - "))
+        elements.push($('<a>').text("copy").prop('href', '#').on('click', (event) => {
+            var range = document.createRange();
+            var code_area = $('#subpage_content code')[0];
+            range.setStartBefore(code_area);
+            range.setEndAfter(code_area);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            // execCommand is deprecated, but this seems much less annoying than the new clipboard api
+            document.execCommand('copy');
+            event.preventDefault(); // prevent the <a> from navigating
+        }));
+        var codearea = $('<code>').text(response).addClass('line-numbers').addClass('language-' + lang_name);
+        elements.push($('<pre>').append(codearea));
         this.display_subpage(elements);
-        SyntaxHighlighter.highlight();
+        Prism.highlightAllUnder(document.getElementById('subpage_content'));
     }
 };
 
@@ -826,3 +854,52 @@ CMS.AWSUtils.ajax_delete = function(url) {
 CMS.AWSUtils.ajax_post = function(url) {
     CMS.AWSUtils.ajax_edit_request("POST", url);
 };
+
+
+/**
+ * Used by templates/macro/question.html.
+ * Toggles visibility of the question reply box.
+ */
+CMS.AWSUtils.prototype.question_reply_toggle = function(event, invoker) {
+    var obj = invoker.parentElement.parentElement.querySelector(".reply_question");
+    if (obj.style.display != "block") {
+        obj.style.display = "block";
+        invoker.innerHTML = "Hide reply";
+    } else {
+        obj.style.display = "none";
+        invoker.innerHTML = "Reply";
+    }
+    event.preventDefault();
+}
+
+/**
+ * Used by templates/macro/question.html.
+ * Updates visibility of answer box when choosing quick answers.
+ */
+CMS.AWSUtils.prototype.update_additional_answer = function(event, invoker) {
+    var obj = $(invoker).parent().find(".alternative_answer");
+    if (invoker.value == "other") {
+        obj.css("display", "");
+    } else {
+        obj.css("display", "none");
+    }
+}
+
+/**
+ * Used by templates/macro/markdown_input.html.
+ * Asks the server to render the markdown input and displays it.
+ */
+CMS.AWSUtils.prototype.render_markdown_preview = function(target) {
+    var form_element = $(target).closest("form");
+    var md_text = form_element.find(".markdown_input").val();
+    $.ajax({
+        type: "POST",
+        url: this.url("render_markdown"),
+        data: {input: md_text},
+        dataType: "text",
+        headers: {"X-XSRFToken": get_cookie("_xsrf")},
+        success: function(response) {
+            form_element.find(".markdown_preview").html(response);
+        },
+    });
+}

@@ -80,6 +80,7 @@ PACKAGE_DATA = {
         os.path.join("gerpythonformat", "lib", "ready", "*.*"),
         os.path.join("gerpythonformat", "templates", "*.*"),
         os.path.join("gerpythonformat", "templates", "*", "*.*"),
+        "loaders/polygon/testlib.h",
     ],
     "cmsranking": [
         "static/img/*.*",
@@ -88,6 +89,8 @@ PACKAGE_DATA = {
     ],
     "cmstestsuite": [
         "code/*.*",
+        "tasks/batch_and_output/code/*",
+        "tasks/batch_and_output/data/*",
         "tasks/batch_stdio/data/*.*",
         "tasks/batch_fileio/data/*.*",
         "tasks/batch_fileio_managed/code/*",
@@ -134,10 +137,6 @@ class build_with_l10n(build):
 setup(
     name="cms",
     version=find_version(),
-    author="The CMS development team",
-    author_email="contestms@googlegroups.com",
-    url="https://github.com/cms-dev/cms",
-    description="A contest management system and grader for IOI-like programming competitions",
     packages=find_packages(),
     package_data=PACKAGE_DATA,
     cmdclass={"build": build_with_l10n},
@@ -196,6 +195,7 @@ setup(
         ],
         "cms.grading.tasktypes": [
             "Batch=cms.grading.tasktypes.Batch:Batch",
+            "BatchAndOutput=cms.grading.tasktypes.BatchAndOutput:BatchAndOutput",
             "Communication=cms.grading.tasktypes.Communication:Communication",
             "OutputOnly=cms.grading.tasktypes.OutputOnly:OutputOnly",
             "TwoSteps=cms.grading.tasktypes.TwoSteps:TwoSteps",
@@ -225,12 +225,4 @@ setup(
             "Rust=cms.grading.languages.rust:Rust",
         ],
     },
-    keywords="ioi programming contest grader management system",
-    license_expression="AGPL-3.0-or-later",
-    classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "Natural Language :: English",
-        "Operating System :: POSIX :: Linux",
-        "Programming Language :: Python :: 3.12",
-    ],
 )

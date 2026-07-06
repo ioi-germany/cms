@@ -32,14 +32,14 @@ class LaTeXSandbox(IsolateSandbox):
 
         IsolateSandbox.__init__(self, *args, box_id=bid, **kwargs)
 
-        self.preserve_env = True
-        self.max_processes = config.latex_compilation_sandbox_max_processes
-        self.timeout = config.latex_compilation_sandbox_max_time_s
-        self.wallclock_timeout = 2 * self.timeout + 1
-        self.address_space = config.latex_compilation_sandbox_max_memory_kib * 1024
+        self.preserve_env: bool = True
+        self.max_processes: int = config.latex_compilation_sandbox_max_processes
+        self.timeout: float = config.latex_compilation_sandbox_max_time_s
+        self.wallclock_timeout: float = 2 * self.timeout + 1
+        self.address_space: int = config.latex_compilation_sandbox_max_memory_kib * 1024
 
-        self.stdout_file = "LaTeX_out.txt"
-        self.stderr_file = "LaTeX_err.txt"
+        self.stdout_file: str = "LaTeX_out.txt"
+        self.stderr_file: str = "LaTeX_err.txt"
         self.add_mapped_directory("/etc/texmf")
         self.add_mapped_directory("/var/lib/texmf")
         self.add_mapped_directory("/etc/fonts")
@@ -62,22 +62,22 @@ class LaTeXSandbox(IsolateSandbox):
         """
         pass
 
-    def get_home_path(self):
+    def get_home_path(self) -> str:
         return os.path.join(self.get_root_path(), "home")
 
-    def failed(self):
+    def failed(self) -> bool:
         return self.get_exit_status() != self.EXIT_OK
 
-    def get_file_contents(self, filename, decoding="latin_1"):
+    def get_file_contents(self, filename: str, decoding="latin_1") -> str:
         return self.get_file_to_string(filename, maxlen=None)\
                    .decode(decoding, errors="replace").strip()
 
-    def get_stdout(self):
+    def get_stdout(self) -> str:
         return self.get_file_contents(self.stdout_file)
 
-    def get_stderr(self):
+    def get_stderr(self) -> str:
         return self.get_file_contents(self.stderr_file)
 
-    def get_log_file_contents(self):
+    def get_log_file_contents(self) -> str:
         return self.get_file_contents("%s.%d" % (self.info_basename,
                                                  self.exec_num))

@@ -48,13 +48,15 @@ class RankingHandler(BaseHandler):
 
         # This massive joined load gets all the information which we will need
         # to generating the rankings.
-        self.contest = self.sql_session.query(Contest)\
-            .filter(Contest.id == contest_id)\
-            .options(joinedload('participations'))\
-            .options(joinedload('participations.submissions'))\
-            .options(joinedload('participations.submissions.token'))\
-            .options(joinedload('participations.submissions.results'))\
+        self.contest: Contest = (
+            self.sql_session.query(Contest)
+            .filter(Contest.id == contest_id)
+            .options(joinedload("participations"))
+            .options(joinedload("participations.submissions"))
+            .options(joinedload("participations.submissions.token"))
+            .options(joinedload("participations.submissions.results"))
             .first()
+        )
 
         # Preprocess participations: get data about teams, scores
         show_teams = False
@@ -92,7 +94,7 @@ class RankingHandler(BaseHandler):
             # globally) have been scored
             include_partial = False
 
-            contest = self.r_params["contest"]
+            contest: Contest = self.r_params["contest"]
 
             row = ["Username", "User"]
             if show_teams:

@@ -32,7 +32,6 @@ from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyifnecessary, copyrecursivelyifnecessary
 from cmscontrib.gerpythonformat.LocationStack import chdir
 
-from six import iteritems
 from copy import copy
 
 import importlib.util
@@ -281,7 +280,7 @@ class RuleResult(object):
         """Whether the saved hash values all agree with the current files.
         """
         for di in (self.dependencies, self.outputs):
-            for filename, oldhash in iteritems(di):
+            for filename, oldhash in di.items():
                 newhash = self.hash_of_file(filename)
                 if oldhash != newhash:
                     #print("Out of date: {}, old hash {}, new hash {}".format(filename, oldhash, newhash))
@@ -755,7 +754,7 @@ class ZipRule(Rule):
     def run(self):
         import zipfile
         with zipfile.ZipFile(self.zipname, 'w', zipfile.ZIP_DEFLATED) as zf:
-            for an, fn in iteritems(self.contents):
+            for an, fn in self.contents.items():
                 zf.write(fn, arcname=an)
                 self.result.add_dependency(fn)
         self.result.add_output(self.zipname)

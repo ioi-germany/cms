@@ -38,12 +38,9 @@ except:
     # Monkey-patch: Tornado 4.5.3 does not work on Python 3.11 by default
     collections.MutableMapping = collections.abc.MutableMapping
 
-try:
-    import tornado4.web as tornado_web
-    from tornado4.web import RequestHandler
-except ImportError:
-    import tornado.web as tornado_web
-    from tornado.web import RequestHandler
+import typing
+import tornado.web as tornado_web
+from tornado.web import RequestHandler
 
 from cms.db import Session
 from cms.server.file_middleware import FileServerMiddleware
@@ -79,29 +76,33 @@ class FileHandlerMixin(RequestHandler):
 
     """
 
-    def fetch(self, digest, content_type, filename):
+    def fetch(self, digest: str, content_type: str, filename: str | None = None, disposition: str | None = None):
         """Serve the file with the given digest.
 
         This will just add the headers required to trigger
         FileServerMiddleware, which will do the real work.
 
-        digest (str): the digest of the file that has to be served.
-        content_type (str): the MIME type the file should be served as.
-        filename (str): the name the file should be served as.
+        digest: the digest of the file that has to be served.
+        content_type: the MIME type the file should be served as.
+        filename: the name the file should be served as.
+        disposition: value to set the Content-Disposition header to.
 
         """
         self.set_header(FileServerMiddleware.DIGEST_HEADER, digest)
-        self.set_header(FileServerMiddleware.FILENAME_HEADER, filename)
+        if filename is not None:
+            self.set_header(FileServerMiddleware.FILENAME_HEADER, filename)
+        if disposition is not None:
+            self.set_header(FileServerMiddleware.DISPOSITION_HEADER, disposition)
         self.set_header("Content-Type", content_type)
         self.finish()
 
 
-def get_url_root(request_path):
+def get_url_root(request_path: str) -> str:
     """Return a relative URL pointing to the root of the website.
 
-    request_path (string): the starting point of the relative path.
+    request_path: the starting point of the relative path.
 
-    return (string): relative URL from request_path to the root.
+    return: relative URL from request_path to the root.
 
     """
 
@@ -119,27 +120,26 @@ class Url:
 
     """
 
-    def __init__(self, url_root):
+    def __init__(self, url_root: str):
         """Create a URL relative to the given root.
 
-        url_root (str): the root of all paths that are generated.
+        url_root: the root of all paths that are generated.
 
         """
         assert not url_root.endswith("/") or url_root == "/"
         self.url_root = url_root
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: object, **kwargs: object) -> str:
         """Generate a URL.
 
         Assemble a URL using the positional arguments as URL components
         and the keyword arguments as the query string. The URL will be
         relative to the root given to the constructor.
 
-        args ([object]): the path components (will be cast to strings).
-        kwargs ({str: object}): the query parameters (values will be
-            cast to strings).
+        args: the path components (will be cast to strings).
+        kwargs: the query parameters (values will be cast to strings).
 
-        return (str): the desired URL.
+        return: the desired URL.
 
         """
         url = self.url_root
@@ -151,7 +151,7 @@ class Url:
             url += "?" + urlencode(kwargs)
         return url
 
-    def __getitem__(self, component):
+    def __getitem__(self, component: object) -> typing.Self:
         """Produce a new Url obtained by extending this instance.
 
         Return a new Url object that will generate paths based on this
@@ -159,9 +159,9 @@ class Url:
         argument. That is, if url() is "/foo", then url["bar"]() is
         "/foo/bar".
 
-        component (object): the path component (will be cast to string).
+        component: the path component (will be cast to string).
 
-        return (Url): the extended URL generator.
+        return: the extended URL generator.
 
         """
         return self.__class__(self.__call__(component))
@@ -183,7 +183,7 @@ class CommonRequestHandler(RequestHandler):
         self.sql_session = Session()
         self.r_params = None
         self.contest = None
-        self.url = None
+        self.url: Url = None
 
     #Used for captchas
     #Returns a string's signature using secret_key

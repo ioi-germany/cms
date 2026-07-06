@@ -24,29 +24,33 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import errno
-import json
+import tomllib
 import logging
 import os
 import sys
 from datetime import datetime
-from collections import namedtuple
+import typing
 
-from .log import set_detailed_logs
+from cms.log import set_detailed_logs
 
 
 logger = logging.getLogger(__name__)
 
 
-class Address(namedtuple("Address", "ip port")):
+class Address(typing.NamedTuple):
+    ip: str
+    port: int
     def __repr__(self):
         return "%s:%d" % (self.ip, self.port)
 
 
-class ServiceCoord(namedtuple("ServiceCoord", "name shard")):
+class ServiceCoord(typing.NamedTuple):
     """A compact representation for the name and the shard number of a
     service (thus identifying it).
 
     """
+    name: str
+    shard: int
     def __repr__(self):
         return "%s,%d" % (self.name, self.shard)
 
@@ -70,8 +74,8 @@ class AsyncConfig:
     anyway not constantly.
 
     """
-    core_services = {}
-    other_services = {}
+    core_services: dict[ServiceCoord, Address] = {}
+    other_services: dict[ServiceCoord, Address] = {}
 
 
 async_config = AsyncConfig()
@@ -80,7 +84,7 @@ async_config = AsyncConfig()
 class Config:
     """This class will contain the configuration for CMS. This needs
     to be populated at the initilization stage. This is loaded by
-    default with some sane data. See cms.conf.sample in the config
+    default with some sane data. See cms.sample.toml in the config
     directory for information on the meaning of the fields.
 
     """
@@ -93,7 +97,6 @@ class Config:
         self.async_config = async_config
 
         # System-wide
-        self.cmsuser = "cmsuser"
         self.temp_dir = "/tmp"
         self.backdoor = False
         self.file_log_debug = False
@@ -163,12 +166,7 @@ class Config:
         self.max_input_length = 5_000_000  # 5 MB
         self.stl_path = "/usr/share/cppreference/doc/html/"
         self.docs_path = None
-        # Prefix of 'shared-mime-info'[1] installation. It can be found
-        # out using `pkg-config --variable=prefix shared-mime-info`, but
-        # it's almost universally the same (i.e. '/usr') so it's hardly
-        # necessary to change it.
-        # [1] http://freedesktop.org/wiki/Software/shared-mime-info
-        self.shared_mime_info_prefix = "/usr"
+        self.contest_admin_token = None
 
         # AdminWebServer.
         self.admin_listen_address = ""
@@ -198,62 +196,62 @@ class Config:
         self.max_compilations = 1000
 
         # TelegramBotService
+        self.bot_pwd = "pwd"
+        self.bot_token = ""
         self.telegram_bot_max_error_messages = 5
 
-        self.log_dir = os.path.join("/", "var", "local", "log", "cms")
-        self.cache_dir = os.path.join("/", "var", "local", "cache", "cms")
-        self.latex_cache_dir = os.path.join("/", "var", "local", "cache", "cms", "latex")
-        self.data_dir = os.path.join("/", "var", "local", "lib", "cms")
-        self.run_dir = os.path.join("/", "var", "local", "run", "cms")
-        paths = [
-            os.path.join("/", "usr", "local", "etc", "cms.conf"),
-            os.path.join("/", "etc", "cms.conf"),
-        ]
+        # DiscordBotService
+        self.discord_bot_token = ""
+        self.discord_bot_pwd = "pwd"
+        self.discord_bot_admin_roles = []
+        self.discord_bot_max_error_messages = 10
 
-        # Allow user to override config file path using environment
+        # PrometheusExporter
+        self.prometheus_listen_address = "127.0.0.1"
+        self.prometheus_listen_port = 8811
+
+        # Try to find CMS installation root from the venv in which we run
+        self.base_dir = sys.prefix
+        if self.base_dir == '/usr':
+            logger.critical('CMS must be run within a Python virtual environment')
+            sys.exit(1)
+        self.log_dir = os.path.join(self.base_dir, 'log')
+        self.cache_dir = os.path.join(self.base_dir, 'cache')
+        self.latex_cache_dir = os.path.join(self.base_dir, 'cache', 'latex')
+        self.data_dir = os.path.join(self.base_dir, 'lib')
+        self.run_dir = os.path.join(self.base_dir, 'run')
+
+        # Default config file path can be overridden using environment
         # variable 'CMS_CONFIG'.
-        CMS_CONFIG_ENV_VAR = "CMS_CONFIG"
-        if CMS_CONFIG_ENV_VAR in os.environ:
-            paths = [os.environ[CMS_CONFIG_ENV_VAR]] + paths
+        default_config_file = os.path.join(self.base_dir, 'etc/cms.toml')
+        config_file = os.environ.get('CMS_CONFIG', default_config_file)
 
-        # Attempt to load a config file.
-        self._load(paths)
+        if not self._load_config(config_file):
+            logging.critical(f'Cannot load configuration file {config_file}')
+            sys.exit(1)
 
         # If the configuration says to print detailed log on stdout,
         # change the log configuration.
         set_detailed_logs(self.stream_log_detailed)
 
-    def _load(self, paths):
-        """Try to load the config files one at a time, until one loads
-        correctly.
-
-        """
-        for conf_file in paths:
-            if self._load_unique(conf_file):
-                break
-        else:
-            logging.warning("No configuration file found: "
-                            "falling back to default values.")
-
-    def _load_unique(self, path):
+    def _load_config(self, path: str) -> bool:
         """Populate the Config class with everything that sits inside
-        the JSON file path (usually something like /etc/cms.conf). The
+        the TOML file path (usually something like /etc/cms.toml). The
         only pieces of data treated differently are the elements of
         core_services and other_services that are sent to async
         config.
 
-        Services whose name begins with an underscore are ignored, so
-        they can be commented out in the configuration file.
-
-        path (string): the path of the JSON config file.
+        path: the path of the TOML config file.
+        returns: whether parsing was successful.
 
         """
         # Load config file.
         try:
-            with open(path, 'rt', encoding='utf-8') as f:
-                data = json.load(f)
+            with open(path, 'rb') as f:
+                data = tomllib.load(f)
         except FileNotFoundError:
-            logger.debug("Couldn't find config file %s.", path)
+            logger.debug("Couldn't find config file %s (maybe you need to "
+                         "convert it from cms.conf to cms.toml?).", path)
             return False
         except OSError as error:
             logger.warning("I/O error while opening file %s: [%s] %s",
@@ -263,8 +261,6 @@ class Config:
         except ValueError as error:
             logger.warning("Invalid syntax in file %s: %s", path, error)
             return False
-
-        logger.info("Using configuration file %s.", path)
 
         if "is_proxy_used" in data:
             logger.warning("The 'is_proxy_used' setting is deprecated, please "
@@ -292,7 +288,10 @@ class Config:
 
         # Put everything else in self.
         for key, value in data.items():
-            setattr(self, key, value)
+            if hasattr(self, key):
+                setattr(self, key, value)
+            else:
+                logger.warning("Unrecognized key %s in config!", key)
 
         return True
 

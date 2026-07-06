@@ -1,0 +1,13 @@
+[Unit]
+Description=Contest Management System TaskOverview Web Server
+Requires=cms-log.service
+After=cms-log.service
+
+[Service]
+Type=simple
+WorkingDirectory=@CMS_DIR@
+ExecStart=@CMS_DIR@/bin/cmsTaskOverviewWebServer
+User=cms
+
+[Install]
+WantedBy=default.target

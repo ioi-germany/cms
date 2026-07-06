@@ -218,6 +218,7 @@ class DatabaseObjectGeneratorMixin:
         args = {
             "task": task,
             "participation": participation,
+            "opaque_id": unique_long_id(),
             "timestamp": (participation.group.start
                           + timedelta(0, unique_long_id())),
         }

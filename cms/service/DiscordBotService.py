@@ -86,7 +86,7 @@ class MyQuestion(WithDatabaseAccess):
         self.question.reply_timestamp = self.question.last_action
 
         self.question.reply_subject = ""
-        self.question.reply_text = "" 
+        self.question.reply_text = ""
         if is_short:
             self.question.reply_subject = a
         else:
@@ -304,9 +304,9 @@ class MyContest(WithDatabaseAccess):
         self.announcements = AnnouncementList(self.contest_id)
 
     def announce(self, header: str, body: str) -> Any:
-        ann = Announcement(timestamp=make_datetime(), 
-                          subject=header, 
-                          text=body, 
+        ann = Announcement(timestamp=make_datetime(),
+                          subject=header,
+                          text=body,
                           src="discord",
                           contest=self.contest)
         self.sql_session.add(ann)
@@ -387,34 +387,34 @@ class DiscordBot(commands.Bot):
         """Check if the channel is authorized for bot operations"""
         if not self.is_registered:
             return False
-        
+
         # Direct channel match
         if channel_id == self.channel_id:
             return True
-            
+
         # Thread in authorized channel
         channel = self.get_channel(channel_id)
         if isinstance(channel, discord.Thread) and channel.parent_id == self.channel_id:
             return True
-            
+
         return False
 
     def _user_has_admin_role(self, user: Union[discord.User, discord.Member]) -> bool:
         """Check if the user has any of the configured admin roles"""
         if not self.admin_roles:
             return False
-        
+
         # Only Members (users in a guild) have roles, not direct message users
         if not isinstance(user, discord.Member):
             return False
-        
+
         user_role_names = [role.name for role in user.roles]
         return any(role_name in user_role_names for role_name in self.admin_roles)
 
     async def setup_hook(self) -> None:
         """Called when the bot is starting up"""
         await self.add_cog(ContestCommands(self))
-        
+
         # Sync slash commands
         try:
             synced = await self.tree.sync()
@@ -439,7 +439,7 @@ class DiscordBot(commands.Bot):
 
             except Exception as e:
                 logger.error("Error in update loop: %s", e)
-            
+
             await asyncio.sleep(5)
 
     async def _process_all_contests(self, channel: Union[discord.TextChannel, discord.Thread]) -> None:
@@ -489,18 +489,18 @@ class DiscordBot(commands.Bot):
 
         view = QuestionView(self, q)
         message = await channel.send(embed=embed, view=view)
-        
+
         # Create a thread for this question
         thread_name = f"Q{q.question.id}: {q.question.subject[:80]}"  # Discord thread name limit
         thread = await message.create_thread(name=thread_name, auto_archive_duration=1440)  # 24 hours
-        
+
         # Store both message and thread references
         self.questions[message.id] = q
-        
+
         Q = q.question
         if Q.id not in self.q_notifications:
             self.q_notifications[Q.id] = []
-        
+
         # Store both message and thread
         notification_data = {
             'message': message,
@@ -508,7 +508,7 @@ class DiscordBot(commands.Bot):
         }
         self.q_notifications[Q.id].append(notification_data)
         self.messages_issued.append(message)
-        
+
         # Send initial message to thread with buttons for replying
         thread_message = await thread.send(
             "Reply in this thread to answer the question."
@@ -534,7 +534,7 @@ class DiscordBot(commands.Bot):
         notification_data = self.q_notifications[q.question.id][-1]
         msg = notification_data['message']
         thread = notification_data['thread']
-        
+
         notification = f"This question has been answered via {q.replied_by}:\n\n" if new \
                        else f"The answer has been edited via {q.replied_by}:\n\n"
 
@@ -546,7 +546,7 @@ class DiscordBot(commands.Bot):
         reply = await thread.send(reply_text)
         self.questions[reply.id] = q
         self.messages_issued.append(reply)
-        
+
         # Update the original message
         await self._update_question(q)
 
@@ -558,14 +558,14 @@ class DiscordBot(commands.Bot):
         notification_data = self.q_notifications[q.question.id][-1]
         msg = notification_data['message']
         thread = notification_data['thread']
-        
+
         notification = f"This question has been {'ignored' if ignore else 'unignored'}."
-        
+
         # Send notification to the thread instead of as a reply
         reply = await thread.send(notification)
         self.questions[reply.id] = q
         self.messages_issued.append(reply)
-        
+
         # Update the original message
         await self._update_question(q)
 
@@ -633,11 +633,11 @@ class DiscordBot(commands.Bot):
                 return None
         return None
 
-    async def _reply_question(self, ctx: Union[discord.Interaction, discord.Message], q: MyQuestion, answer: str, 
+    async def _reply_question(self, ctx: Union[discord.Interaction, discord.Message], q: MyQuestion, answer: str,
                              short_answer: bool = False, in_thread: bool = False) -> None:
         """Reply to a user question"""
         replier = await self._get_replier_name(ctx)
-            
+
         if answer.strip() == "/ignore":
             if q.answered():
                 fail_msg = "This question has already been answered; I can't ignore it anymore ☹."
@@ -651,7 +651,7 @@ class DiscordBot(commands.Bot):
                     success_msg = "I have ignored this question!"
                     await self._send_reply_message(ctx, success_msg, in_thread)
                 # For short_answer (button clicks), success message is handled in _handle_reply
-                
+
                 await self._update_question(q)
             return
 
@@ -674,7 +674,7 @@ class DiscordBot(commands.Bot):
 
 class QuestionView(discord.ui.View):
     """View with buttons for question responses"""
-    
+
     def __init__(self, bot: DiscordBot, question: MyQuestion, in_thread: bool = False) -> None:
         super().__init__(timeout=None)
         self.bot = bot
@@ -709,13 +709,13 @@ class QuestionView(discord.ui.View):
         """Check if the interaction is from an authorized channel"""
         if not self.bot.is_registered:
             return False
-        
+
         if interaction.channel_id == self.bot.channel_id:
             return True
-        
+
         if isinstance(interaction.channel, discord.Thread) and interaction.channel.parent_id == self.bot.channel_id:
             return True
-            
+
         return False
 
     async def _send_thread_notification(self, interaction: discord.Interaction, public_message: str) -> None:
@@ -723,10 +723,10 @@ class QuestionView(discord.ui.View):
         if self.question.question.id in self.bot.q_notifications:
             notification_data = self.bot.q_notifications[self.question.question.id][-1]
             thread = notification_data['thread']
-            
+
             # Send the public message to the thread
             await thread.send(public_message)
-            
+
             # Send a brief acknowledgment to the interaction
             await interaction.followup.send("Response recorded!", ephemeral=True)
         else:
@@ -741,25 +741,25 @@ class QuestionView(discord.ui.View):
 
         # Acknowledge the interaction first
         await interaction.response.defer()
-        
+
         # Handle the reply in the database
         await self.bot._reply_question(interaction, self.question, answer, short_answer=True, in_thread=self.in_thread)
-        
+
         # Send a message about the action
         user = interaction.user
         question_preview = (self.question.question.subject[:50] + "...") if len(self.question.question.subject) > 50 else self.question.question.subject
-        
+
         if answer == "/ignore":
             public_message = f"🚫 **{user.display_name}** ignored the question: \"{question_preview}\""
         else:
             public_message = f"✅ **{user.display_name}** answered \"{question_preview}\" with: **{answer}**"
-        
+
         await self._send_thread_notification(interaction, public_message)
 
 
 class ContestCommands(commands.Cog):
     """Commands for contest management"""
-    
+
     def __init__(self, bot: DiscordBot) -> None:
         self.bot = bot
 
@@ -772,13 +772,13 @@ class ContestCommands(commands.Cog):
         if not interaction.channel:
             await interaction.response.send_message("Error: Could not determine channel.", ephemeral=True)
             return
-            
+
         # Create a mock context-like object for compatibility
         class MockContext:
             def __init__(self, interaction):
                 self.channel = interaction.channel
                 self.send = interaction.response.send_message
-                
+
         ctx = MockContext(interaction)
 
         if self.bot.is_registered:
@@ -788,7 +788,7 @@ class ContestCommands(commands.Cog):
             else:
                 await interaction.response.send_message("Error: I'm already registered with another channel", ephemeral=True)
                 logger.error("%s tried to /start me although I'm already bound to a channel", interaction.user.name)
-                
+
                 if self.bot.channel_id:
                     channel = self.bot.get_channel(self.bot.channel_id)
                     if channel and hasattr(channel, 'send'):
@@ -805,7 +805,7 @@ class ContestCommands(commands.Cog):
                 message += "I'll assist you with the following contest.\n"
             else:
                 message += "I'll assist you with the following contests.\n"
-            
+
             for c in self.bot.contests:
                 message += f"• **{c.name}**: {c.description}\n"
 
@@ -843,7 +843,7 @@ class ContestCommands(commands.Cog):
         if not interaction.channel:
             await interaction.response.send_message("Error: Could not determine channel.", ephemeral=True)
             return
-            
+
         if not self.bot.is_registered:
             await interaction.response.send_message("You have to register me first (using the `/start` command).", ephemeral=True)
             return
@@ -878,28 +878,28 @@ class ContestCommands(commands.Cog):
         contest = self.bot.contests[contest_id]
         try:
             contest.announce(header, msg)
-            
+
             # Get the user who made the announcement
             announcer = interaction.user.display_name
-            
+
             response_msg = f"I have announced the following in {contest.description}:\n\n**{header}**\n{msg}"
-            
+
             # Check if we already responded
             if not interaction.response.is_done():
                 await interaction.response.send_message(response_msg, ephemeral=True)
             else:
                 await interaction.followup.send(response_msg, ephemeral=True)
-                
+
             # Send public message about who made the announcement
             public_msg = f"📢 **{announcer}** has announced the following in {contest.description}:\n\n**{header}**\n{msg}"
-            
+
             # Check if the channel supports sending messages (TextChannel, Thread, etc.)
             if interaction.channel and hasattr(interaction.channel, 'send'):
                 try:
                     await interaction.channel.send(public_msg)
                 except Exception as e:
                     logger.error("Failed to send public announcement message: %s", str(e))
-            
+
         except Exception as e:
             logger.error("Failed to make announcement: %s", e, stack_info=True)
             error_msg = "Sorry, this didn't work..."
@@ -914,7 +914,7 @@ class ContestCommands(commands.Cog):
         if not interaction.channel:
             await interaction.response.send_message("Error: Could not determine channel.", ephemeral=True)
             return
-            
+
         if not self.bot.is_registered:
             await interaction.response.send_message("You have to register me first (using the `/start` command).", ephemeral=True)
             return
@@ -949,7 +949,7 @@ class ContestCommands(commands.Cog):
         if not interaction.channel:
             await interaction.response.send_message("Error: Could not determine channel.", ephemeral=True)
             return
-            
+
         if not self.bot.is_registered:
             await interaction.response.send_message("You have to register me first (using the `/start` command).", ephemeral=True)
             return
@@ -983,7 +983,7 @@ class ContestCommands(commands.Cog):
         if not interaction.channel:
             await interaction.response.send_message("Error: Could not determine channel.", ephemeral=True)
             return
-            
+
         if not self.bot.is_registered:
             await interaction.response.send_message("You have to register me first (using the `/start` command) — and then there will be nothing to purge at the moment anyhow…", ephemeral=True)
             return
@@ -1022,7 +1022,7 @@ In addition this bot will post all new questions appearing in the system. You ca
 
 **Quick Response Buttons:**
 ✅ **Yes** — Simple affirmative answer
-❌ **No** — Simple negative answer  
+❌ **No** — Simple negative answer
 📋 **Answered in task description** — Refer to task documentation
 💭 **No comment** — Decline to answer
 ⚠️ **Invalid question** — Mark as invalid
@@ -1044,19 +1044,19 @@ In addition this bot will post all new questions appearing in the system. You ca
             # Check if this is a reply to a bot message
             if message.reference and message.reference.message_id in self.bot.questions:
                 q = self.bot.questions[message.reference.message_id]
-                
+
                 # Check if there's a thread for this question
                 if q.question.id in self.bot.q_notifications:
                     notification_data = self.bot.q_notifications[q.question.id][-1]
                     thread = notification_data['thread']
-                    
+
                     # Move the message to the thread
                     await self._move_message_to_thread(message, thread, q)
                 else:
                     # No thread exists, handle normally
                     await self.bot._reply_question(message, q, message.content)
-                    
-        # Check if message is in a thread of the registered channel        
+
+        # Check if message is in a thread of the registered channel
         elif isinstance(message.channel, discord.Thread) and message.channel.parent_id == self.bot.channel_id:
             # Find the question associated with this thread
             for question_id, notifications in self.bot.q_notifications.items():
@@ -1078,22 +1078,22 @@ In addition this bot will post all new questions appearing in the system. You ca
             # Send the content to the thread
             thread_message = f"**{message.author.display_name}** replied: {message.content}"
             await thread.send(thread_message)
-            
+
             # Process the answer
             await self.bot._reply_question(message, question, message.content, in_thread=True)
-            
+
             # Delete the original message and send a redirect message
             redirect_msg = f"Your reply has been moved to the question thread: {thread.mention}"
             await message.reply(redirect_msg, delete_after=10)
             await message.delete()
-            
+
         except Exception as e:
             logger.error("Failed to move message to thread: %s", str(e))
 
 
 class PurgeView(discord.ui.View):
     """View for purge confirmation"""
-    
+
     def __init__(self, bot, ctx):
         super().__init__(timeout=60)
         self.bot = bot
@@ -1127,7 +1127,7 @@ class PurgeView(discord.ui.View):
 
 class SlashAnnouncementView(discord.ui.View):
     """View for slash command announcement contest selection"""
-    
+
     def __init__(self, bot, interaction, header, msg):
         super().__init__(timeout=60)
         self.bot = bot
@@ -1168,7 +1168,7 @@ class SlashAnnouncementView(discord.ui.View):
 
 class SlashPurgeView(discord.ui.View):
     """View for slash command purge confirmation"""
-    
+
     def __init__(self, bot: DiscordBot, interaction: discord.Interaction) -> None:
         super().__init__(timeout=60)
         self.bot = bot
@@ -1202,7 +1202,7 @@ class SlashPurgeView(discord.ui.View):
 
 class DiscordBotService(Service):
     """A service running the Discord bot"""
-    
+
     def __init__(self, shard: int, contest_id: Optional[int] = None) -> None:
         Service.__init__(self, shard)
         self.contest_id = contest_id
@@ -1239,10 +1239,10 @@ class DiscordBotService(Service):
                     sys.exit(0)
             else:
                 sys.exit(0)
-        
+
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
-        
+
         while True:
             try:
                 asyncio.run(self._run_bot())
@@ -1258,30 +1258,30 @@ class DiscordBotService(Service):
         """Internal method to run the bot with proper async handling"""
         # Initialize the shutdown event in the async context
         self._shutdown_event = asyncio.Event()
-        
+
         try:
             contests = self._get_contests()
             self.bot_instance = DiscordBot(contests)
-            
+
             token = self._get_bot_token()
             logger.info("Starting Discord bot with token=%s...", token[:4])
-            
+
             # Start the bot and wait for shutdown signal
             bot_task = asyncio.create_task(self.bot_instance.start(token))
             shutdown_task = asyncio.create_task(self._shutdown_event.wait())
-            
+
             # Wait for either the bot to finish or shutdown signal
             done, pending = await asyncio.wait(
-                [bot_task, shutdown_task], 
+                [bot_task, shutdown_task],
                 return_when=asyncio.FIRST_COMPLETED
             )
-            
+
             # If shutdown was requested, close the bot gracefully
             if shutdown_task in done:
                 logger.info("Shutdown signal received, closing bot...")
                 if not self.bot_instance.is_closed():
                     await self.bot_instance.close()
-                
+
                 # Cancel the bot task if it's still running
                 if not bot_task.done():
                     bot_task.cancel()
@@ -1292,7 +1292,7 @@ class DiscordBotService(Service):
             else:
                 # Bot finished on its own, cancel shutdown task
                 shutdown_task.cancel()
-                
+
         except KeyboardInterrupt:
             logger.info("Bot interrupted, closing...")
             if self.bot_instance and not self.bot_instance.is_closed():
@@ -1302,7 +1302,7 @@ class DiscordBotService(Service):
     def exit(self) -> None:
         """Stop the Discord bot service"""
         logger.info("Exit method called, initiating shutdown...")
-        
+
         # Set the shutdown event if it exists
         if self._shutdown_event is not None:
             try:
@@ -1311,7 +1311,7 @@ class DiscordBotService(Service):
             except RuntimeError:
                 # No running loop, fall back to direct bot closure
                 pass
-        
+
         # Also try to close the bot instance directly
         if self.bot_instance:
             try:

@@ -24,7 +24,7 @@ from sys import exc_info
 from traceback import format_exception
 from multiprocessing import Process, Manager
 from typing import Optional
-from six import StringIO
+from io import StringIO
 from ansi2html import Ansi2HTMLConverter
 
 from cms.io.Repository import Repository

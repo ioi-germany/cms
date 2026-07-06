@@ -19,9 +19,8 @@
 import unittest
 from collections import namedtuple
 from datetime import timedelta
-from unittest.mock import MagicMock, PropertyMock, patch, sentinel
+from unittest.mock import MagicMock, PropertyMock, patch, sentinel, ANY
 
-# Needs to be first to allow for monkey patching the DB connection string.
 from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
 
 from cms import config
@@ -83,7 +82,7 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
         self.tornado_files = sentinel.tornado_files
         self.language_name = sentinel.language_name
         self.official = True
-        self.received_files = sentinel.received_files
+        self.received_files = []
         self.files = {"foo.%l": FOO_CONTENT}
         # Multiple extensions, primary one doesn't start with a period.
         self.language = make_language("MockLanguage", ["mock.1", ".mock2"])
@@ -107,6 +106,12 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
         self.check_min_interval = patcher.start()
         self.addCleanup(patcher.stop)
         self.check_min_interval.return_value = True
+
+        patcher = patch(
+            "cms.server.contest.submission.workflow.is_last_minutes")
+        self.is_last_minutes = patcher.start()
+        self.addCleanup(patcher.stop)
+        self.is_last_minutes.return_value = False
 
         patcher = patch(
             "cms.server.contest.submission.workflow.extract_files_from_tornado")
@@ -251,6 +256,19 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
             self.session, min_interval, self.timestamp, self.participation,
             contest=self.contest)
 
+    def test_success_with_min_interval_on_contest_in_last_minutes(self):
+        min_interval = timedelta(seconds=unique_long_id())
+        self.contest.min_submission_interval = min_interval
+        # False only when we ask for contest.
+        self.check_min_interval.side_effect = \
+            lambda *args, **kwargs: "contest" not in kwargs
+        self.is_last_minutes.return_value = True
+
+        self.call()
+
+        self.is_last_minutes.assert_called_with(
+            self.timestamp, self.participation)
+
     def test_failure_due_to_min_interval_on_task(self):
         min_interval = timedelta(seconds=unique_long_id())
         self.task.min_submission_interval = min_interval
@@ -266,13 +284,26 @@ class TestAcceptSubmission(DatabaseMixin, unittest.TestCase):
             self.session, min_interval, self.timestamp, self.participation,
             task=self.task)
 
+    def test_success_with_min_interval_on_task_in_last_minutes(self):
+        min_interval = timedelta(seconds=unique_long_id())
+        self.task.min_submission_interval = min_interval
+        # False only when we ask for task.
+        self.check_min_interval.side_effect = \
+            lambda *args, **kwargs: "task" not in kwargs
+        self.is_last_minutes.return_value = True
+
+        self.call()
+
+        self.is_last_minutes.assert_called_with(
+            self.timestamp, self.participation)
+
     def test_failure_due_to_extract_files_from_tornado(self):
         self.extract_files_from_tornado.side_effect = InvalidArchive
 
         with self.assertRaisesRegex(UnacceptableSubmission, "archive"):
             self.call()
 
-        self.extract_files_from_tornado.assert_called_with(self.tornado_files)
+        self.extract_files_from_tornado.assert_called_with(self.tornado_files, ANY, ANY)
 
     def test_failure_due_to_match_files_and_language(self):
         self.match_files_and_language.side_effect = InvalidFilesOrLanguage
@@ -605,7 +636,7 @@ class TestAcceptUserTest(DatabaseMixin, unittest.TestCase):
         with self.assertRaisesRegex(UnacceptableUserTest, "archive"):
             self.call()
 
-        self.extract_files_from_tornado.assert_called_with(self.tornado_files)
+        self.extract_files_from_tornado.assert_called_with(self.tornado_files, ANY, ANY)
 
     def test_failure_due_to_match_files_and_language(self):
         self.match_files_and_language.side_effect = InvalidFilesOrLanguage

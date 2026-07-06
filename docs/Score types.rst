@@ -74,4 +74,4 @@ Test cases can occur in any number of groups. They will all be evaluated exactly
 Custom score types
 ==================
 
-Additional score types can be defined if necessary. This works in the same way :ref:`as with task types <tasktypes_custom>`: the classes need to extend :py:class:`cms.grading.scoretypes.ScoreType` and the entry point group is called `cms.grading.scoretypes`.
+Additional score types can be defined if necessary. This works in the same way :ref:`as with task types <tasktypes_custom>`: the classes need to extend :py:class:`cms.grading.scoretypes.ScoreType` and the entry point group is called ``cms.grading.scoretypes``.

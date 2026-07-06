@@ -1,19 +1,20 @@
-/*
-    CSS slightly modified by Hamid Zarrabi-Zadeh for IOI 2017.
-*/
-
-
 body {
-    color: #333;
+    /* FIXME: I'd suggest putting a 0.75em font-size */
     font: .85em/1.3em sans-serif;
+
+    color: black;
+
     background-color: #F6F6F6;
     background-image: -webkit-linear-gradient(#FFFFFF, #EDEDED);
     background-image:    -moz-linear-gradient(#FFFFFF, #EDEDED);
     background-image:      -o-linear-gradient(#FFFFFF, #EDEDED);
     background-image:         linear-gradient(#FFFFFF, #EDEDED);
     background-attachment: fixed;
+
     margin: 0;
 }
+
+/* TODO: the following two might be omitted */
 
 td {
     padding: 0;
@@ -24,7 +25,7 @@ a {
 }
 
 abbr {
-    border-bottom: 0px solid black;
+    text-decoration: none;
 }
 
 /******************************************************************************\
@@ -36,14 +37,15 @@ abbr {
 
 #LogoPanel {
     position: absolute;
-    top: 72px;
+    top: 65px;
     left: 24px;
-    width: 220px;
+    width: 200px;
     display: none;
 }
 
 #LogoPanel img {
-    width: 100%;
+    width: 160px;
+    margin-left: 10px;
 }
 
 #UpperPanel {
@@ -52,36 +54,39 @@ abbr {
     left: 0;
     right: 0;
     height: 3em;
-    /* border-width: 0 0 2px 2px; */
-    /* border-style: solid; */
+    border-width: 0 0 2px 2px;
+    border-style: solid;
     border-color: #FAFAFA;
-    /* border-radius: 0 0 0 10px; */
+    border-radius: 0 0 0 10px;
     background-color: #EAEAEC;
-    /* box-shadow: 0 0 2px 0 gray; */
+    box-shadow: 0 0 2px 0 gray;
     z-index: 100;
 }
 
 #SidePanel {
     position: absolute;
-    left: 30px;
-    top: 30px;
+    left: 10px;
+    top: 10px;
     bottom: 30px;
     width: 220px;
-    /* border: 1px solid #ccc; */
+    border-width: 2px 2px 2px 0;
+    border-style: solid;
+    border-color: #FAFAFA;
+    border-radius: 0 10px 10px 0;
     background-color: #EAEAEC;
-    /* box-shadow: 0 0 2px 0 gray; */
+    box-shadow: 0 0 2px 0 gray;
     z-index: 8;
     padding: 0;
 }
 
 #InnerFrame {
     position: absolute;
-    top: 0px;
-    left: 270px;
+    top: 3em;
+    left: 220px;
     right: 0;
     bottom: 0;
-    /* margin: 2px 0 0 2px; */
-    padding: 0 30px 0 0;
+    margin: 2px 0 0 2px;
+    padding: 0 3em;
     overflow-y: scroll;
 }
 
@@ -104,17 +109,16 @@ abbr {
 
 #TimeView_selector {
     display: inline-block;
-    /* position: absolute; */
     height: 2em;
     padding: 0;
     z-index: 10;
     margin: 4px;
     overflow: hidden;
     -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -o-user-select: none;
-    user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+         -o-user-select: none;
+            user-select: none;
 }
 
 /* #TimeView:not(.post_cont) #TimeView_selector:hover */
@@ -124,7 +128,7 @@ abbr {
     margin: 2px;
     background-color: #EAEAEC;
     border: 2px solid #FAFAFA;
-    border-radius: 0px;
+    border-radius: 4px;
     box-shadow: 0 0 2px 0 gray;
 }
 
@@ -219,14 +223,9 @@ abbr {
     top: 72px;
 }
 
-#TimeView_name {
-    display: block;
-    position: absolute;
-    top: .5em;
-    left: 245px;
-    width: 300px;
-    font-size: 18px;
-    text-align: left;
+#TimeView.pre_cont + #SidePanel,
+#TimeView.cont + #SidePanel {
+    top: 260px;
 }
 
 
@@ -266,14 +265,18 @@ abbr {
     right: 118px;
     height: 1.5em;
     margin: 0.5em;
-    border: 1px solid #ddd;
+    border: 0;
     padding: 0.25em;
     z-index: 401;
-    /* border-radius: 2px; */
+    border-radius: 0.5em;
     /* Needed to override WebKit's default font size for inputs */
     font: inherit;
     background-color: #FFFFFF;
     outline: 0;
+}
+
+.teams-hidden #TeamSearch_input {
+    display: none;
 }
 
 #TeamSearch_bg {
@@ -302,7 +305,7 @@ abbr {
     bottom: 0;
     width: 940px;
     margin: 64px auto 48px;
-    border-radius: 0px;
+    border-radius: 12px;
     background-color: white;
 }
 
@@ -390,7 +393,7 @@ abbr {
 #Scoreboard {
     width: 100%;
     table-layout: fixed;
-    margin: 70px 0 10em 0;
+    margin: 20px 0;
 }
 
 #Scoreboard_cols col.sel {
@@ -398,6 +401,10 @@ abbr {
 }
 
 #Scoreboard_cols col.rank {
+    width: 48px;
+}
+
+#Scoreboard_cols col.user_id {
     width: 48px;
 }
 
@@ -411,6 +418,10 @@ abbr {
     width:         calc(2em + 20px);
 }
 
+.teams-hidden #Scoreboard .team {
+    display: none;
+}
+
 #Scoreboard_head tr {
     height: 2.5em;
 }
@@ -420,14 +431,13 @@ abbr {
 }
 
 #Scoreboard_head tr th {
-    background-color: #EAEAEC;
-    /* border: 1px #D0D0D2 solid; */
-    /* border-radius: 4px; */
-    /* box-shadow: 0 0 2px 0 #D2D2D4 inset; */
+    background-color: #ECECEF;
+    border: 1px #D0D0D2 solid;
+    border-radius: 4px;
+    box-shadow: 0 0 2px 0 #D2D2D4 inset;
     height: 24px;
     overflow: hidden;
     white-space: nowrap;
-    padding: 2px;
     text-overflow: ellipsis;
 }
 
@@ -438,10 +448,8 @@ abbr {
 #Scoreboard_body tr td.team img {
     display: block;
     max-width: 40px;
-    max-height: 21px;
+    max-height: 20px;
     margin: 0 auto;
-    border: 1px solid #ddd;
-    /* box-shadow: 0 0 2px 0 gray; */
 }
 
 #Scoreboard_head tr th,
@@ -449,6 +457,7 @@ abbr {
     text-align: center;
 }
 
+#Scoreboard_body tr td.user_id,
 #Scoreboard_body tr td.f_name,
 #Scoreboard_body tr td.l_name {
     text-align: left;
@@ -479,13 +488,15 @@ abbr {
     color: gray;
 }
 
+#Scoreboard_body tr:hover td.user_id,
 #Scoreboard_body tr:hover td.f_name,
 #Scoreboard_body tr:hover td.l_name,
-#Scoreboard_body tr:hover td {
+#Scoreboard_body tr:hover td.team {
     background-color: rgba(200,200,200,0.35);
-    border-radius: 0px;
+    border-radius: 5px;
 }
 
+#Scoreboard_body tr.selected td.user_id,
 #Scoreboard_body tr.selected td.f_name,
 #Scoreboard_body tr.selected td.l_name {
     font-weight: bold;
@@ -522,8 +533,8 @@ abbr {
 
 #Scoreboard_body tr.selected td.sel {
     background: url('img/tick_white.png') no-repeat center transparent;
-    /* border: 1px solid rgba(0,0,0,0.2); */
-    border-radius: 0px;
+    border: 1px solid rgba(0,0,0,0.2);
+    border-radius: 4px;
     opacity: 1;
 }
 
@@ -653,7 +664,7 @@ abbr {
  */
 
 #Scoreboard_body tr.score_up td.rank {
-    border-radius: 0px;
+    border-radius: 5px;
     -webkit-animation-duration: 5s;
        -moz-animation-duration: 5s;
          -o-animation-duration: 5s;
@@ -669,7 +680,7 @@ abbr {
 }
 
 #Scoreboard_body tr.score_down td.rank {
-    border-radius: 0px;
+    border-radius: 5px;
     -webkit-animation-duration: 5s;
        -moz-animation-duration: 5s;
          -o-animation-duration: 5s;
@@ -733,7 +744,7 @@ abbr {
 }
 
 #Scoreboard_body tr.selected.score_up td.rank {
-    border-radius: 0px;
+    border-radius: 5px;
     -webkit-animation-duration: 10s;
        -moz-animation-duration: 10s;
          -o-animation-duration: 10s;
@@ -749,7 +760,7 @@ abbr {
 }
 
 #Scoreboard_body tr.selected.score_down td.rank {
-    border-radius: 0px;
+    border-radius: 5px;
     -webkit-animation-duration: 10s;
        -moz-animation-duration: 10s;
          -o-animation-duration: 10s;
@@ -818,13 +829,14 @@ abbr {
 
 #Scoreboard_body tr td.score {
     opacity: 1;
+    border-radius: 5px;
     color: #333;
     /* text-shadow: 1px 1px #000; */
 }
 
 #Scoreboard_body tr td.score.sort_key {
-    /* border: 1px solid #777777; */
-    /* box-shadow: 0 0 1px white inset; */
+    border: 1px solid #777777;
+    box-shadow: 0 0 1px white inset;
 }
 
 
@@ -881,9 +893,9 @@ abbr {
 }
 
 .score_100 {
-
     background-color: hsl(120, 30%, 55%);
 }
+
 
 /******************************************************************************\
 |                                                                              |
@@ -919,7 +931,7 @@ abbr {
     width: 920px;
     margin: 48px auto;
     padding: 20px;
-    border-radius: 0px;
+    border-radius: 12px;
     background-color: white;
 }
 
@@ -959,10 +971,25 @@ abbr {
     bottom: 100px;
 }
 
+#UserDetail_summary {
+    display: flex;
+    flex-direction: column;
+    font-size: 2em;
+    line-height: 1.5em;
+    text-align: center;
+}
+
+#UserDetail_spacer {
+    flex-grow: 1;
+    min-height: 2em;
+}
+
 #UserDetail_flag {
     bottom: 0;
-    max-height: 100px;
-    max-width: 150px;
+    max-width: 144px;
+    max-height: 96px;
+    object-fit: contain;
+    align-self: center;
 }
 
 #UserDetail_face {
@@ -971,11 +998,8 @@ abbr {
     left: 0;
     max-width: 160px;
     max-height: 240px;
-}
-
-#UserDetail_flag {
-    margin: -1px;
-    border: 1px solid gray;
+    object-fit: contain;
+    align-self: center;
 }
 
 #UserDetail_flag.hidden {
@@ -1020,7 +1044,7 @@ abbr {
     border: 1px solid #999999;
     box-shadow: 0 0 2px gray;
     background-color: #EEEEEE;
-    border-radius: 0px;
+    border-radius: 3px;
     cursor: pointer;
     -webkit-user-select: none;
      -khtml-user-select: none;
@@ -1122,32 +1146,28 @@ abbr {
 /* Style for the network status indicator */
 
 #ConnectionStatus_box {
-    display: block;
-    position: absolute;
-    top: 8px;
-    right: 31px;
+    display: inline-block;
+    position: relative;
+    float: right;
+    margin: 0.5em;
     text-align: right;
-    z-index: 200;
+    z-index: 2;
 }
 
 #ConnectionStatus_label {
-    display: block;
+    display: inline-block;
     position: relative;
-    height: 1.9em;
-    width: 85px;
-    text-align: center;
-    line-height: 2em;
-    /* padding: 0.25em 20px; */
-    margin: -1px 0;
-    z-index: 500;
+    height: 1.3em;
+    padding: 0.25em 20px;
+    z-index: 2;
     border-width: 1px;
     border-style: solid;
-    /* border-radius: 4px; */
+    border-radius: 4px;
     -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -o-user-select: none;
-    user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+         -o-user-select: none;
+            user-select: none;
 }
 
 #ConnectionStatus_box:hover #ConnectionStatus_label {
@@ -1166,10 +1186,10 @@ abbr {
     width: 240px;
     padding: 0.5em;
     margin-top: -1px;
-    z-index: 400;
+    z-index: 1;
     border-width: 1px;
     border-style: solid;
-    border-radius: 0;
+    border-radius: 4px 0 4px 4px;
 }
 
 #ConnectionStatus_box:hover #ConnectionStatus_text,
@@ -1233,6 +1253,10 @@ abbr {
         background-attachment: none;
     }
 
+    #UpperPanel {
+        box-shadow: none;
+    }
+
     #SidePanel {
         left: 0px;
         top: initial;
@@ -1252,6 +1276,7 @@ abbr {
 
     #InnerFrame {
         width: 100vw;
+        top: 2px;
         left: 0;
         margin: 0 0 23vh 0;
         padding: 0 0 0 0;
@@ -1302,7 +1327,7 @@ abbr {
 
     #Scoreboard {
         table-layout: auto;
-        margin: 3em 0 10em 0;
+        margin: 3em 0 1em 0;
         -moz-user-select: none;
         -webkit-user-select: none;
         user-select: none;

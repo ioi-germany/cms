@@ -30,7 +30,6 @@ from time import time
 from copy import deepcopy
 from math import sqrt
 
-from six import iteritems
 from babel.core import Locale
 
 from cms.io.BackgroundScheduler import BackgroundScheduler
@@ -104,7 +103,7 @@ class SingleTaskTranslateInfo:
                                   for l in path.parent.iterdir()
                                   if l.is_file() and l.name.endswith(".tex") and l.name.startswith(info["filename"]+"-")]
 
-        for key, value in iteritems(info):
+        for key, value in info.items():
             setattr(self, key, value)
 
     def to_dict(self):

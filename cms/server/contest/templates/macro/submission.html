@@ -103,7 +103,7 @@ unit_test (boolean): whether to display only the unit tests (true) or
                     xsrf_form_html,
                     actual_phase,
                     s,
-                    submissions|length - loop.index0,
+                    s.opaque_id,
                     show_date,
                     can_use_tokens,
                     can_play_token,
@@ -118,7 +118,7 @@ unit_test (boolean): whether to display only the unit tests (true) or
 {%- endmacro %}
 
 {% macro row(url, contest_url, translation, xsrf_form_html,
-             actual_phase, s, s_num, show_date,
+             actual_phase, s, opaque_id, show_date,
              can_use_tokens, can_play_token, can_play_token_now,
              submissions_download_allowed, unit_test) -%}
 {#
@@ -130,8 +130,7 @@ translation (Translation): locale to use to show messages.
 xsrf_form_html (str): input element for the XSRF protection.
 actual_phase (int): phase of the contest.
 s (Submission): the submission to display.
-s_num (int): 1-based position of the submission in the list of
-    submissions of the currently logged in participaiton on this task.
+opaque_id (int): opaque id of the submission.
 show_date (bool): whether to display only the time or also the date.
 can_use_tokens (bool): whether tokens are allowed for this task.
 can_play_token (bool): if can_use_tokens is true, whether the user has a
@@ -148,7 +147,7 @@ unit_test (bool): whether this is a unit test
 {% set score_type = get_score_type(dataset=task.active_dataset) %}
 {% set sr = s.get_result(task.active_dataset) or undefined %}
 {% set status = sr.get_status() if sr is defined else SubmissionResult.COMPILING  %}
-<tr data-submission="{{ s_num }}" data-status="{{ status }}"
+<tr data-submission="{{ opaque_id }}" data-status="{{ status }}"
 {% if unit_test %}
     {% if status == SubmissionResult.SCORED %}
         {% if sr.unit_test_score_details["verdict"][0] == 0 %}
@@ -231,7 +230,7 @@ unit_test (bool): whether this is a unit test
             {% if s.language is not none %}
                 {% set filename = filename|replace(".%l", (s.language|to_language).source_extension) %}
             {% endif %}
-        <a class="btn" href="{{ contest_url("tasks", task.name, "submissions", s_num, "files", filename) }}">
+        <a class="btn" href="{{ contest_url("tasks", task.name, "submissions", opaque_id, "files", filename) }}">
             {% trans %}Download{% endtrans %}
         </a>
         {% else %}
@@ -249,7 +248,7 @@ unit_test (bool): whether this is a unit test
                     {% endif %}
                 {% endif %}
                 <li>
-                    <a href="{{ contest_url("tasks", task.name, "submissions", s_num, "files", filename) }}">
+                    <a href="{{ contest_url("tasks", task.name, "submissions", opaque_id, "files", filename) }}">
                         {{ filename }}
                     </a>
                 </li>
@@ -266,7 +265,7 @@ unit_test (bool): whether this is a unit test
         {% else %}
             {% if can_play_token_now %}
               {# Can play a token right now: show the button. #}
-        <form action="{{ contest_url("tasks", task.name, "submissions", s_num, "token") }}" method="POST">
+        <form action="{{ contest_url("tasks", task.name, "submissions", opaque_id, "token") }}" method="POST">
             {{ xsrf_form_html|safe }}
             <button type="submit" class="btn btn-warning">{% trans %}Play!{% endtrans %}</button>
         </form>

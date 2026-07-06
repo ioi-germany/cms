@@ -16,13 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import atexit
 import errno
-import json
 import logging
 import os
 import sys
+import tomllib
+import typing
 
-import pkg_resources
+import importlib.resources
 
 from cmsranking.Logger import add_file_handler
 
@@ -43,10 +45,11 @@ class Config:
         """
         # Connection.
         self.bind_address = ''
-        self.http_port = 8890
-        self.https_port = None
-        self.https_certfile = None
-        self.https_keyfile = None
+        self.http_port: int | None = 8890
+        self.https_port: int | None = None
+        self.https_certfile: str | None = None
+        self.https_keyfile: str | None = None
+        # TODO unused???
         self.timeout = 600  # 10 minutes (in seconds)
 
         # Authentication.
@@ -57,19 +60,24 @@ class Config:
         # Buffers
         self.buffer_size = 100  # Needs to be strictly positive.
 
-        self.web_dir = pkg_resources.resource_filename("cmsranking", "static")
-        self.log_dir = os.path.join("/", "var", "local", "log", "cms", "ranking")
-        self.lib_dir = os.path.join("/", "var", "local", "lib", "cms", "ranking")
-        self.conf_paths = [
-            os.path.join("/", "usr", "local", "etc", "cms.ranking.conf"),
-            os.path.join("/", "etc", "cms.ranking.conf"),
-        ]
+        # Keep the static files context manager alive for the application lifetime
+        self._static_files_context = importlib.resources.path("cmsranking", "static")
+        self.web_dir = str(self._static_files_context.__enter__())
+        # Register cleanup handler to properly exit the context manager
+        atexit.register(self._static_files_context.__exit__, None, None, None)
 
-        # Allow users to override config file path using environment
+        # Try to find CMS installation root from the venv in which we run
+        self.base_dir = sys.prefix
+        if self.base_dir == '/usr':
+            logger.critical('CMS must be run within a Python virtual environment')
+            sys.exit(1)
+        self.log_dir = os.path.join(self.base_dir, 'log/ranking')
+        self.lib_dir = os.path.join(self.base_dir, 'lib/ranking')
+
+        # Default config file path can be overridden using environment
         # variable 'CMS_RANKING_CONFIG'.
-        if CMS_RANKING_CONFIG_ENV_VAR in os.environ:
-            self.conf_paths = [os.environ[CMS_RANKING_CONFIG_ENV_VAR]] \
-                + self.conf_paths
+        default_config_file = os.path.join(self.base_dir, 'etc/cms_ranking.toml')
+        self.config_file = os.environ.get('CMS_RANKING_CONFIG', default_config_file)
 
     def get(self, key):
         """Get the config value for the given key.
@@ -77,17 +85,15 @@ class Config:
         """
         return getattr(self, key)
 
-    def load(self, config_override_fobj=None):
-        """Look for config files on disk and load them.
+    def load(self, config_override: str | None = None):
+        """Load the configuration file.
 
         """
-        # If a command-line override is given it is used exclusively.
-        if config_override_fobj is not None:
-            if not self._load_one(config_override_fobj):
-                sys.exit(1)
-        else:
-            if not self._load_many(self.conf_paths):
-                sys.exit(1)
+
+        config_file = config_override if config_override is not None else self.config_file
+        if not self._load_config(config_file):
+            logging.critical(f'Cannot load configuration file {config_file}')
+            sys.exit(1)
 
         try:
             os.makedirs(self.lib_dir)
@@ -106,59 +112,39 @@ class Config:
 
         add_file_handler(self.log_dir)
 
-    def _load_many(self, conf_paths):
-        """Load the first existing config file among the given ones.
-
-        Take a list of paths where config files may reside and attempt
-        to load the first one that exists.
-
-        conf_paths([str]): paths of config file candidates, from most
-            to least prioritary.
-        returns (bool): whether loading was successful.
-
-        """
-        for conf_path in conf_paths:
-            try:
-                with open(conf_path, "rt", encoding="utf-8") as conf_fobj:
-                    logger.info("Using config file %s.", conf_path)
-                    return self._load_one(conf_fobj)
-            except FileNotFoundError:
-                # If it doesn't exist we just skip to the next one.
-                pass
-            except OSError as error:
-                logger.critical("Unable to access config file %s: [%s] %s.",
-                                conf_path, errno.errorcode[error.errno],
-                                os.strerror(error.errno))
-                return False
-        logger.warning("No config file found, using hardcoded defaults.")
-        return True
-
-    def _load_one(self, conf_fobj):
+    def _load_config(self, path: str) -> bool:
         """Populate config parameters from the given file.
 
-        Parse it as JSON and store in self all configuration properties
+        Parse it as TOML and store in self all configuration properties
         it defines. Log critical message and return False if anything
         goes wrong or seems odd.
 
-        conf_fobj (file-like object): the config file.
-        returns (bool): whether parsing was successful.
+        path: the path of the TOML config file.
+        returns: whether parsing was successful.
 
         """
-        # Parse config file.
+        # Load config file.
         try:
-            data = json.load(conf_fobj)
-        except ValueError:
-            logger.critical("Config file is invalid JSON.")
+            with open(path, 'rb') as f:
+                data = tomllib.load(f)
+        except FileNotFoundError:
+            logger.debug("Couldn't find config file %s (maybe you need to "
+                         "convert it from cms.ranking.conf to cms_ranking.toml?).", path)
+            return False
+        except OSError as error:
+            logger.warning("I/O error while opening file %s: [%s] %s",
+                           path, errno.errorcode[error.errno],
+                           os.strerror(error.errno))
+            return False
+        except ValueError as error:
+            logger.warning("Invalid syntax in file %s: %s", path, error)
             return False
 
         # Store every config property.
         for key, value in data.items():
-            if key.startswith("_"):
-                continue
-            if not hasattr(self, key):
-                logger.critical("Invalid field %s in config file, maybe a "
-                                "typo? (use leading underscore to ignore).",
-                                key)
-                return False
-            setattr(self, key, value)
+            if hasattr(self, key):
+                setattr(self, key, value)
+            else:
+                logger.warning("Unrecognized key %s in config!", key)
+
         return True

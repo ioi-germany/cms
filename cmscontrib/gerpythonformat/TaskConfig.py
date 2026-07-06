@@ -45,7 +45,6 @@ import json
 import os
 import shutil
 
-from six import iteritems, iterkeys
 from textwrap import wrap
 
 
@@ -806,7 +805,7 @@ class MySubmission(object):
 
         # Convert the given lists of expected events to something more
         # readable for ScoreTypes
-        for key, items in iteritems(self.expected):
+        for key, items in self.expected.items():
             for item in items:
                 if isinstance(item, MyCase):
                     self.case_expectations[item.codename] += encode(key)
@@ -814,8 +813,10 @@ class MySubmission(object):
                     self.expectations[item.unique_name] += encode(key)
 
         # JSON doesn't allow lists nor tuples as keys so we dump them, too
-        self.expectations = {json.dumps(key, sort_keys=True): val for key, val
-                             in iteritems(self.expectations)}
+        self.expectations = {
+            json.dumps(key, sort_keys=True): val
+            for key, val in self.expectations.items()
+        }
 
     def _should_test(self, local_test):
         """
@@ -1870,9 +1871,12 @@ class TaskConfig(CommonConfig, Scope):
 
         with header("Statistics", depth=3):
             print_msg("Taskname: {}".format(self.name))
-            sts = ["{} {}{}".format(l, self.short_path(s.file_),
-                                    " (primary)" if s.primary else "")
-                   for l, s in iteritems(self._statements)]
+            sts = [
+                "{} {}{}".format(
+                    l, self.short_path(s.file_), " (primary)" if s.primary else ""
+                )
+                for l, s in self._statements.items()
+            ]
             print_msg("Task statements: {}".format(", ".join(sts)))
             print_msg("Attachments: {}".format(", ".join(self.attachments)))
             print_msg("Spoilers: {}".format(", ".join(self.spoilers)))
@@ -1992,7 +1996,7 @@ class TaskConfig(CommonConfig, Scope):
         primary_statements = []
 
         # Add statements
-        for language, statement in iteritems(self._statements):
+        for language, statement in self._statements.items():
             digest = file_cacher.put_file_from_path(
                 statement.file_,
                 "Statement task %s in language %s" % (self.name, language))
@@ -2004,14 +2008,14 @@ class TaskConfig(CommonConfig, Scope):
         tdb.primary_statements = primary_statements
 
         # Add attachments
-        for name, file in iteritems(self.attachments):
+        for name, file in self.attachments.items():
             digest = file_cacher.put_file_from_path(
                 file,
                 "Attachment %s to task %s" % (name, self.name))
             tdb.attachments[name] = Attachment(filename=name, digest=digest)
 
         # Add spoilers
-        for name, file in iteritems(self.spoilers):
+        for name, file in self.spoilers.items():
             digest = file_cacher.put_file_from_path(
                 file,
                 "Spoiler %s to task %s" % (name, self.name))
@@ -2074,7 +2078,7 @@ class TaskConfig(CommonConfig, Scope):
             ddb.testcases[c.codename] = tcdb
 
         # Add managers
-        for name, file in iteritems(self.managers):
+        for name, file in self.managers.items():
             digest = file_cacher.put_file_from_path(
                 file,
                 "Manager %s for task %s" % (name, self.name))
@@ -2373,10 +2377,12 @@ class TaskConfig(CommonConfig, Scope):
         # Create submission object
         sdb = Submission(
             timestamp=datetime.utcnow(),
+            opaque_id=Submission.generate_opaque_id(None, participation.id),
             language=submission_lang,
             participation=participation,
             comment="%s" % (", ".join(os.path.basename(f) for f in files)),
-            official=official)
+            official=official,
+        )
         sdb.task = tdb
         sdb.timestamp = datetime.utcnow()
         sdb.language = submission_lang
@@ -2451,7 +2457,7 @@ class TaskConfig(CommonConfig, Scope):
                 print_block(submission_result.compilation_stderr)
             # Evaluate
             nr_of_testcases = len(ddb.testcases)
-            for nr, codename in enumerate(sorted(iterkeys(ddb.testcases))):
+            for nr, codename in enumerate(sorted(ddb.testcases.keys())):
                 print("\033[2K\033[1GEvaluating {} / {}"
                       .format(nr+1, nr_of_testcases), end='', flush=True)
                 evaluation_operation = ESOperation(ESOperation.EVALUATION,

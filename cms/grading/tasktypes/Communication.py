@@ -22,17 +22,20 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from collections.abc import Iterable
 import logging
 import time
 import os
-import signal
+import subprocess
 import tempfile
 from functools import reduce
+import typing
 
 from cms import config, rmtree
 from cms.db import Executable
 from cms.grading.ParameterTypes import ParameterTypeChoice, ParameterTypeInt
 from cms.grading.Sandbox import wait_without_std, Sandbox
+from cms.grading.language import Language
 from cms.grading.languagemanager import LANGUAGES, get_language
 from cms.grading.steps import compilation_step, evaluation_step_before_run, \
     evaluation_step_after_run, extract_outcome_and_text, \
@@ -139,9 +142,9 @@ class Communication(TaskType):
     def __init__(self, parameters):
         super().__init__(parameters)
 
-        self.num_processes = self.parameters[0]
-        self.compilation = self.parameters[1]
-        self.io = self.parameters[2]
+        self.num_processes: int = self.parameters[0]
+        self.compilation: str = self.parameters[1]
+        self.io: str = self.parameters[2]
 
     def get_compilation_commands(self, submission_format):
         """See TaskType.get_compilation_commands."""
@@ -171,21 +174,21 @@ class Communication(TaskType):
         """See TaskType.get_auto_managers."""
         return [self.MANAGER_FILENAME]
 
-    def _uses_stub(self):
+    def _uses_stub(self) -> bool:
         return self.compilation == self.COMPILATION_STUB
 
-    def _uses_fifos(self):
+    def _uses_fifos(self) -> bool:
         return self.io == self.USER_IO_FIFOS
 
     @staticmethod
-    def _executable_filename(codenames, language):
+    def _executable_filename(codenames: Iterable[str], language: Language) -> str:
         """Return the chosen executable name computed from the codenames.
 
-        codenames ([str]): submission format or codename of submitted files,
+        codenames: submission format or codename of submitted files,
             may contain %l.
-        language (Language): the programming language of the submission.
+        language: the programming language of the submission.
 
-        return (str): a deterministic executable name.
+        return: a deterministic executable name.
 
         """
         name = "_".join(sorted(codename.replace(".%l", "")
@@ -253,7 +256,7 @@ class Communication(TaskType):
                 Executable(executable_filename, digest)
 
         # Cleanup.
-        delete_sandbox(sandbox, job.success, job.keep_sandbox)
+        delete_sandbox(sandbox, job)
 
     def evaluate(self, job, file_cacher):
         """See TaskType.evaluate."""
@@ -357,7 +360,7 @@ class Communication(TaskType):
         if not self._uses_stub():
             manager_dirs_map[abortion_control_fifo_dir] = \
                 (sandbox_abortion_control_fifo_dir, "rw")
-        manager = evaluation_step_before_run(
+        manager_ = evaluation_step_before_run(
             sandbox_mgr,
             manager_command,
             manager_time_limit,
@@ -365,7 +368,11 @@ class Communication(TaskType):
             dirs_map=manager_dirs_map,
             writable_files=[self.OUTPUT_FILENAME],
             stdin_redirect=self.INPUT_FILENAME,
-            multiprocess=job.multithreaded_sandbox)
+            multiprocess=job.multithreaded_sandbox,
+        )
+        # the static return type of evaluation_step_... is bool | Popen,
+        # but it's only bool if wait=True, which it isn't here.
+        manager = typing.cast(subprocess.Popen, manager_)
 
         if not self._uses_stub():
             solution_quitter = open(fifo_solution_quitter, "r")
@@ -376,7 +383,7 @@ class Communication(TaskType):
         language = get_language(job.language)
         main = self.STUB_BASENAME if self._uses_stub() \
                else os.path.splitext(executable_filename)[0]
-        processes = [None for i in indices]
+        processes: list[subprocess.Popen] = [None for i in indices]
         for i in indices:
             args = []
             stdin_redirect = None
@@ -401,7 +408,7 @@ class Communication(TaskType):
             # that don't need tight control.
             if len(commands) > 1:
                 trusted_step(sandbox_user[i], commands[:-1])
-            processes[i] = evaluation_step_before_run(
+            the_process = evaluation_step_before_run(
                 sandbox_user[i],
                 commands[-1],
                 job.time_limit,
@@ -409,7 +416,11 @@ class Communication(TaskType):
                 dirs_map={fifo_dir[i]: (sandbox_fifo_dir[i], "rw")},
                 stdin_redirect=stdin_redirect,
                 stdout_redirect=stdout_redirect,
-                multiprocess=job.multithreaded_sandbox)
+                multiprocess=job.multithreaded_sandbox,
+            )
+            # the static return type of evaluation_step_... is bool | Popen,
+            # but it's only bool if wait=True, which it isn't here.
+            processes[i] = typing.cast(subprocess.Popen, the_process)
 
         if not self._uses_stub():
             # Manager still running but wants to quit
@@ -486,9 +497,9 @@ class Communication(TaskType):
         job.text = text
         job.plus = stats_user
 
-        delete_sandbox(sandbox_mgr, job.success, job.keep_sandbox)
+        delete_sandbox(sandbox_mgr, job)
         for s in sandbox_user:
-            delete_sandbox(s, job.success, job.keep_sandbox)
+            delete_sandbox(s, job)
         if job.success and not config.keep_sandbox and not job.keep_sandbox:
             for d in fifo_dir:
                 rmtree(d)

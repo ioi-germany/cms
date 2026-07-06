@@ -29,7 +29,7 @@ from cmscontrib.gerpythonformat.Supplement import def_latex, input_latex
 from cmscontrib.gerpythonformat.Messenger import print_msg
 import os
 import shutil
-from PyPDF2 import PdfFileReader, PdfFileWriter
+from PyPDF2 import PdfReader, PdfWriter
 
 
 # This is the template for BOI 2021 and 2022 (an only slightly modified lg template)
@@ -179,35 +179,35 @@ class BOITemplate(LgTemplate):
                     self.contest._build_supplements_for_key("credentials")
                     self.contest._build_supplements_for_key("lang")
 
-                    pdf = PdfFileReader(self.contest.compile(filename))
-                    assert(pdf.getNumPages() == len(users))
+                    pdf = PdfReader(self.contest.compile(filename))
+                    assert len(pdf.pages) == len(users)
 
                     for i, u in enumerate(users):
-                        overview_sheets_for[(u.username,l)] = pdf.getPage(i)
+                        overview_sheets_for[(u.username, l)] = pdf.pages[i]
 
                     self.contest.supplements["lang"].parts.clear()
                     self.contest.supplements["credentials"].parts.clear()
 
             def cleardoublepage(stream):
-                if stream.getNumPages() % 2 == 1:
-                    stream.addBlankPage()
+                if len(stream.pages) % 2 == 1:
+                    stream.add_blank_page()
 
             for team, users in teams.items():
                 if not os.path.exists(team.code):
                     os.mkdir(team.code)
 
                 with chdir(team.code):
-                    hw = PdfFileWriter()
+                    hw = PdfWriter()
 
                     for u in users:
                         # Overview sheets
-                        ow = PdfFileWriter()
+                        ow = PdfWriter()
 
                         for l in u.primary_statements:
                             if self.contest.relevant_language and \
                                 self.contest.relevant_language != l:
                                 continue
-                            ow.addPage(overview_sheets_for[(u.username,l)])
+                            ow.add_page(overview_sheets_for[(u.username, l)])
                         with open("overview-" + u.username + ".pdf", "wb") as f:
                             ow.write(f)
 
@@ -224,17 +224,17 @@ class BOITemplate(LgTemplate):
                                     "{} for user {} to the handout "
                                     "as requested by team {}"
                                     .format(l, u.username, team.code))
-                                hw.addPage(overview_sheets_for[(u.username,l)])
+                                hw.add_page(overview_sheets_for[(u.username, l)])
                                 cleardoublepage(hw)
                                 continue
-                            hw.addPage(overview_sheets_for[(u.username,l)])
+                            hw.add_page(overview_sheets_for[(u.username, l)])
                             cleardoublepage(hw)
 
                             for t in sorted(self.contest.tasks.values(),
                                             key=lambda x: x.name):
                                 if l in t._statements:
-                                    st = PdfFileReader(t._statements[l].file_)
-                                    hw.appendPagesFromReader(st)
+                                    st = PdfReader(t._statements[l].file_)
+                                    hw.append_pages_from_reader(st)
                                     cleardoublepage(hw)
 
                     with open("handout.pdf", "wb") as f:

@@ -1,6 +1,5 @@
 .dockerignore
 Dockerfile
-docker-compose*.yml
 .vagrant/
 codecov/
 .dev/
