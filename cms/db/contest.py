@@ -43,6 +43,7 @@ from . import Codename, Base, Admin
 import typing
 if typing.TYPE_CHECKING:
     from . import Task, Participation
+    from cms.db.user import Group
 
 
 class Contest(Base):
@@ -279,6 +280,14 @@ class Contest(Base):
         passive_deletes=True,
         back_populates="contest")
 
+    groups: list["Group"] = relationship(
+        "Group",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        primaryjoin="Contest.id==Group.contest_id",
+        back_populates="contest",
+    )
+
     def get_group(self, name):
         """ Return the group with the given name.
 
@@ -291,28 +300,6 @@ class Contest(Base):
             if g.name == name:
                 return g
         raise KeyError("Group not found")
-
-    def phase(self, timestamp):
-        """Return: -1 if contest isn't started yet at time timestamp,
-                    0 if the contest is active at time timestamp,
-                    1 if the contest has ended but analysis mode
-                      hasn't started yet
-                    2 if the contest has ended and analysis mode is active
-                    3 if the contest has ended and analysis mode is disabled or
-                      has ended
-
-        timestamp: the time we are iterested in.
-        """
-        if timestamp < self.start:
-            return -1
-        if timestamp <= self.stop:
-            return 0
-        if self.analysis_enabled:
-            if timestamp < self.analysis_start:
-                return 1
-            elif timestamp <= self.analysis_stop:
-                return 2
-        return 3
 
 class Announcement(Base):
     """Class to store a messages sent by the contest managers to all

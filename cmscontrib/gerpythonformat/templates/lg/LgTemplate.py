@@ -233,7 +233,7 @@ class LgTemplate(PlainTemplate):
             return "\n".join(documents(u, l) for l in u.primary_statements)
 
         def documents(u, l):
-            return "\\def\TemplateLanguage{%s}" % l + \
+            return "\\def\\TemplateLanguage{%s}" % l + \
                    "\\printoverviewpage{%s}{%s, %s}{%s}" % \
                        (u.username, u.lastname, u.firstname, u.password) + \
                    statements(u, l)

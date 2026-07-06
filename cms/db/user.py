@@ -103,12 +103,18 @@ class Group(Base):
         # nullable=False,
         index=True,
     )
-    contest = relationship(
+    contest: Contest = relationship(
         Contest,
-        backref=backref('groups',
-                        cascade="all, delete-orphan",
-                        passive_deletes=True),
-        primaryjoin="Contest.id==Group.contest_id")
+        back_populates="groups",
+        primaryjoin="Contest.id==Group.contest_id",
+    )
+
+    participations: list["Participation"] = relationship(
+        "Participation",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="group",
+    )
 
     def phase(self, timestamp):
         """Return: -1 if contest isn't started yet at time timestamp,
@@ -342,11 +348,7 @@ class Participation(Base):
         nullable=False,
         index=True,
     )
-    group = relationship(
-        Group,
-        backref=backref("participations",
-                        cascade="all, delete-orphan",
-                        passive_deletes=True))
+    group: Group = relationship(Group, back_populates="participations")
 
     # Team (id and object) that the user is representing with this
     # participation.

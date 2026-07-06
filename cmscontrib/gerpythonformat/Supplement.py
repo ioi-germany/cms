@@ -47,7 +47,7 @@ def def_latex(name, x):
 
 
 def input_latex(x):
-    """Return a function returning a latex statement \input{result of x}
+    """Return a function returning a latex statement \\input{result of x}
     to load the file whose path is returned by x.
     """
     def f():
