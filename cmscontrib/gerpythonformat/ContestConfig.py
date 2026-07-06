@@ -575,9 +575,9 @@ class ContestConfig(CommonConfig):
         if t is None:
             self.min_submission_interval_grace_period = None
         elif isinstance(t, int):
-            self.min_submission_interval_grace_period = t
+            self.min_submission_interval_grace_period = timedelta(seconds=t)
         else:
-            self.min_submission_interval_grace_period = t.seconds
+            self.min_submission_interval_grace_period = t
 
     def short_path(self, f):
         """
@@ -611,6 +611,9 @@ class ContestConfig(CommonConfig):
         cdb.min_submission_interval = self.min_submission_interval
         cdb.max_user_test_number = self.max_user_test_number
         cdb.min_user_test_interval = self.min_user_test_interval
+        cdb.min_submission_interval_grace_period = (
+            self.min_submission_interval_grace_period
+        )
 
         self.usersdb = {}
         self.participationsdb = {}
