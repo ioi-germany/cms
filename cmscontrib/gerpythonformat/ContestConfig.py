@@ -157,6 +157,7 @@ class ContestConfig(CommonConfig):
         # Default submission limits
         self.submission_limits(None, None)
         self.user_test_limits(None, None)
+        self.grace_period(None)
 
         # a standard tokenwise comparator (specified here so that it has to be
         # compiled at most once per contest)
@@ -559,6 +560,24 @@ class ContestConfig(CommonConfig):
 
         """
         self._mytestuser = u
+
+    @exported_function
+    def grace_period(self, t: int | timedelta | None):
+        """
+        Set the grace period, before the end of participation, during
+        which the minimum submission interval restriction is removed.
+
+        grace_period: if None, the restriction is always active,
+            if a positive duration, the restriction is lifted during the final
+            `grace_period` before the participation ends
+            (i.e. from participation_end - grace_period onward).
+        """
+        if t is None:
+            self.min_submission_interval_grace_period = None
+        elif isinstance(t, int):
+            self.min_submission_interval_grace_period = t
+        else:
+            self.min_submission_interval_grace_period = t.seconds
 
     def short_path(self, f):
         """
