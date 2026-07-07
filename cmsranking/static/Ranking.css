@@ -223,9 +223,14 @@ abbr {
     top: 72px;
 }
 
-#TimeView.pre_cont + #SidePanel,
-#TimeView.cont + #SidePanel {
-    top: 260px;
+#TimeView_name {
+    display: block;
+    position: absolute;
+    top: .5em;
+    left: 245px;
+    width: 300px;
+    font-size: 18px;
+    text-align: left;
 }
 
 
@@ -955,8 +960,6 @@ abbr {
 #UserDetail_flag {
     position: absolute;
     right: 470px;
-    font-size: 2em;
-    line-height: 1.5em;
 }
 
 #UserDetail_f_name {
