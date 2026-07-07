@@ -212,6 +212,14 @@ class FunctionalTestFramework:
             page)
         if match is not None:
             contest_id = int(match.groups()[0])
+
+            #Query for group ID of the 'default' group
+            r = self.admin_req('contest/%s/users' % contest_id)
+            g = re.search(r'<select name="group_id">\s+<option value="null" selected>Select a group</option>\s+<option value="([0-9]+)">\s+default\s+</option>\s+</select>', r.text)
+            if g:
+                kwargs["main_group_id"] = int(g.group(1))
+            else:
+                raise TestException("Unable to find any group.")
             self.admin_req('contest/%s' % contest_id, args=kwargs)
             return contest_id
         else:
@@ -287,6 +295,14 @@ class FunctionalTestFramework:
             self.created_users[user_id] = kwargs
         else:
             raise TestException("Unable to create user.")
+
+        #Query for group ID of the 'default' group
+        r = self.admin_req('contest/%s/users' % kwargs["contest_id"])
+        g = re.search(r'<select name="group_id">\s+<option value="null" selected>Select a group</option>\s+<option value="([0-9]+)">\s+default\s+</option>\s+</select>', r.text)
+        if g:
+            kwargs["group_id"] = int(g.group(1))
+        else:
+            raise TestException("Unable to find any group.")
 
         kwargs["user_id"] = user_id
         r = self.admin_req('contest/%s/users/add' % kwargs["contest_id"],

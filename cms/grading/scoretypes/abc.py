@@ -83,6 +83,11 @@ class ScoreType(metaclass=ABCMeta):
             if hasattr(self, "score_column_headers"):
                 self.public_score_header, self.private_score_header = \
                     self.score_column_headers()
+            else:
+                # HTML templates require these to be set; otherwise, the server crashes.
+                # As we only ever use SubtaskGroup, it is not clear whether this makes sense:
+                self.public_score_header = "Sample Score"
+                self.private_score_header = "Actual Score"
         except Exception as e:
             raise ValueError(
                 "Unable to instantiate score type (probably due to invalid "
