@@ -175,12 +175,12 @@ def task_score(
         score = _task_score_max_tokened_last(score_details_tokened)
     else:
         raise ValueError("Unknown score mode '%s'" % task.score_mode)
-    
-    # The following line should be unnecessary since subtask scores 
-    # are rounded. However we are using floats not Decimals 
-    # and this can cause errors. So we round again to be sure. 
+
+    # The following line should be unnecessary since subtask scores
+    # are rounded. However we are using floats not Decimals
+    # and this can cause errors. So we round again to be sure.
     score = round(score, task.score_precision)
-    
+
     return score, partial
 
 
@@ -367,9 +367,8 @@ class UnitTest:
         return result
 
     @staticmethod
-    def ignore(x, l):
-        return UnitTest.is_score(x) or ("time" in l and x == "time?") or\
-                                       ("memory" in l and x == "memory?")
+    def ignore(x):
+        return UnitTest.is_score(x) or x == "time?" or x == "memory?"
 
     @staticmethod
     def is_score(x):
@@ -380,24 +379,8 @@ class UnitTest:
             return False
 
     @staticmethod
-    def get_scores(l):
-        return [float(x) for x in l if UnitTest.is_score(x)]
-
-    @staticmethod
     def remove_scores(l):
         return [x for x in l if not UnitTest.is_score(x)]
-
-    @staticmethod
-    def score(results):
-        """Get the minimum score of a list of results.
-
-        results ([unicode]): list of results
-                             (time, time?, memory, memory? or a score)
-
-        return (float): minimum score (1.0 if no score is present)
-
-        """
-        return min(UnitTest.get_scores(results) + [1.0])
 
     @staticmethod
     def compare_score(score, interval):
@@ -431,57 +414,6 @@ class UnitTest:
         return [x for x in l if not UnitTest.is_interval(x)]
 
     @staticmethod
-    def case_line(results, mandatory, _optional, c=['✓', '≈', '✗', '―']):
-        """Information about a single testcase as part of a group
-           This function returns a list of pairs, where the first entry
-           visualises the respective result and the second one is >0
-           iff the result is as expected
-        """
-        optional = _optional + mandatory
-
-        def badness(key, r):
-            if key in r:
-                return 2
-            if key + '?' in r:
-                return 1
-            else:
-                return 0
-
-        def get_int(b):
-            if b:
-                return 1
-            else:
-                return -1
-
-        L = []
-
-        for x in ['time', 'memory']:
-            L.append((c[badness(x, results)],
-                      get_int((x in results or x not in mandatory) and
-                              badness(x, results) <= badness(x, optional))))
-
-        if UnitTest.meaningful_score(results):
-            s = UnitTest.score(results)
-
-            optional_intervals = UnitTest.get_intervals(optional)
-            if len(optional_intervals) == 0:
-                optional_intervals = [[1.0, 1.0]]
-
-            score_okay = all(UnitTest.compare_score(s, i) == 0
-                             for i in UnitTest.get_intervals(mandatory)) and \
-                         all(UnitTest.compare_score(s, i) != -1
-                             for i in optional_intervals)
-            L.append((s, get_int(score_okay)))
-        else:
-            L.append((c[-1], 0))
-
-        if "arbitrary" in optional:
-            for i in range(0, len(L)):
-                L[i] = (L[i][0], 0)
-
-        return L
-
-    @staticmethod
     def judge_score(x, intervals):
         l = [UnitTest.compare_score(x, i) for i in intervals]
 
@@ -490,76 +422,3 @@ class UnitTest:
         if any(x > 0 for x in l):
             return 1
         return 0
-
-    @staticmethod
-    def judge_scores(scores, intervals):
-        if len(scores) == 0:
-            return 0
-        else:
-            return min(UnitTest.judge_score(s, intervals) for s in scores)
-
-    @staticmethod
-    def judge_subtask(results, _extended_results, mandatory, _optional):
-        """Judge a whole group given a concatenated list of the results of
-           the individual cases
-           extended_results contains results of testcases with explicit
-           expectations
-        """
-        optional = _optional + mandatory
-        extended_results = results + _extended_results
-
-        if "arbitrary" in mandatory:
-            return (1337, "ignored", "You specified that this specific "
-                    "outcome should be ignored (please only do this if you're "
-                    "really sure that's what you want).")
-
-        if "arbitrary" in optional and len(mandatory) != 0:
-            raise Exception("Undefined behaviour: you specified the outcome of "
-                            "a group as arbitrary while giving specific "
-                            "expectations for at least one testcase in this "
-                            "group. I don't know what to do.")
-
-        scores = UnitTest.get_scores(results)
-
-        # When checking whether the score is too low we also care about the
-        # optional score constraints
-        intervals = UnitTest.get_intervals(optional) or [[1.0, 1.0]]
-        score_verdict = UnitTest.judge_scores(scores, intervals)
-
-        if score_verdict == -1 or any(x not in optional for x in results
-                                      if not UnitTest.ignore(x,
-                                          ['time', 'memory'])):
-            return (-2, "failed", "The submission failed for a reason "
-                    "you did not expect (or score too low).")
-
-        if any(x.endswith("?") for x in results
-               if not UnitTest.ignore(x, optional)):
-            return (0, "ambiguous", "It is not clear whether the submission "
-                       "respects the limits.")
-
-        # When checking whether the score is too high we only care about the
-        # mandatory score constraints
-        intervals = UnitTest.get_intervals(mandatory) or [[1.0, 1.0]]
-        score_verdict = UnitTest.judge_scores(scores, intervals)
-
-        mandatory = UnitTest.remove_intervals(mandatory)
-
-        if (score_verdict == 0 and (len(mandatory) == 0 or
-                                    UnitTest.score(results) != 1.0)) or\
-           any(x in extended_results for x in mandatory):
-            return (1, "okay", "... all shall be well.")
-
-        return (-1, "failed",
-                "You expected the submission to fail but it didn't "
-                "(or score too high).")
-
-    @staticmethod
-    def judge_case(results, mandatory, optional):
-        """Judge a single testcase
-        """
-        if "arbitrary" in mandatory:
-            raise Exception("Undefined behaviour: you specified the outcome of "
-                            "a testcase as arbitrary. I don't know what to do")
-
-        a, b, c = UnitTest.judge_subtask(results, [], mandatory, optional)
-        return a, c

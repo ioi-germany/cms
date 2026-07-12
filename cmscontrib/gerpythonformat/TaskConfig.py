@@ -2615,38 +2615,33 @@ class TaskConfig(CommonConfig, Scope):
         details = score_type.compute_unit_test_score(submission_result,
                                                      sdb.additional_info)
 
-        def v(acc_des, z=False):
-            (accepted, desc) = acc_des
-            d = desc
+        def w(details, stat_desc, length, z=False):
+            status, desc = stat_desc
+            return pad_left(v(status, details.strip() + " " + desc, z), 
+                            length)
 
-            if accepted == 1337:
-                return yellow(d)
-            if accepted == 42:
-                return gray(d)
-            elif accepted <= 0:
-                if z and accepted == 0:
-                    return gray(d)
-                return red(d)
-            else:
-                return green(d)
-
-        def w(details, acc_des, length, z=False):
-            (accepted, desc) = acc_des
-            return v((accepted,
-                      pad_left(details.strip() + " " + desc, length)), z=z)
+        def v(status, desc, z=False):
+            return {  -1 : red,
+                       0 : (lambda x: x) if z else yellow,
+                       1 : green,
+                    1337 : gray}[status](desc)
 
         def myheader(name, status):
-            desc = status[1]
+            status, desc, _ = status
             base_space = remaining_line_length() - 15
             space = base_space - len(name) - len(desc)
 
             return header(name + " " + (space - 2) * "═" + " " +
-                          v(status), depth=3)
+                          v(status, desc), depth=3)
 
         # Present verdict
         for st in details["subtasks"]:
-            with myheader(st["name"], (st["verdict"][0], st["verdict"][1])):
-                print(indent(side_by_side(["Time", "Memory", "Answer", "Verdict"],
+            with myheader(st["name"], st["verdict"]):
+                print(indent(st["verdict"][2]))
+                print()
+                print(indent(side_by_side([bold("Time"), bold("Memory"),
+                                           bold("Answer"), 
+                                           bold("Grader response")],
                                           [2, 14, 27, 37])))
 
                 for c in st["cases"]:
@@ -2658,10 +2653,10 @@ class TaskConfig(CommonConfig, Scope):
                         fmem = "%.1fMB" % (float(c["memory"]) / 2**20)
                     ftime = w(ftime, l[0], 8, z=True)
                     fmem = w(fmem, l[1], 10, z=True)
-                    fans = v(l[2], z=True)
-                    fverd = add_line_breaks(v(c["verdict"]),
+                    fans = v(*l[2], z=True)
+                    fresp = add_line_breaks(c["grader"],
                                             remaining_line_length() - 37)
-                    print(indent(side_by_side([ftime, fmem, fans, fverd],
+                    print(indent(side_by_side([ftime, fmem, fans, fresp],
                                               [0, 12, 27, 37])))
 
                 print()
