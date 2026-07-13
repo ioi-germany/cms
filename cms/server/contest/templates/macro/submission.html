@@ -1,11 +1,13 @@
-{% macro rows(url, contest_url, translation, xsrf_form_html,
+{% macro rows(url, static_url, contest_url, translation, xsrf_form_html,
               actual_phase, task, submissions,
               can_use_tokens, can_play_token, can_play_token_now,
+              tokens_info,
               submissions_download_allowed, official, unit_test) -%}
 {#
 Render a submission table with all (un)official submissions passed.
 
 url (Url): the URL instance referring to the root of CWS.
+static_url: static url helper constructed from url
 contest_url (Url): the URL instance referring to the main contest page.
 translation (Translation): locale to use to show messages.
 xsrf_form_html (str): input element for the XSRF protection.
@@ -98,6 +100,7 @@ unit_test (boolean): whether to display only the unit tests (true) or
                 {# loop.revindex is broken: https://github.com/pallets/jinja/issues/794 #}
                 {{ row(
                     url,
+                    static_url,
                     contest_url,
                     translation,
                     xsrf_form_html,
@@ -108,6 +111,7 @@ unit_test (boolean): whether to display only the unit tests (true) or
                     can_use_tokens,
                     can_play_token,
                     can_play_token_now,
+                    tokens_info,
                     submissions_download_allowed,
                     unit_test) }}
             {% endif %}
@@ -117,14 +121,16 @@ unit_test (boolean): whether to display only the unit tests (true) or
 </table>
 {%- endmacro %}
 
-{% macro row(url, contest_url, translation, xsrf_form_html,
+{% macro row(url, static_url, contest_url, translation, xsrf_form_html,
              actual_phase, s, opaque_id, show_date,
              can_use_tokens, can_play_token, can_play_token_now,
+             tokens_info,
              submissions_download_allowed, unit_test) -%}
 {#
 Render a row in a submission table.
 
 url (Url): the URL instance referring to the root of CWS.
+static_url: static url helper constructed from url
 contest_url (Url): the URL instance referring to the main contest page.
 translation (Translation): locale to use to show messages.
 xsrf_form_html (str): input element for the XSRF protection.
@@ -170,16 +176,16 @@ unit_test (bool): whether this is a unit test
     <td class="status">
 {% if status == SubmissionResult.COMPILING %}
         {% trans %}Compiling...{% endtrans %}
-      <img class="details" src="{{ url("static", "loading.gif") }}" />
+      <img class="details" src="{{ static_url("static", "loading.gif") }}" />
 {% elif status == SubmissionResult.COMPILATION_FAILED %}
         {% trans %}Compilation failed{% endtrans %}
         <a class="details">{% trans %}details{% endtrans %}</a>
 {% elif status == SubmissionResult.EVALUATING %}
         {% trans %}Evaluating...{% endtrans %}
-      <img class="details" src="{{ url("static", "loading.gif") }}" />
+      <img class="details" src="{{ static_url("static", "loading.gif") }}" />
 {% elif status == SubmissionResult.SCORING %}
         {% trans %}Scoring...{% endtrans %}
-      <img class="details" src="{{ url("static", "loading.gif") }}" />
+      <img class="details" src="{{ static_url("static", "loading.gif") }}" />
 {% elif status == SubmissionResult.SCORED %}
         {% trans %}Evaluated{% endtrans %}
         <a class="details">{% trans %}details{% endtrans %}</a>
@@ -187,8 +193,8 @@ unit_test (bool): whether this is a unit test
     </td>
 {% if score_type is defined and score_type.max_public_score > 0 %}
     {% if status == SubmissionResult.SCORED %}
-    <td class="public_score {{ get_score_class(sr.public_score, score_type.max_public_score, task.score_precision) }}">
-        {{ score_type.format_score(sr.public_score, score_type.max_public_score, sr.public_score_details, task.score_precision, translation=translation) }}
+    <td class="public_score {{ get_score_class(sr.public_score, score_type.max_public_score) }}">
+        {{ score_type.format_score(sr.public_score, score_type.max_public_score, sr.public_score_details, translation=translation) }}
     </td>
     {% else %}
     <td class="public_score undefined">
@@ -198,8 +204,8 @@ unit_test (bool): whether this is a unit test
 {% endif %}
 {% if score_type is defined %}
     {% if status == SubmissionResult.SCORED and (s.token is not none or actual_phase == 3 or score_type.feedback() == "full" or unit_test) %}
-    <td class="total_score {{ get_score_class(sr.score, score_type.max_score, task.score_precision) }}">
-        {{ score_type.format_score(sr.score, score_type.max_score, sr.score_details, task.score_precision, translation=translation) }}
+    <td class="total_score {{ get_score_class(sr.score, score_type.max_score) }}">
+        {{ score_type.format_score(sr.score, score_type.max_score, sr.score_details, translation=translation) }}
     </td>
     {% else %}
     <td class="total_score undefined">

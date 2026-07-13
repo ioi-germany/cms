@@ -87,10 +87,9 @@ On Ubuntu 24.04, one will need to run the following script to satisfy all depend
 
     # Feel free to change OpenJDK packages with your preferred JDK.
     apt install build-essential openjdk-11-jdk-headless fp-compiler \
-        postgresql postgresql-client \
-        python3.12 python3.12-dev python3-pip python3-venv \
-        libpq-dev libcups2-dev libyaml-dev libffi-dev \
-        shared-mime-info cppreference-doc-en-html zip curl
+        postgresql postgresql-client python3.12 python3.12-dev python3-pip \
+        python3-venv libpq-dev libyaml-dev libffi-dev shared-mime-info \
+        cppreference-doc-en-html zip curl
 
     # Isolate from upstream package repository
     echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/isolate.asc] http://www.ucw.cz/isolate/debian/ noble-isolate main' >/etc/apt/sources.list.d/isolate.list
@@ -98,8 +97,7 @@ On Ubuntu 24.04, one will need to run the following script to satisfy all depend
     apt update && apt install isolate
 
     # Optional
-    apt install nginx-full php-cli texlive-latex-base \
-        a2ps ghc rustc mono-mcs pypy3
+    apt install nginx-full php-cli texlive-latex-base ghc rustc mono-mcs pypy3
 
     # Only for compiling Hebrew statements with German task format, install the following. (TODO: Is there a package for this in Ubuntu?)
     # https://github.com/bBoxType/FiraGO
@@ -124,16 +122,14 @@ However, if you do not want to use them, the following command will install almo
 .. sourcecode:: bash
 
     pacman -S base-devel jdk8-openjdk fpc postgresql postgresql-client \
-        python python-pip postgresql-libs libcups libyaml \
-        shared-mime-info
+        python python-pip postgresql-libs libyaml shared-mime-info
 
     # Install the following from AUR.
     # https://aur.archlinux.org/packages/cppreference/
     # https://aur.archlinux.org/packages/isolate
 
     # Optional
-    pacman -S --needed nginx php php-fpm phppgadmin texlive-core \
-        a2ps ghc rust mono pypy3
+    pacman -S --needed nginx php php-fpm phppgadmin texlive-core ghc rust mono pypy3
 
     # Only for compiling Hebrew statements with German task format, install the following from AUR.
     # https://aur.archlinux.org/packages/ttf-fira-go/

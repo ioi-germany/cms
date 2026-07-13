@@ -22,6 +22,7 @@ import logging
 import os
 import resource
 import shutil
+import typing
 
 from cmscontrib.gerpythonformat.ContestConfig import ContestConfig
 from cmscontrib.gerpythonformat.LocationStack import chdir
@@ -92,34 +93,43 @@ class GerImport(Service):
 
                 # Create users in the database.
                 udbs = [contestconfig._makeuser(u) for u in contestconfig.users]
-                udb1s = _update_list_with_key(session.query(User).all(),
-                                              udbs,
-                                              lambda u : u.username,
-                                              preserve_old=True,
-                                              update_value_fn=update_user,
-                                              creator_fn=session_add)
+                udb1s_ = _update_list_with_key(
+                    session.query(User).all(),
+                    udbs,
+                    lambda u: u.username,
+                    preserve_old=True,
+                    update_value_fn=update_user,
+                    creator_fn=session_add,
+                )
+                udb1s = typing.cast(dict[str, User], udb1s_)
                 udbs = {u.username : u for u in udbs}
 
                 # Create teams in the database.
                 teamdbs = [contestconfig._maketeam(t) for t in contestconfig.teams]
-                teamdb1s = _update_list_with_key(session.query(Team).all(),
-                                                 teamdbs,
-                                                 lambda t : t.code,
-                                                 preserve_old=True,
-                                                 update_value_fn=update_team,
-                                                 creator_fn=session_add)
+                teamdb1s_ = _update_list_with_key(
+                    session.query(Team).all(),
+                    teamdbs,
+                    lambda t: t.code,
+                    preserve_old=True,
+                    update_value_fn=update_team,
+                    creator_fn=session_add,
+                )
+                teamdb1s = typing.cast(dict[str, Team], teamdb1s_)
                 teamdbs = {t.code : t for t in teamdbs}
 
                 # Create contest (including associated user groups) in the database.
                 cdb = contestconfig._makecontest()
-                cdbs = [cdb]
-                cdb1s = _update_list_with_key(session.query(Contest).all(),
-                                              cdbs,
-                                              lambda c : c.name,
-                                              preserve_old=True,
-                                              update_value_fn=update_contest,
-                                              creator_fn=session_add)
-                cdb1 = cdb1s[cdb.name]
+                cdbs: list[Contest] = [cdb]
+                cdb1s_ = _update_list_with_key(
+                    session.query(Contest).all(),
+                    cdbs,
+                    lambda c: c.name,
+                    preserve_old=True,
+                    update_value_fn=update_contest,
+                    creator_fn=session_add,
+                )
+                cdb1s = typing.cast(dict[str, Contest], cdb1s_)
+                cdb1: Contest = cdb1s[cdb.name]
 
                 # Set the contest's main group.
                 cdb1.main_group = cdb1.get_group(contestconfig.defaultgroup.name)
@@ -134,7 +144,7 @@ class GerImport(Service):
                     else:
                         return teamdbs[t.code]
                 # Team object in the database for a given user
-                def user_team1(u):
+                def user_team1(u: str):
                     t = contestconfig.users[u].team
                     if t is None:
                         return None
@@ -147,12 +157,14 @@ class GerImport(Service):
                                                             gdb, user_team(u))
 
                 pdbs = [make_participation(u) for u in contestconfig.users]
-                pdb1s = _update_list_with_key(cdb1.participations,
-                                              pdbs,
-                                              lambda p : p.user.username,
-                                              preserve_old= \
-                                                  self.preserve_participations,
-                                              update_value_fn=update_participation)
+                pdb1s_ = _update_list_with_key(
+                    cdb1.participations,
+                    pdbs,
+                    lambda p: p.user.username,
+                    preserve_old=self.preserve_participations,
+                    update_value_fn=update_participation,
+                )
+                pdb1s = typing.cast(dict[str, Participation], pdb1s_)
                 pdbs = {p.user.username : p for p in pdbs}
 
                 for username, u in pdb1s.items():
@@ -171,7 +183,7 @@ class GerImport(Service):
                 # there might otherwise at one point be two tasks with the same
                 # number.
                 for t in cdb1.tasks:
-                        t.num += len(contestconfig.tasks) + len(cdb1.tasks)
+                    t.num += len(contestconfig.tasks) + len(cdb1.tasks)
 
                 tdbs = [t._makedbobject(cdb, self.file_cacher)
                         for t in contestconfig.tasks.values()]
@@ -211,10 +223,13 @@ class GerImport(Service):
                         tdb = tdbs[t]
                         tdb1 = tdb1s[t]
                         # Mark old test submissions for deletion.
-                        sdb1s = session.query(Submission) \
-                            .filter(Submission.participation == test_pdb1) \
-                            .filter(Submission.task == tdb1) \
-                            .filter(Submission.additional_info != None).all()
+                        sdb1s = (
+                            session.query(Submission)
+                            .filter(Submission.participation == test_pdb1)
+                            .filter(Submission.task == tdb1)
+                            .filter(Submission.additional_info is not None)
+                            .all()
+                        )
                         for sdb1 in sdb1s:
                             assert sdb1.is_unit_test()
                             _to_delete.append(sdb1)

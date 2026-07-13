@@ -28,6 +28,8 @@ import typing
 
 from cms import config
 from cms.db import Executable
+from cms.db.filecacher import FileCacher
+from cms.grading.Job import CompilationJob, EvaluationJob
 from cms.grading.ParameterTypes import ParameterTypeChoice
 from cms.grading.Sandbox import wait_without_std
 from cms.grading.languagemanager import LANGUAGES, get_language
@@ -138,7 +140,7 @@ class TwoSteps(TaskType):
     def _uses_checker(self) -> bool:
         return self.output_eval == TwoSteps.OUTPUT_EVAL_CHECKER
 
-    def compile(self, job, file_cacher):
+    def compile(self, job: CompilationJob, file_cacher: FileCacher):
         """See TaskType.compile."""
         language = get_language(job.language)
         source_ext = language.source_extension
@@ -186,11 +188,11 @@ class TwoSteps(TaskType):
             source_filenames, executable_filename)
 
         # Create the sandbox and put the required files in it.
-        sandbox = create_sandbox(file_cacher, name="compile")
+        sandbox = create_sandbox(0, file_cacher, name="compile")
         job.sandboxes.append(sandbox.get_root_path())
 
         for filename, digest in files_to_get.items():
-            sandbox.create_file_from_storage(filename, digest)
+            sandbox.create_file_from_storage(filename, digest, file_cacher)
 
         # Run the compilation.
         box_success, compilation_success, text, stats = \
@@ -204,15 +206,16 @@ class TwoSteps(TaskType):
         if box_success and compilation_success:
             digest = sandbox.get_file_to_storage(
                 executable_filename,
+                file_cacher,
                 "Executable %s for %s" %
                 (executable_filename, job.info))
             job.executables[executable_filename] = \
                 Executable(executable_filename, digest)
 
         # Cleanup
-        delete_sandbox(sandbox, job)
+        delete_sandbox(sandbox, job, file_cacher)
 
-    def evaluate(self, job, file_cacher):
+    def evaluate(self, job: EvaluationJob, file_cacher: FileCacher):
         """See TaskType.evaluate."""
         if not check_executables_number(job, 1):
             return
@@ -220,12 +223,12 @@ class TwoSteps(TaskType):
         executable_filename = next(iter(job.executables.keys()))
         executable_digest = job.executables[executable_filename].digest
 
-        first_sandbox = create_sandbox(file_cacher, name="first_evaluate")
-        second_sandbox = create_sandbox(file_cacher, name="second_evaluate")
+        first_sandbox = create_sandbox(0, file_cacher, name="first_evaluate")
+        second_sandbox = create_sandbox(1, file_cacher, name="second_evaluate")
         job.sandboxes.append(first_sandbox.get_root_path())
         job.sandboxes.append(second_sandbox.get_root_path())
 
-        fifo_dir = tempfile.mkdtemp(dir=config.temp_dir)
+        fifo_dir = tempfile.mkdtemp(dir=config.global_.temp_dir)
         fifo = os.path.join(fifo_dir, "fifo")
         os.mkfifo(fifo)
         os.chmod(fifo_dir, 0o755)
@@ -242,9 +245,10 @@ class TwoSteps(TaskType):
         for filename, digest in first_executables_to_get.items():
             first_sandbox.create_file_from_storage(filename,
                                                    digest,
+                                                   file_cacher,
                                                    executable=True)
         for filename, digest in first_files_to_get.items():
-            first_sandbox.create_file_from_storage(filename, digest)
+            first_sandbox.create_file_from_storage(filename, digest, file_cacher)
 
         first = evaluation_step_before_run(
             first_sandbox,
@@ -265,9 +269,10 @@ class TwoSteps(TaskType):
         for filename, digest in second_executables_to_get.items():
             second_sandbox.create_file_from_storage(filename,
                                                     digest,
+                                                    file_cacher,
                                                     executable=True)
         for filename, digest in second_files_to_get.items():
-            second_sandbox.create_file_from_storage(filename, digest)
+            second_sandbox.create_file_from_storage(filename, digest, file_cacher)
 
         second = evaluation_step_before_run(
             second_sandbox,
@@ -295,6 +300,7 @@ class TwoSteps(TaskType):
 
         outcome = None
         text = None
+        admin_text = None
 
         # Error in the sandbox: nothing to do!
         if not box_success:
@@ -323,6 +329,7 @@ class TwoSteps(TaskType):
                 if job.get_output:
                     job.user_output = second_sandbox.get_file_to_storage(
                         TwoSteps.OUTPUT_FILENAME,
+                        file_cacher,
                         "Output file in job %s" % job.info,
                         trunc_len=100 * 1024)
 
@@ -333,7 +340,7 @@ class TwoSteps(TaskType):
 
                 # Otherwise evaluate the output file.
                 else:
-                    box_success, outcome, text = eval_output(
+                    box_success, outcome, text, admin_text = eval_output(
                         file_cacher, job,
                         TwoSteps.CHECKER_CODENAME
                         if self._uses_checker() else None,
@@ -344,7 +351,8 @@ class TwoSteps(TaskType):
         job.success = box_success
         job.outcome = str(outcome) if outcome is not None else None
         job.text = text
+        job.admin_text = admin_text
         job.plus = stats
 
-        delete_sandbox(first_sandbox, job)
-        delete_sandbox(second_sandbox, job)
+        delete_sandbox(first_sandbox, job, file_cacher)
+        delete_sandbox(second_sandbox, job, file_cacher)

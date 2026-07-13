@@ -50,7 +50,9 @@ class TestValidateLogin(DatabaseMixin, unittest.TestCase):
             contest=self.contest, user=self.user)
 
         # Set up a temporary admin token
-        patcher = patch.object(config, "contest_admin_token", "admin-token")
+        patcher = patch.object(
+            config.contest_web_server, "contest_admin_token", "admin-token"
+        )
         self.addCleanup(patcher.stop)
         patcher.start()
 
@@ -163,6 +165,10 @@ class TestValidateLogin(DatabaseMixin, unittest.TestCase):
     def test_unsuccessful_impersonation(self):
         self.assertFailure("myuser", "", "127.0.0.1", "bad-admin-token")
 
+    def test_impersonation_with_no_config(self):
+        with patch.object(config.contest_web_server, "contest_admin_token", None):
+            self.assertFailure("myuser", "", "127.0.0.1", "admin-token")
+
     def test_impersonation_overrides_unallowed_password_authentication(self):
         self.contest.allow_password_authentication = False
 
@@ -201,7 +207,9 @@ class TestAuthenticateRequest(DatabaseMixin, unittest.TestCase):
         self.impersonated_user = self.add_user(username="otheruser")
         self.impersonated_participation = self.add_participation(
             contest=self.contest, user=self.impersonated_user)
-        with patch.object(config, "contest_admin_token", "admin-token"):
+        with patch.object(
+            config.contest_web_server, "contest_admin_token", "admin-token"
+        ):
             _, self.impersonated_cookie = validate_login(
                 self.session, self.contest, self.timestamp, "otheruser",
                 "", ipaddress.ip_address("10.0.0.2"), "admin-token")
@@ -281,7 +289,7 @@ class TestAuthenticateRequest(DatabaseMixin, unittest.TestCase):
         self.assertIsNone(cookie)
         self.assertIs(impersonated, False)
 
-    @patch.object(config, "cookie_duration", 10)
+    @patch.object(config.contest_web_server, "cookie_duration", 10)
     def test_cookie_contains_timestamp(self):
         self.contest.ip_autologin = False
         self.contest.allow_password_authentication = True

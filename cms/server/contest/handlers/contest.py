@@ -29,9 +29,12 @@
 
 """
 
+from collections.abc import Callable
+import functools
 import ipaddress
 import json
 import logging
+import typing
 
 import collections
 
@@ -47,7 +50,7 @@ except:
 import tornado.web
 
 from cms import config, TOKEN_MODE_MIXED
-from cms.db import Contest, Submission, Task, UserTest, contest
+from cms.db import Contest, Submission, Task, UserTest
 from cms.locale import filter_language_codes
 from cms.server import FileHandlerMixin
 from cms.server.contest.authentication import authenticate_request
@@ -184,7 +187,11 @@ class ContestHandler(BaseHandler):
             self.clear_cookie(cookie_name)
         elif self.refresh_cookie:
             self.set_secure_cookie(
-                cookie_name, cookie, expires_days=None, max_age=config.cookie_duration)
+                cookie_name,
+                cookie,
+                expires_days=None,
+                max_age=config.contest_web_server.cookie_duration,
+            )
 
         self.impersonated_by_admin = impersonated
         return participation
@@ -202,7 +209,6 @@ class ContestHandler(BaseHandler):
         else:
             ret["phase"] = self.current_user.group.phase(self.timestamp)
 
-        ret["printing_enabled"] = (config.printer is not None)
         ret["questions_enabled"] = self.contest.allow_questions
         ret["testing_enabled"] = self.contest.allow_user_tests
 
@@ -215,10 +221,8 @@ class ContestHandler(BaseHandler):
 
             res = compute_actual_phase(
                 self.timestamp, group.start, group.stop,
-                group.analysis_start if group.analysis_enabled
-                else None,
-                group.analysis_stop if group.analysis_enabled
-                else None,
+                group.analysis_start if group.analysis_enabled else None,
+                group.analysis_stop if group.analysis_enabled else None,
                 group.per_user_time, participation.starting_time,
                 participation.delay_time, participation.extra_time)
 
@@ -338,3 +342,26 @@ class ContestHandler(BaseHandler):
 
 class FileHandler(ContestHandler, FileHandlerMixin):
     pass
+
+_P = typing.ParamSpec("_P")
+_R = typing.TypeVar("_R")
+_Self = typing.TypeVar("_Self", bound="ContestHandler")
+
+def api_login_required(
+    func: Callable[typing.Concatenate[_Self, _P], _R],
+) -> Callable[typing.Concatenate[_Self, _P], _R | None]:
+    """A decorator filtering out unauthenticated requests.
+
+    Unlike @tornado.web.authenticated, this returns a JSON error instead of
+    redirecting.
+
+    """
+
+    @functools.wraps(func)
+    def wrapped(self: _Self, *args: _P.args, **kwargs: _P.kwargs):
+        if not self.current_user:
+            self.json({"error": "An authenticated user is required"}, 403)
+        else:
+            return func(self, *args, **kwargs)
+
+    return wrapped

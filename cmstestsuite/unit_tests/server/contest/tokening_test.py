@@ -39,7 +39,8 @@ class TestTokensAvailable(DatabaseMixin, unittest.TestCase):
 
         self.timestamp = make_datetime()
 
-        self.contest = self.add_contest(start=self.at(0))
+        group = self.get_group(start=self.at(0))
+        self.contest = self.add_contest(groups = [group])
         self.participation = self.add_participation(contest=self.contest)
         self.task = self.add_task(contest=self.contest)
         self.other_task = self.add_task(contest=self.contest)

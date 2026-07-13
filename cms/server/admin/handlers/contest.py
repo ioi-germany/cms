@@ -10,6 +10,9 @@
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
 # Copyright © 2018 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2026 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2026 Chuyang Wang <mail@chuyang-wang.de>
+# Copyright © 2026 Jonathan Baumann <Jonathan.Baumann@edu.ruhr-uni-bochum.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,7 +32,7 @@
 """
 
 from cms import ServiceCoord, get_service_shards, get_service_address
-from cms.db import Contest, Group, Participation, Submission
+from cms.db import Contest, Participation, Group, Submission
 from cmscommon.datetime import make_datetime
 
 from .base import BaseHandler, SimpleContestHandler, SimpleHandler, \
@@ -130,6 +133,7 @@ class ContestHandler(SimpleContestHandler("contest.html")):
             assert main_group_id != "null", "Please select a valid main group"
 
             attrs["main_group"] = self.safe_get_item(Group, main_group_id)
+            self.get_group_settings(contest.main_group)
 
             # Update the contest.
             contest.set_attrs(attrs)

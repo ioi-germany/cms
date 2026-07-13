@@ -118,7 +118,8 @@
 {% endif %}
 {% set compilation_commands = task_type.get_compilation_commands(task.submission_format) %}
 {% if compilation_commands is not none %}
-{% set compilation_commands = compilation_commands|dictselect("in", contest.languages, by="key") %}
+{% set allowed_languages = task.get_allowed_languages() %}
+{% set compilation_commands = compilation_commands|dictselect("in", allowed_languages, by="key") %}
 <tr>
     <th rowspan="{{ compilation_commands|length }}">{% trans %}Compilation commands{% endtrans %}</th>
     {% for l, c in compilation_commands|dictsort(by="key") %}
@@ -185,9 +186,9 @@
             <li>
                 <a href="{{ contest_url("tasks", task.name, "attachments", filename) }}" class="btn">
             {% if type_icon is not none %}
-                    <img src="{{ url("static", "img", "mimetypes", "%s.png"|format(type_icon)) }}" alt="{{ mime_type }}" />
+                    <img src="{{ static_url("static", "img", "mimetypes", "%s.png"|format(type_icon)) }}" alt="{{ mime_type }}" />
             {% else %}
-                    <img src="{{ url("static", "img", "mimetypes", "unknown.png") }}" alt="{% trans %}unknown{% endtrans %}" />
+                    <img src="{{ static_url("static", "img", "mimetypes", "unknown.png") }}" alt="{% trans %}unknown{% endtrans %}" />
             {% endif %}
                     <span class="first_line">
                         <span class="name">{{ filename }}</span>

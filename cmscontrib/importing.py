@@ -4,6 +4,7 @@
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
+# Copyright © 2026 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -387,15 +388,6 @@ def update_task(old_task: Task, new_task: Task, parent=None, get_statements=True
         Task.primary_statements: get_statements,
     }, parent=parent)
 
-
-def update_group(old_group, new_group, parent=None):
-    """Update old_group with information from new_group"""
-    _update_object(old_group, new_group, {
-        Group.contest: False,
-        Group.participations: False,
-    }, parent=parent)
-
-
 def update_contest(old_contest: Contest, new_contest: Contest, parent=None):
     """Update old_contest with information from new_contest"""
     def update_groups_fn(o, n, parent=None):
@@ -411,10 +403,10 @@ def update_contest(old_contest: Contest, new_contest: Contest, parent=None):
         # must be handled differently.
         Contest.tasks: False,
         Contest.participations: False,
-        # We update the list groups in the standard way.
-        Contest.groups: update_groups_fn,
         # The main group has to be set manually in the end.
         Contest.main_group: False,
+        # We update the list groups in the standard way.
+        Contest.groups: update_groups_fn
     }, parent=parent)
 
 
@@ -443,7 +435,16 @@ def update_participation(old_participation, new_participation):
         Participation.questions: False,
         Participation.submissions: False,
         Participation.user_tests: False,
-        Participation.printjobs: False,
         Participation.starting_time: False,
         Participation.extra_time: False,
     })
+
+
+def update_group(old_group: Group, new_group: Group, parent=None):
+    """
+    Update old_group with information from new_group
+    """
+    _update_object(old_group, new_group, {
+        Group.contest: False,
+        Group.participations: False,
+    }, parent=parent)

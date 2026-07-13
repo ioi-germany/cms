@@ -20,23 +20,25 @@
 import os
 
 from cms import config
-from cms.grading.Sandbox import IsolateSandbox
+from cms.grading.Sandbox import Sandbox
 from cmscontrib.gerpythonformat import copyrecursivelyifnecessary
 
-class LaTeXSandbox(IsolateSandbox):
+class LaTeXSandbox(Sandbox):
     """
     A sandbox for compiling statements with (Lua)LaTeX
     """
     def __init__(self, *args, **kwargs):
-        bid = 1000 + (os.getpid() % 8999) # 8999 is prime
+        bid = 1000 + (os.getpid() % 8999)  # 8999 is prime
 
-        IsolateSandbox.__init__(self, *args, box_id=bid, **kwargs)
+        Sandbox.__init__(self, box_index=bid, shard=None, **kwargs)
 
         self.preserve_env: bool = True
-        self.max_processes: int = config.latex_compilation_sandbox_max_processes
-        self.timeout: float = config.latex_compilation_sandbox_max_time_s
+        self.max_processes: int = config.sandbox.latex_compilation_sandbox_max_processes
+        self.timeout: float = config.sandbox.latex_compilation_sandbox_max_time_s
         self.wallclock_timeout: float = 2 * self.timeout + 1
-        self.address_space: int = config.latex_compilation_sandbox_max_memory_kib * 1024
+        self.address_space: int = (
+            config.sandbox.latex_compilation_sandbox_max_memory_kib * 1024
+        )
 
         self.stdout_file: str = "LaTeX_out.txt"
         self.stderr_file: str = "LaTeX_err.txt"
@@ -46,7 +48,7 @@ class LaTeXSandbox(IsolateSandbox):
         # /usr is mapped per default, so we don't need to
         # map anything from there explicitly.
 
-        for d in config.latex_additional_dirs:
+        for d in config.sandbox.latex_additional_dirs:
             # We probably can't map the directory into the sandbox's
             # home directory, so we copy it there.
             copyrecursivelyifnecessary(os.path.expanduser(d),

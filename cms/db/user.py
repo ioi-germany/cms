@@ -8,7 +8,7 @@
 # Copyright © 2015 William Di Luigi <williamdiluigi@gmail.com>
 # Copyright © 2015 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
-# Copyright © 2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2017-2026 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -32,26 +32,27 @@ from datetime import datetime, timedelta
 from ipaddress import IPv4Network, IPv6Network
 
 from sqlalchemy.dialects.postgresql import ARRAY, CIDR
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column, ForeignKey, CheckConstraint, \
-    UniqueConstraint
-from sqlalchemy.types import Boolean, Integer, String, Unicode, DateTime, \
-    Interval
-from sqlalchemy.dialects.postgresql import ARRAY, CIDR
+    UniqueConstraint, ForeignKeyConstraint
+from sqlalchemy.types import Boolean, Integer, String, Unicode, DateTime, Interval
 
 from cmscommon.crypto import generate_random_password, build_password
 from . import CastingArray, Codename, Base, Admin, Contest
 import typing
 if typing.TYPE_CHECKING:
-    from . import PrintJob, Submission, UserTest
+    from . import Submission, UserTest
+
 
 class Group(Base):
     """Class to store a group of users (for timing, etc.).
 
     """
-    __tablename__ = 'group'
+
+    __tablename__ = "groups"
     __table_args__ = (
         UniqueConstraint('contest_id', 'name'),
+        UniqueConstraint('id', 'contest_id'),
         CheckConstraint("start <= stop"),
         CheckConstraint("stop <= analysis_start"),
         CheckConstraint("analysis_start <= analysis_stop"),
@@ -76,7 +77,7 @@ class Group(Base):
         nullable=False,
         default=datetime(2100, 1, 1))
 
-    # Beginning and ending of the contest anaylsis mode.
+    # Beginning and ending of the analysis mode for this group.
     analysis_enabled: bool = Column(
         Boolean,
         nullable=False,
@@ -99,24 +100,16 @@ class Group(Base):
     # Contest (id and object) to which this user group belongs.
     contest_id: int = Column(
         Integer,
-        ForeignKey(Contest.id, onupdate="CASCADE", ondelete="CASCADE"),
-        # nullable=False,
-        index=True,
-    )
+        ForeignKey(Contest.id,
+                   onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=False,
+        index=True)
     contest: Contest = relationship(
         Contest,
-        back_populates="groups",
-        primaryjoin="Contest.id==Group.contest_id",
-    )
+        foreign_keys=[contest_id],
+        back_populates="groups")
 
-    participations: list["Participation"] = relationship(
-        "Participation",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-        back_populates="group",
-    )
-
-    def phase(self, timestamp):
+    def phase(self, timestamp: datetime) -> int:
         """Return: -1 if contest isn't started yet at time timestamp,
                     0 if the contest is active at time timestamp,
                     1 if the contest has ended but analysis mode
@@ -125,10 +118,9 @@ class Group(Base):
                     3 if the contest has ended and analysis mode is disabled or
                       has ended
 
-        timestamp (datetime): the time we are iterested in.
-        return (int): contest phase as above.
-
+        timestamp: the time we are iterested in.
         """
+        # NOTE: this logic is duplicated in aws_utils.js.
         if timestamp < self.start:
             return -1
         if timestamp <= self.stop:
@@ -140,9 +132,12 @@ class Group(Base):
                 return 2
         return 3
 
-    # Follows the description of the fields automatically added by
-    # SQLAlchemy.
-    # participations (list of Participation objects)
+    participations: list["Participation"] = relationship(
+        "Participation",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        foreign_keys="[Participation.group_id]",
+        back_populates="group")
 
 
 class User(Base):
@@ -253,6 +248,12 @@ class Participation(Base):
 
     """
     __tablename__ = 'participations'
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ("group_id", "contest_id"),
+            (Group.id, Group.contest_id)),
+        UniqueConstraint("contest_id", "user_id"),
+    )
 
     # Auto increment primary key.
     id: int = Column(
@@ -339,16 +340,18 @@ class Participation(Base):
     user: User = relationship(
         User,
         back_populates="participations")
-    __table_args__ = (UniqueConstraint("contest_id", "user_id"),)
 
     # Group this user belongs to
     group_id: int = Column(
         Integer,
-        ForeignKey(Group.id, onupdate="CASCADE", ondelete="CASCADE"),
+        ForeignKey(Group.id,
+                   onupdate="CASCADE", ondelete="CASCADE"),
         nullable=False,
-        index=True,
-    )
-    group: Group = relationship(Group, back_populates="participations")
+        index=True)
+    group: Group = relationship(
+        Group,
+        foreign_keys=[group_id],
+        back_populates="participations")
 
     # Team (id and object) that the user is representing with this
     # participation.
@@ -386,12 +389,6 @@ class Participation(Base):
 
     user_tests: list["UserTest"] = relationship(
         "UserTest",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-        back_populates="participation")
-
-    printjobs: list["PrintJob"] = relationship(
-        "PrintJob",
         cascade="all, delete-orphan",
         passive_deletes=True,
         back_populates="participation")

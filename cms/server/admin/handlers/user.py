@@ -10,6 +10,8 @@
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2017 Valentin Rosca <rosca.valentin2012@gmail.com>
 # Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
+# Copyright © 2026 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2026 Chuyang Wang <mail@chuyang-wang.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -28,7 +30,7 @@
 
 """
 
-from cms.db import Contest, Group, Participation, Submission, Team, User
+from cms.db import Contest, Participation, Submission, Team, Group, User
 from cmscommon.datetime import make_datetime
 
 from .base import BaseHandler, SimpleContestHandler, SimpleHandler, \
@@ -323,8 +325,6 @@ class AddUserHandler(SimpleHandler("add_user.html", permission_all=True)):
             self.redirect(self.url("user", user.id))
         else:
             self.redirect(fallback_page)
-
-
 class AddParticipationHandler(BaseHandler):
     @require_permission(BaseHandler.PERMISSION_ALL)
     def post(self, user_id):
@@ -409,6 +409,62 @@ class GroupListHandler(SimpleContestHandler("groups.html")):
 
     """
 
+    DELETE_GROUP = "Delete selected group"
+    MAKE_MAIN = "Make main group"
+
+    @require_permission(BaseHandler.PERMISSION_ALL)
+    def post(self, contest_id):
+        fallback_page = self.url("contest", contest_id, "groups")
+
+        try:
+            group_id = self.get_argument("group_id")
+            operation = self.get_argument("operation")
+
+            contest = self.safe_get_item(Contest, contest_id)
+            group = self.safe_get_item(Group, group_id)
+
+            if operation == self.DELETE_GROUP:
+                self._handle_delete_group(contest, group)
+                self.redirect(fallback_page)
+                return
+            elif operation == self.MAKE_MAIN:
+                contest.main_group_id = group.id
+                self.try_commit()
+                self.redirect(fallback_page)
+                return
+            else:
+                self.service.add_notification(
+                    make_datetime(), "Invalid operation",
+                    f"I do not understand the operation `{operation}'")
+                self.redirect(fallback_page)
+                return
+
+        except Exception as error:
+            self.service.add_notification(
+                make_datetime(), "Invalid field(s)", repr(error))
+            self.redirect(fallback_page)
+            return
+
+    def _handle_delete_group(self, contest, group):
+        # disallow deleting non-empty groups
+        if len(group.participations) != 0:
+            self.application.service.add_notification(
+                make_datetime(), "Cannot delete group containing users",
+                f"The group `{group.name}' contains "
+                f"{len(group.participations)} users")
+            return
+
+        # disallow deleting the main_group of the contest
+        if contest.main_group_id == group.id:
+            self.application.service.add_notification(
+                make_datetime(), f"Cannot delete a contest's main group.",
+                f"To delete '{group.name}', change the main group of "
+                f"the contest first to another group.")
+            return
+
+        self.sql_session.delete(group)
+        self.try_commit()
+
 
 class AddGroupHandler(BaseHandler):
     """Adds a new group.
@@ -416,7 +472,7 @@ class AddGroupHandler(BaseHandler):
     """
     @require_permission(BaseHandler.PERMISSION_ALL)
     def post(self, contest_id):
-        fallback_page = self.url("contest", contest_id, "group", "add")
+        fallback_page = self.url("contest", contest_id, "groups", "add")
 
         try:
             attrs = dict()
@@ -427,6 +483,11 @@ class AddGroupHandler(BaseHandler):
                 "No name specified."
 
             attrs["contest"] = self.safe_get_item(Contest, contest_id)
+
+            for key in ["start", "stop", "analysis_enabled",
+                        "analysis_start", "analysis_stop",
+                        "per_user_time"]:
+                attrs[key] = getattr(attrs["contest"].main_group, key)
 
             # Create the group.
             group = Group(**attrs)
@@ -441,31 +502,6 @@ class AddGroupHandler(BaseHandler):
         self.try_commit()
         self.redirect(self.url("contest", contest_id,
                                "group", group.id, "edit"))
-
-
-class RemoveGroupHandler(BaseHandler):
-    """Delete actually removes the group from CMS assuming it contains no
-    participations.
-
-    """
-    @require_permission(BaseHandler.PERMISSION_ALL)
-    def delete(self, group_id):
-        group = self.safe_get_item(User, group_id)
-
-        fallback_page = self.url("contest", group.contest_id, "groups")
-
-        if len(group.participations) != 0:
-            self.application.service.add_notification(
-                make_datetime(),
-                "Cannot delete group because it contains users.")
-            self.redirect(fallback_page)
-            return
-
-        self.sql_session.delete(group)
-        self.try_commit()
-
-        # Maybe they'll want to do this again (for another user)
-        self.write("../../groups")
 
 
 class GroupHandler(BaseHandler):
@@ -495,19 +531,12 @@ class GroupHandler(BaseHandler):
 
             self.get_string(attrs, "name", empty=None)
 
-            self.get_datetime(attrs, "start")
-            self.get_datetime(attrs, "stop")
-            self.get_timedelta_sec(attrs, "per_user_time")
-
-            self.get_bool(attrs, "analysis_enabled")
-            self.get_datetime(attrs, "analysis_start")
-            self.get_datetime(attrs, "analysis_stop")
-
             assert attrs.get("name") is not None, \
                 "No group name specified."
 
             # Update the group.
-            group.set_attrs(attrs)
+            group.name = attrs["name"]
+            self.get_group_settings(group)
 
         except Exception as error:
             self.application.service.add_notification(

@@ -1,7 +1,7 @@
 Running CMS
 ***********
 
-If you only intend to develop tasks locally without running the actual server on your machine, you do not need to configure the DB or CMS. Just copy :file:`config/cms.conf.sample` to :file:`config/cms.conf` and install again:
+If you only intend to develop tasks locally without running the actual server on your machine, you do not need to configure the DB or CMS. Just copy :file:`config/cms.toml.sample` to :file:`config/cms.toml` and install again:
 
 .. sourcecode:: bash
 

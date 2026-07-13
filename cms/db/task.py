@@ -6,6 +6,7 @@
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
+# Copyright © 2025 Pasit Sangprachathanarak <ouipingpasit@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -115,6 +116,12 @@ class Task(Base):
         ARRAY(String),
         nullable=False,
         default=[])
+
+    # The list of names of programming languages allowed for this task.
+    # If null, all contest languages are allowed.
+    allowed_languages: list[str] | None = Column(
+        ARRAY(String), nullable=True, default=None
+    )
 
     # The parameters that control task-tokens follow. Note that their
     # effect during the contest depends on the interaction with the
@@ -279,6 +286,21 @@ class Task(Base):
         passive_deletes=True,
         back_populates="task")
 
+    def get_allowed_languages(self) -> list[str] | None:
+        """Get the list of allowed languages for this task.
+
+        If the task has specific allowed languages configured, return those.
+        Otherwise, return the contest's allowed languages.
+
+        return: list of allowed language names, or None if no contest is set
+        """
+        # If task has specific language restrictions, use those
+        if self.allowed_languages is not None:
+            return self.allowed_languages
+
+        # Otherwise, use contest language restrictions
+        return self.contest.languages if self.contest else None
+
 
 class Statement(Base):
     """Class to store a translation of the task statement.
@@ -435,8 +457,8 @@ class Dataset(Base):
         nullable=True)
     memory_limit: int | None = Column(
         BigInteger,
-        CheckConstraint("memory_limit > 0"),
-        CheckConstraint("MOD(memory_limit, 1048576) = 0"),
+        CheckConstraint("memory_limit > 0", name='datasets_memory_limit_check'),
+        CheckConstraint("MOD(memory_limit, 1048576) = 0", name='datasets_memory_limit_check1'),
         nullable=True)
 
     # Name of the TaskType child class suited for the task.
@@ -518,7 +540,8 @@ class Dataset(Base):
             from cms.grading.scoretypes import get_score_type
             # This can raise.
             self._cached_score_type_object = get_score_type(
-                self.score_type, self.score_type_parameters, public_testcases)
+                self.score_type, self.score_type_parameters, public_testcases,
+                self.task.score_precision)
             # If an exception is raised these updates don't take place:
             # that way, next time this property is accessed, we get a
             # cache miss again and the same exception is raised again.

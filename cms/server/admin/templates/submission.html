@@ -48,7 +48,7 @@
         <td>
           {% for filename in s.task.submission_format %}
             {% if filename in s.files %}
-              {% set real_filename = filename if s.language is none else filename|replace(".%l", (s.language|to_language).source_extension) %}
+              {% set real_filename = get_lang_filename(s.language, filename) %}
           <a href="javascript:void(0);" onclick="utils.show_file('{{ real_filename }}','{{ url("submission_file", s.files[filename].id) }}')">
             {{ real_filename }}
           </a>
@@ -129,9 +129,9 @@
         <td>Score as seen by user</td>
         <td>
           {% if s.token is not none %}
-            {{ st.format_score(sr.score, st.max_score, sr.score_details, s.task.score_precision) }}
+            {{ st.format_score(sr.score, st.max_score, sr.score_details) }}
           {% else %}
-            {{ st.format_score(sr.public_score, st.max_public_score, sr.public_score_details, s.task.score_precision) }}
+            {{ st.format_score(sr.public_score, st.max_public_score, sr.public_score_details) }}
           {% endif %}
         </td>
       </tr>
@@ -163,7 +163,7 @@
                 {{- sr.compilation_sandbox_paths[loop.index0] -}}
               </a>
             {% endfor %}
-          {% else %}
+          {% elif sr.compilation_sandbox_paths is not none %}
             {{ sr.compilation_sandbox_paths|join(" ") }}
           {% endif %}
 
@@ -234,10 +234,14 @@
 <div id="evaluation_user">
 
   <div class="score_details" id="evaluation_{{ s.id }}">
-    {% if s.tokened() %}
-      {{ st.get_html_details(sr.score_details, s.task.feedback_level)|safe }}
+    {% if st is defined %}
+      {% if s.tokened() %}
+        {{ st.get_html_details(sr.score_details, s.task.feedback_level)|safe }}
+      {% else %}
+        {{ st.get_html_details(sr.public_score_details, s.task.feedback_level)|safe }}
+      {% endif %}
     {% else %}
-      {{ st.get_html_details(sr.public_score_details, s.task.feedback_level)|safe }}
+      [Cannot get score type - see logs]
     {% endif %}
   </div>
 </div>
@@ -257,6 +261,7 @@
         <th>Outcome</th>
         <th>Visible</th>
         <th>Details</th>
+        <th>Admin Details</th>
         <th>Shard</th>
         <th>Resources</th>
         <th>Sandbox</th>
@@ -273,6 +278,13 @@
             <input type="checkbox" disabled{{ " checked" if s.token is not none or ev.testcase.public else "" }}>
           </td>
           <td id="eval_text_{{ ev.codename }}">{{ ev.text|format_status_text }}</td>
+          <td id="eval_admin_text_{{ ev.codename }}">
+            {% if ev.admin_text is not none %}
+            {{ ev.admin_text }}
+            {% else %}
+            N/A
+            {% endif %}
+          </td>
           <td>{{ ev.evaluation_shard }}</td>
           <td>
             {% if ev.execution_time is not none %}
@@ -293,7 +305,7 @@
                   {{- ev.evaluation_sandbox_paths[loop.index0] -}}
                 </a>
               {% endfor %}
-            {% else %}
+            {% elif ev.evaluation_sandbox_paths is not none %}
               {{ ev.evaluation_sandbox_paths|join(" ") }}
             {% endif %}
 

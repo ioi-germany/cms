@@ -34,6 +34,7 @@ can be translated by writing "translate:x" where x is "success", "partial" or
 "wrong".
 
 """
+from cms.db.filecacher import FileCacher
 
 import logging
 import re
@@ -77,13 +78,14 @@ def _sanitize_message(string: str) -> str:
     return string.replace('%', '%%')
 
 
-def extract_outcome_and_text(sandbox: Sandbox) -> tuple[float, list[str]]:
+def extract_outcome_and_text(sandbox: Sandbox) -> tuple[float, list[str], str | None]:
     """Extract the outcome and the text from the a standard manager output.
 
     sandbox: the sandbox whose last execution was a manager writing
         a standard manager output.
 
-    return: outcome and text.
+    return: outcome, contestant-facing text and admin-facing text
+        (not translated).
 
     raise (ValueError): if cannot decode the data.
     raise (FileNotFoundError): if any of the sandbox stdout or stderr file
@@ -108,6 +110,23 @@ def extract_outcome_and_text(sandbox: Sandbox) -> tuple[float, list[str]]:
             logger.error("Manager stderr (text) is malformed. %r", error)
             raise error
 
+        # Parse special commands
+        admin_text = None
+        for line in stderr_file.readlines():
+            line = line.strip()
+            if not line:
+                continue
+
+            PREFIX = "ADMIN_MESSAGE:"
+            if line.startswith(PREFIX):
+                line = _sanitize_message(line[len(PREFIX):].strip())
+                if admin_text is not None:
+                    admin_text = admin_text + " " + line
+                else:
+                    admin_text = line
+            else:
+                logger.warning(f"Unknown special manager command `{line}`")
+
     try:
         outcome = float(outcome)
     except ValueError:
@@ -125,7 +144,7 @@ def extract_outcome_and_text(sandbox: Sandbox) -> tuple[float, list[str]]:
             logger.warning("Manager asked to translate text, but string "
                            "'%s' is not recognized." % remaining)
 
-    return outcome, [text]
+    return outcome, [text], admin_text
 
 
 def trusted_step(
@@ -150,10 +169,10 @@ def trusted_step(
     """
     # Set sandbox parameters suitable for trusted commands.
     sandbox.preserve_env = True
-    sandbox.max_processes = config.trusted_sandbox_max_processes
-    sandbox.timeout = config.trusted_sandbox_max_time_s
+    sandbox.max_processes = config.sandbox.trusted_sandbox_max_processes
+    sandbox.timeout = config.sandbox.trusted_sandbox_max_time_s
     sandbox.wallclock_timeout = 2 * sandbox.timeout + 1
-    sandbox.address_space = config.trusted_sandbox_max_memory_kib * 1024
+    sandbox.address_space = config.sandbox.trusted_sandbox_max_memory_kib * 1024
 
     # Run the trusted commands.
     stats = generic_step(sandbox, commands, "trusted")
@@ -191,17 +210,19 @@ def trusted_step(
 
 def checker_step(
     sandbox: Sandbox,
+    file_cacher: FileCacher,
     checker_digest: str | None,
     input_digest: str,
     correct_output_digest: str,
     output_filename: str,
     extra_args: list[str] | None = None
-) -> tuple[bool, float | None, list[str] | None]:
+) -> tuple[bool, float | None, list[str] | None, str | None]:
     """Run the explicit checker given by the admins
 
     sandbox: the sandbox to run the checker in; should already
         contain input, correct output, and user output; the checker is instead
         copied from the managers.
+    file_cacher: the file cacher to use to load the checker.
     checker_digest: digest of the checker, will be fetched as
         "checker"; if None, an appropriate error for bad configuration of the
         task will be generated.
@@ -213,7 +234,8 @@ def checker_step(
     extra_args: extra arguments to pass to the checker.
 
     return: success (true if the checker was able to check the solution
-        successfully), outcome and text (both None if success is False).
+        successfully), outcome, text and admin_text (all None if success
+        is False).
 
     """
     # Check that the file we are going to inject in the sandbox are not already
@@ -224,19 +246,19 @@ def checker_step(
         if sandbox.file_exists(filename):
             logger.error("File %s already in the sandbox for the checker.",
                          filename)
-            return False, None, None
+            return False, None, None, None
 
     # Copy the checker in the sandbox, after making sure it was provided.
     if checker_digest is None:
         logger.error("Configuration error: missing checker in task managers.")
-        return False, None, None
+        return False, None, None, None
     sandbox.create_file_from_storage(CHECKER_FILENAME, checker_digest,
-                                     executable=True)
+                                     file_cacher, executable=True)
 
     # Copy input and correct output in the sandbox.
-    sandbox.create_file_from_storage(CHECKER_INPUT_FILENAME, input_digest)
+    sandbox.create_file_from_storage(CHECKER_INPUT_FILENAME, input_digest, file_cacher)
     sandbox.create_file_from_storage(CHECKER_CORRECT_OUTPUT_FILENAME,
-                                     correct_output_digest)
+                                     correct_output_digest, file_cacher)
 
     # Execute the checker and ensure success, or log an error.
     command = ["./%s" % CHECKER_FILENAME,
@@ -247,17 +269,17 @@ def checker_step(
     if not box_success or not success:
         logger.error("Sandbox failed during checker step. "
                      "See previous logs for the reason.")
-        return False, None, None
+        return False, None, None, None
 
     # Extract outcome and text assuming a standard manager output.
     try:
-        outcome, text = extract_outcome_and_text(sandbox)
+        outcome, text, admin_text = extract_outcome_and_text(sandbox)
     except ValueError as e:
         logger.error("Invalid output from checker: %s", e)
-        return False, None, None
+        return False, None, None, None
     except FileNotFoundError as e:
         # This should not happen, as the redirect is handled by the sandbox.
         logger.error("Missing stdout or stderr file from checker: %s", e)
-        return False, None, None
+        return False, None, None, None
 
-    return True, outcome, text
+    return True, outcome, text, admin_text

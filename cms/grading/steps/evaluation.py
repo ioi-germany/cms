@@ -67,15 +67,12 @@ EVALUATION_MESSAGES = MessageCollection([
                     "for example. Note that in this case the CPU time "
                     "visible in the submission details might be much smaller "
                     "than the time limit.")),
+    HumanMessage("memorylimit",
+                 N_("Memory limit exceeded"),
+                 N_("Your submission used too much memory.")),
     HumanMessage("signal",
-                 N_("Execution killed (could be triggered by violating memory "
-                    "limits)"),
-                 N_("The evaluation was killed by a signal. "
-                    "Among other things, this might be caused by exceeding "
-                    "the memory limit. Note that if this is the reason, "
-                    "the memory usage visible in the submission details is "
-                    "the usage before the allocation that caused the "
-                    "signal.")),
+                 N_("Execution killed by signal"),
+                 N_("The evaluation was killed by a signal.")),
     HumanMessage("returncode",
                  N_("Execution failed because the return code was nonzero"),
                  N_("Your submission failed because it exited with a return "
@@ -139,8 +136,8 @@ def evaluation_step(
     for command in commands:
         success = evaluation_step_before_run(
             sandbox, command, time_limit, memory_limit,
-            dirs_map, writable_files, stdin_redirect, stdout_redirect,
-            multiprocess, wait=True)
+            None, dirs_map, writable_files, stdin_redirect,
+            stdout_redirect, multiprocess, wait=True)
         if not success:
             logger.debug("Job failed in evaluation_step_before_run.")
             return False, None, None
@@ -157,11 +154,13 @@ def evaluation_step_before_run(
     command: list[str],
     time_limit: float | None = None,
     memory_limit: int | None = None,
+    wall_limit: float | None = None,
     dirs_map: dict[str, tuple[str | None, str | None]] | None = None,
     writable_files: list[str] | None = None,
-    stdin_redirect: str | None = None,
-    stdout_redirect: str | None = None,
+    stdin_redirect: str | int | None = None,
+    stdout_redirect: str | int | None = "stdout.txt",
     multiprocess: bool = False,
+    close_fds: bool = True,
     wait: bool = False,
 ) -> bool | subprocess.Popen:
     """First part of an evaluation step, up to the execution, included.
@@ -178,6 +177,8 @@ def evaluation_step_before_run(
     # Ensure parameters are appropriate.
     if time_limit is not None and time_limit <= 0:
         raise ValueError("Time limit must be positive, is %s" % time_limit)
+    if wall_limit is not None and wall_limit <= 0:
+        raise ValueError("Wall limit must be positive, is %s" % wall_limit)
     if memory_limit is not None and memory_limit <= 0:
         raise ValueError(
             "Memory limit must be positive, is %s" % memory_limit)
@@ -187,8 +188,6 @@ def evaluation_step_before_run(
         dirs_map = {}
     if writable_files is None:
         writable_files = []
-    if stdout_redirect is None:
-        stdout_redirect = "stdout.txt"
 
     # Set sandbox parameters suitable for evaluation.
     if time_limit is not None:
@@ -198,13 +197,16 @@ def evaluation_step_before_run(
         sandbox.timeout = None
         sandbox.wallclock_timeout = None
 
+    if wall_limit is not None:
+        sandbox.wallclock_timeout = wall_limit
+
     if memory_limit is not None:
         sandbox.address_space = memory_limit
     else:
         sandbox.address_space = None
 
-    # config.max_file_size is in KiB
-    sandbox.fsize = config.max_file_size * 1024
+    # config.sandbox.max_file_size is in KiB
+    sandbox.fsize = config.sandbox.max_file_size * 1024
 
     sandbox.stdin_file = stdin_redirect
     sandbox.stdout_file = stdout_redirect
@@ -213,11 +215,12 @@ def evaluation_step_before_run(
     for src, (dest, options) in dirs_map.items():
         sandbox.add_mapped_directory(src, dest=dest, options=options)
     for name in [sandbox.stderr_file, sandbox.stdout_file]:
-        if name is not None:
+        if isinstance(name, str):
             writable_files.append(name)
     sandbox.allow_writing_only(writable_files)
 
     sandbox.set_multiprocess(multiprocess)
+    sandbox.close_fds = close_fds
 
     # Actually run the evaluation command.
     logger.debug("Starting execution step.")
@@ -244,6 +247,7 @@ def evaluation_step_after_run(
             Sandbox.EXIT_TIMEOUT,
             Sandbox.EXIT_TIMEOUT_WALL,
             Sandbox.EXIT_NONZERO_RETURN,
+            Sandbox.EXIT_MEM_LIMIT,
             Sandbox.EXIT_SIGNAL]:
         # Evaluation succeeded, and user program was interrupted for some error
         # condition. We report the success, the task type should decide how to
@@ -288,6 +292,8 @@ def human_evaluation_message(stats: StatsDict) -> list[str]:
     elif exit_status == Sandbox.EXIT_SANDBOX_ERROR:
         # Contestants won't see this, the submission will still be evaluating.
         return []
+    elif exit_status == Sandbox.EXIT_MEM_LIMIT:
+        return [EVALUATION_MESSAGES.get("memorylimit").message]
     elif exit_status == Sandbox.EXIT_NONZERO_RETURN:
         # Don't tell which code: would be too much information!
         return [EVALUATION_MESSAGES.get("returncode").message]

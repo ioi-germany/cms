@@ -28,7 +28,6 @@ import time
 
 from cms import config
 from cmscontrib.gerpythonformat.LaTeXSandbox import LaTeXSandbox
-from cms.db.filecacher import FileCacher
 from cmscontrib.gerpythonformat import copyifnecessary, copyrecursivelyifnecessary
 from cmscontrib.gerpythonformat.LocationStack import chdir
 
@@ -36,7 +35,6 @@ from copy import copy
 
 import importlib.util
 import importlib.machinery
-
 
 # from https://docs.python.org/3/whatsnew/3.12.html#whatsnew312-removed-imp
 def load_source(modname, filename):
@@ -228,7 +226,7 @@ class RuleResult(object):
 
         assert stat.S_ISREG(sta.st_mode)
 
-        if config.always_recompute_hash:
+        if config.germake.always_recompute_hash:
             return compute_file_hash(filename)
 
         # TODO Check that the following works reliably on all systems.
@@ -588,7 +586,6 @@ class SafeLaTeXRule(Rule):
         self.output = output
         self.party = party
         self.wdir = wdir
-        self.file_cacher = FileCacher()
         self.extra = extra
         self.command = ["/usr/bin/latexmk", "-g", "-pdflua", "-deps",
                         "-deps-out=.deps"] + self.extra + [source]
@@ -603,23 +600,21 @@ class SafeLaTeXRule(Rule):
                 'extra': self.extra}
 
     def run(self):
-        sandbox = LaTeXSandbox(self.file_cacher, name="LaTeX")
+        sandbox = LaTeXSandbox(name="LaTeX")
         copyrecursivelyifnecessary(self.wdir, sandbox.get_home_path(),
                                    self.ignore, self.ignore_ext, self.do_copy,
                                    mode=0o777)
 
-        stored_cache_path = os.path.join(config.latex_cache_dir,
-                                         self.party,
-                                         config.latex_distro)
-        sandbox_cache_path = os.path.join(sandbox.get_home_path(),
-                                          config.latex_distro)
+        stored_cache_path = os.path.join(
+            config.global_.latex_cache_dir, self.party, config.sandbox.latex_distro
+        )
+        sandbox_cache_path = os.path.join(
+            sandbox.get_home_path(), config.sandbox.latex_distro
+        )
         # Create the LaTeX cache directory if it doesn't exist
-        os.makedirs(stored_cache_path,
-                    exist_ok=True)
+        os.makedirs(stored_cache_path, exist_ok=True)
         # Copy the LaTeX cache directory into the sandbox
-        copyrecursivelyifnecessary(stored_cache_path,
-                                   sandbox_cache_path,
-                                   mode=0o777)
+        copyrecursivelyifnecessary(stored_cache_path, sandbox_cache_path, mode=0o777)
 
         sandbox.allow_writing_all()
 
@@ -658,9 +653,8 @@ class SafeLaTeXRule(Rule):
                             os.path.join(self.wdir, relpath, self.output))
             self.result.add_output(self.output)
 
-            #Copy potentially changed latex cache
-            copyrecursivelyifnecessary(sandbox_cache_path,
-                                       stored_cache_path)
+            # Copy potentially changed latex cache
+            copyrecursivelyifnecessary(sandbox_cache_path, stored_cache_path)
 
             # Change to the same working directory that lualatex used (which is
             # inside the sandbox).
@@ -668,10 +662,10 @@ class SafeLaTeXRule(Rule):
                 readmakefile(".deps", self.result, True)
 
             def convert(path):
-                if path.startswith(os.path.join(config.latex_distro, "")):
-                    return os.path.join(config.latex_cache_dir,
-                                        self.party,
-                                        path)
+                if path.startswith(os.path.join(config.sandbox.latex_distro, "")):
+                    return os.path.join(
+                        config.global_.latex_cache_dir, self.party, path
+                    )
                 else:
                     return path
 
@@ -679,7 +673,7 @@ class SafeLaTeXRule(Rule):
                {convert(path): hash
                 for path, hash in self.result.dependencies.items()}
 
-            sandbox.cleanup(not config.keep_sandbox)
+            sandbox.cleanup(not config.worker.keep_sandbox)
 
     def finish(self):
         self.result.code = self.result.log['code']

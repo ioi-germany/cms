@@ -49,18 +49,17 @@ import tornado.web
 from sqlalchemy.orm.exc import NoResultFound
 
 from cms import config
-from cms.db import PrintJob, User, Participation, Team
+from cms.db import User, Participation, Team
 from cms.grading.languagemanager import get_language
 from cms.grading.steps import COMPILATION_MESSAGES, EVALUATION_MESSAGES
 from cms.server import multi_contest
+from cms.server.util import normalize_login_next_page
 from cms.server.contest.authentication import validate_login
 from cms.server.contest.communication import get_communications
-from cms.server.contest.printing import accept_print_job, PrintingDisabled, \
-    UnacceptablePrintJob
 from cmscommon.crypto import hash_password, validate_password
 from cmscommon.datetime import make_datetime, make_timestamp
 from cmscommon.mimetypes import get_type_for_file_name
-from .contest import ContestHandler
+from .contest import ContestHandler, api_login_required
 from ..phase_management import actual_phase_required
 
 from cms.server.captcha.captcha import Captcha
@@ -291,12 +290,7 @@ class LoginHandler(ContestHandler):
         next_page: str | None = self.get_argument("next", None)
         if next_page is not None:
             error_args["next"] = next_page
-            if next_page != "/":
-                next_page = self.url(*next_page.strip("/").split("/"))
-            else:
-                next_page = self.url()
-        else:
-            next_page = self.contest_url()
+        next_page = normalize_login_next_page(next_page, self.url, self.contest_url())
         error_page = self.contest_url(**error_args)
 
         username: str = self.get_argument("username", "")
@@ -318,7 +312,11 @@ class LoginHandler(ContestHandler):
             self.clear_cookie(cookie_name)
         else:
             self.set_secure_cookie(
-                cookie_name, cookie, expires_days=None, max_age=config.cookie_duration)
+                cookie_name,
+                cookie,
+                expires_days=None,
+                max_age=config.contest_web_server.cookie_duration,
+            )
 
         if participation is None:
             self.redirect(error_page)
@@ -362,7 +360,7 @@ class NotificationsHandler(ContestHandler):
 
     refresh_cookie = False
 
-    @tornado.web.authenticated
+    @api_login_required
     @multi_contest
     def get(self):
         participation: Participation = self.current_user
@@ -390,55 +388,6 @@ class NotificationsHandler(ContestHandler):
         self.write(json.dumps(res))
 
 
-class PrintingHandler(ContestHandler):
-    """Serve the interface to print and handle submitted print jobs.
-
-    """
-    @tornado.web.authenticated
-    @actual_phase_required(0)
-    @multi_contest
-    def get(self):
-        participation: Participation = self.current_user
-
-        if not self.r_params["printing_enabled"]:
-            raise tornado.web.HTTPError(404)
-
-        printjobs: list[PrintJob] = (
-            self.sql_session.query(PrintJob)
-            .filter(PrintJob.participation == participation)
-            .all()
-        )
-
-        remaining_jobs = max(0, config.max_jobs_per_user - len(printjobs))
-
-        self.render("printing.html",
-                    printjobs=printjobs,
-                    remaining_jobs=remaining_jobs,
-                    max_pages=config.max_pages_per_job,
-                    pdf_printing_allowed=config.pdf_printing_allowed,
-                    **self.r_params)
-
-    @tornado.web.authenticated
-    @actual_phase_required(0)
-    @multi_contest
-    def post(self):
-        try:
-            printjob = accept_print_job(
-                self.sql_session, self.service.file_cacher, self.current_user,
-                self.timestamp, self.request.files)
-            self.sql_session.commit()
-        except PrintingDisabled:
-            raise tornado.web.HTTPError(404)
-        except UnacceptablePrintJob as e:
-            self.notify_error(e.subject, e.text, e.text_params)
-        else:
-            self.service.printing_service.new_printjob(printjob_id=printjob.id)
-            self.notify_success(N_("Print job received"),
-                                N_("Your print job has been received."))
-
-        self.redirect(self.contest_url("printing"))
-
-
 class DocumentationHandler(ContestHandler):
     """Displays the instruction (compilation lines, documentation,
     ...) of the contest.
@@ -451,10 +400,10 @@ class DocumentationHandler(ContestHandler):
         languages = [get_language(lang) for lang in contest.languages]
 
         language_docs = []
-        if config.docs_path is not None:
+        if config.contest_web_server.docs_path is not None:
             for language in languages:
                 ext = language.source_extensions[0][1:]  # remove dot
-                path = os.path.join(config.docs_path, ext)
+                path = os.path.join(config.contest_web_server.docs_path, ext)
                 if os.path.exists(path):
                     language_docs.append((language.name, ext))
         else:

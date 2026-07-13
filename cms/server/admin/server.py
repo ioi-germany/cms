@@ -53,9 +53,9 @@ class AdminWebServer(WebService):
         parameters = {
             "static_files": [("cms.server", "static"),
                              ("cms.server.admin", "static")],
-            "cookie_secret": hex_to_bin(config.secret_key),
-            "debug": config.tornado_debug,
-            "num_proxies_used": config.admin_num_proxies_used,
+            "cookie_secret": hex_to_bin(config.web_server.secret_key),
+            "debug": config.web_server.tornado_debug,
+            "num_proxies_used": config.admin_web_server.num_proxies_used,
             "auth_middleware": AWSAuthMiddleware,
             "rpc_enabled": True,
             "rpc_auth": self.is_rpc_authorized,
@@ -63,11 +63,11 @@ class AdminWebServer(WebService):
             "xsrf_cookie_kwargs": {"samesite": "Strict"},
         }
         super().__init__(
-            config.admin_listen_port,
+            config.admin_web_server.listen_port,
             HANDLERS,
             parameters,
             shard=shard,
-            listen_address=config.admin_listen_address)
+            listen_address=config.admin_web_server.listen_address)
         self.auth_handler: AWSAuthMiddleware
 
         self.jinja2_environment = AWS_ENVIRONMENT
@@ -82,7 +82,7 @@ class AdminWebServer(WebService):
         self.scoring_service = self.connect_to(
             ServiceCoord("ScoringService", 0))
 
-        ranking_enabled = len(config.rankings) > 0
+        ranking_enabled = len(config.proxy_service.rankings) > 0
         self.proxy_service = self.connect_to(
             ServiceCoord("ProxyService", 0),
             must_be_present=ranking_enabled)

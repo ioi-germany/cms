@@ -30,56 +30,49 @@
 
 """
 
-import os
-import re
-
 from setuptools import setup, find_packages
 from setuptools.command.build import build
 
 
 PACKAGE_DATA = {
     "cms.server": [
-        os.path.join("static", "*.*"),
-        os.path.join("static", "jq", "*.*"),
-        os.path.join("admin", "static", "*.*"),
-        os.path.join("admin", "static", "jq", "*.*"),
-        os.path.join("admin", "static", "sh", "*.*"),
-        os.path.join("admin", "templates", "*.*"),
-        os.path.join("admin", "templates", "fragments", "*.*"),
-        os.path.join("admin", "templates", "macro", "*.*"),
-        os.path.join("admin", "templates", "views", "*.*"),
-        os.path.join("contest", "static", "*.*"),
-        os.path.join("contest", "static", "css", "*.*"),
-        os.path.join("contest", "static", "img", "*.*"),
-        os.path.join("contest", "static", "img", "mimetypes", "*.*"),
-        os.path.join("contest", "static", "js", "*.*"),
-        os.path.join("contest", "templates", "*.*"),
-        os.path.join("contest", "templates", "macro", "*.*"),
-        os.path.join("taskoverview", "templates", "*.*"),
-        os.path.join("taskoverview", "static", "*.*"),
-        os.path.join("taskoverview", "static", "css", "*.*"),
-        os.path.join("taskoverview", "static", "img", "*.*"),
-        os.path.join("taskoverview", "static", "jq", "*.*"),
-        os.path.join("taskoverview", "static", "js", "*.*"),
-        os.path.join("gertranslate", "templates", "*.*"),
-        os.path.join("gertranslate", "static", "*.*"),
-        os.path.join("gertranslate", "static", "css", "*.*"),
-        os.path.join("gertranslate", "static", "img", "*.*"),
-        os.path.join("gertranslate", "static", "jq", "*.*"),
-        os.path.join("gertranslate", "static", "js", "*.*"),
-        os.path.join("captcha", "static", "*.*"),
-    ],
-    "cms.service": [
-        "templates/printing/*.*",
+        "static/*.*",
+        "static/jq/*.*",
+        "admin/static/*.*",
+        "admin/static/jq/*.*",
+        "admin/static/sh/*.*",
+        "admin/templates/*.*",
+        "admin/templates/fragments/*.*",
+        "admin/templates/macro/*.*",
+        "contest/static/*.*",
+        "contest/static/css/*.*",
+        "contest/static/img/*.*",
+        "contest/static/img/mimetypes/*.*",
+        "contest/static/js/*.*",
+        "contest/templates/*.*",
+        "contest/templates/macro/*.*",
+        "taskoverview/templates/*.*",
+        "taskoverview/static/*.*",
+        "taskoverview/static/css/*.*",
+        "taskoverview/static/img/*.*",
+        "taskoverview/static/jq/*.*",
+        "taskoverview/static/js/*.*",
+        "gertranslate/templates/*.*",
+        "gertranslate/static/*.*",
+        "gertranslate/static/css/*.*",
+        "gertranslate/static/img/*.*",
+        "gertranslate/static/jq/*.*",
+        "gertranslate/static/js/*.*",
+        "captcha/static/*.*",
     ],
     "cms.locale": [
         "*/LC_MESSAGES/*.*",
     ],
     "cmscontrib": [
-        os.path.join("gerpythonformat", "lib", "include", "*.*"),
-        os.path.join("gerpythonformat", "lib", "ready", "*.*"),
-        os.path.join("gerpythonformat", "templates", "*.*"),
-        os.path.join("gerpythonformat", "templates", "*", "*.*"),
+        "gerpythonformat/lib/include/*.*",
+        "gerpythonformat/lib/ready/*.*",
+        "gerpythonformat/templates/*.*",
+        "gerpythonformat/templates/*/*.*",
         "loaders/polygon/testlib.h",
     ],
     "cmsranking": [
@@ -105,6 +98,10 @@ PACKAGE_DATA = {
         "tasks/communication_stdio/data/*.*",
         "tasks/communication_stdio_stubbed/code/*",
         "tasks/communication_stdio_stubbed/data/*.*",
+        "tasks/interactive/code/*",
+        "tasks/interactive/data/*.*",
+        "tasks/interactive_many/code/*",
+        "tasks/interactive_many/data/*.*",
         "tasks/outputonly/data/*.*",
         "tasks/outputonly_comparator/code/*",
         "tasks/outputonly_comparator/data/*.*",
@@ -115,18 +112,6 @@ PACKAGE_DATA = {
     ],
 }
 
-
-def find_version():
-    """Return the version string obtained from cms/__init__.py"""
-    path = os.path.join("cms", "__init__.py")
-    with open(path, "rt", encoding="utf-8") as f:
-        version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
-                                  f.read(), re.M)
-    if version_match is not None:
-        return version_match.group(1)
-    raise RuntimeError("Unable to find version string.")
-
-
 # We piggyback the translation catalogs compilation onto build since
 # the po and mofiles will be part of the package data for cms.locale,
 # which is collected at this stage.
@@ -136,7 +121,6 @@ class build_with_l10n(build):
 
 setup(
     name="cms",
-    version=find_version(),
     packages=find_packages(),
     package_data=PACKAGE_DATA,
     cmdclass={"build": build_with_l10n},
@@ -150,7 +134,6 @@ setup(
         "scripts/cmsContestWebServer",
         "scripts/cmsAdminWebServer",
         "scripts/cmsProxyService",
-        "scripts/cmsPrintingService",
         "scripts/cmsRankingWebServer",
         "scripts/cmsTaskOverviewWebServer",
         "scripts/cmsGerTranslateWebServer",
@@ -186,6 +169,7 @@ setup(
             "cmsRemoveSubmissions=cmscontrib.RemoveSubmissions:main",
             "cmsRemoveTask=cmscontrib.RemoveTask:main",
             "cmsRemoveUser=cmscontrib.RemoveUser:main",
+            "cmsSolutionChecker=cmscontrib.SolutionChecker:main",
             "cmsSpoolExporter=cmscontrib.SpoolExporter:main",
             "cmsMake=cmstaskenv.cmsMake:main",
             "cmsPrometheusExporter=cmscontrib.PrometheusExporter:main",
@@ -197,6 +181,7 @@ setup(
             "Batch=cms.grading.tasktypes.Batch:Batch",
             "BatchAndOutput=cms.grading.tasktypes.BatchAndOutput:BatchAndOutput",
             "Communication=cms.grading.tasktypes.Communication:Communication",
+            "Interactive=cms.grading.tasktypes.Interactive:Interactive",
             "OutputOnly=cms.grading.tasktypes.OutputOnly:OutputOnly",
             "TwoSteps=cms.grading.tasktypes.TwoSteps:TwoSteps",
             "OmnipotentManager=" \

@@ -3,3 +3,6 @@ Dockerfile
 .vagrant/
 codecov/
 .dev/
+.venv/
+.git/
+.jj/

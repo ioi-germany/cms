@@ -29,7 +29,7 @@
 
 import logging
 from functools import wraps
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlsplit
 
 import collections
 try:
@@ -46,6 +46,8 @@ from cms.db import Session
 from cms.server.file_middleware import FileServerMiddleware
 from cmscommon.datetime import make_datetime
 
+if typing.TYPE_CHECKING:
+    from cms.io.web_service import WebService
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +169,38 @@ class Url:
         return self.__class__(self.__call__(component))
 
 
+def normalize_login_next_page(next_page: str | None, url: Url, default_url: str) -> str:
+    """Normalize a login redirection target.
+
+    Accept only local absolute-path targets (plus optional query), and
+    rebase them through the provided URL builder. Query-only values are
+    treated as "/" and preserved.
+
+    next_page: raw value of the "next" parameter.
+    url: URL builder for local paths.
+    default_url: fallback when next_page is missing or invalid.
+
+    return: normalized redirect target.
+    """
+    if next_page is None:
+        return default_url
+
+    split = urlsplit(next_page)
+    path = split.path or "/"
+    if split.scheme or split.netloc or not path.startswith("/"):
+        return default_url
+
+    if path != "/":
+        normalized = url(*path.strip("/").split("/"))
+    else:
+        normalized = url()
+
+    if split.query:
+        normalized += "?" + split.query
+
+    return normalized
+
+
 class CommonRequestHandler(RequestHandler):
     """Encapsulates shared RequestHandler functionality.
 
@@ -184,6 +218,7 @@ class CommonRequestHandler(RequestHandler):
         self.r_params = None
         self.contest = None
         self.url: Url = None
+        self.static_url_helper = None
 
     #Used for captchas
     #Returns a string's signature using secret_key
@@ -202,6 +237,7 @@ class CommonRequestHandler(RequestHandler):
         """
         super().prepare()
         self.url = Url(get_url_root(self.request.path))
+        self.static_url_helper = self.service.static_file_hasher.make(self.url)
         self.set_header("Cache-Control", "no-cache, must-revalidate")
 
     def finish(self, *args, **kwargs):
@@ -228,5 +264,5 @@ class CommonRequestHandler(RequestHandler):
             logger.debug("Connection closed before our reply.")
 
     @property
-    def service(self):
+    def service(self) -> "WebService":
         return self.application.service

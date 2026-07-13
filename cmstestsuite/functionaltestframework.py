@@ -24,6 +24,7 @@
 
 import json
 import logging
+import os
 import re
 import sys
 import time
@@ -129,7 +130,7 @@ class FunctionalTestFramework:
             self.admin_info["username"] = "admin_%s" % suffix
             logger.info("Trying %(username)s" % self.admin_info)
             try:
-                sh([sys.executable, "cmscontrib/AddAdmin.py",
+                sh([os.path.join(sys.prefix, "bin/cmsAddAdmin"),
                     "%(username)s" % self.admin_info,
                     "-p", "%(password)s" % self.admin_info],
                    ignore_failure=False)
@@ -206,15 +207,19 @@ class FunctionalTestFramework:
         resp = self.admin_req('contests/add', args=add_args)
         # Contest ID is returned as HTTP response.
         page = resp.text
-        match = re.search(
+        match_contest = re.search(
             r'<form enctype="multipart/form-data" '
             r'action="../contest/([0-9]+)" '
             r'method="POST" name="edit_contest" style="display:inline;">',
             page)
-        if match is not None:
-            contest_id = int(match.groups()[0])
+        match_group = re.search(
+            r'<a href=\'../contest/[0-9]+/group/([0-9]+)/edit\'>',
+            page)
+        if match_contest is not None and match_group is not None:
+            contest_id = int(match_contest.groups()[0])
+            group_id = int(match_group.groups()[0])
             self.admin_req('contest/%s' % contest_id, args=kwargs)
-            return contest_id
+            return contest_id, group_id
         else:
             raise TestException("Unable to create contest.")
 

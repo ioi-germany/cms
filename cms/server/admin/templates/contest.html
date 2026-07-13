@@ -90,6 +90,14 @@
         <input type="checkbox" id="allow_unofficial_submission_before_analysis_mode" name="allow_unofficial_submission_before_analysis_mode" {{ "checked" if contest.allow_unofficial_submission_before_analysis_mode else "" }}/>
       </td>
     </tr>
+    <tr>
+      <td>
+        <span class="info" title="Timezone of the server, used to display start, end times and the current server time to contestants.
+                                  Example: 'Europe/Rome', 'America/New_York', ..."></span>
+        Timezone
+      </td>
+      <td><input type="text" name="timezone" value="{{ contest.timezone if contest.timezone is not none else "" }}"></td>
+    </tr>
 
     <tr><td colspan=2><h2>Logging in</h2></td></tr>
     <tr>
@@ -202,29 +210,31 @@
       <td><input type="text" name="token_gen_max" value="{{ contest.token_gen_max if contest.token_gen_max is not none else "" }}" size="3"></td>
     </tr>
 
-    <tr><td colspan=2><h2>Times</h2></td></tr>
+    <tr><td colspan=2><h2>Main group settings</h2></td></tr>
     <tr>
       <td>
         <span class="info" title="The group used for time calculations in the admin and ranking interface."></span>
         Main group
       </td>
       <td>
-        <select name="main_group_id">
-    {% for g in contest.groups %}
-          <option value="{{ g.id }}" {% if contest.main_group_id == g.id %}selected{% endif %}>
-            {{ g.name }}
-          </option>
-    {% endfor %}
-        </select>
+        <a href='{{ url("contest", contest.id, "group", contest.main_group_id, "edit") }}'>{{ contest.main_group.name }}</a>
       </td>
     </tr>
+  </table>
+  <table class="NestedSettings">
+    {% set group = contest.main_group %}
+    {% include "fragments/group_settings.html" %}
+  </table>
+  <table>
     <tr>
       <td>
-        <span class="info" title="Timezone of the server, used to display start, end times and the current server time to contestants.
-                                  Example: 'Europe/Rome', 'America/New_York', ..."></span>
-        Timezone
+        <span style="width: 8px; display: inline-block;"></span>
+        <span style="max-width: 300px; display: inline-block; word-wrap: break-word;">
+          To change start and end times or analysis mode for other groups, or change the main
+          group, please use the <a href='{{ url("contest", contest.id, "groups")
+          }}'>groups</a> section.
+        </span>
       </td>
-      <td><input type="text" name="timezone" value="{{ contest.timezone if contest.timezone is not none else "" }}"></td>
     </tr>
 
     <tr><td colspan=2><h2>Limits</h2></td></tr>

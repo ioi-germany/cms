@@ -371,6 +371,16 @@ table.TaskTypeOptions {
     border: 1px solid gray;
     margin: 5px 0px;
 }
+table.NestedSettings {
+    margin-left: 32px;
+    display: inline-table;
+}
+table.NestedSettings h2 {
+    margin-left: -1em;
+}
+table.NestedSettings h2::before {
+    content: "\21B3";
+}
 
 table td.wrapping-options {
     display: flex;
@@ -382,6 +392,15 @@ table td.wrapping-options label {
     margin-right: 15px;
 }
 
+.language-item label {
+    display: block;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.language-item input[type="checkbox"] {
+    margin-right: 6px;
+}
 table td.partial::after {
     content: "*";
 }
@@ -741,4 +760,11 @@ a.button-link {
 
 a.button-link:hover {
     background-color: #EEF3EA;
+}
+
+th.diff-only, td.diff-only {
+    display: none;
+}
+table.diff-open th.diff-only, table.diff-open td.diff-only {
+    display: table-cell;
 }

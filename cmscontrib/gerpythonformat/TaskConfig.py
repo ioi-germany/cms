@@ -18,6 +18,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from cms.db.user import Participation
+from cmscontrib.gerpythonformat.Executable import Executable
 from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \
     header, red, green, gray, yellow, blue, lightgreen, orange, purple, bold, \
     box, side_by_side, pad_left, add_line_breaks, \
@@ -36,7 +38,7 @@ from cms.db import Task, Statement, Testcase, Dataset, \
     SubmissionResult
 from cms.grading.tasktypes import get_task_type
 from cms.grading.languagemanager import get_language
-from cms.grading.Job import CompilationJob, EvaluationJob
+from cms.grading.Job import CompilationJob, EvaluationJob, Job
 from cms.rules.Rule import JobRule, ZipRule
 from cms.service.esoperations import ESOperation
 from datetime import datetime
@@ -797,12 +799,6 @@ class MySubmission(object):
         for c in self.task.cases:
             self.case_expectations[c.codename] = []
 
-        def encode(key):
-            try:
-                return keywords[key]
-            except KeyError:
-                return [MySubmission.score_machine_readable(json.loads(key))]
-
         # Convert the given lists of expected events to something more
         # readable for ScoreTypes
         for key, items in self.expected.items():
@@ -926,7 +922,7 @@ class TaskConfig(CommonConfig, Scope):
         self.cases_by_codename = {}
         self.cases_hashnames = set()
         self.group_stack = []
-        self.output_generator = None
+        self.output_generator_: Executable | None = None
         self.testsubmissions = []
         self.attachments = {}
         self.spoilers = {}
@@ -1106,11 +1102,11 @@ class TaskConfig(CommonConfig, Scope):
 
     @exported_function
     def get_constraint_value(self, name):
-        l = self.get_constraint_lower(name)
-        u = self.get_constraint_upper(name)
+        lower = self.get_constraint_lower(name)
+        upper = self.get_constraint_upper(name)
 
-        if l == u:
-            return l
+        if lower == upper:
+            return lower
         else:
             raise ValueError("calling get_constraint_value although lower and "
                              "upper do not agree")
@@ -1120,7 +1116,7 @@ class TaskConfig(CommonConfig, Scope):
     def cpp_constraints(self):
         def cppify(x):
             if x is None:
-                return "none";
+                return "none"
             else:
                 return "(string)\"{}\"".format(x)
 
@@ -1142,8 +1138,9 @@ class TaskConfig(CommonConfig, Scope):
             s += '\tNEW_SOFT_CONSTRAINT_LIST;\n'
 
             for c in cl.constraints:
-                s += '\t\tNEW_SOFT_CONSTRAINT(({}), ({}));\n'.\
-                         format(cppify(c.lower()), cppify(c.upper()));
+                s += "\t\tNEW_SOFT_CONSTRAINT(({}), ({}));\n".format(
+                    cppify(c.lower()), cppify(c.upper())
+                )
 
                 for var in c.variables:
                     s += '\t\t\tSOFT_CONSTRAINT_VAR(("{}"));\n'.format(var.val)
@@ -1385,7 +1382,7 @@ class TaskConfig(CommonConfig, Scope):
                                     "fifo_io"])
 
     @exported_function
-    def output_generator(self, s):
+    def output_generator(self, s: Executable):
         """
         Set the output file generator.
 
@@ -1395,7 +1392,7 @@ class TaskConfig(CommonConfig, Scope):
 
         """
         print_msg("Registered output generator {}".format(s), headerdepth=10)
-        self.output_generator = s
+        self.output_generator_ = s
 
     # Test cases (subtasks, groups, ...)
 
@@ -1417,17 +1414,18 @@ class TaskConfig(CommonConfig, Scope):
         prog (Executable): program to run to generate the test case
 
         """
-        codename = case_number = "%.04d" % (len(self.cases) + 1)
+        codename = "%.04d" % (len(self.cases) + 1)
 
-        if self.output_generator is None:
+        if self.output_generator_ is None:
             raise Exception(
                 "You must specify an output generator before a test case")
 
         # Note that we don't use the output (infile) path of prog or the
         # in- and output part (infile and outfile) path of the output
         # generator as part of the mission hash, unlike the actual missions
-        hashname = '-'.join((prog.missionhash()[:14],
-                            self.output_generator.missionhash()[:14]))
+        hashname = "-".join(
+            (prog.missionhash()[:14], self.output_generator_.missionhash()[:14])
+        )
 
         if hashname in self.cases_hashnames:
             raise Exception("Another testcase already has the identifier {}. "
@@ -1443,7 +1441,7 @@ class TaskConfig(CommonConfig, Scope):
 
             prog(stdout=case.infile)
 
-            self.output_generator(stdin=case.infile, stdout=case.outfile)
+            self.output_generator_(stdin=case.infile, stdout=case.outfile)
             self.cases.append(case)
             self.cases_by_codename[codename] = case
             self.cases_hashnames.add(hashname)
@@ -1873,9 +1871,9 @@ class TaskConfig(CommonConfig, Scope):
             print_msg("Taskname: {}".format(self.name))
             sts = [
                 "{} {}{}".format(
-                    l, self.short_path(s.file_), " (primary)" if s.primary else ""
+                    lang, self.short_path(s.file_), " (primary)" if s.primary else ""
                 )
-                for l, s in self._statements.items()
+                for lang, s in self._statements.items()
             ]
             print_msg("Task statements: {}".format(", ".join(sts)))
             print_msg("Attachments: {}".format(", ".join(self.attachments)))
@@ -2310,16 +2308,22 @@ class TaskConfig(CommonConfig, Scope):
                               use_ellipsis=False)
                     print()
 
-    def _makesubmission(self, submission, participation, tdb, official=True):
+    def _makesubmission(
+        self,
+        submission: MySubmission,
+        participation: Participation,
+        tdb: Task,
+        official: bool = True,
+    ) -> Submission:
         """
         Create and return a test submission database object.
 
-        submission (MySubmission): configuration object for this submission
+        submission: configuration object for this submission
 
-        participation (Participation): database object for the test
+        participation: database object for the test
                                        participation
 
-        tdb (Task): database object for the task
+        tdb: database object for the task
 
         official (boolean): whether this submission is official (i.e. counts
                             towards the score)
@@ -2426,21 +2430,22 @@ class TaskConfig(CommonConfig, Scope):
 
         return sdb
 
-    def _do_test_submission(self, sdb, ddb):
+    def _do_test_submission(self, sdb: Submission, ddb: Dataset):
         """
         Test the given submission.
 
-        sdb (Submission): database object for the submission
+        sdb: database object for the submission
 
-        ddb (Dataset): database object for the data set
+        ddb: database object for the data set
 
         """
         submission_result = SubmissionResult(submission=sdb,
                                              dataset=ddb)
         # Compile
         compile_operation = ESOperation(ESOperation.COMPILATION, -1, -1)
-        compile_job = CompilationJob.from_submission(
-            compile_operation, sdb, ddb)
+        compile_job: CompilationJob = CompilationJob.from_submission(
+            compile_operation, sdb, ddb
+        )
         compile_job = self._run_job(compile_job)
         compile_job.to_submission(submission_result)
         compile_ok = (submission_result.compilation_outcome == "ok")
@@ -2463,11 +2468,9 @@ class TaskConfig(CommonConfig, Scope):
                 evaluation_operation = ESOperation(ESOperation.EVALUATION,
                                                    -1, -1,
                                                    codename)
-                evaluation_job = EvaluationJob.from_submission(
-                    evaluation_operation,
-                    sdb,
-                    ddb,
-                    submission_result)
+                evaluation_job: EvaluationJob = EvaluationJob.from_submission(
+                    evaluation_operation, sdb, ddb, submission_result
+                )
                 # Remove testcase_codename so the submission isn't re-evaluated
                 # when only the testcase's codename has changed.
                 evaluation_job.operation.testcase_codename = None
@@ -2567,7 +2570,6 @@ class TaskConfig(CommonConfig, Scope):
             print()
 
         if compile_ok:
-            submission_info = json.loads(sdb.additional_info)
             score_precision = sdb.task.score_precision
 
             def print_score_info(prefix, name):
@@ -2601,11 +2603,11 @@ class TaskConfig(CommonConfig, Scope):
 
         return verd[0] == 1, details
 
-    def _run_job(self, job):
+    def _run_job(self, job: Job):
         """
         Run the given job (if necessary) and save the results to it.
 
-        job (Job): the job
+        job: the job
 
         """
         r = JobRule(self.rules, job, self.file_cacher).ensure()

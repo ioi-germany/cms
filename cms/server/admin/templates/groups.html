@@ -21,7 +21,14 @@
   Edit selected group:
   <input type="submit"
          name="operation"
-         value="Remove from contest"
+         value="Make main group"
+{% if not admin.permission_all %}
+         disabled
+{% endif %}
+         />
+  <input type="submit"
+         name="operation"
+         value="Delete selected group"
 {% if not admin.permission_all %}
          disabled
 {% endif %}
@@ -45,7 +52,7 @@
         <td>
           <input type="radio" name="group_id" value="{{ g.id }}"/>
         </td>
-        <td><a href="{{ url("contest", contest.id, "group", g.id, "edit") }}">{{ g.name }}</a></td>
+        <td><a href="{{ url("contest", contest.id, "group", g.id, "edit") }}">{{ g.name }} {% if g.id == g.contest.main_group_id %}(main group){% endif %}</a></td>
         <td>{{ g.start }}</td>
         <td>{{ g.stop }}</td>
         <td>

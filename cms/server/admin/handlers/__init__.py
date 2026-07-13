@@ -79,7 +79,8 @@ from .submission import \
     SubmissionHandler, \
     SubmissionCommentHandler, \
     SubmissionOfficialStatusHandler, \
-    SubmissionFileHandler
+    SubmissionFileHandler, \
+    SubmissionDiffHandler
 from .task import \
     AddTaskHandler, \
     TaskHandler, \
@@ -105,7 +106,6 @@ from .user import \
     RemoveTeamHandler, \
     GroupListHandler, \
     AddGroupHandler, \
-    RemoveGroupHandler, \
     GroupHandler
 from .usertest import \
     UserTestHandler, \
@@ -145,7 +145,6 @@ HANDLERS = [
 
     (r"/contest/([0-9]+)/groups", GroupListHandler),
     (r"/contest/([0-9]+)/groups/add", AddGroupHandler),
-    (r"/contest/([0-9]+)/group/([0-9]+)/remove", RemoveGroupHandler),
     (r"/contest/([0-9]+)/group/([0-9]+)/edit", GroupHandler),
 
     # Contest's tasks
@@ -230,6 +229,7 @@ HANDLERS = [
     (r"/submission/([0-9]+)(?:/([0-9]+))?/comment", SubmissionCommentHandler),
     (r"/submission/([0-9]+)(?:/([0-9]+))?/official", SubmissionOfficialStatusHandler),
     (r"/submission_file/([0-9]+)", SubmissionFileHandler),
+    (r"/submission_diff/([0-9]+)/([0-9]+)", SubmissionDiffHandler),
 
     # User tests
 

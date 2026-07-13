@@ -9,6 +9,8 @@
 # Copyright © 2015-2019 Luca Chiodini <luca@chiodini.org>
 # Copyright © 2016 Andrea Cracco <guilucand@gmail.com>
 # Copyright © 2018 Edoardo Morassutto <edoardo.morassutto@gmail.com>
+# Copyright © 2026 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2026 Jonathan Baumann <jonathan.baumann@edu.ruhr-uni-bochum.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -35,7 +37,7 @@ import yaml
 from cms import TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE, \
     FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED, FEEDBACK_LEVEL_OI_RESTRICTED
 from cms.db import Contest, User, Task, Statement, Attachment, Team, Dataset, \
-    Manager, Testcase
+    Manager, Testcase, Group
 from cms.grading.languagemanager import LANGUAGES, HEADER_EXTS
 from cmscommon.constants import \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK, SCORE_MODE_MAX_TOKENED_LAST
@@ -237,10 +239,11 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                 args["token_gen_interval"] = timedelta(minutes=1)
 
         # Times
-        load(conf, args, ["start", "inizio"], conv=parse_datetime)
-        load(conf, args, ["stop", "fine"], conv=parse_datetime)
+        main_group = {}
+        load(conf, main_group, ["start", "inizio"], conv=parse_datetime)
+        load(conf, main_group, ["stop", "fine"], conv=parse_datetime)
         load(conf, args, ["timezone"])
-        load(conf, args, ["per_user_time"], conv=make_timedelta)
+        load(conf, main_group, ["per_user_time"], conv=make_timedelta)
 
         # Limits
         load(conf, args, "max_submission_number")
@@ -249,9 +252,34 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         load(conf, args, "min_user_test_interval", conv=make_timedelta)
 
         # Analysis mode
-        load(conf, args, "analysis_enabled")
-        load(conf, args, "analysis_start", conv=parse_datetime)
-        load(conf, args, "analysis_stop", conv=parse_datetime)
+        load(conf, main_group, "analysis_enabled")
+        load(conf, main_group, "analysis_start", conv=parse_datetime)
+        load(conf, main_group, "analysis_stop", conv=parse_datetime)
+
+        # Groups
+        main_group_name: str | None = load(conf, None, "main_group")
+        groups: list[dict] | None = load(conf, None, "groups")
+
+        if groups is None:
+            main_group["name"] = "default"
+            args["groups"] = [self.make_group(main_group)]
+            args["main_group"] = args["groups"][0]
+        else:
+            if main_group:
+                logger.critical("You should not specify `start', `stop', "
+                               "`analysis_start', `analysis_end', or "
+                               "`analysis_enabled' when using groups")
+                sys.exit(1)
+
+            if main_group_name is None:
+                if len(groups) == 1:
+                    main_group_name = groups[0]["name"]
+                else:
+                    main_group_name = "main"
+
+            args["groups"] = [self.make_group(g) for g in groups]
+            args["main_group"] = [g for g in args["groups"]
+                                    if g.name == main_group_name][0]
 
         tasks: list[str] | None = load(conf, None, ["tasks", "problemi"])
         participations: list[dict] | None = load(conf, None, ["users", "utenti"])
@@ -265,6 +293,20 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         logger.info("Contest parameters loaded.")
 
         return Contest(**args), tasks, participations
+
+    @staticmethod
+    def make_group(g_dict: dict) -> Group | None:
+        """Build a Group object from a dict"""
+        args = {}
+        for key in ["start", "stop", "analysis_stop", "analysis_end"]:
+            if key in g_dict:
+                args[key] = parse_datetime(g_dict[key])
+        for key in ["name", "analysis_enabled"]:
+            if key in g_dict:
+                args[key] = g_dict[key]
+        if "per_user_time" in g_dict:
+            args["per_user_time"] = make_timedelta(g_dict["per_user_time"])
+        return Group(**args)
 
     def get_user(self):
         """See docstring in class UserLoader."""
@@ -553,10 +595,15 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         # presuming that the task type is Batch, we retrieve graders
         # in the form sol/grader.%l
         graders = False
+        stubs = False
         for lang in LANGUAGES:
             if os.path.exists(os.path.join(
                     self.path, "sol", "grader%s" % lang.source_extension)):
                 graders = True
+                break
+            if os.path.exists(os.path.join(
+                    self.path, "sol", "stub%s" % lang.source_extension)):
+                stubs = True
                 break
         if graders:
             # Read grader for each language
@@ -573,6 +620,24 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                         Manager("grader%s" % extension, digest)]
                 else:
                     logger.warning("Grader for language %s not found ", lang)
+            compilation_param = "grader"
+        elif stubs:
+            # Read grader for each language
+            for lang in LANGUAGES:
+                extension = lang.source_extension
+                grader_filename = os.path.join(
+                    self.path, "sol", "stub%s" % extension)
+                if os.path.exists(grader_filename):
+                    digest = self.file_cacher.put_file_from_path(
+                        grader_filename,
+                        "Stub for task %s and language %s" %
+                        (task.name, lang))
+                    args["managers"] += [
+                        Manager("stub%s" % extension, digest)]
+                else:
+                    logger.warning("Stub for language %s not found ", lang)
+            compilation_param = "stub"
+        if graders or stubs:
             # Read managers with other known file extensions
             for other_filename in os.listdir(os.path.join(self.path, "sol")):
                 if any(other_filename.endswith(header)
@@ -582,7 +647,6 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
                         "Manager %s for task %s" % (other_filename, task.name))
                     args["managers"] += [
                         Manager(other_filename, digest)]
-            compilation_param = "grader"
         else:
             compilation_param = "alone"
 
@@ -603,95 +667,98 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
         else:
             evaluation_param = "diff"
 
-        # Detect subtasks by checking GEN
-        gen_filename = os.path.join(self.path, 'gen', 'GEN')
-        try:
-            with open(gen_filename, "rt", encoding="utf-8") as gen_file:
-                subtasks = []
-                testcases = 0
-                points = None
-                for line in gen_file:
-                    line = line.strip()
-                    splitted = line.split('#', 1)
-
-                    if len(splitted) == 1:
-                        # This line represents a testcase, otherwise
-                        # it's just a blank
-                        if splitted[0] != '':
-                            testcases += 1
-
-                    else:
-                        testcase, comment = splitted
-                        testcase = testcase.strip()
-                        comment = comment.strip()
-                        testcase_detected = len(testcase) > 0
-                        copy_testcase_detected = comment.startswith("COPY:")
-                        subtask_detected = comment.startswith('ST:')
-
-                        flags = [testcase_detected,
-                                 copy_testcase_detected,
-                                 subtask_detected]
-                        if len([x for x in flags if x]) > 1:
-                            raise Exception("No testcase and command in"
-                                            " the same line allowed")
-
-                        # This line represents a testcase and contains a
-                        # comment, but the comment doesn't start a new
-                        # subtask
-                        if testcase_detected or copy_testcase_detected:
-                            testcases += 1
-
-                        # This line starts a new subtask
-                        if subtask_detected:
-                            # Close the previous subtask
-                            if points is None:
-                                assert testcases == 0
-                            else:
-                                subtasks.append([points, testcases])
-                            # Open the new one
-                            testcases = 0
-                            points = int(comment[3:].strip())
-
-                # Close last subtask (if no subtasks were defined, just
-                # fallback to Sum)
-                if points is None:
-                    args["score_type"] = "Sum"
-                    total_value = float(conf.get("total_value", 100.0))
-                    input_value = 0.0
-                    n_input = testcases
-                    if n_input != 0:
-                        input_value = total_value / n_input
-                    args["score_type_parameters"] = input_value
-                else:
-                    subtasks.append([points, testcases])
-                    assert 100 == sum([int(st[0]) for st in subtasks])
-                    n_input = sum([int(st[1]) for st in subtasks])
-                    args["score_type"] = "GroupMin"
-                    args["score_type_parameters"] = subtasks
-
-                if "n_input" in conf:
-                    assert int(conf['n_input']) == n_input
-
-        # If gen/GEN doesn't exist, just fallback to Sum
-        except OSError:
-            args["score_type"] = "Sum"
-            total_value = float(conf.get("total_value", 100.0))
-            input_value = 0.0
-            n_input = int(conf['n_input'])
-            if n_input != 0:
-                input_value = total_value / n_input
-            args["score_type_parameters"] = input_value
-
         # Override score_type if explicitly specified
-        if "score_type" in conf and "score_type_parameters" in conf:
+        if "score_type" in conf and "score_type_parameters" in conf and "n_input" in conf:
             logger.info("Overriding 'score_type' and 'score_type_parameters' "
                         "as per task.yaml")
+            n_input = conf["n_input"]
             load(conf, args, "score_type")
             load(conf, args, "score_type_parameters")
-        elif "score_type" in conf or "score_type_parameters" in conf:
-            logger.warning("To override score type data, task.yaml must "
-                           "specify both 'score_type' and "
-                           "'score_type_parameters'.")
+        else:
+            if "score_type" in conf or "score_type_parameters" in conf:
+                logger.warning("To override score type data, task.yaml must "
+                               "specify all 'score_type', "
+                               "'score_type_parameters' and "
+                               "'n_input'.")
+
+            # Detect subtasks by checking GEN
+            gen_filename = os.path.join(self.path, 'gen', 'GEN')
+            try:
+                with open(gen_filename, "rt", encoding="utf-8") as gen_file:
+                    subtasks = []
+                    testcases = 0
+                    points = None
+                    for line in gen_file:
+                        line = line.strip()
+                        splitted = line.split('#', 1)
+
+                        if len(splitted) == 1:
+                            # This line represents a testcase, otherwise
+                            # it's just a blank
+                            if splitted[0] != '':
+                                testcases += 1
+
+                        else:
+                            testcase, comment = splitted
+                            testcase = testcase.strip()
+                            comment = comment.strip()
+                            testcase_detected = len(testcase) > 0
+                            copy_testcase_detected = comment.startswith("COPY:")
+                            subtask_detected = comment.startswith('ST:')
+
+                            flags = [testcase_detected,
+                                    copy_testcase_detected,
+                                    subtask_detected]
+                            if len([x for x in flags if x]) > 1:
+                                raise Exception("No testcase and command in"
+                                                " the same line allowed")
+
+                            # This line represents a testcase and contains a
+                            # comment, but the comment doesn't start a new
+                            # subtask
+                            if testcase_detected or copy_testcase_detected:
+                                testcases += 1
+
+                            # This line starts a new subtask
+                            if subtask_detected:
+                                # Close the previous subtask
+                                if points is None:
+                                    assert testcases == 0
+                                else:
+                                    subtasks.append([points, testcases])
+                                # Open the new one
+                                testcases = 0
+                                points = int(comment[3:].strip())
+
+                    # Close last subtask (if no subtasks were defined, just
+                    # fallback to Sum)
+                    if points is None:
+                        args["score_type"] = "Sum"
+                        total_value = float(conf.get("total_value", 100.0))
+                        input_value = 0.0
+                        n_input = testcases
+                        if n_input != 0:
+                            input_value = total_value / n_input
+                        args["score_type_parameters"] = input_value
+                    else:
+                        subtasks.append([points, testcases])
+                        assert 100 == sum([int(st[0]) for st in subtasks])
+                        n_input = sum([int(st[1]) for st in subtasks])
+                        args["score_type"] = "GroupMin"
+                        args["score_type_parameters"] = subtasks
+
+                    if "n_input" in conf:
+                        assert int(conf['n_input']) == n_input
+
+            # If gen/GEN doesn't exist, just fallback to Sum
+            except OSError:
+                args["score_type"] = "Sum"
+                total_value = float(conf.get("total_value", 100.0))
+                input_value = 0.0
+                n_input = int(conf['n_input'])
+                if n_input != 0:
+                    input_value = total_value / n_input
+                args["score_type_parameters"] = input_value
 
         # If output_only is set, then the task type is OutputOnly
         if conf.get('output_only', False):
@@ -702,88 +769,92 @@ class YamlLoader(ContestLoader, TaskLoader, UserLoader, TeamLoader):
             task.submission_format = \
                 ["output_%03d.txt" % i for i in range(n_input)]
 
+        # If there is check/controller (or equivalent), then the task
+        # type is Interactive
+        controller_path = None
+        for path in (os.path.join(self.path, "check", "controller"),
+                     os.path.join(self.path, "cor", "controller")):
+            if os.path.exists(path):
+                controller_path = path
+                break
+
         # If there is check/manager (or equivalent), then the task
         # type is Communication
+        manager_path = None
+        for path in (os.path.join(self.path, "check", "manager"),
+                     os.path.join(self.path, "cor", "manager")):
+            if os.path.exists(path):
+                manager_path = path
+                break
+
+        if controller_path is not None and manager_path is not None:
+            logger.fatal("Cannot have both a manager and a controller")
+
+        if controller_path is not None:
+            args["task_type"] = "Interactive"
+            logger.info("Task type Interactive")
+
+            process_limit = conf.get("controller_process_limit", 200)
+            concurrent = conf.get("interactive_concurrent", True)
+            controller_memory_limit_mb = conf.get("controller_memory_limit", None)
+            controller_time_limit = conf.get("controller_time_limit", None)
+            controller_wall_limit = conf.get("controller_wall_time_limit", None)
+
+            args["task_type_parameters"] = \
+                [process_limit, compilation_param, concurrent,
+                 controller_memory_limit_mb, controller_time_limit, controller_wall_limit]
+            digest = self.file_cacher.put_file_from_path(
+                controller_path,
+                "Controller for task %s" % task.name)
+            args["managers"] += [Manager("controller", digest)]
+        elif manager_path is not None:
+            num_processes = load(conf, None, "num_processes")
+            if num_processes is None:
+                num_processes = 1
+            io_type = load(conf, None, "user_io")
+            if io_type is not None:
+                if io_type not in ["std_io", "fifo_io"]:
+                    logger.warning("user_io incorrect. Valid options "
+                                   "are 'std_io' and 'fifo_io'. "
+                                   "Ignored.")
+                    io_type = None
+            logger.info("Task type Communication")
+            args["task_type"] = "Communication"
+            args["task_type_parameters"] = \
+                [num_processes, compilation_param,
+                 io_type or ("fifo_io" if compilation_param == "stub" else "std_io")]
+            digest = self.file_cacher.put_file_from_path(
+                manager_path,
+                "Manager for task %s" % task.name)
+            args["managers"] += [Manager("manager", digest)]
         else:
-            paths = [os.path.join(self.path, "check", "manager"),
-                     os.path.join(self.path, "cor", "manager")]
-            for path in paths:
-                if os.path.exists(path):
-                    num_processes = load(conf, None, "num_processes")
-                    if num_processes is None:
-                        num_processes = 1
-                    io_type = load(conf, None, "user_io")
-                    if io_type is not None:
-                        if io_type not in ["std_io", "fifo_io"]:
-                            logger.warning("user_io incorrect. Valid options "
-                                           "are 'std_io' and 'fifo_io'. "
-                                           "Ignored.")
-                            io_type = None
-                    logger.info("Task type Communication")
-                    args["task_type"] = "Communication"
-                    args["task_type_parameters"] = \
-                        [num_processes, "alone", io_type or "std_io"]
-                    digest = self.file_cacher.put_file_from_path(
-                        path,
-                        "Manager for task %s" % task.name)
-                    args["managers"] += [
-                        Manager("manager", digest)]
-                    for lang in LANGUAGES:
-                        stub_name = os.path.join(
-                            self.path, "sol", "stub%s" % lang.source_extension)
-                        if os.path.exists(stub_name):
-                            digest = self.file_cacher.put_file_from_path(
-                                stub_name,
-                                "Stub for task %s and language %s" % (
-                                    task.name, lang.name))
-                            args["task_type_parameters"] = \
-                                [num_processes, "stub", io_type or "fifo_io"]
-                            args["managers"] += [
-                                Manager(
-                                    "stub%s" % lang.source_extension, digest)]
-                        else:
-                            logger.warning("Stub for language %s not "
-                                           "found.", lang.name)
-                    for other_filename in os.listdir(os.path.join(self.path,
-                                                                  "sol")):
-                        if any(other_filename.endswith(header)
-                               for header in HEADER_EXTS):
-                            digest = self.file_cacher.put_file_from_path(
-                                os.path.join(self.path, "sol", other_filename),
-                                "Stub %s for task %s" % (other_filename,
-                                                         task.name))
-                            args["managers"] += [
-                                Manager(other_filename, digest)]
-                    break
-
             # Otherwise, the task type is Batch or BatchAndOutput
-            else:
-                args["task_type"] = "Batch"
-                args["task_type_parameters"] = [
-                    compilation_param,
-                    [infile_param, outfile_param],
-                    evaluation_param,
-                ]
+            args["task_type"] = "Batch"
+            args["task_type_parameters"] = [
+                compilation_param,
+                [infile_param, outfile_param],
+                evaluation_param,
+            ]
 
-                output_only_testcases = load(conf, None, "output_only_testcases",
-                                             conv=lambda x: "" if x is None else x)
-                output_optional_testcases = load(conf, None, "output_optional_testcases",
-                                             conv=lambda x: "" if x is None else x)
-                if len(output_only_testcases) > 0 or len(output_optional_testcases) > 0:
-                    args["task_type"] = "BatchAndOutput"
-                    output_only_codenames = set()
-                    if len(output_only_testcases) > 0:
-                        output_only_codenames = \
-                            {"%03d" % int(x.strip()) for x in output_only_testcases.split(',')}
-                        args["task_type_parameters"].append(','.join(output_only_codenames))
-                    else:
-                        args["task_type_parameters"].append("")
-                    output_codenames = set()
-                    if len(output_optional_testcases) > 0:
-                        output_codenames = \
-                            {"%03d" % int(x.strip()) for x in output_optional_testcases.split(',')}
-                    output_codenames.update(output_only_codenames)
-                    task.submission_format.extend(["output_%s.txt" % s for s in sorted(output_codenames)])
+            output_only_testcases = load(conf, None, "output_only_testcases",
+                                         conv=lambda x: "" if x is None else x)
+            output_optional_testcases = load(conf, None, "output_optional_testcases",
+                                         conv=lambda x: "" if x is None else x)
+            if len(output_only_testcases) > 0 or len(output_optional_testcases) > 0:
+                args["task_type"] = "BatchAndOutput"
+                output_only_codenames = set()
+                if len(output_only_testcases) > 0:
+                    output_only_codenames = \
+                        {"%03d" % int(x.strip()) for x in output_only_testcases.split(',')}
+                    args["task_type_parameters"].append(','.join(output_only_codenames))
+                else:
+                    args["task_type_parameters"].append("")
+                output_codenames = set()
+                if len(output_optional_testcases) > 0:
+                    output_codenames = \
+                        {"%03d" % int(x.strip()) for x in output_optional_testcases.split(',')}
+                output_codenames.update(output_only_codenames)
+                task.submission_format.extend(["output_%s.txt" % s for s in sorted(output_codenames)])
 
         args["testcases"] = []
         for i in range(n_input):

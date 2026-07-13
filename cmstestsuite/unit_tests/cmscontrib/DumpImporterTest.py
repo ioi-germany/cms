@@ -49,12 +49,13 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
             "name": "contestname",
             "description": "contest description 你好",
             "tasks": ["task_key"],
-            "groups": ["group_key"],
+            "participations": ["part_key"],
             "main_group": "group_key",
         },
         "group_key": {
             "_class": "Group",
-            "name": "groupname",
+            "contest": "contest_key",
+            "name": "default",
         },
         "task_key": {
             "_class": "Task",
@@ -153,8 +154,7 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
             skip_generated=skip_generated,
             skip_submissions=skip_submissions,
             skip_user_tests=False,
-            skip_users=skip_users,
-            skip_print_jobs=False).do_import()
+            skip_users=skip_users).do_import()
 
     def write_dump(self, dump):
         destination = self.get_path("contest.json")

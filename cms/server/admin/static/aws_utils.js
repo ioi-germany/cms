@@ -30,7 +30,7 @@ var CMS = CMS || {};
 CMS.AWSUtils = function(url_root, timestamp,
                         contest_start, contest_stop,
                         analysis_start, analysis_stop,
-                        phase) {
+                        analysis_enabled) {
     this.url = CMS.AWSUtils.create_url_builder(url_root);
     this.first_date = new Date();
     this.last_notification = timestamp;
@@ -39,7 +39,7 @@ CMS.AWSUtils = function(url_root, timestamp,
     this.contest_stop = contest_stop;
     this.analysis_start = analysis_start;
     this.analysis_stop = analysis_stop;
-    this.phase = phase;
+    this.analysis_enabled = analysis_enabled;
     this.file_asked_name = "";
     this.file_asked_url = "";
 
@@ -91,6 +91,25 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
+CMS.AWSUtils.filename_to_lang = function(file_name) {
+    // TODO: update if adding a new language to cms
+    // (need to also update the prism bundle then)
+    var extension_to_lang = {
+        'cs': 'csharp',
+        'cpp': 'cpp',
+        'c': 'c',
+        'h': 'c',
+        'go': 'go',
+        'hs': 'haskell',
+        'java': 'java',
+        'js': 'javascript',
+        'php': 'php',
+        'py': 'python',
+        'rs': 'rust',
+    }
+    var file_ext = file_name.split('.').pop();
+    return extension_to_lang[file_ext] || file_ext;
+}
 
 /**
  * This is called when we receive file content, or an error message.
@@ -114,23 +133,7 @@ CMS.AWSUtils.prototype.file_received = function(response, error) {
             this.display_subpage(elements);
             return;
         }
-        // TODO: update if adding a new language to cms
-        // (need to also update the prism bundle then)
-        var extension_to_lang = {
-            'cs': 'csharp',
-            'cpp': 'cpp',
-            'c': 'c',
-            'h': 'c',
-            'go': 'go',
-            'hs': 'haskell',
-            'java': 'java',
-            'js': 'javascript',
-            'php': 'php',
-            'py': 'python',
-            'rs': 'rust',
-        }
-        var file_ext = file_name.split('.').pop();
-        var lang_name = extension_to_lang[file_ext] || file_ext;
+        var lang_name = CMS.AWSUtils.filename_to_lang(file_name);
 
         elements.push($('<h1>').text(file_name));
         elements.push($('<a>').text("Download").prop("href", url));
@@ -473,42 +476,35 @@ CMS.AWSUtils.prototype.two_digits = function(n) {
 
 /**
  * Update the remaining time showed in the "remaining" div.
- *
- * timer (int): handle for the timer that called this function, or -1 if none
  */
-CMS.AWSUtils.prototype.update_remaining_time = function(timer = -1) {
-    // We assume this.phase always is the correct phase (since this
-    // method also refreshes the page when the phase changes).
+CMS.AWSUtils.prototype.update_remaining_time = function() {
     var relevant_timestamp = null;
     var text = null;
-    if (this.phase === -1) {
+    var now_timestamp = this.timestamp + (new Date() - this.first_date) / 1000;
+
+    // based on the phase logic from cms/db/contest.py.
+    if (now_timestamp < this.contest_start) {
         relevant_timestamp = this.contest_start;
         text = "To start of contest: "
-    } else if (this.phase === 0) {
+    } else if (now_timestamp <= this.contest_stop) {
         relevant_timestamp = this.contest_stop;
         text = "To end of contest: "
-    } else if (this.phase === 1) {
+    } else if (this.analysis_enabled && now_timestamp < this.analysis_start) {
         relevant_timestamp = this.analysis_start;
         text = "To start of analysis: "
-    } else if (this.phase === 2) {
+    } else if (this.analysis_enabled && now_timestamp <= this.analysis_stop) {
         relevant_timestamp = this.analysis_stop;
         text = "To end of analysis: "
     }
 
     // We are in phase 3, nothing to show.
     if (relevant_timestamp === null) {
+        $("#remaining_text").text("");
+        $("#remaining_value").text("");
         return;
     }
 
-    // Compute actual seconds to next phase value, and if negative we
-    // refresh to update the phase.
-    var now = new Date();
-    var countdown_sec =
-        relevant_timestamp - this.timestamp - (now - this.first_date) / 1000;
-    if (countdown_sec <= 0) {
-        clearInterval(timer);
-        location.reload();
-    }
+    var countdown_sec = relevant_timestamp - now_timestamp;
 
     $("#remaining_text").text(text);
     $("#remaining_value").text(this.format_countdown(countdown_sec));
@@ -902,4 +898,71 @@ CMS.AWSUtils.prototype.render_markdown_preview = function(target) {
             form_element.find(".markdown_preview").html(response);
         },
     });
+}
+
+/**
+ * Handlers for diffing submissions.
+ */
+
+/**
+ * Shows/hides the diff radio buttons when opening/closing the diff section.
+ */
+CMS.AWSUtils.prototype.update_diffchooser = function() {
+    var el = document.getElementById("diffchooser");
+    if(el.open) {
+        $("#submissions_table").addClass("diff-open");
+    } else {
+        $("#submissions_table").removeClass("diff-open");
+    }
+}
+
+/**
+ * Updates the submission ID inputs when clicking diff radio buttons.
+ */
+CMS.AWSUtils.prototype.update_diff_ids = function(ev) {
+    var name = ev.target.name;
+    var sub_id = ev.target.dataset.submission;
+    if(name == "diff-radio-old") {
+        $("#diff-old-input").val(sub_id);
+    } else {
+        $("#diff-new-input").val(sub_id);
+    }
+}
+
+/**
+ * Renders a diff that was received from the server.
+ */
+CMS.AWSUtils.prototype.show_diff = function(response, error) {
+    if(error !== null) {
+        this.display_subpage([$('<p>').text('Error: ' + error)]);
+        return;
+    }
+    var elements = [];
+    if(response.message !== null) {
+        elements.push($('<p>').text(response.message));
+    }
+    for(let x of response.files) {
+        elements.push($('<h2>').text(x.fname));
+        if('status' in x) {
+            elements.push($('<p>').text(x.status));
+            continue;
+        }
+        var lang_name = CMS.AWSUtils.filename_to_lang(x.fname);
+        var codearea = $('<code>').text(x.diff)
+            .addClass('language-diff-' + lang_name)
+            .addClass('diff-highlight');
+        elements.push($('<pre>').append(codearea));
+    }
+    this.display_subpage(elements);
+    Prism.highlightAllUnder(document.getElementById('subpage_content'));
+}
+
+/**
+ * Called when "Diff" button is clicked, requests the diff from the server.
+ */
+CMS.AWSUtils.prototype.do_diff = function() {
+    var old_id = $("#diff-old-input").val();
+    var new_id = $("#diff-new-input").val();
+    var show_diff = this.bind_func(this, this.show_diff);
+    this.ajax_request(this.url("submission_diff", old_id, new_id), null, show_diff);
 }

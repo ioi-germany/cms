@@ -9,7 +9,7 @@
 # Copyright © 2015 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
-# Copyright © 2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2017-2026 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2018 William Di Luigi <williamdiluigi@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -42,8 +42,7 @@ from cms import TOKEN_MODE_DISABLED, TOKEN_MODE_FINITE, TOKEN_MODE_INFINITE
 from . import Codename, Base, Admin
 import typing
 if typing.TYPE_CHECKING:
-    from . import Task, Participation
-    from cms.db.user import Group
+    from . import Task, Participation, Group
 
 
 class Contest(Base):
@@ -241,23 +240,26 @@ class Contest(Base):
         nullable=False,
         default=0)
 
-    # Contest (id and object) to which this user group belongs.
-    main_group_id = Column(
+    # Main group (id and Group object) of this contest
+    main_group_id: int | None = Column(
         Integer,
-        ForeignKey("group.id", use_alter=True, name="fk_contest_main_group_id",
+        ForeignKey("groups.id", use_alter=True, name="fk_contest_main_group_id",
                    onupdate="CASCADE", ondelete="SET NULL"),
-        # nullable=False,  # This would fail with post_update=True.
+        nullable=True,
         index=True)
-    main_group = relationship(
+    main_group: "Group | None" = relationship(
         "Group",
         primaryjoin="Group.id==Contest.main_group_id",
         post_update=True)
 
-    # Follows the description of the fields automatically added by
-    # SQLAlchemy.
-    # groups (list of Group objects)
     # These one-to-many relationships are the reversed directions of
     # the ones defined in the "child" classes using foreign keys.
+    groups : list["Group"] = relationship(
+        "Group",
+        foreign_keys="[Group.contest_id]",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        back_populates="contest")
 
     tasks: list["Task"] = relationship(
         "Task",
@@ -280,16 +282,8 @@ class Contest(Base):
         passive_deletes=True,
         back_populates="contest")
 
-    groups: list["Group"] = relationship(
-        "Group",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-        primaryjoin="Contest.id==Group.contest_id",
-        back_populates="contest",
-    )
-
-    def get_group(self, name):
-        """ Return the group with the given name.
+    def get_group(self, name: str):
+        """Return the group with the given name.
 
         name (string): the name of the group we are interested in.
         return (Group): the corresponding group object, or KeyError.
@@ -300,6 +294,7 @@ class Contest(Base):
             if g.name == name:
                 return g
         raise KeyError("Group not found")
+
 
 class Announcement(Base):
     """Class to store a messages sent by the contest managers to all

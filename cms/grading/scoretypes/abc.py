@@ -35,6 +35,7 @@ task.
 import json
 import logging
 import re
+from typing import TypedDict, NotRequired
 from abc import ABCMeta, abstractmethod
 
 from cms import FEEDBACK_LEVEL_RESTRICTED
@@ -61,7 +62,8 @@ class ScoreType(metaclass=ABCMeta):
 
     TEMPLATE = ""
 
-    def __init__(self, parameters: object, public_testcases: dict[str, bool]):
+    def __init__(self, parameters: object, public_testcases: dict[str, bool],
+                 score_precision: int):
         """Initializer.
 
         parameters: format is specified in the subclasses.
@@ -72,6 +74,7 @@ class ScoreType(metaclass=ABCMeta):
         """
         self.parameters = parameters
         self.public_testcases = public_testcases
+        self.score_precision = score_precision
 
         # Preload the maximum possible scores.
         try:
@@ -98,7 +101,6 @@ class ScoreType(metaclass=ABCMeta):
         score: float,
         max_score: float,
         unused_score_details: object,
-        score_precision: int,
         translation: Translation = DEFAULT_TRANSLATION,
     ) -> str:
         """Produce the string of the score that is shown in CWS.
@@ -113,16 +115,14 @@ class ScoreType(metaclass=ABCMeta):
         max_score: the maximum score that can be achieved.
         unused_score_details: the opaque data structure that
             the ScoreType produced for the submission when scoring it.
-        score_precision: the maximum number of digits of the
-            fractional digits to show.
         translation: the translation to use.
 
         return: the message to show.
 
         """
         return "%s / %s" % (
-            translation.format_decimal(round(score, score_precision)),
-            translation.format_decimal(round(max_score, score_precision)))
+            translation.format_decimal(score),
+            translation.format_decimal(max_score))
 
     @staticmethod
     def unit_test_result(unit_test_score_details):
@@ -164,8 +164,8 @@ class ScoreType(metaclass=ABCMeta):
                                             translation=translation,
                                             gettext=_, ngettext=n_)
             except Exception:
-                logger.error("Found an invalid score details string. "
-                             "Try invalidating scores.", exc_info=True)
+                logger.exception("Found an invalid score details string. "
+                                 "Try invalidating scores.")
                 return _("Score details temporarily unavailable.")
 
     @abstractmethod
@@ -225,26 +225,38 @@ class ScoreTypeAlone(ScoreType):
     pass
 
 
+class ScoreTypeGroupParametersDict(TypedDict):
+    max_score: float
+    testcases: int | str | list[str]
+    threshold: NotRequired[float]
+    always_show_testcases: NotRequired[bool]
+
+
+# the format of parameters is impossible to type-hint correctly, it seems...
+# this hint is (mostly) correct for the methods this base class implements,
+# subclasses might need a longer tuple.
+ScoreTypeGroupParameters = tuple[float, int | str | list[str]] | ScoreTypeGroupParametersDict
+
+
 class ScoreTypeGroup(ScoreTypeAlone):
     """Intermediate class to manage tasks whose testcases are
     subdivided in groups (or subtasks). The score type parameters must
     be in the form [[m, t, ...], [...], ...], where m is the maximum
     score for the given subtask and t is the parameter for specifying
-    testcases.
+    testcases, or be a list of dicts matching ScoreTypeGroupParametersDict.
 
     If t is int, it is interpreted as the number of testcases
     comprising the subtask (that are consumed from the first to the
     last, sorted by num). If t is unicode, it is interpreted as the regular
-    expression of the names of target testcases. All t must have the same type.
+    expression of the names of target testcases. If t is a list of strings,
+    it is interpreted as a list of testcase codenames. All t must have the
+    same type.
 
     A subclass must implement the method 'get_public_outcome' and
     'reduce'.
 
     """
-    # the format of parameters is impossible to type-hint correctly, it seems...
-    # this hint is (mostly) correct for the methods this base class implements,
-    # subclasses might need a longer tuple.
-    parameters: list[tuple[float, int | str]]
+    parameters: list[ScoreTypeGroupParameters]
 
     # Mark strings for localization.
     N_("Subtask %(index)s")
@@ -366,6 +378,32 @@ class ScoreTypeGroup(ScoreTypeAlone):
 </div>
 {% endfor %}"""
 
+    def get_max_score(self, group_parameter: ScoreTypeGroupParameters) -> float:
+        if isinstance(group_parameter, tuple) or isinstance(group_parameter, list):
+            score = group_parameter[0]
+        else:
+            score = group_parameter["max_score"]
+        assert (
+            round(
+                score,
+                self.score_precision
+            ) == score
+        ), (f"The max score for a subtask"
+            "has more precision than the task allows.")
+        return score
+
+    def get_testcases(self, group_parameter: ScoreTypeGroupParameters) -> int | str | list[str]:
+        if isinstance(group_parameter, tuple) or isinstance(group_parameter, list):
+            return group_parameter[1]
+        else:
+            return group_parameter["testcases"]
+
+    def get_always_show_testcases(self, group_parameter: ScoreTypeGroupParameters) -> bool:
+        if isinstance(group_parameter, tuple) or isinstance(group_parameter, list):
+            return False
+        else:
+            return group_parameter.get("always_show_testcases", False)
+
     def retrieve_target_testcases(self) -> list[list[str]]:
         """Return the list of the target testcases for each subtask.
 
@@ -378,7 +416,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
         """
 
-        t_params = [p[1] for p in self.parameters]
+        t_params = [self.get_testcases(p) for p in self.parameters]
 
         if all(isinstance(t, int) for t in t_params):
 
@@ -412,9 +450,12 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
             return targets
 
+        elif all(isinstance(t, list) for t in t_params) and all(all(isinstance(t, str) for t in s) for s in t_params):
+            return t_params
+
         raise ValueError(
             "In the score type parameters, the second value of each element "
-            "must have the same type (int or unicode)")
+            "must have the same type (int, unicode or list of strings)")
 
     def max_scores(self):
         """See ScoreType.max_score."""
@@ -426,10 +467,10 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
         for st_idx, parameter in enumerate(self.parameters):
             target = targets[st_idx]
-            score += parameter[0]
+            score += self.get_max_score(parameter)
             if all(self.public_testcases[tc_idx] for tc_idx in target):
-                public_score += parameter[0]
-            headers += ["Subtask %d (%g)" % (st_idx, parameter[0])]
+                public_score += self.get_max_score(parameter)
+            headers += ["Subtask %d (%g)" % (st_idx, self.get_max_score(parameter))]
 
         return score, public_score, headers
 
@@ -494,10 +535,10 @@ class ScoreTypeGroup(ScoreTypeAlone):
             st_score_fraction = self.reduce(
                 [float(evaluations[tc_idx].outcome) for tc_idx in target],
                 parameter)
-            st_score = st_score_fraction * parameter[0]
+            st_score = st_score_fraction * self.get_max_score(parameter)
             rounded_score = round(st_score, score_precision)
 
-            if tc_first_lowest_idx is not None and st_score_fraction < 1.0:
+            if tc_first_lowest_idx is not None and st_score_fraction < 1.0 and not self.get_always_show_testcases(parameter):
                 for tc in testcases:
                     if not self.public_testcases[tc["idx"]]:
                         continue
@@ -506,7 +547,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
                     tc["show_in_oi_restricted_feedback"] = (
                         tc["idx"] == tc_first_lowest_idx)
 
-            score += st_score
+            score += rounded_score
             subtasks.append({
                 "idx": st_idx,
                 # We store the fraction so that an "example" testcase
@@ -515,20 +556,25 @@ class ScoreTypeGroup(ScoreTypeAlone):
                 "score_fraction": st_score_fraction,
                 # But we also want the properly rounded score for display.
                 "score": rounded_score,
-                "max_score": parameter[0],
+                "max_score": self.get_max_score(parameter),
                 "testcases": testcases})
             if all(self.public_testcases[tc_idx] for tc_idx in target):
-                public_score += st_score
+                public_score += rounded_score
                 public_subtasks.append(subtasks[-1])
             else:
                 public_subtasks.append({"idx": st_idx,
                                         "testcases": public_testcases})
-            ranking_details.append("%g" % st_score)
+            ranking_details.append("%g" % rounded_score)
+
+        # The following line should be unnecessary since subtask scores
+        # are rounded. However we are using floats not Decimals
+        # and this can cause errors. So we round again to be sure.
+        score = round(score, score_precision)
 
         return score, subtasks, public_score, public_subtasks, ranking_details
 
     @abstractmethod
-    def get_public_outcome(self, outcome: float, parameter: list) -> str:
+    def get_public_outcome(self, outcome: float, parameter: ScoreTypeGroupParameters) -> str:
         """Return a public outcome from an outcome.
 
         The public outcome is shown to the user, and this method
@@ -545,7 +591,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
         pass
 
     @abstractmethod
-    def reduce(self, outcomes: list[float], parameter: list) -> float:
+    def reduce(self, outcomes: list[float], parameter: ScoreTypeGroupParameters) -> float:
         """Return the score of a subtask given the outcomes.
 
         outcomes: the outcomes of the submission in

@@ -17,7 +17,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+import atexit
 import functools
+import importlib.resources
 import json
 import logging
 import os
@@ -30,21 +32,19 @@ from datetime import datetime
 
 import gevent
 from gevent.pywsgi import WSGIServer
+from werkzeug.datastructures import WWWAuthenticate
 from werkzeug.exceptions import HTTPException, BadRequest, Unauthorized, \
     Forbidden, NotFound, NotAcceptable, UnsupportedMediaType
 from werkzeug.routing import Map, Rule
 from werkzeug.wrappers import Request, Response
 from werkzeug.wsgi import responder, wrap_file
-try:
-    from werkzeug.wsgi import DispatcherMiddleware, SharedDataMiddleware
-except ImportError:
-    from werkzeug.middleware.dispatcher import DispatcherMiddleware
-    from werkzeug.middleware.shared_data import SharedDataMiddleware
+from werkzeug.middleware.shared_data import SharedDataMiddleware
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 # Needed for initialization. Do not remove.
 import cmsranking.Logger  # noqa
 from cmscommon.eventsource import EventSource
-from cmsranking.Config import Config
+from cmsranking.Config import PublicConfig, load_config
 from cmsranking.Contest import Contest
 from cmsranking.Entity import InvalidData
 from cmsranking.Scoring import ScoringStore
@@ -67,10 +67,7 @@ class CustomUnauthorized(Unauthorized):
 
     def get_response(self, environ=None):
         response = super().get_response(environ)
-        # XXX With werkzeug-0.9 a full-featured Response object is
-        # returned: there is no need for this.
-        response = Response.force_type(response)
-        response.www_authenticate.set_basic(self.realm_name)
+        response.www_authenticate = WWWAuthenticate('basic', {'realm': self.realm_name})
         return response
 
 
@@ -89,7 +86,7 @@ class StoreHandler:
             Rule("/", methods=["PUT"], endpoint="put_list"),
             Rule("/<key>", methods=["DELETE"], endpoint="delete"),
             Rule("/", methods=["DELETE"], endpoint="delete_list"),
-        ], encoding_errors="strict")
+        ])
 
     def __call__(self, environ, start_response):
         return self.wsgi_app(environ, start_response)
@@ -103,7 +100,6 @@ class StoreHandler:
             return exc
 
         request = Request(environ)
-        request.encoding_errors = "strict"
 
         response = Response()
 
@@ -295,7 +291,7 @@ class SubListHandler:
 
         self.router = Map([
             Rule("/<user_id>", methods=["GET"], endpoint="sublist"),
-        ], encoding_errors="strict")
+        ])
 
     def __call__(self, environ, start_response):
         return self.wsgi_app(environ, start_response)
@@ -310,7 +306,6 @@ class SubListHandler:
         assert endpoint == "sublist"
 
         request = Request(environ)
-        request.encoding_errors = "strict"
 
         if request.accept_mimetypes.quality("application/json") <= 0:
             raise NotAcceptable()
@@ -343,7 +338,6 @@ class HistoryHandler:
 
     def wsgi_app(self, environ, start_response):
         request = Request(environ)
-        request.encoding_errors = "strict"
 
         if request.accept_mimetypes.quality("application/json") <= 0:
             raise NotAcceptable()
@@ -368,7 +362,6 @@ class ScoreHandler:
 
     def wsgi_app(self, environ, start_response):
         request = Request(environ)
-        request.encoding_errors = "strict"
 
         if request.accept_mimetypes.quality("application/json") <= 0:
             raise NotAcceptable()
@@ -404,7 +397,7 @@ class ImageHandler:
 
         self.router = Map([
             Rule("/<name>", methods=["GET"], endpoint="get"),
-        ], encoding_errors="strict")
+        ])
 
     def __call__(self, environ, start_response):
         return self.wsgi_app(environ, start_response)
@@ -420,7 +413,6 @@ class ImageHandler:
         location = self.location % args
 
         request = Request(environ)
-        request.encoding_errors = "strict"
 
         response = Response()
 
@@ -460,7 +452,6 @@ class RootHandler:
     @responder
     def wsgi_app(self, environ, start_response):
         request = Request(environ)
-        request.encoding_errors = "strict"
 
         response = Response()
         response.status_code = 200
@@ -475,6 +466,31 @@ class RootHandler:
         return response
 
 
+class PublicConfigHandler:
+
+    def __init__(self, pub_config: PublicConfig):
+        self.pub_config = pub_config
+
+    def __call__(self, environ, start_response):
+        return self.wsgi_app(environ, start_response)
+
+    @responder
+    def wsgi_app(self, environ, start_response):
+        request = Request(environ)
+
+        response = Response()
+        response.status_code = 200
+        response.mimetype = "application/json"
+        print(str(self.pub_config))
+        response.data = json.dumps(
+            self.pub_config,
+            default=lambda o: o.__dict__,
+            sort_keys=True,
+        )
+
+        return response
+
+
 class RoutingHandler:
 
     def __init__(
@@ -484,6 +500,7 @@ class RoutingHandler:
         logo_handler: ImageHandler,
         score_handler: ScoreHandler,
         history_handler: HistoryHandler,
+        public_config_handler: PublicConfigHandler,
     ):
         self.router = Map([
             Rule("/", methods=["GET"], endpoint="root"),
@@ -491,13 +508,15 @@ class RoutingHandler:
             Rule("/scores", methods=["GET"], endpoint="scores"),
             Rule("/events", methods=["GET"], endpoint="events"),
             Rule("/logo", methods=["GET"], endpoint="logo"),
-        ], encoding_errors="strict")
+            Rule("/config", methods=["GET"], endpoint="public_config")
+        ])
 
         self.event_handler = event_handler
         self.logo_handler = logo_handler
         self.score_handler = score_handler
         self.history_handler = history_handler
         self.root_handler = root_handler
+        self.public_config_handler = public_config_handler
 
     def __call__(self, environ, start_response):
         return self.wsgi_app(environ, start_response)
@@ -519,6 +538,8 @@ class RoutingHandler:
             return self.score_handler(environ, start_response)
         elif endpoint == "history":
             return self.history_handler(environ, start_response)
+        elif endpoint == 'public_config':
+            return self.public_config_handler(environ, start_response)
 
 
 def main() -> int:
@@ -537,8 +558,13 @@ def main() -> int:
                         help="do not require confirmation on dropping data")
     args = parser.parse_args()
 
-    config = Config()
-    config.load(args.config)
+    config = load_config(args.config)
+
+    # Keep the static files context manager alive for the application lifetime
+    static_files_context = importlib.resources.path("cmsranking", "static")
+    web_dir = str(static_files_context.__enter__())
+    # Register cleanup handler to properly exit the context manager
+    atexit.register(static_files_context.__exit__, None, None, None)
 
     if args.drop:
         if args.yes:
@@ -584,13 +610,14 @@ def main() -> int:
     stores["scoring"].init_store()
 
     toplevel_handler = RoutingHandler(
-        RootHandler(config.web_dir),
+        RootHandler(web_dir),
         DataWatcher(stores, config.buffer_size),
         ImageHandler(
             os.path.join(config.lib_dir, '%(name)s'),
-            os.path.join(config.web_dir, 'img', 'logo.png')),
+            os.path.join(web_dir, 'img', 'logo.png')),
         ScoreHandler(stores),
-        HistoryHandler(stores))
+        HistoryHandler(stores),
+        PublicConfigHandler(config.public))
 
     wsgi_app = SharedDataMiddleware(DispatcherMiddleware(
         toplevel_handler, {
@@ -614,23 +641,25 @@ def main() -> int:
                 config.username, config.password, config.realm_name),
             '/faces': ImageHandler(
                 os.path.join(config.lib_dir, 'faces', '%(name)s'),
-                os.path.join(config.web_dir, 'img', 'face.png')),
+                os.path.join(web_dir, 'img', 'face.png')),
             '/flags': ImageHandler(
                 os.path.join(config.lib_dir, 'flags', '%(name)s'),
-                os.path.join(config.web_dir, 'img', 'flag.png')),
+                os.path.join(web_dir, 'img', 'flag.png')),
             '/sublist': SubListHandler(stores),
-        }), {'/': config.web_dir})
+        }), {'/': web_dir})
 
     servers: list[WSGIServer] = list()
     if config.http_port is not None:
         http_server = WSGIServer(
             (config.bind_address, config.http_port), wsgi_app)
         servers.append(http_server)
+        logger.info(f"Listening to HTTP requests at {config.bind_address}:{config.http_port}")
     if config.https_port is not None:
         https_server = WSGIServer(
             (config.bind_address, config.https_port), wsgi_app,
             certfile=config.https_certfile, keyfile=config.https_keyfile)
         servers.append(https_server)
+        logger.info(f"Listening to HTTPS requests at {config.bind_address}:{config.https_port}")
 
     def sigterm_handler(*_):
         raise KeyboardInterrupt

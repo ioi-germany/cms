@@ -48,7 +48,6 @@ from .main import \
     RegistrationHandler, \
     StartHandler, \
     NotificationsHandler, \
-    PrintingHandler, \
     DocumentationHandler, \
     CaptchaHandler
 from .communication import \
@@ -70,7 +69,6 @@ HANDLERS = [
     (r"/register", RegistrationHandler),
     (r"/start", StartHandler),
     (r"/notifications", NotificationsHandler),
-    (r"/printing", PrintingHandler),
     (r"/documentation", DocumentationHandler),
     (r"/captcha", CaptchaHandler),
 

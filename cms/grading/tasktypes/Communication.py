@@ -33,6 +33,8 @@ import typing
 
 from cms import config, rmtree
 from cms.db import Executable
+from cms.db.filecacher import FileCacher
+from cms.grading.Job import CompilationJob, EvaluationJob
 from cms.grading.ParameterTypes import ParameterTypeChoice, ParameterTypeInt
 from cms.grading.Sandbox import wait_without_std, Sandbox
 from cms.grading.language import Language
@@ -195,7 +197,7 @@ class Communication(TaskType):
                                for codename in codenames))
         return name + language.executable_extension
 
-    def compile(self, job, file_cacher):
+    def compile(self, job: CompilationJob, file_cacher: FileCacher):
         """See TaskType.compile."""
         language = get_language(job.language)
         source_ext = language.source_extension
@@ -232,12 +234,12 @@ class Communication(TaskType):
             filenames_to_compile, executable_filename)
 
         # Create the sandbox.
-        sandbox = create_sandbox(file_cacher, name="compile")
+        sandbox = create_sandbox(0, file_cacher, name="compile")
         job.sandboxes.append(sandbox.get_root_path())
 
         # Copy all required files in the sandbox.
         for filename, digest in filenames_and_digests_to_get.items():
-            sandbox.create_file_from_storage(filename, digest)
+            sandbox.create_file_from_storage(filename, digest, file_cacher)
 
         # Run the compilation.
         box_success, compilation_success, text, stats = \
@@ -251,14 +253,15 @@ class Communication(TaskType):
         if box_success and compilation_success:
             digest = sandbox.get_file_to_storage(
                 executable_filename,
+                file_cacher,
                 "Executable %s for %s" % (executable_filename, job.info))
             job.executables[executable_filename] = \
                 Executable(executable_filename, digest)
 
         # Cleanup.
-        delete_sandbox(sandbox, job)
+        delete_sandbox(sandbox, job, file_cacher)
 
-    def evaluate(self, job, file_cacher):
+    def evaluate(self, job: EvaluationJob, file_cacher: FileCacher):
         """See TaskType.evaluate."""
         if not check_executables_number(job, 1):
             return
@@ -274,9 +277,9 @@ class Communication(TaskType):
         indices = range(self.num_processes)
 
         # Create FIFOs.
-        fifo_dir = [tempfile.mkdtemp(dir=config.temp_dir) for i in indices]
+        fifo_dir = [tempfile.mkdtemp(dir=config.global_.temp_dir) for i in indices]
         if not self._uses_stub():
-            abortion_control_fifo_dir = tempfile.mkdtemp(dir=config.temp_dir)
+            abortion_control_fifo_dir = tempfile.mkdtemp(dir=config.global_.temp_dir)
         fifo_user_to_manager = [
             os.path.join(fifo_dir[i], "u%d_to_m" % i) for i in indices]
         fifo_manager_to_user = [
@@ -312,22 +315,23 @@ class Communication(TaskType):
 
         # Create the manager sandbox and copy manager and input and
         # reference output.
-        sandbox_mgr = create_sandbox(file_cacher, name="manager_evaluate")
+        sandbox_mgr = create_sandbox(0, file_cacher, name="manager_evaluate")
         job.sandboxes.append(sandbox_mgr.get_root_path())
         sandbox_mgr.create_file_from_storage(
-            self.MANAGER_FILENAME, manager_digest, executable=True)
+            self.MANAGER_FILENAME, manager_digest, file_cacher, executable=True)
         sandbox_mgr.create_file_from_storage(
-            self.INPUT_FILENAME, job.input)
+            self.INPUT_FILENAME, job.input, file_cacher)
         sandbox_mgr.create_file_from_storage(
-            self.OK_FILENAME, job.output)
+            self.OK_FILENAME, job.output, file_cacher)
 
         # Create the user sandbox(es) and copy the executable.
-        sandbox_user = [create_sandbox(file_cacher, name="user_evaluate")
-                        for i in indices]
+        sandbox_user = [
+            create_sandbox(i+1, file_cacher, name="user_evaluate_" + str(i))
+            for i in indices]
         job.sandboxes.extend(s.get_root_path() for s in sandbox_user)
         for i in indices:
             sandbox_user[i].create_file_from_storage(
-                executable_filename, executable_digest, executable=True)
+                executable_filename, executable_digest, file_cacher, executable=True)
 
         # Start the manager. Redirecting to stdin is unnecessary, but for
         # historical reasons the manager can choose to read from there
@@ -354,9 +358,10 @@ class Communication(TaskType):
         #     constraint on the total time can only be enforced after all user
         #     programs terminated.
         manager_time_limit = max(self.num_processes * (job.time_limit + 1.0),
-                                 config.trusted_sandbox_max_time_s)
-        manager_dirs_map = dict((fifo_dir[i], (sandbox_fifo_dir[i], "rw"))
-                                for i in indices)
+                                 config.sandbox.trusted_sandbox_max_time_s)
+        manager_dirs_map: dict[str, tuple[str | None, str | None]] = dict(
+            (fifo_dir[i], (sandbox_fifo_dir[i], "rw")) for i in indices
+        )
         if not self._uses_stub():
             manager_dirs_map[abortion_control_fifo_dir] = \
                 (sandbox_abortion_control_fifo_dir, "rw")
@@ -364,7 +369,7 @@ class Communication(TaskType):
             sandbox_mgr,
             manager_command,
             manager_time_limit,
-            config.trusted_sandbox_max_memory_kib * 1024,
+            config.sandbox.trusted_sandbox_max_memory_kib * 1024,
             dirs_map=manager_dirs_map,
             writable_files=[self.OUTPUT_FILENAME],
             stdin_redirect=self.INPUT_FILENAME,
@@ -459,6 +464,7 @@ class Communication(TaskType):
             and box_success_mgr and evaluation_success_mgr
         outcome = None
         text = None
+        admin_text = None
 
         # If at least one sandbox had problems, or the manager did not
         # terminate correctly, we report an error (and no need for user stats).
@@ -478,7 +484,7 @@ class Communication(TaskType):
 
         # Otherwise, we use the manager to obtain the outcome.
         else:
-            outcome, text = extract_outcome_and_text(sandbox_mgr)
+            outcome, text, admin_text = extract_outcome_and_text(sandbox_mgr)
 
         # If asked so, save the output file with additional information,
         # provided that it exists.
@@ -486,6 +492,7 @@ class Communication(TaskType):
             if sandbox_mgr.file_exists(self.OUTPUT_FILENAME):
                 job.user_output = sandbox_mgr.get_file_to_storage(
                     self.OUTPUT_FILENAME,
+                    file_cacher,
                     "Output file in job %s" % job.info,
                     trunc_len=100 * 1024)
             else:
@@ -496,11 +503,12 @@ class Communication(TaskType):
         job.outcome = "%s" % outcome if outcome is not None else None
         job.text = text
         job.plus = stats_user
+        job.admin_text = admin_text
 
-        delete_sandbox(sandbox_mgr, job)
+        delete_sandbox(sandbox_mgr, job, file_cacher)
         for s in sandbox_user:
-            delete_sandbox(s, job)
-        if job.success and not config.keep_sandbox and not job.keep_sandbox:
+            delete_sandbox(s, job, file_cacher)
+        if job.success and not config.worker.keep_sandbox and not job.keep_sandbox:
             for d in fifo_dir:
                 rmtree(d)
             if not self._uses_stub():

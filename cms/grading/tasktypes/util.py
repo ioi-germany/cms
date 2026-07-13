@@ -49,9 +49,10 @@ logger = logging.getLogger(__name__)
 EVAL_USER_OUTPUT_FILENAME = "user_output.txt"
 
 
-def create_sandbox(file_cacher: FileCacher, name: str | None = None) -> Sandbox:
+def create_sandbox(box_index: int, file_cacher: FileCacher, name: str | None = None) -> Sandbox:
     """Create a sandbox, and return it.
 
+    box_index: the index of this sandbox within this service.
     file_cacher: a file cacher instance.
     name: name to include in the path of the sandbox.
 
@@ -61,7 +62,8 @@ def create_sandbox(file_cacher: FileCacher, name: str | None = None) -> Sandbox:
 
     """
     try:
-        sandbox = Sandbox(file_cacher, name=name)
+        shard = file_cacher.service.shard if file_cacher.service is not None else None
+        sandbox = Sandbox(box_index, shard, name=name)
     except OSError:
         err_msg = "Couldn't create sandbox."
         logger.error(err_msg, exc_info=True)
@@ -69,7 +71,7 @@ def create_sandbox(file_cacher: FileCacher, name: str | None = None) -> Sandbox:
     return sandbox
 
 
-def delete_sandbox(sandbox: Sandbox, job: Job, success: bool | None = None):
+def delete_sandbox(sandbox: Sandbox, job: Job, file_cacher: FileCacher, success: bool | None = None):
     """Delete the sandbox, if the configuration and job was ok.
 
     sandbox: the sandbox to delete.
@@ -83,7 +85,7 @@ def delete_sandbox(sandbox: Sandbox, job: Job, success: bool | None = None):
 
     # Archive the sandbox if required
     if job.archive_sandbox:
-        sandbox_digest = sandbox.archive()
+        sandbox_digest = sandbox.archive(file_cacher)
         if sandbox_digest is not None:
             job.sandbox_digests[sandbox.get_root_path()] = sandbox_digest
 
@@ -92,7 +94,7 @@ def delete_sandbox(sandbox: Sandbox, job: Job, success: bool | None = None):
         logger.warning("Sandbox %s kept around because job did not succeed.",
                        sandbox.get_root_path())
 
-    delete = success and not config.keep_sandbox and not job.keep_sandbox
+    delete = success and not config.worker.keep_sandbox and not job.keep_sandbox
     try:
         sandbox.cleanup(delete=delete)
     except OSError:
@@ -221,7 +223,7 @@ def eval_output(
     user_output_digest: str | None = None,
     user_output_filename: str = "",
     extra_args: list[str] | None = None
-) -> tuple[bool, float | None, list[str] | None]:
+) -> tuple[bool, float | None, list[str] | None, str | None]:
     """Evaluate ("check") a user output using a white diff or a checker.
 
     file_cacher: file cacher to use to get files.
@@ -237,8 +239,8 @@ def eval_output(
     extra_args: additional arguments to pass to the checker
 
     return: tuple of success (true if the checker was
-        able to check the solution successfully), outcome and text (both None
-        if success is False).
+        able to check the solution successfully), outcome, text and admin_text
+        (both None if success is False).
 
     """
     if (user_output_path is None) == (user_output_digest is None):
@@ -252,14 +254,14 @@ def eval_output(
         if not os.path.exists(user_output_path) \
                 or os.path.islink(user_output_path):
             return True, 0.0, [EVALUATION_MESSAGES.get("nooutput").message,
-                               user_output_filename]
+                               user_output_filename], None
 
     if checker_codename is not None:
         if not check_manager_present(job, checker_codename):
-            return False, None, None
+            return False, None, None, None
 
         # Create a brand-new sandbox just for checking.
-        sandbox = create_sandbox(file_cacher, name="check")
+        sandbox = create_sandbox(0, file_cacher, name="check")
         job.sandboxes.append(sandbox.get_root_path())
 
         # Put user output in the sandbox.
@@ -271,16 +273,17 @@ def eval_output(
             # function, but the type checker isn't smart enough for that
             assert user_output_digest is not None
             sandbox.create_file_from_storage(EVAL_USER_OUTPUT_FILENAME,
-                                             user_output_digest)
+                                             user_output_digest,
+                                             file_cacher)
 
         checker_digest = job.managers[checker_codename].digest \
             if checker_codename in job.managers else None
-        success, outcome, text = checker_step(
-            sandbox, checker_digest, job.input, job.output,
+        success, outcome, text, admin_text = checker_step(
+            sandbox, file_cacher, checker_digest, job.input, job.output,
             EVAL_USER_OUTPUT_FILENAME, extra_args)
 
-        delete_sandbox(sandbox, job, success)
-        return success, outcome, text
+        delete_sandbox(sandbox, job, file_cacher, success)
+        return success, outcome, text, admin_text
 
     else:
         if user_output_path is not None:
@@ -289,6 +292,6 @@ def eval_output(
             user_output_fobj = file_cacher.get_file(user_output_digest)
         with user_output_fobj:
             with file_cacher.get_file(job.output) as correct_output_fobj:
-                outcome, text = white_diff_fobj_step(
+                outcome, text, admin_text = white_diff_fobj_step(
                     user_output_fobj, correct_output_fobj)
-        return True, outcome, text
+        return True, outcome, text, admin_text

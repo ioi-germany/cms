@@ -48,7 +48,7 @@ from cms.server.contest.submission import get_submission_count, \
     TestingNotAllowed, UnacceptableUserTest, accept_user_test
 from cmscommon.crypto import encrypt_number
 from cmscommon.mimetypes import get_type_for_file_name
-from .contest import ContestHandler, FileHandler
+from .contest import ContestHandler, FileHandler, api_login_required
 from ..phase_management import actual_phase_required
 
 
@@ -156,7 +156,7 @@ class UserTestHandler(ContestHandler):
             # (nor it discloses information to the user), but it is
             # useful for automatic testing to obtain the user test id).
             query_args["user_test_id"] = \
-                encrypt_number(user_test.id, config.secret_key)
+                encrypt_number(user_test.id, config.web_server.secret_key)
 
         self.redirect(self.contest_url("testing", task_name=task.name,
                                        **query_args))
@@ -166,7 +166,7 @@ class UserTestStatusHandler(ContestHandler):
 
     refresh_cookie = False
 
-    @tornado.web.authenticated
+    @api_login_required
     @actual_phase_required(0)
     @multi_contest
     def get(self, task_name, user_test_num):
@@ -221,7 +221,7 @@ class UserTestDetailsHandler(ContestHandler):
 
     refresh_cookie = False
 
-    @tornado.web.authenticated
+    @api_login_required
     @actual_phase_required(0)
     @multi_contest
     def get(self, task_name, user_test_num):

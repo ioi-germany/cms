@@ -17,10 +17,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
+import importlib.resources
 import json
+import logging
 
-from pkg_resources import resource_filename
 from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler, Application, MissingArgumentError
 
@@ -119,23 +119,35 @@ class TaskOverviewWebServer:
                     (r"/compile", TaskCompileHandler),
                     (r"/download/(.*)", DownloadHandler)]
 
-        params = {"template_path": resource_filename("cms.server",
-                                                     "taskoverview/templates"),
-                  "static_path": resource_filename("cms.server",
-                                                   "taskoverview/static")}
+        params = {
+            "template_path": str(
+                importlib.resources.files("cms.server") / "taskoverview/templates"
+            ),
+            "static_path": str(
+                importlib.resources.files("cms.server") / "taskoverview/static"
+            ),
+        }
 
         repository = Repository(
-            config.task_repository, config.auto_sync, auto_push=True
+            config.taskoverview.task_repository,
+            config.taskoverview.auto_sync,
+            auto_push=True,
         )
 
-        TaskFetch.init(repository, config.max_compilations)
-        TaskInfo.init(repository, config.tasks_folders, config.contests_folders)
+        TaskFetch.init(repository, config.taskoverview.max_compilations)
+        TaskInfo.init(
+            repository,
+            config.taskoverview.tasks_folders,
+            config.taskoverview.contests_folders,
+        )
 
         self.app = Application(handlers, **params)
 
     def run(self):
-        self.app.listen(config.overview_listen_port,
-                        address=config.overview_listen_address)
+        self.app.listen(
+            config.taskoverview.overview_listen_port,
+            address=config.taskoverview.overview_listen_address,
+        )
 
         try:
             IOLoop.instance().start()

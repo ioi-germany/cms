@@ -11,6 +11,7 @@
 # Copyright © 2015-2016 William Di Luigi <williamdiluigi@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
+# Copyright © 2025 Pasit Sangprachathanarak <ouipingpasit@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -166,7 +167,9 @@ def accept_submission(
     # the largest allowed. Since we don't yet know which files from the archive
     # are used and which are extraneous, this size limit applies to the entire
     # archive in total.
-    archive_size_limit = config.max_submission_length * len(required_codenames)
+    archive_size_limit = config.contest_web_server.max_submission_length * len(
+        required_codenames
+    )
     # Honest users never need to submit more than required_codenames files, but
     # we are a bit lenient to allow .DS_Store or other hidden files that might
     # accidentally end up in an archive.
@@ -180,7 +183,7 @@ def accept_submission(
             raise UnacceptableSubmission(
                 N_("Submission too big!"),
                 N_("Each source file must be at most %d bytes long."),
-                config.max_submission_length)
+                config.contest_web_server.max_submission_length)
         if e.too_many_files:
             raise UnacceptableSubmission(
                 N_("Submission too big!"),
@@ -193,8 +196,11 @@ def accept_submission(
 
     try:
         files, language = match_files_and_language(
-            received_files, language_name, required_codenames,
-            contest.languages)
+            received_files,
+            language_name,
+            required_codenames,
+            task.get_allowed_languages(),
+        )
     except InvalidFilesOrLanguage as err:
         logger.info(f'Submission rejected: {err}')
         raise UnacceptableSubmission(
@@ -214,19 +220,26 @@ def accept_submission(
                 N_("Invalid submission format!"),
                 N_("Please select the correct files."))
 
-    if any(len(content) > config.max_submission_length
-           for content in files.values()):
+    if any(
+        len(content) > config.contest_web_server.max_submission_length
+        for content in files.values()
+    ):
         raise UnacceptableSubmission(
             N_("Submission too big!"),
             N_("Each source file must be at most %d bytes long."),
-            config.max_submission_length)
+            config.contest_web_server.max_submission_length)
 
     # All checks done, submission accepted.
 
-    if config.submit_local_copy:
+    if config.contest_web_server.submit_local_copy:
         try:
-            store_local_copy(config.submit_local_copy_path, participation,
-                             task, timestamp, files)
+            store_local_copy(
+                config.contest_web_server.submit_local_copy_path,
+                participation,
+                task,
+                timestamp,
+                files,
+            )
         except StorageFailed:
             logger.error("Submission local copy failed.", exc_info=True)
 
@@ -374,7 +387,9 @@ def accept_user_test(
     required_codenames.add("input")
 
     # See accept_submission() for these variables.
-    archive_size_limit = config.max_submission_length * len(required_codenames)
+    archive_size_limit = config.contest_web_server.max_submission_length * len(
+        required_codenames
+    )
     archive_max_files = 2 * len(required_codenames)
     try:
         received_files = extract_files_from_tornado(
@@ -387,8 +402,11 @@ def accept_user_test(
 
     try:
         files, language = match_files_and_language(
-            received_files, language_name, required_codenames,
-            contest.languages)
+            received_files,
+            language_name,
+            required_codenames,
+            task.get_allowed_languages(),
+        )
     except InvalidFilesOrLanguage as err:
         logger.info(f'Test rejected: {err}')
         raise UnacceptableUserTest(
@@ -413,25 +431,35 @@ def accept_user_test(
             N_("Invalid test format!"),
             N_("Please select the correct files."))
 
-    if any(len(content) > config.max_submission_length
-           for codename, content in files.items()
-           if codename != "input"):
+    if any(
+        len(content) > config.contest_web_server.max_submission_length
+        for codename, content in files.items()
+        if codename != "input"
+    ):
         raise UnacceptableUserTest(
             N_("Test too big!"),
             N_("Each source file must be at most %d bytes long."),
-            config.max_submission_length)
-    if "input" in files and len(files["input"]) > config.max_input_length:
+            config.contest_web_server.max_submission_length)
+    if (
+        "input" in files
+        and len(files["input"]) > config.contest_web_server.max_input_length
+    ):
         raise UnacceptableUserTest(
             N_("Input too big!"),
             N_("The input file must be at most %d bytes long."),
-            config.max_input_length)
+            config.contest_web_server.max_input_length)
 
     # All checks done, submission accepted.
 
-    if config.tests_local_copy:
+    if config.contest_web_server.tests_local_copy:
         try:
-            store_local_copy(config.tests_local_copy_path, participation, task,
-                             timestamp, files)
+            store_local_copy(
+                config.contest_web_server.tests_local_copy_path,
+                participation,
+                task,
+                timestamp,
+                files,
+            )
         except StorageFailed:
             logger.error("Test local copy failed.", exc_info=True)
 
