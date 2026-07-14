@@ -2637,7 +2637,7 @@ class TaskConfig(CommonConfig, Scope):
         # Present verdict
         for st in details["subtasks"]:
             with myheader(st["name"], st["verdict"]):
-                print_msg(st["verdict"][2])
+                print_msg(st["verdict"][2], use_ellipsis=False)
                 print()
                 print(indent(side_by_side([bold("Time"), bold("Memory"),
                                            bold("Answer"), 

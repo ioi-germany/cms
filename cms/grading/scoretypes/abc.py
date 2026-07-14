@@ -728,8 +728,6 @@ class ScoreTypeGroup(ScoreTypeAlone):
                     status, short, desc = st["verdict"]
                     st["verdict"] = (status, short, desc + "\n\n" + msg)
 
-                print(UnitTest.judge_score(0.0, score_expectations))
-
                 if UnitTest.judge_score(0.0, score_expectations) > 0 and \
                    "arbitrary" not in expected:
                     append_to_verdict(subtasks[-1],
@@ -874,15 +872,15 @@ class ScoreTypeGroup(ScoreTypeAlone):
         is useless if our goal is to enforce that the given unit test
         satisfies the expectations for the current group.
 
-        How one should precisele define "weak" and "useless" heavily
-        depends on the behavior of the score type and you probably want to
+        How one should precisely define "weak" and "useless" heavily
+        depends on the behavior of the score type and you might want to
         override this method in a custom subclass. Here we use the heuristic
-        that a testcase is weak if it is not essential and if using only
-        this testcase and all testcases with higher score would yield a
-        considerably higher score for this group. This heuristic works best
-        when the "reduce" function is idempotent (meaning duplicating entries
-        of scores does not change the result) or if the only scores are 0.0
-        and 1.0.
+        that a testcase is weak if the submission succeeds on it, or if
+        it is not essential and if using only this testcase and all
+        testcases with higher score would yield a considerably higher score
+        for this group. This heuristic works best when the "reduce" function
+        is idempotent (meaning duplicating entries of scores does not
+        change the result) or if the only scores are 0.0 and 1.0.
 
         scores (list): the scores of all testcases in this group on a
             given submission
@@ -893,11 +891,14 @@ class ScoreTypeGroup(ScoreTypeAlone):
         if self.essential_testcase(scores, idx, parameter):
             return False
 
+        if scores[idx] > 1 - ScoreTypeGroup.THRESHOLD_LAX:
+            return True
+
         better = [x for x in scores if x >= scores[idx]]
         score_exc = self.reduce(better, parameter)
         score_inc = self.reduce(scores, parameter)
 
-        return score_inc + ScoreTypeGroup.THRESHOLD_LAX > score_exc
+        return score_exc > score_inc + ScoreTypeGroup.THRESHOLD_LAX
 
     def dominated_by(self, scores, idx, parameter):
         """
