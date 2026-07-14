@@ -672,15 +672,6 @@ class ScoreTypeGroup(ScoreTypeAlone):
                     cases.append(tc)
                     results += r
 
-                    l = self.case_line(r, expected)
-                    g = format_status_text((ev.text)).strip()
-
-                    subtasks[-1]["cases"].append({"line": l,
-                                                  "grader": g,
-                                                  "time": ev.execution_time,
-                                                  "memory": ev.execution_memory,
-                                                  "codename": tc})
-
                 # check score
                 score_expectations = UnitTest.get_intervals(expected) or \
                                      [[1.0, 1.0]]
@@ -691,6 +682,9 @@ class ScoreTypeGroup(ScoreTypeAlone):
                 else:
                     score_verdict = 0
 
+                missing = []
+
+                # judge this group
                 if "arbitrary" in expected:
                     subtasks[-1]["verdict"] = (1337, ScoreTypeGroup.IGN,
                                                ScoreTypeGroup.GRP_IGNORED)
@@ -718,6 +712,8 @@ class ScoreTypeGroup(ScoreTypeAlone):
                       and "0.0" not in results):
                     subtasks[-1]["verdict"] = (-1, ScoreTypeGroup.FAILED,
                                                ScoreTypeGroup.GRP_TOO_HIGH)
+                    missing = (["time"] if "time" in expected else []) + \
+                              (["memory"] if "memory" in expected else [])
 
                 elif score_verdict == 0:
                     subtasks[-1]["verdict"] = (1, ScoreTypeGroup.OKAY,
@@ -729,19 +725,33 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
                 # sanity checks
                 def append_to_verdict(st, msg):
-                    status, short, desc = st
-                    st = (status, short, desc + "\n\n" + msg)
+                    status, short, desc = st["verdict"]
+                    st["verdict"] = (status, short, desc + "\n\n" + msg)
+
+                print(UnitTest.judge_score(0.0, score_expectations))
 
                 if UnitTest.judge_score(0.0, score_expectations) > 0 and \
                    "arbitrary" not in expected:
-                    append_to_verdict(subtasks[-1]["verdict"],
+                    append_to_verdict(subtasks[-1],
                                       ScoreTypeGroup.NEGATIVE_SCORE_EXPECTED)
 
                 if UnitTest.judge_score(0.0, score_expectations) < 0 and \
                    ("time" in expected or "memory" in expected) and \
                    "arbitrary" not in expected:
-                    append_to_verdict(subtasks[-1]["verdict"],
+                    append_to_verdict(subtasks[-1],
                                       ScoreTypeGroup.IMPOSSIBLE_EXPECTATIONS)
+
+                for tc in testcases:
+                    ev = evaluations[tc] # TODO: adjust this if we want to support multiscoring
+                    r = UnitTest.get_result(submission_info["limits"], ev)
+                    l = self.case_line(r, expected, missing)
+                    g = format_status_text((ev.text)).strip()
+
+                    subtasks[-1]["cases"].append({"line": l,
+                                                  "grader": g,
+                                                  "time": ev.execution_time,
+                                                  "memory": ev.execution_memory,
+                                                  "codename": tc})
 
                 subtasks[-1]["max_runtime"] = \
                     max((c["time"] for c in subtasks[-1]["cases"]),
@@ -787,7 +797,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
             "useful": list(useful)
         }
 
-    def case_line(self, results, expected):
+    def case_line(self, results, expected, missing):
         """Information about a single testcase as part of a group
            This function returns a list of pairs, where the first entry
            visualises the respective result and the second one is >0
@@ -803,15 +813,27 @@ class ScoreTypeGroup(ScoreTypeAlone):
             else:
                 return 0
 
-        def get_int(b):
-            return 1 if b else -1
+        def get_int(x, y):
+            if x > y:
+                return -1
+            elif x == y:
+                return 1
+            else:
+                return 0
 
         L = []
 
+        # TODO: do something more clever here, like marking the time entry red when we
+        # expected TLE for this group but all cases ran in time and memory?
         for x in ['time', 'memory']:
-            L.append((symbols[badness(x, results)],
-                      get_int((x in results or x not in expected) and
-                              badness(x, results) <= badness(x, expected))))
+            this_badness = badness(x, results)
+            exp_badness = badness(x, expected)
+
+            if x in missing:
+                L.append((symbols[this_badness], -1))
+            else:
+                L.append((symbols[this_badness],
+                         get_int(this_badness, exp_badness)))
 
         if UnitTest.meaningful_score(results):
             scores = [x for x in results if UnitTest.is_score(x)]
