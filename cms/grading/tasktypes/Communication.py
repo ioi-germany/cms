@@ -400,10 +400,6 @@ class Communication(TaskType):
             stdout_redirect = sandbox_fifo_user_to_manager[i]
             if self.num_processes != 1:
                 args.append(str(i))
-            if self._uses_stub():
-                main = self.STUB_BASENAME
-            else:
-                main = executable_filename
             commands = language.get_evaluation_commands(
                 executable_filename,
                 main=main,
