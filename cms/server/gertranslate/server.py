@@ -180,18 +180,18 @@ class GerTranslateWebServer:
             ),
         }
 
-        repository = Repository(config.translate_task_repository,
-                                config.translate_auto_sync,
+        repository = Repository(config.gertranslate.task_repository,
+                                config.gertranslate.auto_sync,
                                 auto_push=True)
 
-        TaskAccess.init(repository, config.translate_max_compilations)
+        TaskAccess.init(repository, config.gertranslate.max_compilations)
         TaskTranslateInfo.init(repository)
 
         self.app = Application(handlers, **params)
 
     def run(self):
-        self.app.listen(config.translate_listen_port,
-                        address=config.translate_listen_address)
+        self.app.listen(config.gertranslate.listen_port,
+                        address=config.gertranslate.listen_address)
 
         try:
             IOLoop.instance().start()

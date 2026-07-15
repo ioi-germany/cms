@@ -145,8 +145,8 @@ class TaskOverviewWebServer:
 
     def run(self):
         self.app.listen(
-            config.taskoverview.overview_listen_port,
-            address=config.taskoverview.overview_listen_address,
+            config.taskoverview.listen_port,
+            address=config.taskoverview.listen_address,
         )
 
         try:

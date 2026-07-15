@@ -196,13 +196,22 @@ class DiscordBotConfig:
 
 @dataclass()
 class TaskOverviewConfig:
-    overview_listen_address: str = "127.0.0.1"
-    overview_listen_port: int = 8891
+    listen_address: str = "127.0.0.1"
+    listen_port: int = 8891
     task_repository: str | None = None
     tasks_folders: list[str] = field_helper(list[str])
     contests_folders: list[str] = field_helper(list[str])
     auto_sync: bool = False
-    max_compilations: int = 1000
+    max_compilations: int = 10
+
+
+@dataclass()
+class GerTranslateConfig:
+    listen_address: str = "127.0.0.1"
+    listen_port: int = 8892
+    task_repository: str | None = None
+    auto_sync: bool = False
+    max_compilations: int = 10
 
 
 @dataclass()
@@ -229,6 +238,7 @@ class Config:
     telegram_bot: TelegramBotConfig = field_helper(TelegramBotConfig)
     discord_bot: DiscordBotConfig = field_helper(DiscordBotConfig)
     taskoverview: TaskOverviewConfig = field_helper(TaskOverviewConfig)
+    gertranslate: GerTranslateConfig = field_helper(GerTranslateConfig)
     germake: GerMakeConfig = field_helper(GerMakeConfig)
     # This is the one that will be provided in the config file.
     services_: dict[str, list[tuple[str, int]]]

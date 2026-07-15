@@ -210,8 +210,8 @@ discord_bot_admin_roles = []
 discord_bot_max_error_messages = 10
 
 [taskoverview]
-overview_listen_address = "127.0.0.1"
-overview_listen_port = 8891
+listen_address = "127.0.0.1"
+listen_port = 8891
 # Repository to search for tasks (you have to fill this yourself!).
 #task_repository = "..."
 # Directories relative to the repository to search for tasks.
@@ -224,6 +224,19 @@ contests_folders = []
 auto_sync = false
 # Maximum number of simultaneous compilations (the processes will
 # be created regardless but will stay idle).
-max_compilations = 1000
+max_compilations = 10
+
+[gertranslate]
+listen_address = "127.0.0.1"
+listen_port = 8892
+# Directory to search for tasks (you have to fill this yourself!).
+#task_repository = "..."
+# Whether to automatically sync the task repository (only use this
+# for git repositories).
+auto_sync = false
+# Maximum number of simultaneous compilations (the processes will
+# be created regardless but will stay idle).
+max_compilations = 10
 
 [germake]
+always_recompute_hash = true
