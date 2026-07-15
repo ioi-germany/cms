@@ -37,6 +37,7 @@ same regardless of the path used to reach it.
 """
 
 from datetime import timedelta
+from typing import Any
 
 
 from cms.db import engine, metadata, Announcement, Contest, Dataset, Evaluation, \
@@ -44,7 +45,6 @@ from cms.db import engine, metadata, Announcement, Contest, Dataset, Evaluation,
     Statement, Submission, SubmissionResult, Task, Team, Testcase, User, \
     UserTest, UserTestResult, drop_db, init_db, Token, UserTestFile, \
     UserTestManager
-from cms.db import Group
 from cms.db.filecacher import DBBackend
 from cmstestsuite.unit_tests.testidgenerator import unique_long_id, \
     unique_unicode_id, unique_digest
@@ -81,29 +81,17 @@ class DatabaseObjectGeneratorMixin:
             if a in kwargs:
                 grpargs[a] = kwargs[a]
                 del kwargs[a]
-        args = {
+        args: dict[str, Any] = {
             "name": unique_unicode_id(),
             "description": unique_unicode_id(),
-            "main_group": cls.get_group(**grpargs),
         }
-        args["groups"] = [args["main_group"]]
         args.update(kwargs)
         if "groups" not in args.keys() or not args["groups"]:
-            args["groups"] = [cls.get_group()]
+            args["groups"] = [cls.get_group(**grpargs)]
         if "main_group" not in args.keys():
             args["main_group"] = args["groups"][0]
         contest = Contest(**args)
         return contest
-
-    @staticmethod
-    def get_group(**kwargs):
-        """Create a group"""
-        args = {
-            "name": "main"
-        }
-        args.update(kwargs)
-        group = Group(**args)
-        return group
 
     @classmethod
     def get_announcement(cls, contest=None, **kwargs):

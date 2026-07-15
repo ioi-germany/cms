@@ -105,4 +105,24 @@ ALTER TABLE contests DROP COLUMN analysis_stop;
 -- https://github.com/cms-dev/cms/pull/1672
 ALTER TABLE contests DROP COLUMN per_user_time;
 
+-- German Format
+ALTER TABLE announcements ADD COLUMN src VARCHAR NOT NULL;
+ALTER TABLE participations ADD COLUMN unofficial BOOLEAN NOT NULL;
+ALTER TABLE questions ADD COLUMN last_action timestamp without time zone;
+ALTER TABLE questions ADD COLUMN reply_source VARCHAR;
+ALTER TABLE submission_results ADD COLUMN unit_test_score_details jsonb;
+ALTER TABLE submissions ADD COLUMN additional_info VARCHAR;
+
+CREATE TABLE spoilers (
+    id SERIAL PRIMARY KEY,
+    digest digest NOT NULL,
+    filename filename NOT NULL,
+    task_id integer NOT NULL
+);
+
+ALTER TABLE spoilers ADD CONSTRAINT spoilers_task_id_filename_key UNIQUE (task_id, filename);
+CREATE INDEX ix_spoilers_task_id ON spoilers USING btree (task_id);
+ALTER TABLE spoilers ADD CONSTRAINT spoilers_task_id_fkey FOREIGN KEY (task_id)
+    REFERENCES tasks(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
 COMMIT;

@@ -377,7 +377,7 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         sandbox_mgr.create_file_from_storage.assert_has_calls([
             call("manager", "digest of manager", self.file_cacher, executable=True),
             call("input.txt", "digest of input", self.file_cacher),
-            call("ok.txt", "digest of correct output"),
+            call("ok.txt", "digest of correct output", self.file_cacher),
         ], any_order=True)
         self.assertEqual(sandbox_mgr.create_file_from_storage.call_count, 3)
         sandbox_usr.create_file_from_storage.assert_has_calls([
@@ -624,7 +624,7 @@ class TestEvaluate(TaskTypeTestMixin, FileSystemMixin, unittest.TestCase):
         sandbox_mgr.create_file_from_storage.assert_has_calls([
             call("manager", "digest of manager", self.file_cacher, executable=True),
             call("input.txt", "digest of input", self.file_cacher),
-            call("ok.txt", "digest of correct output"),
+            call("ok.txt", "digest of correct output", self.file_cacher),
         ], any_order=True)
         self.assertEqual(sandbox_mgr.create_file_from_storage.call_count, 3)
         # Same content in both user sandboxes.
