@@ -30,9 +30,9 @@ from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
 import copy
 import os
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from importlib import import_module
-import pytz
+import zoneinfo
 
 
 class MyGroup(object):
@@ -286,8 +286,8 @@ class ContestConfig(CommonConfig):
         if timezone is None:
             timezone = self._timezone
         time = datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
-        tz = pytz.timezone(timezone)
-        convtime = tz.normalize(tz.localize(time)).astimezone(pytz.utc)
+        tz = zoneinfo.ZoneInfo(timezone)
+        convtime = time.replace(tzinfo=tz).astimezone(dt_timezone.utc)
         return convtime.replace(tzinfo=None)
 
     @exported_function

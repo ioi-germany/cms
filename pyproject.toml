@@ -54,9 +54,6 @@ dependencies = [
     # Only for TaskOverviewWebServer
     "ansi2html>=1.6",
 
-    # Only for ContestConfig
-    "pytz>=2026.2",
-
     # Only for BOI/CEOI template
     "PyPDF2==3.0.1",
 ]
