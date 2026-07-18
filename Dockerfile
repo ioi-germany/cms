@@ -225,7 +225,6 @@ RUN <<EOF
     sed -i 's/127.0.0.1/0.0.0.0/' ../cms/etc/cms.toml
 EOF
 
-WORKDIR /home/cmsuser/tasks
 ENTRYPOINT ["/home/cmsuser/docker-entrypoint.sh"]
 
 # cws, aws, rws, taskoverview, gertranslate

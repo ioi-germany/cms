@@ -16,6 +16,7 @@ services:
       PYTEST_ADDOPTS: --color=yes
     volumes:
       - "../codecov:/home/cmsuser/src/codecov"
+    entrypoint: ""
     privileged: true
     cgroup: host
     command: wait-for-it testdb:5432 -- docker/_cms-test-internal.sh
@@ -26,6 +27,7 @@ services:
       - "testdb"
     environment:
       CMS_CONFIG: /home/cmsuser/cms/etc/cms-testdb.toml
+    entrypoint: ""
     privileged: true
     cgroup: host
     command: wait-for-it testdb:5432 -- docker/_cms-stresstest-internal.sh
