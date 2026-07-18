@@ -31,8 +31,6 @@ import os
 import shutil
 import copy
 
-from six import iteritems
-
 class PlainTemplate(Template):
     def __init__(self, contest):
         super(PlainTemplate, self).__init__(contest)
@@ -178,7 +176,7 @@ class PlainTemplate(Template):
                     d[v] = c
 
         res = ""
-        for v, c in iteritems(d):
+        for v, c in d.items():
             res += r"\makescopedconstraint{" + "{}".format(i) + "}{" + v + \
                    "}{" + c.latex() + "}\n"
 

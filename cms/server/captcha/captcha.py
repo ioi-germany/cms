@@ -20,9 +20,9 @@
 
 """
 
+import importlib.resources
 import logging
 import os
-from pkg_resources import resource_filename
 
 import cairosvg
 from random import randint, uniform
@@ -39,7 +39,7 @@ class Captcha():
     split = "/>"
 
     def __init__(self):
-        static_path = resource_filename("cms.server", "captcha/static")
+        static_path = str(importlib.resources.files("cms.server") / "captcha/static")
         with open(os.path.join(static_path, "frame.svg" ), 'r') as framefile:
                 self.frame  = framefile.read() .split("<!--Anchor-->")
         with open(os.path.join(static_path, "digits.svg"), 'r') as digitsfile:

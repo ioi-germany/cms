@@ -20,12 +20,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from collections.abc import Iterable
 import logging
 import os
 
 from cms.db import Executable
+from cms.db.filecacher import FileCacher
+from cms.grading.Job import CompilationJob, EvaluationJob
 from cms.grading.ParameterTypes import ParameterTypeCollection, \
     ParameterTypeChoice, ParameterTypeString
+from cms.grading.language import Language
 from cms.grading.languagemanager import LANGUAGES, get_language
 from cms.grading.steps import compilation_step, evaluation_step, \
     human_evaluation_message
@@ -67,6 +71,8 @@ class Batch(TaskType):
     input, correct output and user output) and should write the
     outcome to stdout and the text to stderr.
 
+    Note that this class is used as a base class for the BatchAndOutput task
+    type.
     """
     # Codename of the checker, if it is used.
     CHECKER_CODENAME = "checker"
@@ -112,7 +118,7 @@ class Batch(TaskType):
     ACCEPTED_PARAMETERS = [_COMPILATION, _USE_FILE, _EVALUATION]
 
     @property
-    def name(self):
+    def name(self) -> str:
         """See TaskType.name."""
         # TODO add some details if a grader/comparator is used, etc...
         return "Batch"
@@ -121,6 +127,10 @@ class Batch(TaskType):
         super().__init__(parameters)
 
         # Data in the parameters.
+        self.compilation: str
+        self.input_filename: str
+        self.output_filename: str
+        self.output_eval: str
         self.compilation = self.parameters[0]
         self.input_filename, self.output_filename = self.parameters[1]
         self.output_eval = self.parameters[2]
@@ -139,7 +149,10 @@ class Batch(TaskType):
         codenames_to_compile = []
         if self._uses_grader():
             codenames_to_compile.append(self.GRADER_BASENAME + ".%l")
-        codenames_to_compile.extend(submission_format)
+        # For regular batch, all parts of the submission format end with %l.
+        # For batch+output only, some might not.
+        codenames_to_compile.extend(
+            [x for x in submission_format if x.endswith('.%l')])
         res = dict()
         for language in LANGUAGES:
             source_ext = language.source_extension
@@ -164,40 +177,36 @@ class Batch(TaskType):
         """See TaskType.get_auto_managers."""
         return []
 
-    def _uses_grader(self):
+    def _uses_grader(self) -> bool:
         return self.compilation == self.COMPILATION_GRADER
 
-    def _uses_checker(self):
+    def _uses_checker(self) -> bool:
         return self.output_eval == self.OUTPUT_EVAL_CHECKER
 
     @staticmethod
-    def _executable_filename(codenames, language):
+    def _executable_filename(codenames: Iterable[str], language: Language) -> str:
         """Return the chosen executable name computed from the codenames.
 
-        codenames ([str]): submission format or codename of submitted files,
+        codenames: submission format or codename of submitted files,
             may contain %l.
-        language (Language): the programming language of the submission.
+        language: the programming language of the submission.
 
-        return (str): a deterministic executable name.
+        return: a deterministic executable name.
 
         """
-        name =  "_".join(sorted(codename.replace(".%l", "")
-                                for codename in codenames))
+        name = "_".join(sorted(codename.replace(".%l", "")
+                               for codename in codenames))
         return name + language.executable_extension
 
-    def compile(self, job, file_cacher):
-        """See TaskType.compile."""
+    def _do_compile(self, job: CompilationJob, file_cacher: FileCacher):
         language = get_language(job.language)
         source_ext = language.source_extension
-
-        if not check_files_number(job, 1, or_more=True):
-            return
 
         # Create the list of filenames to be passed to the compiler. If we use
         # a grader, it needs to be in first position in the command line, and
         # we check that it exists.
-        filenames_to_compile = []
-        filenames_and_digests_to_get = {}
+        filenames_to_compile: list[str] = []
+        filenames_and_digests_to_get: dict[str, str] = {}
         # The grader, that must have been provided (copy and add to
         # compilation).
         if self._uses_grader():
@@ -209,6 +218,8 @@ class Batch(TaskType):
                 job.managers[grader_filename].digest
         # User's submitted file(s) (copy and add to compilation).
         for codename, file_ in job.files.items():
+            if not codename.endswith(".%l"):
+                continue
             filename = codename.replace(".%l", source_ext)
             filenames_to_compile.append(filename)
             filenames_and_digests_to_get[filename] = file_.digest
@@ -224,12 +235,12 @@ class Batch(TaskType):
             filenames_to_compile, executable_filename)
 
         # Create the sandbox.
-        sandbox = create_sandbox(file_cacher, name="compile")
+        sandbox = create_sandbox(0, file_cacher, name="compile")
         job.sandboxes.append(sandbox.get_root_path())
 
         # Copy required files in the sandbox (includes the grader if present).
         for filename, digest in filenames_and_digests_to_get.items():
-            sandbox.create_file_from_storage(filename, digest)
+            sandbox.create_file_from_storage(filename, digest, file_cacher)
 
         # Run the compilation.
         box_success, compilation_success, text, stats = \
@@ -243,23 +254,27 @@ class Batch(TaskType):
         if box_success and compilation_success:
             digest = sandbox.get_file_to_storage(
                 executable_filename,
+                file_cacher,
                 "Executable %s for %s" % (executable_filename, job.info))
             job.executables[executable_filename] = \
                 Executable(executable_filename, digest)
 
         # Cleanup.
-        delete_sandbox(sandbox, job.success, job.keep_sandbox)
+        delete_sandbox(sandbox, job, file_cacher)
 
-    def evaluate(self, job, file_cacher):
-        """See TaskType.evaluate."""
-        if not check_executables_number(job, 1):
+    def compile(self, job: CompilationJob, file_cacher: FileCacher):
+        """See TaskType.compile."""
+        if not check_files_number(job, 1, or_more=True):
             return
 
+        self._do_compile(job, file_cacher)
+
+    def _execution_step(self, job: EvaluationJob, file_cacher: FileCacher):
         # Prepare the execution
         executable_filename = next(iter(job.executables.keys()))
         language = get_language(job.language)
         main = self.GRADER_BASENAME if self._uses_grader() \
-               else os.path.splitext(executable_filename)[0]
+            else os.path.splitext(executable_filename)[0]
         commands = language.get_evaluation_commands(
             executable_filename, main=main)
         executables_to_get = {
@@ -283,14 +298,14 @@ class Batch(TaskType):
             files_allowing_write.append(self._actual_output)
 
         # Create the sandbox
-        sandbox = create_sandbox(file_cacher, name="evaluate")
+        sandbox = create_sandbox(0, file_cacher, name="evaluate")
         job.sandboxes.append(sandbox.get_root_path())
 
         # Put the required files into the sandbox
         for filename, digest in executables_to_get.items():
-            sandbox.create_file_from_storage(filename, digest, executable=True)
+            sandbox.create_file_from_storage(filename, digest, file_cacher, executable=True)
         for filename, digest in files_to_get.items():
-            sandbox.create_file_from_storage(filename, digest)
+            sandbox.create_file_from_storage(filename, digest, file_cacher)
 
         # Actually performs the execution
         box_success, evaluation_success, stats = evaluation_step(
@@ -305,6 +320,7 @@ class Batch(TaskType):
 
         outcome = None
         text = None
+        output_file_params = None
 
         # Error in the sandbox: nothing to do!
         if not box_success:
@@ -333,6 +349,7 @@ class Batch(TaskType):
                 if job.get_output:
                     job.user_output = sandbox.get_file_to_storage(
                         self._actual_output,
+                        file_cacher,
                         "Output file in job %s" % job.info,
                         trunc_len=100 * 1024)
 
@@ -341,20 +358,44 @@ class Batch(TaskType):
                     outcome = 0.0
                     text = [N_("Execution completed successfully")]
 
-                # Otherwise evaluate the output file.
+                # Otherwise prepare to evaluate the output file.
                 else:
-                    box_success, outcome, text = eval_output(
-                        file_cacher, job,
-                        self.CHECKER_CODENAME
-                        if self._uses_checker() else None,
-                        user_output_path=sandbox.relative_path(
+                    output_file_params = {
+                        'user_output_path': sandbox.relative_path(
                             self._actual_output),
-                        user_output_filename=self.output_filename)
+                        'user_output_filename': self.output_filename}
+
+        return outcome, text, output_file_params, stats, box_success, sandbox
+
+    def _evaluate_step(self, job, file_cacher, output_file_params, outcome, text, stats, box_success, sandbox, extra_args):
+        admin_text = None
+
+        if box_success:
+            assert (output_file_params is None) == (outcome is not None)
+            if output_file_params is not None:
+                box_success, outcome, text, admin_text = eval_output(
+                    file_cacher, job,
+                    self.CHECKER_CODENAME
+                    if self._uses_checker() else None,
+                    **output_file_params, extra_args=extra_args)
 
         # Fill in the job with the results.
         job.success = box_success
         job.outcome = str(outcome) if outcome is not None else None
         job.text = text
         job.plus = stats
+        job.admin_text = admin_text
 
-        delete_sandbox(sandbox, job.success, job.keep_sandbox)
+        if sandbox is not None:
+            delete_sandbox(sandbox, job, file_cacher)
+
+    def evaluate(self, job, file_cacher):
+        """See TaskType.evaluate."""
+        if not check_executables_number(job, 1):
+            return
+
+        outcome, text, output_file_params, stats, box_success, sandbox = self._execution_step(
+            job, file_cacher)
+
+        self._evaluate_step(job, file_cacher, output_file_params,
+                            outcome, text, stats, box_success,  sandbox, extra_args=None)

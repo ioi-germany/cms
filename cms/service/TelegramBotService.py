@@ -338,7 +338,7 @@ class TelegramBot:
     """
 
     def __init__(self, contests=None, only_listen_to=None):
-        self.pwd = config.bot_pwd # Password needed during startup
+        self.pwd = config.telegram_bot.bot_pwd  # Password needed during startup
         self.id = None            # We will only communicate with the group of
                                   # this id (will be set during startup)
         self.only_listen_to = only_listen_to
@@ -347,10 +347,11 @@ class TelegramBot:
         self.messages_issued = []
         self.contests = contests
         self.err_count = 0
-        self.MAX_ERR_COUNT = config.telegram_bot_max_error_messages
+        self.MAX_ERR_COUNT = config.telegram_bot.telegram_bot_max_error_messages
 
-        self.bot = BotWithMessageQueue(token=config.bot_token,
-                                       request=Request(con_pool_size=8))
+        self.bot = BotWithMessageQueue(
+            token=config.telegram_bot.bot_token, request=Request(con_pool_size=8)
+        )
 
         self.updater = Updater(bot=self.bot)
         self.dispatcher = self.updater.dispatcher

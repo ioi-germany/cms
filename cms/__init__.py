@@ -33,19 +33,17 @@ __all__ = [
     "TOKEN_MODE_DISABLED", "TOKEN_MODE_FINITE", "TOKEN_MODE_INFINITE",
     "TOKEN_MODE_MIXED",
     "FEEDBACK_LEVEL_FULL", "FEEDBACK_LEVEL_RESTRICTED",
+    "FEEDBACK_LEVEL_OI_RESTRICTED",
     # log
     # Nothing intended for external use, no need to advertise anything.
     # conf
-    "Address", "ServiceCoord", "ConfigError", "async_config", "config",
+    "Address", "ServiceCoord", "ConfigError", "config",
     # util
     "mkdir", "rmtree", "utf8_decoder", "get_safe_shard", "get_service_address",
     "get_service_shards", "contest_id_from_args", "default_argument_parser",
     # plugin
     "plugin_list",
 ]
-
-
-__version__ = "1.5.1"
 
 
 # Instantiate or import these objects.
@@ -68,10 +66,17 @@ FEEDBACK_LEVEL_FULL = "full"
 # Restricted set of information (no killing signal, time or memory, testcases
 # can be omitted).
 FEEDBACK_LEVEL_RESTRICTED = "restricted"
+# Restricted set of information in accordance with the Contest Rules of
+# the International Olympiad of Informatics
+FEEDBACK_LEVEL_OI_RESTRICTED = "oi_restricted"
 
 
-from .conf import Address, ServiceCoord, ConfigError, async_config, config
+from .conf import Address, ServiceCoord, ConfigError, config
 from .util import mkdir, rmtree, utf8_decoder, get_safe_shard, \
     get_service_address, get_service_shards, contest_id_from_args, \
     default_argument_parser
 from .plugin import plugin_list
+
+# Define version here for backwards compatibility, just in case anything reads it.
+import importlib.metadata
+__version__ = importlib.metadata.version("cms")

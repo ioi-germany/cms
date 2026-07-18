@@ -18,10 +18,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
+import importlib.resources
 import json
+import logging
 
-from pkg_resources import resource_filename
 from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler, Application
 
@@ -171,23 +171,27 @@ class GerTranslateWebServer:
                     (r"/mark/(.*)", MarkHandler),
                     (r"/log/(.*)", LogHandler)]
 
-        params = {"template_path": resource_filename("cms.server",
-                                                     "gertranslate/templates"),
-                  "static_path": resource_filename("cms.server",
-                                                   "gertranslate/static")}
+        params = {
+            "template_path": str(
+                importlib.resources.files("cms.server") / "gertranslate/templates"
+            ),
+            "static_path": str(
+                importlib.resources.files("cms.server") / "gertranslate/static"
+            ),
+        }
 
-        repository = Repository(config.translate_task_repository,
-                                config.translate_auto_sync,
+        repository = Repository(config.gertranslate.task_repository,
+                                config.gertranslate.auto_sync,
                                 auto_push=True)
 
-        TaskAccess.init(repository, config.translate_max_compilations)
+        TaskAccess.init(repository, config.gertranslate.max_compilations)
         TaskTranslateInfo.init(repository)
 
         self.app = Application(handlers, **params)
 
     def run(self):
-        self.app.listen(config.translate_listen_port,
-                        address=config.translate_listen_address)
+        self.app.listen(config.gertranslate.listen_port,
+                        address=config.gertranslate.listen_address)
 
         try:
             IOLoop.instance().start()

@@ -18,13 +18,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from collections import abc
 import hashlib
 import json
 import os.path
 from cmscontrib.gerpythonformat.Messenger import print_block, header
 from cms.rules.Rule import CommandRule, GCCRule, PythonFunctionRule
-from six import iteritems
 
 class Executable(object):
     """Abstract base class for executables suitable for e.g. solutions and
@@ -248,7 +246,7 @@ class ParamsExecutable(Executable):
             .format(self.parent.__str__(),
                     ", ".join([x for x in map(str, self.args)] +
                               [str(a) + "=" + str(b)
-                               for a, b in iteritems(self.kwargs)]))
+                               for a, b in self.kwargs.items()]))
 
 
 class ExitCodeException(Exception):

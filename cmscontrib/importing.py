@@ -4,6 +4,7 @@
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
+# Copyright © 2026 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,10 +21,14 @@
 
 """Utility functions for importers"""
 
+from collections.abc import Callable
 import functools
 import logging
+import typing
 
 from cms.db import Contest, Dataset, Task, Group, User, Team, Participation
+from cms.db.base import Base
+from cms.db.session import Session
 
 
 __all__ = [
@@ -49,13 +54,13 @@ def _attrstr(a):
     return ".".join(_update_prefix + [a])
 
 
-def contest_from_db(contest_id, session):
+def contest_from_db(contest_id: int | None, session: Session) -> Contest | None:
     """Return the contest object with the given id
 
-    contest_id (int|None): the id of the contest, or None to return None.
-    session (Session): SQLAlchemy session to use.
+    contest_id: the id of the contest, or None to return None.
+    session: SQLAlchemy session to use.
 
-    return (Contest|None): None if contest_id is None, or the contest.
+    return: None if contest_id is None, or the contest.
     raise (ImportDataError): if there is no contest with the given id.
 
     """
@@ -69,13 +74,13 @@ def contest_from_db(contest_id, session):
     return contest
 
 
-def task_from_db(task_name, session):
+def task_from_db(task_name: str | None, session: Session) -> Task | None:
     """Return the task object with the given name
 
-    task_name (string|None): the name of the task, or None to return None.
-    session (Session): SQLAlchemy session to use.
+    task_name: the name of the task, or None to return None.
+    session: SQLAlchemy session to use.
 
-    return (Task|None): None if task_name is None, or the task.
+    return: None if task_name is None, or the task.
     raise (ImportDataError): if there is no task with the given name.
 
     """
@@ -118,7 +123,7 @@ def _copy(new_object):
     return old_object
 
 
-def _update_columns(old_object, new_object, spec=None):
+def _update_columns(old_object: Base, new_object: Base, spec=None):
     """Update the scalar columns of the object
 
     Update all non-relationship columns of old_object with the values in
@@ -140,7 +145,9 @@ def _update_columns(old_object, new_object, spec=None):
                 setattr(old_object, prp.key, getattr(new_object, prp.key))
 
 
-def _update_object(old_object, new_object, spec=None, parent=None):
+def _update_object(
+    old_object: Base, new_object: Base, spec=None, parent: str | None = None
+):
     """Update old_object with the values in new_object
 
     Update all columns with this strategy:
@@ -153,14 +160,14 @@ def _update_object(old_object, new_object, spec=None, parent=None):
         strategy (see _update_list and _update_dict); otherwise if spec is
         a function, that function is used to update.
 
-    old_object (Base): object to update.
-    new_object (Base): object whose values will be used.
+    old_object: object to update.
+    new_object: object whose values will be used.
     spec (
         {sqlalchemy.orm.attributes.InstrumentedAttribute: boolean|function}
         |None): a dictionary mapping attributes to a boolean (if not
         updating or using the default strategy) or to an updating function,
         with signature fn(old_value, new_value, parent=None).
-    parent (string|None): the name of the relationship in the parent object,
+    parent: the name of the relationship in the parent object,
         which is ignored.
 
     """
@@ -212,7 +219,7 @@ def _update_object(old_object, new_object, spec=None, parent=None):
             spec[prp.class_attribute](old_value, new_value, parent=prp.key)
 
 
-def _update_list(old_list, new_list, update_value_fn=None):
+def _update_list(old_list: list[Base], new_list: list[Base], update_value_fn=None):
     """Update a SQLAlchemy relationship with type list
 
     Make old_list look like new_list, by:
@@ -255,7 +262,7 @@ def _update_list(old_list, new_list, update_value_fn=None):
         old_list.append(temp)
 
 
-def _update_dict(old_dict, new_dict, update_value_fn=None):
+def _update_dict(old_dict: dict, new_dict: dict, update_value_fn=None):
     """Update a SQLAlchemy relationship with type dict
 
     Make old_dict look like new_dict, by:
@@ -293,9 +300,14 @@ def _update_dict(old_dict, new_dict, update_value_fn=None):
             del old_dict[key]
 
 
-def _update_list_with_key(old_list, new_list, key,
-                          preserve_old=False, update_value_fn=None,
-                          creator_fn=None):
+def _update_list_with_key(
+    old_list: list[Base],
+    new_list: list[Base],
+    key: Callable[[Base], typing.Any],
+    preserve_old=False,
+    update_value_fn=None,
+    creator_fn=None,
+):
     """Update a SQLAlchemy list-relationship, using key for identity
 
     Make old_list look like new_list, in a similar way to _update_dict, as
@@ -341,7 +353,7 @@ def _update_list_with_key(old_list, new_list, key,
     return old_dict
 
 
-def update_dataset(old_dataset, new_dataset, parent=None):
+def update_dataset(old_dataset: Dataset, new_dataset: Dataset, parent=None):
     """Update old_dataset with information from new_dataset"""
     _update_object(old_dataset, new_dataset, {
         # Since we know it, hardcode to ignore the parent relationship.
@@ -352,7 +364,7 @@ def update_dataset(old_dataset, new_dataset, parent=None):
     }, parent=parent)
 
 
-def update_task(old_task, new_task, parent=None, get_statements=True):
+def update_task(old_task: Task, new_task: Task, parent=None, get_statements=True):
     """Update old_task with information from new_task"""
     def update_datasets_fn(o, n, parent=None):
         _update_list_with_key(
@@ -376,16 +388,7 @@ def update_task(old_task, new_task, parent=None, get_statements=True):
         Task.primary_statements: get_statements,
     }, parent=parent)
 
-
-def update_group(old_group, new_group, parent=None):
-    """Update old_group with information from new_group"""
-    _update_object(old_group, new_group, {
-        Group.contest: False,
-        Group.participations: False,
-    }, parent=parent)
-
-
-def update_contest(old_contest, new_contest, parent=None):
+def update_contest(old_contest: Contest, new_contest: Contest, parent=None):
     """Update old_contest with information from new_contest"""
     def update_groups_fn(o, n, parent=None):
         _update_list_with_key(
@@ -400,10 +403,10 @@ def update_contest(old_contest, new_contest, parent=None):
         # must be handled differently.
         Contest.tasks: False,
         Contest.participations: False,
-        # We update the list groups in the standard way.
-        Contest.groups: update_groups_fn,
         # The main group has to be set manually in the end.
         Contest.main_group: False,
+        # We update the list groups in the standard way.
+        Contest.groups: update_groups_fn
     }, parent=parent)
 
 
@@ -432,7 +435,16 @@ def update_participation(old_participation, new_participation):
         Participation.questions: False,
         Participation.submissions: False,
         Participation.user_tests: False,
-        Participation.printjobs: False,
         Participation.starting_time: False,
         Participation.extra_time: False,
     })
+
+
+def update_group(old_group: Group, new_group: Group, parent=None):
+    """
+    Update old_group with information from new_group
+    """
+    _update_object(old_group, new_group, {
+        Group.contest: False,
+        Group.participations: False,
+    }, parent=parent)

@@ -8,7 +8,7 @@
 # Copyright © 2015 William Di Luigi <williamdiluigi@gmail.com>
 # Copyright © 2015 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
-# Copyright © 2017 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2017-2026 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -29,85 +29,87 @@
 """
 
 from datetime import datetime, timedelta
+from ipaddress import IPv4Network, IPv6Network
 
 from sqlalchemy.dialects.postgresql import ARRAY, CIDR
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column, ForeignKey, CheckConstraint, \
-    UniqueConstraint
-from sqlalchemy.types import Boolean, Integer, String, Unicode, DateTime, \
-    Interval
-from sqlalchemy.dialects.postgresql import ARRAY, CIDR
+    UniqueConstraint, ForeignKeyConstraint
+from sqlalchemy.types import Boolean, Integer, String, Unicode, DateTime, Interval
 
 from cmscommon.crypto import generate_random_password, build_password
 from . import CastingArray, Codename, Base, Admin, Contest
+import typing
+if typing.TYPE_CHECKING:
+    from . import Submission, UserTest
 
 
 class Group(Base):
     """Class to store a group of users (for timing, etc.).
 
     """
-    __tablename__ = 'group'
+
+    __tablename__ = "groups"
     __table_args__ = (
         UniqueConstraint('contest_id', 'name'),
+        UniqueConstraint('id', 'contest_id'),
         CheckConstraint("start <= stop"),
         CheckConstraint("stop <= analysis_start"),
         CheckConstraint("analysis_start <= analysis_stop"),
     )
 
     # Auto increment primary key.
-    id = Column(
+    id: int = Column(
         Integer,
         primary_key=True)
 
-    name = Column(
+    name: str = Column(
         Unicode,
         nullable=False)
 
     # Beginning and ending of the contest.
-    start = Column(
+    start: datetime = Column(
         DateTime,
         nullable=False,
         default=datetime(2000, 1, 1))
-    stop = Column(
+    stop: datetime = Column(
         DateTime,
         nullable=False,
         default=datetime(2100, 1, 1))
 
-    # Beginning and ending of the contest anaylsis mode.
-    analysis_enabled = Column(
+    # Beginning and ending of the analysis mode for this group.
+    analysis_enabled: bool = Column(
         Boolean,
         nullable=False,
         default=False)
-    analysis_start = Column(
+    analysis_start: datetime = Column(
         DateTime,
         nullable=False,
         default=datetime(2100, 1, 1))
-    analysis_stop = Column(
+    analysis_stop: datetime = Column(
         DateTime,
         nullable=False,
         default=datetime(2100, 1, 1))
 
     # Max contest time for each user in seconds.
-    per_user_time = Column(
+    per_user_time: timedelta | None = Column(
         Interval,
         CheckConstraint("per_user_time >= '0 seconds'"),
         nullable=True)
 
     # Contest (id and object) to which this user group belongs.
-    contest_id = Column(
+    contest_id: int = Column(
         Integer,
         ForeignKey(Contest.id,
                    onupdate="CASCADE", ondelete="CASCADE"),
-        # nullable=False,
+        nullable=False,
         index=True)
-    contest = relationship(
+    contest: Contest = relationship(
         Contest,
-        backref=backref('groups',
-                        cascade="all, delete-orphan",
-                        passive_deletes=True),
-        primaryjoin="Contest.id==Group.contest_id")
+        foreign_keys=[contest_id],
+        back_populates="groups")
 
-    def phase(self, timestamp):
+    def phase(self, timestamp: datetime) -> int:
         """Return: -1 if contest isn't started yet at time timestamp,
                     0 if the contest is active at time timestamp,
                     1 if the contest has ended but analysis mode
@@ -116,10 +118,9 @@ class Group(Base):
                     3 if the contest has ended and analysis mode is disabled or
                       has ended
 
-        timestamp (datetime): the time we are iterested in.
-        return (int): contest phase as above.
-
+        timestamp: the time we are iterested in.
         """
+        # NOTE: this logic is duplicated in aws_utils.js.
         if timestamp < self.start:
             return -1
         if timestamp <= self.stop:
@@ -131,9 +132,12 @@ class Group(Base):
                 return 2
         return 3
 
-    # Follows the description of the fields automatically added by
-    # SQLAlchemy.
-    # participations (list of Participation objects)
+    participations: list["Participation"] = relationship(
+        "Participation",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        foreign_keys="[Participation.group_id]",
+        back_populates="group")
 
 
 class User(Base):
@@ -144,30 +148,30 @@ class User(Base):
     __tablename__ = 'users'
 
     # Auto increment primary key.
-    id = Column(
+    id: int = Column(
         Integer,
         primary_key=True)
 
     # Real name (human readable) of the user.
-    first_name = Column(
+    first_name: str = Column(
         Unicode,
         nullable=False)
-    last_name = Column(
+    last_name: str = Column(
         Unicode,
         nullable=False)
 
     # Username and password to log in the CWS.
-    username = Column(
+    username: str = Column(
         Codename,
         nullable=False,
         unique=True)
-    password = Column(
+    password: str = Column(
         Unicode,
         nullable=False,
         default=lambda: build_password(generate_random_password()))
 
     # Email for any communications in case of remote contest.
-    email = Column(
+    email: str | None = Column(
         Unicode,
         nullable=True)
 
@@ -177,7 +181,7 @@ class User(Base):
     # (if it's None or an invalid string) the local timezone of the
     # server. This value has to be a string like "Europe/Rome",
     # "Australia/Sydney", "America/New_York", etc.
-    timezone = Column(
+    timezone: str | None = Column(
         Unicode,
         nullable=True)
 
@@ -187,7 +191,7 @@ class User(Base):
     # preferred of them will be highlighted.
     # FIXME: possibly move it to Participation and change it back to
     # primary_statements
-    preferred_languages = Column(
+    preferred_languages: list[str] = Column(
         ARRAY(String),
         nullable=False,
         default=[])
@@ -195,7 +199,7 @@ class User(Base):
     # These one-to-many relationships are the reversed directions of
     # the ones defined in the "child" classes using foreign keys.
 
-    participations = relationship(
+    participations: list["Participation"] = relationship(
         "Participation",
         cascade="all, delete-orphan",
         passive_deletes=True,
@@ -214,22 +218,22 @@ class Team(Base):
     __tablename__ = 'teams'
 
     # Auto increment primary key.
-    id = Column(
+    id: int = Column(
         Integer,
         primary_key=True)
 
     # Team code (e.g. the ISO 3166-1 code of a country)
-    code = Column(
+    code: str = Column(
         Codename,
         nullable=False,
         unique=True)
 
     # Human readable team name (e.g. the ISO 3166-1 short name of a country)
-    name = Column(
+    name: str = Column(
         Unicode,
         nullable=False)
 
-    participations = relationship(
+    participations: list["Participation"] = relationship(
         "Participation",
         cascade="all, delete-orphan",
         passive_deletes=True,
@@ -244,9 +248,15 @@ class Participation(Base):
 
     """
     __tablename__ = 'participations'
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ("group_id", "contest_id"),
+            (Group.id, Group.contest_id)),
+        UniqueConstraint("contest_id", "user_id"),
+    )
 
     # Auto increment primary key.
-    id = Column(
+    id: int = Column(
         Integer,
         primary_key=True)
 
@@ -254,27 +264,27 @@ class Participation(Base):
     # requests come from an IP address that belongs to any of these
     # subnetworks. An empty list prevents the user from logging in,
     # None disables the IP lock for the user.
-    ip = Column(
+    ip: list[IPv4Network | IPv6Network] | None = Column(
         CastingArray(CIDR),
         nullable=True)
 
     # Starting time: for contests where every user has at most x hours
     # of the y > x hours totally available, this is the time the user
     # decided to start their time-frame.
-    starting_time = Column(
+    starting_time: datetime | None = Column(
         DateTime,
         nullable=True)
 
     # A shift in the time interval during which the user is allowed to
     # submit.
-    delay_time = Column(
+    delay_time: timedelta = Column(
         Interval,
         CheckConstraint("delay_time >= '0 seconds'"),
         nullable=False,
         default=timedelta())
 
     # An extra amount of time allocated for this user.
-    extra_time = Column(
+    extra_time: timedelta = Column(
         Interval,
         CheckConstraint("extra_time >= '0 seconds'"),
         nullable=False,
@@ -283,13 +293,13 @@ class Participation(Base):
     # Contest-specific password. If this password is not null then the
     # traditional user.password field will be "replaced" by this field's
     # value (only for this participation).
-    password = Column(
+    password: str | None = Column(
         Unicode,
         nullable=True)
 
     # A hidden participation (e.g. does not appear in public rankings), can
     # also be used for debugging purposes.
-    hidden = Column(
+    hidden: bool = Column(
         Boolean,
         nullable=False,
         default=False)
@@ -304,89 +314,81 @@ class Participation(Base):
     # maximum number of submissions, minimum interval between submissions,
     # maximum number of user tests, minimum interval between user tests),
     # can also be used for debugging purposes.
-    unrestricted = Column(
+    unrestricted: bool = Column(
         Boolean,
         nullable=False,
         default=False)
 
     # Contest (id and object) to which the user is participating.
-    contest_id = Column(
+    contest_id: int = Column(
         Integer,
         ForeignKey(Contest.id,
                    onupdate="CASCADE", ondelete="CASCADE"),
         nullable=False,
         index=True)
-    contest = relationship(
+    contest: Contest = relationship(
         Contest,
         back_populates="participations")
 
     # User (id and object) which is participating.
-    user_id = Column(
+    user_id: int = Column(
         Integer,
         ForeignKey(User.id,
                    onupdate="CASCADE", ondelete="CASCADE"),
         nullable=False,
         index=True)
-    user = relationship(
+    user: User = relationship(
         User,
         back_populates="participations")
-    __table_args__ = (UniqueConstraint('contest_id', 'user_id'),)
 
     # Group this user belongs to
-    group_id = Column(
+    group_id: int = Column(
         Integer,
         ForeignKey(Group.id,
                    onupdate="CASCADE", ondelete="CASCADE"),
         nullable=False,
         index=True)
-    group = relationship(
+    group: Group = relationship(
         Group,
-        backref=backref("participations",
-                        cascade="all, delete-orphan",
-                        passive_deletes=True))
+        foreign_keys=[group_id],
+        back_populates="participations")
 
     # Team (id and object) that the user is representing with this
     # participation.
-    team_id = Column(
+    team_id: int | None = Column(
         Integer,
-        ForeignKey(Team.id,
-                   onupdate="CASCADE", ondelete="RESTRICT"),
-        nullable=True)
-    team = relationship(
+        ForeignKey(Team.id, onupdate="CASCADE", ondelete="SET NULL"),
+        nullable=True,
+    )
+    team: Team | None = relationship(
         Team,
         back_populates="participations")
 
     # These one-to-many relationships are the reversed directions of
     # the ones defined in the "child" classes using foreign keys.
 
-    messages = relationship(
+    messages: list["Message"] = relationship(
         "Message",
         order_by="[Message.timestamp]",
         cascade="all, delete-orphan",
         passive_deletes=True,
         back_populates="participation")
 
-    questions = relationship(
+    questions: list["Question"] = relationship(
         "Question",
         order_by="[Question.question_timestamp, Question.reply_timestamp]",
         cascade="all, delete-orphan",
         passive_deletes=True,
         back_populates="participation")
 
-    submissions = relationship(
+    submissions: list["Submission"] = relationship(
         "Submission",
         cascade="all, delete-orphan",
         passive_deletes=True,
         back_populates="participation")
 
-    user_tests = relationship(
+    user_tests: list["UserTest"] = relationship(
         "UserTest",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-        back_populates="participation")
-
-    printjobs = relationship(
-        "PrintJob",
         cascade="all, delete-orphan",
         passive_deletes=True,
         back_populates="participation")
@@ -400,31 +402,31 @@ class Message(Base):
     __tablename__ = 'messages'
 
     # Auto increment primary key.
-    id = Column(
+    id: int = Column(
         Integer,
         primary_key=True)
 
     # Time the message was sent.
-    timestamp = Column(
+    timestamp: datetime = Column(
         DateTime,
         nullable=False)
 
     # Subject and body of the message.
-    subject = Column(
+    subject: str = Column(
         Unicode,
         nullable=False)
-    text = Column(
+    text: str = Column(
         Unicode,
         nullable=False)
 
     # Participation (id and object) owning the message.
-    participation_id = Column(
+    participation_id: int = Column(
         Integer,
         ForeignKey(Participation.id,
                    onupdate="CASCADE", ondelete="CASCADE"),
         nullable=False,
         index=True)
-    participation = relationship(
+    participation: Participation = relationship(
         Participation,
         back_populates="messages")
 
@@ -432,13 +434,13 @@ class Message(Base):
     # deleted). Admins only loosely "own" a message, so we do not back
     # populate any field in Admin, nor we delete the message when the admin
     # gets deleted.
-    admin_id = Column(
+    admin_id: int | None = Column(
         Integer,
         ForeignKey(Admin.id,
                    onupdate="CASCADE", ondelete="SET NULL"),
         nullable=True,
         index=True)
-    admin = relationship(Admin)
+    admin: Admin | None = relationship(Admin)
 
 
 class Question(Base):
@@ -450,63 +452,65 @@ class Question(Base):
 
     MAX_SUBJECT_LENGTH = 50
     MAX_TEXT_LENGTH = 2000
+    QUICK_ANSWERS = {
+        "yes": "Yes",
+        "no": "No",
+        "invalid": "Invalid Question (not a Yes/No Question)",
+        "nocomment": "No Comment/Please refer to task statement",
+    }
 
     # Auto increment primary key.
-    id = Column(
+    id: int = Column(
         Integer,
         primary_key=True)
 
     # Time the question was made.
-    question_timestamp = Column(
+    question_timestamp: datetime = Column(
         DateTime,
         nullable=False)
 
     # Subject and body of the question.
-    subject = Column(
+    subject: str = Column(
         Unicode,
         nullable=False)
-    text = Column(
+    text: str = Column(
         Unicode,
         nullable=False)
 
     # Time the reply was sent.
-    reply_timestamp = Column(
+    reply_timestamp: datetime | None = Column(
         DateTime,
         nullable=True)
 
     # Last time something about the answer changed
-    last_action = Column(
-        DateTime,
-        nullable=True)
+    last_action: datetime | None = Column(DateTime, nullable=True)
 
     # Has this message been ignored by the admins?
-    ignored = Column(
+    ignored: bool = Column(
         Boolean,
         nullable=False,
         default=False)
 
     # Short (as in 'chosen amongst some predetermined choices') and
     # long answer.
-    reply_subject = Column(
+    reply_subject: str | None = Column(
         Unicode,
         nullable=True)
-    reply_text = Column(
+    reply_text: str | None = Column(
         Unicode,
         nullable=True)
 
     # Source of the answer (web / telegram / discord)
-    reply_source = Column(
-        Unicode,
-        nullable=True)
+    reply_source: str = Column(Unicode, nullable=True)
 
     # Participation (id and object) owning the question.
-    participation_id = Column(
+    participation_id: int = Column(
         Integer,
         ForeignKey(Participation.id,
                    onupdate="CASCADE", ondelete="CASCADE"),
         nullable=False,
         index=True)
-    participation = relationship(
+    participation: Participation = relationship(
         Participation,
         back_populates="questions")
 
@@ -514,10 +518,10 @@ class Question(Base):
     # yet, or if the admin has been later deleted). Admins only loosely "own" a
     # question, so we do not back populate any field in Admin, nor delete the
     # question if the admin gets deleted.
-    admin_id = Column(
+    admin_id: int | None = Column(
         Integer,
         ForeignKey(Admin.id,
                    onupdate="CASCADE", ondelete="SET NULL"),
         nullable=True,
         index=True)
-    admin = relationship(Admin)
+    admin: Admin | None = relationship(Admin)

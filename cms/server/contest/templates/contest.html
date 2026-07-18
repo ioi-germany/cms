@@ -101,7 +101,7 @@ $(document).ready(function () {
                         <div class="control-group">
                             <label class="control-label" for="username">{% trans %}Username{% endtrans %}</label>
                             <div class="controls">
-                                <input type="text" class="input-xlarge" name="username" id="username">
+                                <input type="text" class="input-xlarge" name="username" id="username" autofocus>
                             </div>
                         </div>
                         <div class="control-group">
@@ -184,7 +184,7 @@ $(document).ready(function () {
                                     <span id="unread_count" class="label label-warning no_unread"></span>
                                 </a>
                             </li>
-    {% if actual_phase == 0 or actual_phase == 3 or participation.unrestricted %}
+    {% if actual_phase >= 0 or participation.unrestricted %}
         {% for t_iter in contest.tasks %}
                             <li class="nav-header">
                                 {{ t_iter.name }}
@@ -205,11 +205,6 @@ $(document).ready(function () {
         {% if testing_enabled %}
                             <li{% if page == "test_interface" %} class="active"{% endif %}>
                                 <a href="{{ contest_url("testing") }}">{% trans %}Testing{% endtrans %}</a>
-                            </li>
-        {% endif %}
-        {% if printing_enabled %}
-                            <li{% if page == "printing" %} class="active"{% endif %}>
-                                <a href="{{ contest_url("printing") }}">{% trans %}Printing{% endtrans %}</a>
                             </li>
         {% endif %}
     {% endif %}

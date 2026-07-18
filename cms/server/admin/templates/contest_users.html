@@ -21,7 +21,7 @@
   <select name="group_id">
     <option value="null" selected>Select a group</option>
     {% for g in contest.groups %}
-    <option value="{{ g.id }}">
+    <option value="{{ g.id }}" {% if contest.main_group_id == g.id %}selected{% endif %}>
       {{ g.name }}
     </option>
     {% endfor %}

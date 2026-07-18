@@ -44,6 +44,7 @@ from cms import config
 from cms.db import SessionGen, Contest, Participation, Task, Submission, \
     get_submissions
 from cms.io import Executor, QueueItem, TriggeredService, rpc_method
+from cms.io.priorityqueue import QueueEntry
 from cmscommon.datetime import make_timestamp
 
 
@@ -54,11 +55,11 @@ class CannotSendError(Exception):
     pass
 
 
-def encode_id(entity_id):
+def encode_id(entity_id: str) -> str:
     """Encode the id using only A-Za-z0-9_.
 
-    entity_id (unicode): the entity id to encode.
-    return (unicode): encoded entity id.
+    entity_id: the entity id to encode.
+    return: encoded entity id.
 
     """
     encoded_id = ""
@@ -70,13 +71,13 @@ def encode_id(entity_id):
     return encoded_id
 
 
-def safe_put_data(ranking, resource, data, operation):
+def safe_put_data(ranking: str, resource: str, data: dict, operation: str):
     """Send some data to ranking using a PUT request.
 
-    ranking (bytes): the URL of ranking server.
-    resource (bytes): the relative path of the entity.
-    data (dict): the data to JSON-encode and send.
-    operation (unicode): a human-readable description of the operation
+    ranking: the URL of ranking server.
+    resource: the relative path of the entity.
+    data: the data to JSON-encode and send.
+    operation: a human-readable description of the operation
         we're performing (to produce log messages).
 
     raise (CannotSendError): in case of communication errors.
@@ -90,7 +91,7 @@ def safe_put_data(ranking, resource, data, operation):
         res = requests.put(url, json.dumps(data),
                            auth=(auth.username, auth.password),
                            headers={'content-type': 'application/json'},
-                           verify=config.https_certfile)
+                           verify=config.proxy_service.https_certfile)
     except requests.exceptions.RequestException as error:
         msg = "%s while %s: %s." % (type(error).__name__, operation, error)
         logger.warning(msg)
@@ -101,11 +102,11 @@ def safe_put_data(ranking, resource, data, operation):
         raise CannotSendError(msg)
 
 
-def safe_url(url):
+def safe_url(url: str) -> str:
     """Return a sanitized URL without sensitive information.
 
-       url (unicode): the URL to sanitize.
-       return (unicode): sanitized URL.
+    url: the URL to sanitize.
+    return: sanitized URL.
 
     """
     parts = urlsplit(url)
@@ -115,7 +116,8 @@ def safe_url(url):
 
 
 class ProxyOperation(QueueItem):
-    def __init__(self, type_, data):
+
+    def __init__(self, type_: int, data: dict):
         self.type_ = type_
         self.data = data
 
@@ -128,7 +130,7 @@ class ProxyOperation(QueueItem):
                 "data": self.data}
 
 
-class ProxyExecutor(Executor):
+class ProxyExecutor(Executor[ProxyOperation]):
     """A thread that sends data to one ranking.
 
     The object is used as a thread-local storage and its run method is
@@ -169,10 +171,10 @@ class ProxyExecutor(Executor):
     # before trying again.
     FAILURE_WAIT = 60.0
 
-    def __init__(self, ranking):
+    def __init__(self, ranking: str):
         """Create a proxy for the ranking at the given URL.
 
-        ranking (bytes): a complete URL (containing protocol, username,
+        ranking: a complete URL (containing protocol, username,
             password, hostname, port and prefix) where a ranking is
             supposed to listen.
 
@@ -182,7 +184,7 @@ class ProxyExecutor(Executor):
         self._ranking = ranking
         self._visible_ranking = safe_url(ranking)
 
-    def execute(self, entries):
+    def execute(self, entries: list[QueueEntry[ProxyOperation]]):
         """Consume (i.e. send) the data put in the queue, forever.
 
         Pick all operations found in the queue (if there aren't any,
@@ -196,8 +198,7 @@ class ProxyExecutor(Executor):
         (queue fetch, request send, failure wait, etc.). Since the
         queue is joinable, also notify when the fetched jobs are done.
 
-        entries ([QueueEntry]): entries containing the operations to
-            perform.
+        entries: entries containing the operations to perform.
 
         """
         # The cumulative data that we will try to send to the ranking,
@@ -231,7 +232,7 @@ class ProxyExecutor(Executor):
             gevent.sleep(self.FAILURE_WAIT)
 
 
-class ProxyService(TriggeredService):
+class ProxyService(TriggeredService[ProxyOperation, ProxyExecutor]):
     """Maintain the information held by rankings up-to-date.
 
     Discover (by receiving notifications and by periodically sweeping
@@ -248,18 +249,18 @@ class ProxyService(TriggeredService):
 
     """
 
-    def __init__(self, shard, contest_id):
+    def __init__(self, shard: int, contest_id: int):
         """Start the service with the given parameters.
 
         Create an instance of the ProxyService and make it listen on
         the address corresponding to the given shard. Tell it to
         manage data for the contest with the given ID.
 
-        shard (int): the shard of the service, i.e. this instance
+        shard: the shard of the service, i.e. this instance
             corresponds to the shard-th entry in the list of addresses
             (hostname/port pairs) for this kind of service in the
             configuration file.
-        contest_id (int): the ID of the contest to manage.
+        contest_id: the ID of the contest to manage.
 
         """
         super().__init__(shard)
@@ -268,12 +269,12 @@ class ProxyService(TriggeredService):
 
         # Store what data we already sent to rankings, to avoid
         # sending it twice.
-        self.scores_sent_to_rankings = set()
-        self.tokens_sent_to_rankings = set()
+        self.scores_sent_to_rankings: set[int] = set()
+        self.tokens_sent_to_rankings: set[int] = set()
 
         # Create one executor for each ranking.
         self.rankings = list()
-        for ranking in config.rankings:
+        for ranking in config.proxy_service.rankings:
             self.add_executor(ProxyExecutor(ranking))
 
         # Enqueue the dispatch of some initial data to rankings. Needs
@@ -328,7 +329,7 @@ class ProxyService(TriggeredService):
         logger.info("Initializing rankings.")
 
         with SessionGen() as session:
-            contest = Contest.get_from_id(self.contest_id, session)
+            contest: Contest = Contest.get_from_id(self.contest_id, session)
 
             if contest is None:
                 logger.error("Received request for unexistent contest "
@@ -382,7 +383,7 @@ class ProxyService(TriggeredService):
         self.enqueue(ProxyOperation(ProxyExecutor.USER_TYPE, users))
         self.enqueue(ProxyOperation(ProxyExecutor.TASK_TYPE, tasks))
 
-    def operations_for_score(self, submission):
+    def operations_for_score(self, submission: Submission):
         """Send the score for the given submission to all rankings.
 
         Put the submission and its score subchange in all the proxy
@@ -406,7 +407,6 @@ class ProxyService(TriggeredService):
 
         # This check is probably useless.
         if submission_result is not None and submission_result.scored():
-            # We're sending the unrounded score to RWS
             subchange_data["score"] = submission_result.score
             subchange_data["extra"] = submission_result.ranking_score_details
 
@@ -418,7 +418,7 @@ class ProxyService(TriggeredService):
             ProxyOperation(ProxyExecutor.SUBCHANGE_TYPE,
                            {subchange_id: subchange_data})]
 
-    def operations_for_token(self, submission):
+    def operations_for_token(self, submission: Submission):
         """Send the token for the given submission to all rankings.
 
         Put the submission and its token subchange in all the proxy
@@ -460,15 +460,14 @@ class ProxyService(TriggeredService):
         self.initialize()
 
     @rpc_method
-    def submission_scored(self, submission_id):
+    def submission_scored(self, submission_id: int):
         """Notice that a submission has been scored.
 
         Usually called by ScoringService when it's done with scoring a
         submission result. Since we don't trust anyone we verify that,
         and then send data about the score to the rankings.
 
-        submission_id (int): the id of the submission that changed.
-        dataset_id (int): the id of the dataset to use.
+        submission_id: the id of the submission that changed.
 
         """
         with SessionGen() as session:
@@ -505,14 +504,14 @@ class ProxyService(TriggeredService):
                 self.enqueue(operation)
 
     @rpc_method
-    def submission_tokened(self, submission_id):
+    def submission_tokened(self, submission_id: int):
         """Notice that a submission has been tokened.
 
         Usually called by ContestWebServer when it's processing a token
         request of an user. Since we don't trust anyone we verify that,
         and then send data about the token to the rankings.
 
-        submission_id (int): the id of the submission that changed.
+        submission_id: the id of the submission that changed.
 
         """
         with SessionGen() as session:
@@ -549,7 +548,7 @@ class ProxyService(TriggeredService):
                 self.enqueue(operation)
 
     @rpc_method
-    def dataset_updated(self, task_id):
+    def dataset_updated(self, task_id: int):
         """Notice that the active dataset of a task has been changed.
 
         Usually called by AdminWebServer when the contest administrator
@@ -559,11 +558,11 @@ class ProxyService(TriggeredService):
         yet we keep the old scores (we don't delete them!) and wait for
         ScoringService to notify us that the new ones are available.
 
-        task_id (int): the ID of the task whose dataset has changed.
+        task_id: the ID of the task whose dataset has changed.
 
         """
         with SessionGen() as session:
-            task = Task.get_from_id(task_id, session)
+            task: Task = Task.get_from_id(task_id, session)
             dataset = task.active_dataset
 
             # This ProxyService may focus on a different contest, and it should

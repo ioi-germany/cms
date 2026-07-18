@@ -1,33 +1,36 @@
+
 msgid ""
 msgstr ""
-"Project-Id-Version: VERSION\n"
-"POT-Creation-Date: 2025-06-06 09:35+0000\n"
-"PO-Revision-Date: 2025-06-06 09:35+0000\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE TEAM <EMAIL@ADDRESS>\n"
-"Language: fr_FR\n"
+"Project-Id-Version:  VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-11-09 23:31+0100\n"
+"PO-Revision-Date: 2025-08-17 17:02+0000\n"
+"Last-Translator: Pasit Sangprachathanarak <ouipingpasit@gmail.com>\n"
+"Language: fr\n"
+"Language-Team: French <https://hosted.weblate.org/projects/cms/main/fr/>\n"
+"Plural-Forms: nplurals=2; plural=n > 1;\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Generated-By: Babel 2.12.1\n"
 
 msgid "N/A"
 msgstr "N/A"
 
-msgid "Correct"
-msgstr "Correct"
-
 msgid "Not correct"
 msgstr "Incorrect"
+
+msgid "Correct"
+msgstr "Correct"
 
 msgid "Partially correct"
 msgstr "Partiellement correct"
 
-msgid "Outcome"
-msgstr "Résultat"
-
 msgid "#"
 msgstr "#"
+
+msgid "Outcome"
+msgstr "Résultat"
 
 msgid "Details"
 msgstr "Détails"
@@ -74,7 +77,7 @@ msgid "Output is correct"
 msgstr "Sortie correcte"
 
 msgid "Your submission ran and gave the correct answer"
-msgstr "Votre soumission a été exécutée et a donné la réponse correcte."
+msgstr "Votre soumission a été exécutée et a donné la réponse correcte"
 
 msgid "Output is partially correct"
 msgstr "La sortie est partiellement correcte"
@@ -86,7 +89,7 @@ msgid "Output isn't correct"
 msgstr "Sortie incorrecte"
 
 msgid "Your submission ran, but gave the wrong answer"
-msgstr "Votre soumission a été exécutée mais donne une réponse incorrecte."
+msgstr "Votre soumission a été exécutée mais donne une réponse incorrecte"
 
 #, python-format
 msgid "Evaluation didn't produce file %s"
@@ -99,7 +102,7 @@ msgid "Execution timed out"
 msgstr "Durée maximale d'exécution dépassée"
 
 msgid "Your submission used too much CPU time."
-msgstr "Votre soumission a utilisé trop de temps CPU (processeur)"
+msgstr "Votre soumission a utilisé trop de temps CPU (processeur)."
 
 msgid "Execution timed out (wall clock limit exceeded)"
 msgstr "Temps d'exécution dépassé (durée maximale dépassée)"
@@ -107,14 +110,20 @@ msgstr "Temps d'exécution dépassé (durée maximale dépassée)"
 msgid "Your submission used too much total time. This might be triggered by undefined code, or buffer overflow, for example. Note that in this case the CPU time visible in the submission details might be much smaller than the time limit."
 msgstr "Votre soumission a pris trop de temps. Cela peut être causé, par exemple, par un code indéfini ou une écriture hors mémoire allouée. Notez que dans ce cas, le temps CPU (processeur) visible dans les détails de la soumission peut être bien plus petit que la limite de temps."
 
-msgid "Execution killed (could be triggered by violating memory limits)"
-msgstr "Exécution tuée (peut être causé par un dépassement des limites mémoire)"
+msgid "Memory limit exceeded"
+msgstr "Limite de mémoire dépassée"
 
-msgid "The evaluation was killed by a signal. Among other things, this might be caused by exceeding the memory limit. Note that if this is the reason, the memory usage visible in the submission details is the usage before the allocation that caused the signal."
-msgstr "L'évaluation a été tuée par un signal. Cela peut être causé, mais pas uniquement, par un dépassement des limites mémoire. Notez que si cela est le cas, l'utilisation de la mémoire visible dans les détails de la soumission est l'utilisation avant l'allocation mémoire qui a causé le signal."
+msgid "Your submission used too much memory."
+msgstr "Votre soumission a utilisé trop de mémoire."
+
+msgid "Execution killed by signal"
+msgstr "Exécution interrompue par un signal"
+
+msgid "The evaluation was killed by a signal."
+msgstr "L'évaluation a été tuée par un signal."
 
 msgid "Execution failed because the return code was nonzero"
-msgstr "Exécution échouée: code de retour différent de zéro"
+msgstr "Exécution échouée : code de retour différent de zéro"
 
 msgid "Your submission failed because it exited with a return code different from 0."
 msgstr "Votre soumission a échouée car elle a terminé avec un code de retour différent de 0."
@@ -190,14 +199,14 @@ msgstr[0] "jusqu'à un maximum d'un %(type_s)s."
 msgstr[1] "jusqu'à un maximum de %(gen_max)d %(type_pl)s."
 
 #, python-format
-msgid "You don't get other %(type_pl)s."
-msgstr "Vous ne recevez plus de %(type_pl)s."
-
-#, python-format
 msgid "you get another %(type_s)s."
 msgid_plural "you get %(gen_number)d other %(type_pl)s."
 msgstr[0] "vous recevez un %(type_s)s supplémentaire."
 msgstr[1] "vous recevez %(gen_number)d %(type_pl)s supplémentaires."
+
+#, python-format
+msgid "You don't get other %(type_pl)s."
+msgstr "Vous ne recevez plus de %(type_pl)s."
 
 #, python-format
 msgid "You can use a %(type_s)s every second "
@@ -226,52 +235,11 @@ msgstr[1] "Vous pouvez utiliser au maximum %(max_number)d %(type_pl)s."
 msgid "You have no limitations on how you use them."
 msgstr "Il n'y a pas de limitation sur leur utilisation."
 
-msgid "Too many print jobs!"
-msgstr "Trop d'impressions !"
-
-#, python-format
-msgid "You have reached the maximum limit of at most %d print jobs."
-msgstr "Vous avez atteint le nombre maximal de %d impressions."
-
-msgid "Invalid format!"
-msgstr "Format invalide !"
-
-msgid "Please select the correct files."
-msgstr "Sélectionnez les fichiers corrects."
-
-msgid "File too big!"
-msgstr "Fichier trop gros !"
-
-#, python-format
-msgid "Each file must be at most %d bytes long."
-msgstr "Chaque fichier source ne peut pas faire plus de %d octets."
-
-msgid "Print job storage failed!"
-msgstr "Impossible de stocker l'impression !"
-
-msgid "Please try again."
-msgstr "Veuillez réessayer."
-
-msgid "Token request discarded"
-msgstr "Demande de token refusée"
-
-msgid "Your request has been discarded because you have no tokens available."
-msgstr "Votre requête a été annulée car vous n'avez plus de jetons disponibles."
-
-msgid "Your request has been discarded because you already used a token on that submission."
-msgstr "Votre requête a été annulée car vous avez déjà utilisé un jeton sur cette soumission."
-
 msgid "Question received"
 msgstr "Question envoyée"
 
 msgid "Your question has been received, you will be notified when it is answered."
 msgstr "Votre question a été envoyée, vous serez notifié lorsque quelqu'un y aura répondu."
-
-msgid "Print job received"
-msgstr "Impression reçue"
-
-msgid "Your print job has been received."
-msgstr "Votre impression a été reçue."
 
 msgid "Submission received"
 msgstr "Soumission reçue"
@@ -294,11 +262,11 @@ msgstr "Évalué"
 msgid "status"
 msgstr "état"
 
-msgid "Your request has been received and applied to the submission."
-msgstr "Votre requête a été reçue et appliquée à la soumission."
-
 msgid "Token request received"
 msgstr "Demande de jeton reçue"
+
+msgid "Your request has been received and applied to the submission."
+msgstr "Votre requête a été reçue et appliquée à la soumission."
 
 msgid "Test received"
 msgstr "Test reçu"
@@ -337,6 +305,17 @@ msgstr "Toutes tâches confondues, vous ne pouvez resoumettre que %d secondes ap
 msgid "For this task, you can submit again after %d seconds from last submission."
 msgstr "Pour cette tâche, vous ne pouvez resoumettre que %d secondes après votre précédente soumission."
 
+msgid "Submission too big!"
+msgstr "Fichier soumis trop gros !"
+
+#, python-format
+msgid "Each source file must be at most %d bytes long."
+msgstr "Chaque fichier source ne peut pas faire plus de %d octets."
+
+#, python-format
+msgid "The submission should contain at most %d files."
+msgstr "La soumission doit contenir au maximum %d fichiers."
+
 msgid "Invalid archive format!"
 msgstr "Format d'archive invalide !"
 
@@ -346,15 +325,14 @@ msgstr "Impossible d'ouvrir l'archive soumise."
 msgid "Invalid submission format!"
 msgstr "Format de soumission invalide !"
 
-msgid "Submission too big!"
-msgstr "Fichier soumis trop gros !"
-
-#, python-format
-msgid "Each source file must be at most %d bytes long."
-msgstr "Chaque fichier source ne peut pas faire plus de %d octets."
+msgid "Please select the correct files."
+msgstr "Sélectionnez les fichiers corrects."
 
 msgid "Submission storage failed!"
 msgstr "Erreur d'enregistrement de votre soumission !"
+
+msgid "Please try again."
+msgstr "Veuillez réessayer."
 
 msgid "Too many tests!"
 msgstr "Trop de tests !"
@@ -436,7 +414,7 @@ msgid "Logged in as <strong>%(first_name)s %(last_name)s</strong> <em>(%(usernam
 msgstr "Connecté en tant que <strong>%(first_name)s %(last_name)s</strong> <em>(%(username)s)</em>"
 
 msgid "Failed to log in."
-msgstr "Connexion impossible"
+msgstr "Échec de la connexion."
 
 msgid "Welcome"
 msgstr "Bienvenue"
@@ -475,11 +453,11 @@ msgstr "%d non lu(s)"
 msgid "Until contest starts:"
 msgstr "L'épreuve commence dans :"
 
-msgid "Until analysis starts:"
-msgstr "La session d'analyse commence dans :"
-
 msgid "Until contest ends:"
 msgstr "Temps d'épreuve restant :"
+
+msgid "Until analysis starts:"
+msgstr "La session d'analyse commence dans :"
 
 msgid "Until analysis ends:"
 msgstr "Temps restant dans la session d'analyse :"
@@ -505,9 +483,6 @@ msgstr "Documentation"
 msgid "Testing"
 msgstr "Tests"
 
-msgid "Printing"
-msgstr "Impression en cours"
-
 msgid "Contest Management System"
 msgstr "Contest Management System"
 
@@ -522,9 +497,6 @@ msgstr "Choisissez un concours"
 
 msgid "Programming languages and libraries"
 msgstr "Langages et librairies de programmation"
-
-msgid "Standard Template Library"
-msgstr "Librairie Standard C++ (STL)"
 
 msgid "The main Java class of the solution should have exactly the same name as the task."
 msgstr "La classe Java principale de la solution doit avoir exactement le même nom que la tâche."
@@ -553,6 +525,30 @@ msgstr "Toute tentative de manipulation frauduleuse du serveur de soumission (te
 
 msgid "If you encountered this error during normal usage, please notify the contest administrators."
 msgstr "Si vous recontrer cette erreur alors que vous utilisez le service normalement, veuillez en notifier les administrateurs du concours."
+
+msgid "Public score"
+msgstr "Score public"
+
+msgid "Total score"
+msgstr "Score total"
+
+msgid "Score"
+msgstr "Score"
+
+msgid "Token"
+msgstr "Jeton"
+
+msgid "no submissions"
+msgstr "aucune soumission"
+
+msgid "Played"
+msgstr "Utilisé"
+
+msgid "Play!"
+msgstr "Utiliser !"
+
+msgid "No tokens"
+msgstr "Aucun jeton"
 
 msgid "General information"
 msgstr "Information générale"
@@ -630,7 +626,7 @@ msgstr "Vous pouvez soumettre au maximum %(submissions)s solutions durant ce con
 
 #, python-format
 msgid "You can submit at most %(user_tests)s user tests during this contest."
-msgstr "Vous pouvez soumettre au maximum %(user_tests)s tests utilisateurs durant ce concours "
+msgstr "Vous pouvez soumettre au maximum %(user_tests)s tests utilisateurs durant ce concours."
 
 #, python-format
 msgid "Every user is allowed to compete (i.e. submit solutions) for a uninterrupted time frame of %(per_user_time)s."
@@ -640,7 +636,7 @@ msgid "As soon as the contest starts you can choose to start your time frame."
 msgstr "Dès que le concours a débuté, vous pouvez choisir la fourchette de temps pendant laquelle vous participez."
 
 msgid "Once you start, you can submit solutions until the end of the time frame or until the end of the contest, whatever comes first."
-msgstr "Lorsque vous avez commencé, vous pouvez soumettre jusqu'à ce que votre fourchette de participation soit terminée ou que le concours se termine (selon le premier ayant lieu)"
+msgstr "Lorsque vous avez commencé, vous pouvez soumettre jusqu'à ce que votre fourchette de participation soit terminée ou que le concours se termine (selon le premier ayant lieu)."
 
 msgid "By clicking on the button below you can start your time frame."
 msgstr "En cliquant sur le bouton ci-dessous, vous commencerez votre fourchette de participation."
@@ -694,50 +690,6 @@ msgstr "Oui"
 
 msgid "No"
 msgstr "Non"
-
-msgid "Print"
-msgstr "Imprimer"
-
-#, python-format
-msgid "You can print %(remaining_jobs)s more text or PDF files of up to %(max_pages)s pages each."
-msgstr "Vous pouvez encore imprimer %(remaining_jobs)s fichiers textes ou PDF de %(max_pages)s pages maximum chacuns."
-
-#, python-format
-msgid "You can print %(remaining_jobs)s more text files of up to %(max_pages)s pages each."
-msgstr "Vous pouvez encore imprimer %(remaining_jobs)s fichiers textes de %(max_pages)s pages maximum chacuns."
-
-msgid "File (text or PDF)"
-msgstr "Fichier (texte ou PDF)"
-
-msgid "File (text)"
-msgstr "Fichier (texte)"
-
-msgid "Submit"
-msgstr "Soumettre"
-
-msgid "You cannot print anything any more as you have used up your printing quota."
-msgstr "Vous ne pouvez plus imprimer car vous avez épuisé votre quota d'impression."
-
-msgid "Previous print jobs"
-msgstr "Impressions précédentes"
-
-msgid "Date and time"
-msgstr "Date et heure"
-
-msgid "Time"
-msgstr "Heure"
-
-msgid "File name"
-msgstr "Nom de fichier"
-
-msgid "Status"
-msgstr "Status"
-
-msgid "Preparing..."
-msgstr "Préparation ..."
-
-msgid "no print jobs yet"
-msgstr "aucune impression"
 
 msgid "The passwords do not match!"
 msgstr "Les mots de passe ne correspondent pas !"
@@ -874,6 +826,9 @@ msgstr "inconnu"
 msgid "loading..."
 msgstr "chargement ..."
 
+msgid "Error loading details, please refresh the page."
+msgstr ""
+
 #, python-format
 msgid "%(name)s (%(short_name)s) <small>submissions</small>"
 msgstr "%(name)s (%(short_name)s) <small>soumissions</small>"
@@ -899,6 +854,9 @@ msgstr "Vous pouvez soumettre un sous-ensemble des sorties dans une seule soumis
 #, python-format
 msgid "You can submit %(submissions_left)s more solution(s)."
 msgstr "Vous pouvez encore soumettre %(submissions_left)s solutions."
+
+msgid "Submit"
+msgstr "Soumettre"
 
 msgid "submission.zip"
 msgstr "soumission.zip"
@@ -965,6 +923,15 @@ msgstr "entrée"
 msgid "Previous tests"
 msgstr "Tests précédents"
 
+msgid "Date and time"
+msgstr "Date et heure"
+
+msgid "Time"
+msgstr "Heure"
+
+msgid "Status"
+msgstr "Status"
+
 msgid "Input"
 msgstr "Entrée"
 
@@ -986,36 +953,12 @@ msgstr "Patientez ..."
 msgid "None"
 msgstr "Aucun(e)"
 
-msgid "Public score"
-msgstr "Score public"
+msgid "Token request discarded"
+msgstr "Demande de token refusée"
 
-msgid "Total score"
-msgstr "Score total"
+msgid "Your request has been discarded because you have no tokens available."
+msgstr "Votre requête a été annulée car vous n'avez plus de jetons disponibles."
 
-msgid "Score"
-msgstr "Score"
-
-msgid "Token"
-msgstr "Jeton"
-
-msgid "no submissions"
-msgstr "aucune soumission"
-
-msgid "Played"
-msgstr "Utilisé"
-
-msgid "Play!"
-msgstr "Utiliser !"
-
-msgid "No tokens"
-msgstr "Aucun jeton"
-
-msgid "Invalid file"
-msgstr "Fichier invalide"
-
-msgid "Print job has too many pages"
-msgstr "Le document à imprimer est trop long."
-
-msgid "Sent to printer"
-msgstr "Envoyer à l'imprimante"
+msgid "Your request has been discarded because you already used a token on that submission."
+msgstr "Votre requête a été annulée car vous avez déjà utilisé un jeton sur cette soumission."
 

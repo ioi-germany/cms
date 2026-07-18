@@ -1,27 +1,21 @@
-# German translations for CMS.
-# Copyright (C) 2019 CMS development group
-# This file is distributed under the same license as the Contest Management
-# System project.
-#
-# Manuel Gundlach <manuel.gundlach@gmail.com>, 2019, 2020, 2021.
+
 msgid ""
 msgstr ""
-"Project-Id-Version: Contest Management System 1.5.dev0\n"
-"Report-Msgid-Bugs-To: contestms@googlegroups.com\n"
-"POT-Creation-Date: 2020-02-24 14:56+0100\n"
-"PO-Revision-Date: 2020-02-24 15:20+0100\n"
-"Last-Translator: Manuel Gundlach <manuel.gundlach@gmail.com>\n"
-"Language: de\n"
-"Language-Team: German <kde-i18n-de@kde.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Project-Id-Version:  VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-11-09 23:31+0100\n"
+"PO-Revision-Date: 2025-06-06 09:35+0000\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: de_DE\n"
+"Language-Team: de_DE TEAM <EMAIL@ADDRESS>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.8.0\n"
-"X-Generator: Lokalize 19.12.2\n"
+"Generated-By: Babel 2.12.1\n"
 
 msgid "N/A"
-msgstr "nicht verfügbar"
+msgstr "N/A"
 
 msgid "Not correct"
 msgstr "Nicht korrekt"
@@ -35,11 +29,11 @@ msgstr "Teilweise korrekt"
 msgid "Case"
 msgstr "Test- fall"
 
-msgid "Outcome"
-msgstr "Ergebnis"
-
 msgid "#"
 msgstr "#"
+
+msgid "Outcome"
+msgstr "Ergebnis"
 
 msgid "Details"
 msgstr "Details"
@@ -167,11 +161,20 @@ msgstr "Zeitlimit überschritten (Echtzeitlimit überschritten)"
 msgid "Your submission used too much total time. This might be triggered by undefined code, or buffer overflow, for example. Note that in this case the CPU time visible in the submission details might be much smaller than the time limit."
 msgstr "Deine Einsendung benötigte insgesamt zu viel Zeit. Dies könnte zum Beispiel von undefiniertem Code oder einem Buffer Overflow ausgelöst worden sein. Beachte, dass in diesem Fall die in den Einsendungsdetails angezeigte CPU-Zeit viel kleiner sein kann als das Zeitlimit."
 
-msgid "Execution killed (could be triggered by violating memory limits)"
-msgstr "Ausführung beendet (möglicherweise ausgelöst durch das Verletzen von Speicherlimits)"
+#, fuzzy
+msgid "Memory limit exceeded"
+msgstr "Speicherlimit überschritten"
 
-msgid "The evaluation was killed by a signal. Among other things, this might be caused by exceeding the memory limit. Note that if this is the reason, the memory usage visible in the submission details is the usage before the allocation that caused the signal."
-msgstr "Die Auswertung wurde mit einem Signal beendet. Unter anderem könnte dies an einer Überschreitung des Speicherlimits liegen. Beachte, dass in diesem Fall der in den Einsendungsdetails angezeigte Speicherbedarf der Bedarf vor der Zuweisung ist, die das Signal ausgelöst hat."
+#, fuzzy
+msgid "Your submission used too much memory."
+msgstr "Deine Einsendung hat zu viel Speicher benötigt."
+
+#, fuzzy
+msgid "Execution killed by signal"
+msgstr "Die Auswertung wurde mit einem Signal beendet."
+
+msgid "The evaluation was killed by a signal."
+msgstr "Die Auswertung wurde mit einem Signal beendet."
 
 msgid "Execution failed because the return code was nonzero"
 msgstr ""
@@ -193,12 +196,8 @@ msgid "Question too long!"
 msgstr "Frage zu lang!"
 
 #, python-format
-msgid ""
-"Subject must be at most %(max_subject_length)d characters, content at most "
-"%(max_text_length)d."
-msgstr ""
-"Der Betreff darf höchstens %(max_subject_length)d Zeichen, der Inhalt "
-"höchstens %(max_text_length)d Zeichen lang sein."
+msgid "Subject must be at most %(max_subject_length)d characters, content at most %(max_text_length)d."
+msgstr "Der Betreff darf höchstens %(max_subject_length)d Zeichen, der Inhalt höchstens %(max_text_length)d Zeichen lang sein."
 
 msgid "contest-token"
 msgstr "Wettbewerbs-Token"
@@ -257,12 +256,12 @@ msgstr[1] "bis zu einem Maximum von %(gen_max)d %(type_pl)s."
 #, python-format
 msgid "you get another %(type_s)s."
 msgid_plural "you get %(gen_number)d other %(type_pl)s."
-msgstr[0] " bekommst Du einen weiteren %(type_s)s."
-msgstr[1] "bekommst Du %(gen_number)d weitere %(type_pl)s."
+msgstr[0] "erhältst du einen weiteren %(type_s)s."
+msgstr[1] "erhältst du %(gen_number)d weitere %(type_pl)s."
 
 #, python-format
 msgid "You don't get other %(type_pl)s."
-msgstr "Du bekommst keine weiteren %(type_pl)s."
+msgstr "Du erhältst keine weiteren %(type_pl)s."
 
 #, python-format
 msgid "You can use a %(type_s)s every second "
@@ -291,55 +290,13 @@ msgstr[1] ""
 
 #, fuzzy
 msgid "You have no limitations on how you use them."
-msgstr "Wie Du sie benutzt, ist nicht beschränkt."
-
-msgid "Too many print jobs!"
-msgstr "Zu viele Druckaufträge!"
-
-#, python-format
-msgid "You have reached the maximum limit of at most %d print jobs."
-msgstr "Du hast das Limit von höchstens %d Druckaufträgen erreicht."
-
-msgid "Invalid format!"
-msgstr "Ungültiges Format!"
-
-msgid "Please select the correct files."
-msgstr "Bitte wähle die richtigen Dateien aus."
-
-msgid "File too big!"
-msgstr "Datei zu groß!"
-
-#, python-format
-msgid "Each file must be at most %d bytes long."
-msgstr "Jede Datei darf höchstens %d Bytes groß sein."
-
-msgid "Print job storage failed!"
-msgstr "Speichern des Druckauftrags fehlgeschlagen!"
-
-msgid "Please try again."
-msgstr "Bitte erneut versuchen."
-
-# 'Abfrage' ist nicht wirklich passend
-msgid "Token request discarded"
-msgstr "Token-Abfrage verworfen"
-
-msgid "Your request has been discarded because you have no tokens available."
-msgstr "Deine Abfrage wurde verworfen, da Du keine Tokens zur Verfügung hast."
-
-msgid "Your request has been discarded because you already used a token on that submission."
-msgstr "Deine Anfrage wurde verworfen, weil du für diese Einsendung bereits einen Token verwendet hast."
+msgstr "Du hast keine Beschränkungen darin, wie du sie verwendest."
 
 msgid "Question received"
 msgstr "Frage erhalten"
 
 msgid "Your question has been received, you will be notified when it is answered."
-msgstr "Deine Frage wurde erhalten; Du wirst benachrichtigt, wenn sie beantwortet wurde."
-
-msgid "Print job received"
-msgstr "Druckauftrag erhalten"
-
-msgid "Your print job has been received."
-msgstr "Dein Druckauftrag wurde erhalten."
+msgstr "Deine Frage wurde erhalten, du wirst bei Antworten benachrichtigt."
 
 msgid "Submission received"
 msgstr "Einsendung erhalten "
@@ -362,13 +319,13 @@ msgstr "Ausgewertet"
 # Wo kommt das vor?
 #, fuzzy
 msgid "status"
-msgstr ""
+msgstr "Status"
 
 msgid "Token request received"
 msgstr "Token-Abfrage erhalten"
 
 msgid "Your request has been received and applied to the submission."
-msgstr "Deine Abfrage wurde erhalten und auf die Einsendung angewendet."
+msgstr "Deine Anfrage wurde erhalten und wurde auf die Einsendung angewandt."
 
 msgid "Test received"
 msgstr "Test erhalten"
@@ -407,6 +364,17 @@ msgstr "Verteilt über alle Aufgaben darfst Du %d Sekunden nach einer Einsendung
 msgid "For this task, you can submit again after %d seconds from last submission."
 msgstr "Zu dieser Aufgabe darfst Du %d Sekunden nach einer Einsendung wieder einsenden."
 
+msgid "Submission too big!"
+msgstr "Einsendung zu groß!"
+
+#, python-format
+msgid "Each source file must be at most %d bytes long."
+msgstr "Jede Quelltextdatei darf maximal %d Bytes groß sein."
+
+#, python-format
+msgid "The submission should contain at most %d files."
+msgstr "Die Einsendung sollte höchstens %d Dateien enthalten."
+
 msgid "Invalid archive format!"
 msgstr "Ungültiges Archivformat!"
 
@@ -416,15 +384,14 @@ msgstr "Das eingesendete Archiv konnte nicht geöffnet werden."
 msgid "Invalid submission format!"
 msgstr "Ungültiges Einsendungsformat!"
 
-msgid "Submission too big!"
-msgstr "Einsendung zu groß!"
-
-#, python-format
-msgid "Each source file must be at most %d bytes long."
-msgstr "Jede Quelldatei darf höchstens %d Bytes groß sein."
+msgid "Please select the correct files."
+msgstr "Bitte wähle die korrekten Dateien aus."
 
 msgid "Submission storage failed!"
 msgstr "Speichern der Einsendung fehlgeschlagen!"
+
+msgid "Please try again."
+msgstr "Bitte erneut versuchen."
 
 msgid "Too many tests!"
 msgstr "Zu viele Tests!"
@@ -526,6 +493,7 @@ msgstr "Anmelden"
 msgid "Don't have an account?"
 msgstr "Du hast noch keinen Zugang?"
 
+#, fuzzy
 msgid "Register"
 msgstr "Registrieren"
 
@@ -575,9 +543,6 @@ msgstr "Dokumentation"
 msgid "Testing"
 msgstr "Testen"
 
-msgid "Printing"
-msgstr "Drucken"
-
 msgid "Contest Management System"
 msgstr "Contest Management System"
 
@@ -592,9 +557,6 @@ msgstr "Wähle einen Wettbewerb aus"
 
 msgid "Programming languages and libraries"
 msgstr "Programmiersprachen und Bibliotheken"
-
-msgid "Standard Template Library"
-msgstr "Standard Template Library"
 
 msgid "The main Java class of the solution should have exactly the same name as the task."
 msgstr "Der Name der Java-Hauptklasse sollte identisch zum Namen der Aufgabe sein."
@@ -633,6 +595,31 @@ msgstr ""
 
 msgid "If you encountered this error during normal usage, please notify the contest administrators."
 msgstr "Falls dieser Fehler bei normaler Benutzung aufgetreten ist, verständige bitte die Wettbewerbs-Administratoren."
+
+msgid "Public score"
+msgstr "Öffentliche Punktzahl"
+
+msgid "Total score"
+msgstr "Gesamte Punktzahl"
+
+msgid "Score"
+msgstr "Punktzahl"
+
+msgid "Token"
+msgstr "Token"
+
+#, fuzzy
+msgid "no submissions"
+msgstr "Einsendungen"
+
+msgid "Played"
+msgstr "Verwendet"
+
+msgid "Play!"
+msgstr "Verwenden!"
+
+msgid "No tokens"
+msgstr "Keine Tokens"
 
 msgid "General information"
 msgstr "Allgemeines"
@@ -766,7 +753,7 @@ msgid "Memory limit"
 msgstr "Speicherlimit"
 
 msgid "Type"
-msgstr "Art"
+msgstr "Typ"
 
 msgid "Files"
 msgstr "Dateien"
@@ -780,71 +767,48 @@ msgstr "Ja"
 msgid "No"
 msgstr "Nein"
 
-msgid "Print"
-msgstr "Drucken"
-
-#, python-format
-msgid "You can print %(remaining_jobs)s more text or PDF files of up to %(max_pages)s pages each."
-msgstr "Du kannst noch %(remaining_jobs)s Text- oder PDF-Dateien mit je bis zu %(max_pages)s Seiten drucken."
-
-#, python-format
-msgid "You can print %(remaining_jobs)s more text files of up to %(max_pages)s pages each."
-msgstr "Du kannst noch %(remaining_jobs)s Text-Dateien mit je bis zu %(max_pages)s Seiten drucken."
-
-msgid "File (text or PDF)"
-msgstr "Datei (Text oder PDF)"
-
-msgid "File (text)"
-msgstr "Datei (Text)"
-
-msgid "Submit"
-msgstr "Abschicken"
-
-msgid "You cannot print anything any more as you have used up your printing quota."
-msgstr "Du kannst nichts mehr ausdrucken, da Du Dein Druckkontingent aufgebraucht hast."
-
-msgid "Previous print jobs"
-msgstr "Bisherige Druckaufträge"
-
-msgid "Date and time"
-msgstr "Tag und Zeit"
-
-msgid "Time"
-msgstr "Zeit"
-
-msgid "File name"
-msgstr "Dateiname"
-
-msgid "Status"
-msgstr "Status"
-
-msgid "Preparing..."
-msgstr "Aufbereiten..."
-
-msgid "no print jobs yet"
-msgstr "noch keine Druckaufträge"
-
 msgid "The passwords do not match!"
 msgstr "Die Passwörter stimmen nicht überein!"
 
 msgid "This username is already taken, please choose a different one."
 msgstr "Dieser Benutzername ist schon vergeben, bitte wähle einen anderen."
 
-msgid "New user"
-msgstr "Neuer Benutzer"
+msgid "This user is already registered in the contest."
+msgstr "Dieser Benutzer ist bereits in dem Contest registriert."
+
+msgid "No such user."
+msgstr "Benutzer nicht gefunden."
+
+msgid "The password is not correct."
+msgstr "Password ist nicht korrekt."
+
+msgid "Registration"
+msgstr "Registrierung"
 
 msgid "Please fill in the fields to register"
 msgstr "Fülle bitte die Felder aus, um Dich zu registrieren"
 
+#, fuzzy
+msgid "New user"
+msgstr "Neuer Benutzer"
+
+#, fuzzy
+msgid "Join contest"
+msgstr "Contest beitreten"
+
+#, fuzzy
 msgid "First name"
 msgstr "Vorname"
 
+#, fuzzy
 msgid "Last name"
 msgstr "Nachname"
 
+#, fuzzy
 msgid "E-mail"
 msgstr "E-Mail"
 
+#, fuzzy
 msgid "Representing"
 msgstr "Antreten für"
 
@@ -854,18 +818,21 @@ msgid_plural "Must be %(min_length)s characters or more."
 msgstr[0] "Muss mindestens ein Zeichen enthalten."
 msgstr[1] "Muss mindestens %(min_length)s Zeichen enthalten."
 
+#, fuzzy
 msgid "Confirm password"
 msgstr "Passwort bestätigen"
 
-msgid "The user was created successfully!"
-msgstr "Der Benutzer wurde erfolgreich erstellt!"
+msgid "Registered in the contest successfully!"
+msgstr "Erfolgreich im Contest registriert!"
 
+#, fuzzy
 msgid "Your username is:"
 msgstr "Dein Benutzername ist:"
 
-msgid "The password you chose was stored securely."
+msgid "Your password is stored securely."
 msgstr "Das gewählte Passwort wurde sicher gespeichert."
 
+#, fuzzy
 msgid "Back to login"
 msgstr "Zurück zur Anmeldung"
 
@@ -952,9 +919,24 @@ msgstr ""
 msgid "loading..."
 msgstr "laden..."
 
+msgid "Error loading details, please refresh the page."
+msgstr "Fehler beim Laden der Details, bitte aktualisiere die Seite."
+
 #, python-format
 msgid "%(name)s (%(short_name)s) <small>submissions</small>"
 msgstr "%(name)s (%(short_name)s) <small>Einsendungen</small>"
+
+msgid "Score:"
+msgstr "Punktzahl:"
+
+msgid "Public score:"
+msgstr "Öffentliche Punktzahl:"
+
+msgid "Score of tokened submissions:"
+msgstr "Punktzahl der Einsendungen, für welche ein Token verwendet worden ist:"
+
+msgid "Total score:"
+msgstr "Gesamte Punktzahl:"
 
 msgid "Submit a solution"
 msgstr "Lösung einsenden"
@@ -965,10 +947,13 @@ msgstr "Du kannst eine beliebige Teilmenge an Ausgaben in einer einzigen Einsend
 
 #, python-format
 msgid "You can submit %(submissions_left)s more solution(s)."
-msgstr "Du kannst noch %(submissions_left)s Lösung(en) einsenden."
+msgstr "Du kannst noch %(submissions_left)s weitere Lösung(en) einsenden."
+
+msgid "Submit"
+msgstr "Absenden"
 
 msgid "submission.zip"
-msgstr "Einsendung.zip"
+msgstr "submission.zip"
 
 msgid "Previous submissions"
 msgstr "Bisherige Einsendungen"
@@ -1043,6 +1028,15 @@ msgstr "Eingabe"
 msgid "Previous tests"
 msgstr "Bisherige Tests"
 
+msgid "Date and time"
+msgstr "Datum und Uhrzeit"
+
+msgid "Time"
+msgstr "Uhrzeit"
+
+msgid "Status"
+msgstr "Status"
+
 msgid "Input"
 msgstr "Eingabe"
 
@@ -1064,55 +1058,12 @@ msgstr "Augenblick..."
 msgid "None"
 msgstr ""
 
-msgid "Actual score"
-msgstr "Gültige Punktzahl"
+msgid "Token request discarded"
+msgstr "Token-Anfrage verworfen"
 
-msgid "Verdict"
-msgstr "Urteil"
+msgid "Your request has been discarded because you have no tokens available."
+msgstr "Deine Anfrage wurde verworfen, weil du über keine Tokens verfügst."
 
-msgid "Token"
-msgstr "Token"
-
-msgid "no submissions"
-msgstr "keine Einsendungen"
-
-#, fuzzy
-msgid "Played"
-msgstr "Played"
-
-#, fuzzy
-msgid "Play!"
-msgstr "Play!"
-
-msgid "No tokens"
-msgstr "Keine Tokens"
-
-msgid "Invalid file"
-msgstr "Ungültige Datei"
-
-msgid "Print job has too many pages"
-msgstr "Druckauftrag hat zu viele Seiten"
-
-msgid "Sent to printer"
-msgstr "An Drucker gesendet"
-
-#~ msgid "Public score"
-#~ msgstr "Öffentliche Punktzahl"
-
-#~ msgid "Score"
-#~ msgstr "Punktzahl"
-
-#~ msgid "Score:"
-#~ msgstr "Punktzahl:"
-
-#~ msgid "Public score:"
-#~ msgstr "Öffentliche Punktzahl:"
-
-# Nochmal: Mit Token oder mit Tokens versehene?
-#~ msgid "Score of tokened submissions:"
-#~ msgstr "Punktzahl der mit Tokens versehenen Einsendungen:"
-
-# Nochmal: Bedeutung richtig?
-#~ msgid "Total score:"
-#~ msgstr "Gesamtpunktzahl:"
+msgid "Your request has been discarded because you already used a token on that submission."
+msgstr "Deine Anfrage wurde verworfen, weil du für diese Einsendung bereits einen Token verwendet hast."
 

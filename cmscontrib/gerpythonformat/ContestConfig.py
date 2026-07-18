@@ -30,9 +30,9 @@ from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
 import copy
 import os
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from importlib import import_module
-import pytz
+import zoneinfo
 
 
 class MyGroup(object):
@@ -157,6 +157,7 @@ class ContestConfig(CommonConfig):
         # Default submission limits
         self.submission_limits(None, None)
         self.user_test_limits(None, None)
+        self.grace_period(None)
 
         # a standard tokenwise comparator (specified here so that it has to be
         # compiled at most once per contest)
@@ -285,8 +286,8 @@ class ContestConfig(CommonConfig):
         if timezone is None:
             timezone = self._timezone
         time = datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
-        tz = pytz.timezone(timezone)
-        convtime = tz.normalize(tz.localize(time)).astimezone(pytz.utc)
+        tz = zoneinfo.ZoneInfo(timezone)
+        convtime = time.replace(tzinfo=tz).astimezone(dt_timezone.utc)
         return convtime.replace(tzinfo=None)
 
     @exported_function
@@ -560,6 +561,24 @@ class ContestConfig(CommonConfig):
         """
         self._mytestuser = u
 
+    @exported_function
+    def grace_period(self, t: int | timedelta | None):
+        """
+        Set the grace period, before the end of participation, during
+        which the minimum submission interval restriction is removed.
+
+        grace_period: if None, the restriction is always active,
+            if a positive duration, the restriction is lifted during the final
+            `grace_period` before the participation ends
+            (i.e. from participation_end - grace_period onward).
+        """
+        if t is None:
+            self.min_submission_interval_grace_period = None
+        elif isinstance(t, int):
+            self.min_submission_interval_grace_period = timedelta(seconds=t)
+        else:
+            self.min_submission_interval_grace_period = t
+
     def short_path(self, f):
         """
         Return a (possibly) shorter name for a file (which can be relative
@@ -592,6 +611,9 @@ class ContestConfig(CommonConfig):
         cdb.min_submission_interval = self.min_submission_interval
         cdb.max_user_test_number = self.max_user_test_number
         cdb.min_user_test_interval = self.min_user_test_interval
+        cdb.min_submission_interval_grace_period = (
+            self.min_submission_interval_grace_period
+        )
 
         self.usersdb = {}
         self.participationsdb = {}

@@ -3,6 +3,7 @@
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2015-2018 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2018 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2026 Jonathan Baumann <Jonathan.Baumann@edu.ruhr-uni-bochum.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -36,14 +37,14 @@ same regardless of the path used to reach it.
 """
 
 from datetime import timedelta
+from typing import Any
 
 
 from cms.db import engine, metadata, Announcement, Contest, Dataset, Evaluation, \
-    Executable, File, Manager, Message, Participation, Question, Session, \
+    Executable, File, Group, Manager, Message, Participation, Question, Session, \
     Statement, Submission, SubmissionResult, Task, Team, Testcase, User, \
     UserTest, UserTestResult, drop_db, init_db, Token, UserTestFile, \
     UserTestManager
-from cms.db import Group
 from cms.db.filecacher import DBBackend
 from cmstestsuite.unit_tests.testidgenerator import unique_long_id, \
     unique_unicode_id, unique_digest
@@ -62,6 +63,17 @@ class DatabaseObjectGeneratorMixin:
     """
 
     @classmethod
+    def get_group(cls, **kwargs):
+        """Create a group"""
+        args = {
+            "name": unique_unicode_id()
+        }
+        args.update(kwargs)
+        group = Group(**args)
+        return group
+
+
+    @classmethod
     def get_contest(cls, **kwargs):
         """Create a contest"""
         grpargs = {}
@@ -69,25 +81,17 @@ class DatabaseObjectGeneratorMixin:
             if a in kwargs:
                 grpargs[a] = kwargs[a]
                 del kwargs[a]
-        args = {
+        args: dict[str, Any] = {
             "name": unique_unicode_id(),
             "description": unique_unicode_id(),
-            "main_group": cls.get_group(**grpargs),
         }
-        args["groups"] = [args["main_group"]]
         args.update(kwargs)
+        if "groups" not in args.keys() or not args["groups"]:
+            args["groups"] = [cls.get_group(**grpargs)]
+        if "main_group" not in args.keys():
+            args["main_group"] = args["groups"][0]
         contest = Contest(**args)
         return contest
-
-    @staticmethod
-    def get_group(**kwargs):
-        """Create a group"""
-        args = {
-            "name": "main"
-        }
-        args.update(kwargs)
-        group = Group(**args)
-        return group
 
     @classmethod
     def get_announcement(cls, contest=None, **kwargs):
@@ -97,8 +101,7 @@ class DatabaseObjectGeneratorMixin:
             "contest": contest,
             "subject": unique_unicode_id(),
             "text": unique_unicode_id(),
-            "timestamp": (contest.main_group.start
-                          + timedelta(0, unique_long_id())),
+            "timestamp": (contest.main_group.start + timedelta(0, unique_long_id())),
         }
         args.update(kwargs)
         announcement = Announcement(**args)
@@ -118,14 +121,15 @@ class DatabaseObjectGeneratorMixin:
         return user
 
     @classmethod
-    def get_participation(cls, user=None, contest=None, **kwargs):
+    def get_participation(cls, user=None, contest=None, group=None, **kwargs):
         """Create a participation"""
         user = user if user is not None else cls.get_user()
         contest = contest if contest is not None else cls.get_contest()
+        group = group if group is not None else contest.main_group
         args = {
             "user": user,
             "contest": contest,
-            "group": contest.main_group,
+            "group": group,
         }
         args.update(kwargs)
         participation = Participation(**args)
@@ -218,6 +222,7 @@ class DatabaseObjectGeneratorMixin:
         args = {
             "task": task,
             "participation": participation,
+            "opaque_id": unique_long_id(),
             "timestamp": (participation.group.start
                           + timedelta(0, unique_long_id())),
         }

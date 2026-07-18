@@ -35,16 +35,17 @@ import logging
 import re
 
 import collections
+
+from cms.db.task import Task
+from cms.db.user import Participation
+
 try:
     collections.MutableMapping
 except:
     # Monkey-patch: Tornado 4.5.3 does not work on Python 3.11 by default
     collections.MutableMapping = collections.abc.MutableMapping
 
-try:
-    import tornado4.web as tornado_web
-except ImportError:
-    import tornado.web as tornado_web
+import tornado.web
 from sqlalchemy.orm import joinedload
 
 from cms import config, FEEDBACK_LEVEL_FULL
@@ -58,7 +59,7 @@ from cms.server.contest.tokening import \
     UnacceptableToken, TokenAlreadyPlayed, accept_token, tokens_available
 from cmscommon.crypto import encrypt_number
 from cmscommon.mimetypes import get_type_for_file_name
-from .contest import ContestHandler, FileHandler
+from .contest import ContestHandler, FileHandler, api_login_required
 from ..phase_management import actual_phase_required
 
 
@@ -75,13 +76,19 @@ class SubmitHandler(ContestHandler):
 
     """
 
-    @tornado_web.authenticated
-    @actual_phase_required(0, 3)
+    @tornado.web.authenticated
+    @actual_phase_required(0, 1, 2, 3)
     @multi_contest
     def post(self, task_name):
+        # Reject submission if the contest disallow unofficial submission outside of official window or analysis mode
+        if 0 < self.r_params["actual_phase"] < 3 and \
+                not self.contest.allow_unofficial_submission_before_analysis_mode:
+            self.redirect(self.contest_url())
+            return
+
         task = self.get_task(task_name)
         if task is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
         # Only set the official bit when the user can compete and we are not in
         # analysis mode.
@@ -108,7 +115,7 @@ class SubmitHandler(ContestHandler):
             # (nor it discloses information to the user), but it is
             # useful for automatic testing to obtain the submission id).
             query_args["submission_id"] = \
-                encrypt_number(submission.id, config.secret_key)
+                encrypt_number(submission.id, config.web_server.secret_key)
 
         self.redirect(self.contest_url("tasks", task.name, "submissions",
                                        **query_args))
@@ -118,31 +125,33 @@ class TaskSubmissionsHandler(ContestHandler):
     """Shows the data of a task in the contest.
 
     """
-    @tornado_web.authenticated
-    @actual_phase_required(0, 3)
+    @tornado.web.authenticated
+    @actual_phase_required(0, 1, 2, 3, 4)
     @multi_contest
     def get(self, task_name):
-        participation = self.current_user
+        participation: Participation = self.current_user
 
         task = self.get_task(task_name)
         if task is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
-        submissions = self.sql_session.query(Submission)\
-            .filter(Submission.participation == participation)\
-            .filter(Submission.task == task)\
-            .options(joinedload(Submission.token))\
-            .options(joinedload(Submission.results))\
+        submissions: list[Submission] = (
+            self.sql_session.query(Submission)
+            .filter(Submission.participation == participation)
+            .filter(Submission.task == task)
+            .options(joinedload(Submission.token))
+            .options(joinedload(Submission.results))
             .all()
+        )
 
         score_type = task.active_dataset.score_type_object
 
         public_score, is_public_score_partial = task_score(
-            participation, task, public=True, rounded=True)
+            participation, task, public=True)
         tokened_score, is_tokened_score_partial = task_score(
-            participation, task, only_tokened=True, rounded=True)
+            participation, task, only_tokened=True)
         actual_score, is_actual_score_partial = task_score(
-            participation, task, rounded=True)
+            participation, task)
 
         # The first two should be the same, anyway.
         is_score_partial = \
@@ -201,12 +210,12 @@ class SubmissionStatusHandler(ContestHandler):
 
     refresh_cookie = False
 
-    def add_task_score(self, participation, task, data):
+    def add_task_score(self, participation: Participation, task: Task, data: dict):
         """Add the task score information to the dict to be returned.
 
-        participation (Participation): user for which we want the score.
-        task (Task): task for which we want the score.
-        data (dict): where to put the data; all fields will start with "task",
+        participation: user for which we want the score.
+        task: task for which we want the score.
+        data: where to put the data; all fields will start with "task",
             followed by "public" if referring to the public scores, or
             "tokened" if referring to the total score (always limited to
             tokened submissions); for both public and tokened, the fields are:
@@ -225,14 +234,14 @@ class SubmissionStatusHandler(ContestHandler):
         score_type = task.active_dataset.score_type_object
 
         data["task_public_score"], public_score_is_partial = \
-            task_score(participation, task, public=True, rounded=True)
+            task_score(participation, task, public=True)
         data["task_tokened_score"], tokened_score_is_partial = \
-            task_score(participation, task, only_tokened=True, rounded=True)
+            task_score(participation, task, only_tokened=True)
 
         if score_type.feedback() == "full" or \
            self.r_params["actual_phase"] == 3:
             data["task_actual_score"], actual_score_is_partial = \
-                task_score(participation, task, rounded=True)
+                task_score(participation, task)
 
         # These two should be the same, anyway.
         data["task_score_is_partial"] = \
@@ -242,27 +251,27 @@ class SubmissionStatusHandler(ContestHandler):
         score_type = task.active_dataset.score_type_object
         data["task_public_score_message"] = score_type.format_score(
             data["task_public_score"], score_type.max_public_score, None,
-            task.score_precision, translation=self.translation)
+            translation=self.translation)
         data["task_tokened_score_message"] = score_type.format_score(
             data["task_tokened_score"], score_type.max_score, None,
-            task.score_precision, translation=self.translation)
+            translation=self.translation)
 
         if score_type.feedback() == "full":
             data["task_actual_score_message"] = score_type.format_score(
                 data["task_actual_score"], score_type.max_score, None,
-                task.score_precision, translation=self.translation)
+                translation=self.translation)
 
-    @tornado_web.authenticated
-    @actual_phase_required(0, 3)
+    @api_login_required
+    @actual_phase_required(0, 1, 2, 3, 4)
     @multi_contest
-    def get(self, task_name, submission_num):
+    def get(self, task_name, opaque_id):
         task = self.get_task(task_name)
         if task is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
-        submission = self.get_submission(task, submission_num)
+        submission = self.get_submission(task, opaque_id)
         if submission is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
         sr = submission.get_result(task.active_dataset)
 
@@ -283,14 +292,12 @@ class SubmissionStatusHandler(ContestHandler):
 
             score_type = task.active_dataset.score_type_object
             if True:
-                data["max_public_score"] = \
-                    round(score_type.max_public_score, task.score_precision)
+                data["max_public_score"] = score_type.max_public_score
                 if data["status"] == SubmissionResult.SCORED:
-                    data["public_score"] = \
-                        round(sr.public_score, task.score_precision)
+                    data["public_score"] = sr.public_score
                     data["public_score_message"] = score_type.format_score(
                         sr.public_score, score_type.max_public_score,
-                        sr.public_score_details, task.score_precision,
+                        sr.public_score_details,
                         translation=self.translation)
             if (
                 submission.token is not None
@@ -298,14 +305,12 @@ class SubmissionStatusHandler(ContestHandler):
                 or score_type.feedback() == "full"
                 or submission.is_unit_test()
             ):
-                data["max_score"] = \
-                    round(score_type.max_score, task.score_precision)
+                data["max_score"] = score_type.max_score
                 if data["status"] == SubmissionResult.SCORED:
-                    data["score"] = \
-                        round(sr.score, task.score_precision)
+                    data["score"] = sr.score
                     data["score_message"] = score_type.format_score(
                         sr.score, score_type.max_score,
-                        sr.score_details, task.score_precision,
+                        sr.score_details,
                         translation=self.translation)
             if submission.is_unit_test():
                 utd = sr.unit_test_score_details
@@ -319,17 +324,17 @@ class SubmissionDetailsHandler(ContestHandler):
 
     refresh_cookie = False
 
-    @tornado_web.authenticated
-    @actual_phase_required(0, 3)
+    @api_login_required
+    @actual_phase_required(0, 1, 2, 3, 4)
     @multi_contest
-    def get(self, task_name, submission_num):
+    def get(self, task_name, opaque_id):
         task = self.get_task(task_name)
         if task is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
-        submission = self.get_submission(task, submission_num)
+        submission = self.get_submission(task, opaque_id)
         if submission is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
         sr = submission.get_result(task.active_dataset)
         score_type = task.active_dataset.score_type_object
@@ -363,20 +368,20 @@ class SubmissionFileHandler(FileHandler):
     """Send back a submission file.
 
     """
-    @tornado_web.authenticated
-    @actual_phase_required(0, 3)
+    @tornado.web.authenticated
+    @actual_phase_required(0, 1, 2, 3, 4)
     @multi_contest
-    def get(self, task_name, submission_num, filename):
+    def get(self, task_name, opaque_id, filename):
         if not self.contest.submissions_download_allowed:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
         task = self.get_task(task_name)
         if task is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
-        submission = self.get_submission(task, submission_num)
+        submission = self.get_submission(task, opaque_id)
         if submission is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
         # The following code assumes that submission.files is a subset
         # of task.submission_format. CWS will always ensure that for new
@@ -393,7 +398,7 @@ class SubmissionFileHandler(FileHandler):
             stored_filename = re.sub(r'%s$' % extension, '.%l', filename)
 
         if stored_filename not in submission.files:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
         digest = submission.files[stored_filename].digest
         self.sql_session.close()
@@ -409,17 +414,17 @@ class UseTokenHandler(ContestHandler):
     """Called when the user try to use a token on a submission.
 
     """
-    @tornado_web.authenticated
+    @tornado.web.authenticated
     @actual_phase_required(0)
     @multi_contest
-    def post(self, task_name, submission_num):
+    def post(self, task_name, opaque_id):
         task = self.get_task(task_name)
         if task is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
-        submission = self.get_submission(task, submission_num)
+        submission = self.get_submission(task, opaque_id)
         if submission is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
         try:
             accept_token(self.sql_session, submission, self.timestamp)

@@ -35,18 +35,22 @@ task.
 import json
 import logging
 import re
+from typing import TypedDict, NotRequired
 from abc import ABCMeta, abstractmethod
 
 from cms import FEEDBACK_LEVEL_RESTRICTED
-from cms.locale import DEFAULT_TRANSLATION
+from cms.db import SubmissionResult
+from cms.grading.steps import EVALUATION_MESSAGES
+from cms.locale import Translation, DEFAULT_TRANSLATION
 from cms.server.jinja2_toolbox import GLOBAL_ENVIRONMENT
+from jinja2 import Template
 
 
 logger = logging.getLogger(__name__)
 
 
 # Dummy function to mark translatable string.
-def N_(message):
+def N_(message: str):
     return message
 
 
@@ -58,17 +62,19 @@ class ScoreType(metaclass=ABCMeta):
 
     TEMPLATE = ""
 
-    def __init__(self, parameters, public_testcases):
+    def __init__(self, parameters: object, public_testcases: dict[str, bool],
+                 score_precision: int):
         """Initializer.
 
-        parameters (object): format is specified in the subclasses.
-        public_testcases (dict): associate to each testcase's codename
-                                 a boolean indicating if the testcase
-                                 is public.
+        parameters: format is specified in the subclasses.
+        public_testcases: associate to each testcase's codename
+                          a boolean indicating if the testcase
+                          is public.
 
         """
         self.parameters = parameters
         self.public_testcases = public_testcases
+        self.score_precision = score_precision
 
         # Preload the maximum possible scores.
         try:
@@ -88,11 +94,15 @@ class ScoreType(metaclass=ABCMeta):
                 "Unable to instantiate score type (probably due to invalid "
                 "values for the score type parameters): %s." % e)
 
-        self.template = GLOBAL_ENVIRONMENT.from_string(self.TEMPLATE)
+        self.template: Template = GLOBAL_ENVIRONMENT.from_string(self.TEMPLATE)
 
     @staticmethod
-    def format_score(score, max_score, unused_score_details,
-                     score_precision, translation=DEFAULT_TRANSLATION):
+    def format_score(
+        score: float,
+        max_score: float,
+        unused_score_details: object,
+        translation: Translation = DEFAULT_TRANSLATION,
+    ) -> str:
         """Produce the string of the score that is shown in CWS.
 
         In the submission table in the task page of CWS the global
@@ -101,20 +111,18 @@ class ScoreType(metaclass=ABCMeta):
         text that is shown there. It can be overridden to provide a
         custom message (e.g. "Accepted"/"Rejected").
 
-        score (float): the global score of the submission.
-        max_score (float): the maximum score that can be achieved.
-        unused_score_details (string): the opaque data structure that
+        score: the global score of the submission.
+        max_score: the maximum score that can be achieved.
+        unused_score_details: the opaque data structure that
             the ScoreType produced for the submission when scoring it.
-        score_precision (int): the maximum number of digits of the
-            fractional digits to show.
-        translation (Translation): the translation to use.
+        translation: the translation to use.
 
-        return (string): the message to show.
+        return: the message to show.
 
         """
         return "%s / %s" % (
-            translation.format_decimal(round(score, score_precision)),
-            translation.format_decimal(round(max_score, score_precision)))
+            translation.format_decimal(score),
+            translation.format_decimal(max_score))
 
     @staticmethod
     def unit_test_result(unit_test_score_details):
@@ -124,18 +132,21 @@ class ScoreType(metaclass=ABCMeta):
     def format_unit_test_verdict(unit_test_score_details):
         return unit_test_score_details["verdict"][1]
 
-    def get_html_details(self, score_details,
-                         feedback_level=FEEDBACK_LEVEL_RESTRICTED,
-                         translation=DEFAULT_TRANSLATION):
+    def get_html_details(
+        self,
+        score_details: object,
+        feedback_level: str = FEEDBACK_LEVEL_RESTRICTED,
+        translation: Translation = DEFAULT_TRANSLATION,
+    ) -> str:
         """Return an HTML string representing the score details of a
         submission.
 
-        score_details (object): the data saved by the score type
+        score_details: the data saved by the score type
             itself in the database; can be public or private.
-        feedback_level (str): the level of details to show to users.
-        translation (Translation): the translation to use.
+        feedback_level: the level of details to show to users.
+        translation: the translation to use.
 
-        return (string): an HTML string representing score_details.
+        return: an HTML string representing score_details.
 
         """
         _ = translation.gettext
@@ -153,37 +164,39 @@ class ScoreType(metaclass=ABCMeta):
                                             translation=translation,
                                             gettext=_, ngettext=n_)
             except Exception:
-                logger.error("Found an invalid score details string. "
-                             "Try invalidating scores.", exc_info=True)
+                logger.exception("Found an invalid score details string. "
+                                 "Try invalidating scores.")
                 return _("Score details temporarily unavailable.")
 
     @abstractmethod
-    def max_scores(self):
+    def max_scores(self) -> tuple[float, float, list[str]]:
         """Returns the maximum score that one could aim to in this
         problem. Also return the maximum score from the point of view
         of a user that did not play the token. And the headers of the
         columns showing extra information (e.g. subtasks) in RWS.
         Depend on the subclass.
 
-        return (float, float, [string]): maximum score and maximum
-            score with only public testcases; ranking headers.
+        return: maximum score and maximum score with only public
+            testcases; ranking headers.
 
         """
         pass
 
     @abstractmethod
-    def compute_score(self, unused_submission_result):
+    def compute_score(
+        self, submission_result: SubmissionResult
+    ) -> tuple[float, object, float, object, list[str]]:
         """Computes a score of a single submission.
 
-        unused_submission_result (SubmissionResult): the submission
+        submission_result: the submission
             result of which we want the score
 
-        return (float, object, float, object, [str]): respectively: the
-            score, an opaque JSON-like data structure with additional
-            information (e.g. testcases' and subtasks' score) that will
-            be converted to HTML by get_html_details, the score and a
-            similar data structure from the point of view of a user who
-            did not play a token, the list of strings to send to RWS.
+        return: respectively: the score, an opaque JSON-like data
+            structure with additional information (e.g. testcases' and
+            subtasks' score) that will be converted to HTML by
+            get_html_details, the score and a similar data structure
+            from the point of view of a user who did not play a token,
+            the list of strings to send to RWS.
 
         """
         pass
@@ -212,22 +225,39 @@ class ScoreTypeAlone(ScoreType):
     pass
 
 
+class ScoreTypeGroupParametersDict(TypedDict):
+    max_score: float
+    testcases: int | str | list[str]
+    threshold: NotRequired[float]
+    always_show_testcases: NotRequired[bool]
+
+
+# the format of parameters is impossible to type-hint correctly, it seems...
+# this hint is (mostly) correct for the methods this base class implements,
+# subclasses might need a longer tuple.
+ScoreTypeGroupParameters = tuple[float, int | str | list[str]] | ScoreTypeGroupParametersDict
+
+
 class ScoreTypeGroup(ScoreTypeAlone):
     """Intermediate class to manage tasks whose testcases are
     subdivided in groups (or subtasks). The score type parameters must
     be in the form [[m, t, ...], [...], ...], where m is the maximum
     score for the given subtask and t is the parameter for specifying
-    testcases.
+    testcases, or be a list of dicts matching ScoreTypeGroupParametersDict.
 
     If t is int, it is interpreted as the number of testcases
     comprising the subtask (that are consumed from the first to the
     last, sorted by num). If t is unicode, it is interpreted as the regular
-    expression of the names of target testcases. All t must have the same type.
+    expression of the names of target testcases. If t is a list of strings,
+    it is interpreted as a list of testcase codenames. All t must have the
+    same type.
 
     A subclass must implement the method 'get_public_outcome' and
     'reduce'.
 
     """
+    parameters: list[ScoreTypeGroupParameters]
+
     # Mark strings for localization.
     N_("Subtask %(index)s")
     N_("#")
@@ -253,10 +283,9 @@ class ScoreTypeGroup(ScoreTypeAlone):
         <span class="title">
             {% trans index=st["idx"] %}Subtask {{ index }}{% endtrans %}
         </span>
-    {% if "score_fraction" in st and "max_score" in st %}
-        {% set score = st["score_fraction"] * st["max_score"] %}
+    {% if "score" in st and "max_score" in st %}
         <span class="score">
-            ({{ score|round(2)|format_decimal }}
+            ({{ st["score"]|format_decimal }}
              / {{ st["max_score"]|format_decimal }})
         </span>
     {% else %}
@@ -290,9 +319,13 @@ class ScoreTypeGroup(ScoreTypeAlone):
             </thead>
             <tbody>
     {% for tc in st["testcases"] %}
-        {% if "outcome" in tc
-               and (feedback_level == FEEDBACK_LEVEL_FULL
-                    or tc["show_in_restricted_feedback"]) %}
+        {% set show_tc = "outcome" in tc
+               and ((feedback_level == FEEDBACK_LEVEL_FULL)
+               or (feedback_level == FEEDBACK_LEVEL_RESTRICTED
+               and tc["show_in_restricted_feedback"])
+               or (feedback_level == FEEDBACK_LEVEL_OI_RESTRICTED
+               and tc["show_in_oi_restricted_feedback"])) %}
+        {% if show_tc %}
             {% if tc["outcome"] == "Correct" %}
                 <tr class="correct">
             {% elif tc["outcome"] == "Not correct" %}
@@ -307,7 +340,9 @@ class ScoreTypeGroup(ScoreTypeAlone):
                     </td>
             {% if feedback_level == FEEDBACK_LEVEL_FULL %}
                     <td class="execution-time">
-                {% if "time" in tc and tc["time"] is not none %}
+                {% if "time_limit_was_exceeded" in tc and tc["time_limit_was_exceeded"] %}
+                        &gt; {{ tc["time_limit"]|format_duration }}
+                {% elif "time" in tc and tc["time"] is not none %}
                         {{ tc["time"]|format_duration }}
                 {% else %}
                         {% trans %}N/A{% endtrans %}
@@ -323,16 +358,18 @@ class ScoreTypeGroup(ScoreTypeAlone):
             {% endif %}
                 </tr>
         {% else %}
+            {% if feedback_level != FEEDBACK_LEVEL_OI_RESTRICTED %}
                 <tr class="undefined">
                     <td class="idx">{{ loop.index }}</td>
-            {% if feedback_level == FEEDBACK_LEVEL_FULL %}
+                {% if feedback_level == FEEDBACK_LEVEL_FULL %}
                     <td colspan="4">
-            {% else %}
+                {% else %}
                     <td colspan="2">
-            {% endif %}
+                {% endif %}
                         {% trans %}N/A{% endtrans %}
                     </td>
                 </tr>
+            {% endif %}
         {% endif %}
     {% endfor %}
             </tbody>
@@ -341,7 +378,33 @@ class ScoreTypeGroup(ScoreTypeAlone):
 </div>
 {% endfor %}"""
 
-    def retrieve_target_testcases(self):
+    def get_max_score(self, group_parameter: ScoreTypeGroupParameters) -> float:
+        if isinstance(group_parameter, tuple) or isinstance(group_parameter, list):
+            score = group_parameter[0]
+        else:
+            score = group_parameter["max_score"]
+        assert (
+            round(
+                score,
+                self.score_precision
+            ) == score
+        ), (f"The max score for a subtask"
+            "has more precision than the task allows.")
+        return score
+
+    def get_testcases(self, group_parameter: ScoreTypeGroupParameters) -> int | str | list[str]:
+        if isinstance(group_parameter, tuple) or isinstance(group_parameter, list):
+            return group_parameter[1]
+        else:
+            return group_parameter["testcases"]
+
+    def get_always_show_testcases(self, group_parameter: ScoreTypeGroupParameters) -> bool:
+        if isinstance(group_parameter, tuple) or isinstance(group_parameter, list):
+            return False
+        else:
+            return group_parameter.get("always_show_testcases", False)
+
+    def retrieve_target_testcases(self) -> list[list[str]]:
         """Return the list of the target testcases for each subtask.
 
         Each element of the list consist of multiple strings.
@@ -349,11 +412,11 @@ class ScoreTypeGroup(ScoreTypeAlone):
         to the corresponding subtask.
         The order of the list is the same as 'parameters'.
 
-        return ([[unicode]]): the list of the target testcases for each task.
+        return: the list of the target testcases for each task.
 
         """
 
-        t_params = [p[1] for p in self.parameters]
+        t_params = [self.get_testcases(p) for p in self.parameters]
 
         if all(isinstance(t, int) for t in t_params):
 
@@ -363,6 +426,8 @@ class ScoreTypeGroup(ScoreTypeAlone):
             targets = []
 
             for t in t_params:
+                # this assert is guaranteed by the `if` check, but the type checker is dumb...
+                assert isinstance(t, int)
                 next_ = current + t
                 targets.append(indices[current:next_])
                 current = next_
@@ -375,6 +440,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
             targets = []
 
             for t in t_params:
+                assert isinstance(t, str)
                 regexp = re.compile(t)
                 target = [tc for tc in indices if regexp.match(tc)]
                 if not target:
@@ -384,9 +450,12 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
             return targets
 
+        elif all(isinstance(t, list) for t in t_params) and all(all(isinstance(t, str) for t in s) for s in t_params):
+            return t_params
+
         raise ValueError(
             "In the score type parameters, the second value of each element "
-            "must have the same type (int or unicode)")
+            "must have the same type (int, unicode or list of strings)")
 
     def max_scores(self):
         """See ScoreType.max_score."""
@@ -398,10 +467,10 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
         for st_idx, parameter in enumerate(self.parameters):
             target = targets[st_idx]
-            score += parameter[0]
+            score += self.get_max_score(parameter)
             if all(self.public_testcases[tc_idx] for tc_idx in target):
-                public_score += parameter[0]
-            headers += ["Subtask %d (%g)" % (st_idx + 1, parameter[0])]
+                public_score += self.get_max_score(parameter)
+            headers += ["Subtask %d (%g)" % (st_idx, self.get_max_score(parameter))]
 
         return score, public_score, headers
 
@@ -420,59 +489,92 @@ class ScoreTypeGroup(ScoreTypeAlone):
         targets = self.retrieve_target_testcases()
         evaluations = {ev.codename: ev for ev in submission_result.evaluations}
 
+        score_precision = submission_result.submission.task.score_precision
+
         for st_idx, parameter in enumerate(self.parameters):
             target = targets[st_idx]
 
             testcases = []
             public_testcases = []
-            previous_tc_all_correct = True
+            # In "Restricted" feedback mode:
+            #   show until the first testcase with a lowest score
+            # In "OI Restricted" feedback mode:
+            #   show only the first testcase with a lowest score
+
+            tc_first_lowest_idx = None
+            tc_first_lowest_score = None
             for tc_idx in target:
+                tc_score = float(evaluations[tc_idx].outcome)
                 tc_outcome = self.get_public_outcome(
-                    float(evaluations[tc_idx].outcome), parameter)
+                    tc_score, parameter)
+
+                time_limit_was_exceeded = False
+                if evaluations[tc_idx].text == [EVALUATION_MESSAGES.get("timeout").message]:
+                    time_limit_was_exceeded = True
 
                 testcases.append({
                     "idx": tc_idx,
                     "outcome": tc_outcome,
                     "text": evaluations[tc_idx].text,
                     "time": evaluations[tc_idx].execution_time,
+                    "time_limit": evaluations[tc_idx].dataset.time_limit,
+                    "time_limit_was_exceeded": time_limit_was_exceeded,
                     "memory": evaluations[tc_idx].execution_memory,
-                    "show_in_restricted_feedback": previous_tc_all_correct})
+                    "show_in_restricted_feedback": self.public_testcases[tc_idx],
+                    "show_in_oi_restricted_feedback": self.public_testcases[tc_idx]})
+
                 if self.public_testcases[tc_idx]:
                     public_testcases.append(testcases[-1])
-                    # Only block restricted feedback if this is the first
-                    # *public* non-correct testcase, otherwise we might be
-                    # leaking info on private testcases.
-                    if tc_outcome != "Correct":
-                        previous_tc_all_correct = False
+                    if tc_first_lowest_score is None or \
+                            tc_score < tc_first_lowest_score:
+                        tc_first_lowest_idx = tc_idx
+                        tc_first_lowest_score = tc_score
                 else:
                     public_testcases.append({"idx": tc_idx})
 
             st_score_fraction = self.reduce(
                 [float(evaluations[tc_idx].outcome) for tc_idx in target],
                 parameter)
-            st_score = st_score_fraction * parameter[0]
+            st_score = st_score_fraction * self.get_max_score(parameter)
+            rounded_score = round(st_score, score_precision)
 
-            score += st_score
+            if tc_first_lowest_idx is not None and st_score_fraction < 1.0 and not self.get_always_show_testcases(parameter):
+                for tc in testcases:
+                    if not self.public_testcases[tc["idx"]]:
+                        continue
+                    tc["show_in_restricted_feedback"] = (
+                        tc["idx"] <= tc_first_lowest_idx)
+                    tc["show_in_oi_restricted_feedback"] = (
+                        tc["idx"] == tc_first_lowest_idx)
+
+            score += rounded_score
             subtasks.append({
-                "idx": st_idx + 1,
+                "idx": st_idx,
                 # We store the fraction so that an "example" testcase
                 # with a max score of zero is still properly rendered as
                 # correct or incorrect.
                 "score_fraction": st_score_fraction,
-                "max_score": parameter[0],
+                # But we also want the properly rounded score for display.
+                "score": rounded_score,
+                "max_score": self.get_max_score(parameter),
                 "testcases": testcases})
             if all(self.public_testcases[tc_idx] for tc_idx in target):
-                public_score += st_score
+                public_score += rounded_score
                 public_subtasks.append(subtasks[-1])
             else:
-                public_subtasks.append({"idx": st_idx + 1,
+                public_subtasks.append({"idx": st_idx,
                                         "testcases": public_testcases})
-            ranking_details.append("%g" % round(st_score, 2))
+            ranking_details.append("%g" % rounded_score)
+
+        # The following line should be unnecessary since subtask scores
+        # are rounded. However we are using floats not Decimals
+        # and this can cause errors. So we round again to be sure.
+        score = round(score, score_precision)
 
         return score, subtasks, public_score, public_subtasks, ranking_details
 
     @abstractmethod
-    def get_public_outcome(self, unused_outcome, unused_parameter):
+    def get_public_outcome(self, outcome: float, parameter: ScoreTypeGroupParameters) -> str:
         """Return a public outcome from an outcome.
 
         The public outcome is shown to the user, and this method
@@ -480,24 +582,23 @@ class ScoreTypeGroup(ScoreTypeAlone):
         submission in a testcase contained in the group identified by
         parameter.
 
-        unused_outcome (float): the outcome of the submission in the
-            testcase.
-        unused_parameter (list): the parameters of the current group.
+        outcome: the outcome of the submission in the testcase.
+        parameter: the parameters of the current group.
 
-        return (str): the public output.
+        return: the public output.
 
         """
         pass
 
     @abstractmethod
-    def reduce(self, unused_outcomes, unused_parameter):
+    def reduce(self, outcomes: list[float], parameter: ScoreTypeGroupParameters) -> float:
         """Return the score of a subtask given the outcomes.
 
-        unused_outcomes ([float]): the outcomes of the submission in
+        outcomes: the outcomes of the submission in
             the testcases of the group.
-        unused_parameter (list): the parameters of the group.
+        parameter: the parameters of the group.
 
-        return (float): the public output.
+        return: the public output.
 
         """
         pass

@@ -48,7 +48,7 @@
         <td>
           {% for filename in s.task.submission_format %}
             {% if filename in s.files %}
-              {% set real_filename = filename if s.language is none else filename|replace(".%l", (s.language|to_language).source_extension) %}
+              {% set real_filename = get_lang_filename(s.language, filename) %}
           <a href="javascript:void(0);" onclick="utils.show_file('{{ real_filename }}','{{ url("submission_file", s.files[filename].id) }}')">
             {{ real_filename }}
           </a>
@@ -105,22 +105,22 @@
         <td>Status</td>
         <td id="submission_status">
           {% if status == SubmissionResult.COMPILING %}
-          Compiling...
+            Compiling...
           {% elif status == SubmissionResult.COMPILATION_FAILED %}
-          Compilation failed
+            Compilation failed
           {% elif status == SubmissionResult.EVALUATING %}
-          Evaluating...
+            Evaluating...
           {% elif status == SubmissionResult.SCORING %}
-          Scoring...
+            Scoring...
           {% elif status == SubmissionResult.SCORED %}
             {% if st is defined %}
               {% set max_score = st.max_score %}
             {% else %}
               {% set max_score = "[Cannot get score type - see logs]" %}
             {% endif %}
-          Scored ({{ sr.score }} / {{ max_score }})
+            Scored ({{ sr.score }} / {{ max_score }})
           {% else %}
-          N/A
+            N/A
           {% endif %}
         </td>
       </tr>
@@ -129,10 +129,18 @@
         <td>Score as seen by user</td>
         <td>
           {% if s.token is not none %}
-            {{ st.format_score(sr.score, st.max_score, sr.score_details, s.task.score_precision) }}
+            {{ st.format_score(sr.score, st.max_score, sr.score_details) }}
           {% else %}
-            {{ st.format_score(sr.public_score, st.max_public_score, sr.public_score_details, s.task.score_precision) }}
+            {{ st.format_score(sr.public_score, st.max_public_score, sr.public_score_details) }}
           {% endif %}
+        </td>
+      </tr>
+      {% endif %}
+      {% if sr is not none and sr.scored_at is not none %}
+      <tr>
+        <td>Latency as seen by user</td>
+        <td>
+          {{ (sr.scored_at - s.timestamp).total_seconds()|format_duration }}
         </td>
       </tr>
       {% endif %}
@@ -147,7 +155,34 @@
       </tr>
       <tr>
         <td>Compilation sandbox</td>
-        <td>{{ sr.compilation_sandbox }}</td>
+        <td>
+          {% if sr.compilation_sandbox_digests %}
+            {% for sandbox_digest in sr.compilation_sandbox_digests %}
+              {%- set filename = "submission_%s_compilation_sandbox_%s.tar.gz"|format(sr.submission_id, loop.index) -%}
+              <a href="{{ url("file", sandbox_digest, filename) }}">
+                {{- sr.compilation_sandbox_paths[loop.index0] -}}
+              </a>
+            {% endfor %}
+          {% elif sr.compilation_sandbox_paths is not none %}
+            {{ sr.compilation_sandbox_paths|join(" ") }}
+          {% endif %}
+
+          <button onclick="cmsrpc_request(
+                           'EvaluationService', 0,
+                           'invalidate_submission', {
+                             'submission_id': {{ s.id }},
+                             'dataset_id': {{ shown_dataset.id }},
+                             'level': 'compilation',
+                             'archive_sandbox': true
+                           },
+                           function(response) { utils.redirect_if_ok('{{ url("submission", s.id, shown_dataset.id) }}', response); }
+          );"
+          {% if not admin.permission_all %}
+          disabled
+          {% endif %}>
+            Rerun and archive
+          </button>
+        </td>
       </tr>
       <tr>
         <td>Failures during evaluation</td>
@@ -199,10 +234,14 @@
 <div id="evaluation_user">
 
   <div class="score_details" id="evaluation_{{ s.id }}">
-    {% if s.tokened() %}
-      {{ st.get_html_details(sr.score_details, s.task.feedback_level)|safe }}
+    {% if st is defined %}
+      {% if s.tokened() %}
+        {{ st.get_html_details(sr.score_details, s.task.feedback_level)|safe }}
+      {% else %}
+        {{ st.get_html_details(sr.public_score_details, s.task.feedback_level)|safe }}
+      {% endif %}
     {% else %}
-      {{ st.get_html_details(sr.public_score_details, s.task.feedback_level)|safe }}
+      [Cannot get score type - see logs]
     {% endif %}
   </div>
 </div>
@@ -222,6 +261,7 @@
         <th>Outcome</th>
         <th>Visible</th>
         <th>Details</th>
+        <th>Admin Details</th>
         <th>Shard</th>
         <th>Resources</th>
         <th>Sandbox</th>
@@ -238,6 +278,13 @@
             <input type="checkbox" disabled{{ " checked" if s.token is not none or ev.testcase.public else "" }}>
           </td>
           <td id="eval_text_{{ ev.codename }}">{{ ev.text|format_status_text }}</td>
+          <td id="eval_admin_text_{{ ev.codename }}">
+            {% if ev.admin_text is not none %}
+            {{ ev.admin_text }}
+            {% else %}
+            N/A
+            {% endif %}
+          </td>
           <td>{{ ev.evaluation_shard }}</td>
           <td>
             {% if ev.execution_time is not none %}
@@ -250,7 +297,36 @@
             ({{ ev.execution_memory // (1024 * 1024) }} MiB)
             {% endif %}
           </td>
-          <td>{{ ev.evaluation_sandbox }}</td>
+          <td>
+            {% if ev.evaluation_sandbox_digests %}
+              {% for sandbox_digest in ev.evaluation_sandbox_digests %}
+                {%- set filename = "submission_%s_testcase_%s_sandbox_%s.tar.gz"|format(sr.submission_id, ev.codename, loop.index) -%}
+                <a href="{{ url("file", sandbox_digest, filename) }}">
+                  {{- ev.evaluation_sandbox_paths[loop.index0] -}}
+                </a>
+              {% endfor %}
+            {% elif ev.evaluation_sandbox_paths is not none %}
+              {{ ev.evaluation_sandbox_paths|join(" ") }}
+            {% endif %}
+
+            <button
+              onclick="cmsrpc_request(
+                       'EvaluationService', 0,
+                       'invalidate_submission', {
+                         'submission_id': {{ s.id }},
+                         'dataset_id': {{ shown_dataset.id }},
+                         'testcase_id': {{ ev.testcase_id }},
+                         'level': 'evaluation',
+                         'archive_sandbox': true
+                       },
+                       function(response) { utils.redirect_if_ok('{{ url("submission", s.id, shown_dataset.id) }}', response); }
+            );"
+            {% if not admin.permission_all %}
+            disabled
+            {% endif %}>
+              Rerun and archive
+            </button>
+          </td>
         </tr>
         {% endfor %}
       {% endif %}

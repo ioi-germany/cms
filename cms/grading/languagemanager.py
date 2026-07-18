@@ -18,8 +18,9 @@
 
 """Provide utilities to work with programming language classes."""
 
+import logging
 from cms import plugin_list
-
+from cms.grading.language import Language
 
 __all__ = [
     "LANGUAGES",
@@ -28,18 +29,21 @@ __all__ = [
 ]
 
 
-LANGUAGES = list()
-_BY_NAME = dict()
-HEADER_EXTS = set()
-OBJECT_EXTS = set()
-SOURCE_EXTS = set()
+logger = logging.getLogger(__name__)
 
 
-def get_language(name):
+LANGUAGES: list[Language] = list()
+_BY_NAME: dict[str, Language] = dict()
+HEADER_EXTS: set[str] = set()
+OBJECT_EXTS: set[str] = set()
+SOURCE_EXTS: set[str] = set()
+
+
+def get_language(name: str) -> Language:
     """Return the language object corresponding to the given name.
 
-    name (unicode): name of the requested language.
-    return (Language): language object.
+    name: name of the requested language.
+    return: language object.
 
     raise (KeyError): if the name does not correspond to a language.
 
@@ -49,22 +53,42 @@ def get_language(name):
     return _BY_NAME[name]
 
 
-def filename_to_language(filename):
+def safe_get_lang_filename(lang: str | None, filename: str) -> str:
+    """Get the filename of a file in a specific programming language,
+    avoiding errors if the language isn't recognized.
+
+    lang: name of the programming language
+    filename: filename template (containing .%l)
+    return: filename with the template replaced.
+    """
+    if lang is None:
+        return filename
+    try:
+        language = get_language(lang)
+        source_ext = language.source_extension
+    except KeyError:
+        logger.warning(f"Found invalid language {lang}!")
+        source_ext = ".invalid_language"
+    return filename.replace(".%l", source_ext)
+
+
+def filename_to_language(filename: str, available_languages: list[Language] | None=None) -> Language | None:
     """Return one of the languages inferred from the given filename.
 
-    filename (string): the file to test.
+    filename: the file to test.
 
-    return (Language|None): one (arbitrary, but deterministic)
-        language matching the given filename, or None if none
-        match.
+    return: one (arbitrary, but deterministic) language
+    matching the given filename, or None if none match.
 
     """
+    if available_languages is None:
+        available_languages = LANGUAGES
     ext_index = filename.rfind(".")
     if ext_index == -1:
         return None
     ext = filename[ext_index:]
     names = sorted(language.name
-                   for language in LANGUAGES
+                   for language in available_languages
                    if ext in language.source_extensions)
     return None if len(names) == 0 else get_language(names[0])
 

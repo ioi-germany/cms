@@ -25,6 +25,7 @@
 
 import logging
 
+from cms.grading.Job import Job
 from cms.grading.ParameterTypes import ParameterTypeChoice
 from . import TaskType, eval_output
 
@@ -79,9 +80,9 @@ class OutputOnly(TaskType):
 
     def __init__(self, parameters):
         super().__init__(parameters)
-        self.output_eval = self.parameters[0]
+        self.output_eval: str = self.parameters[0]
 
-    def get_compilation_commands(self, unused_submission_format):
+    def get_compilation_commands(self, submission_format):
         """See TaskType.get_compilation_commands."""
         return None
 
@@ -93,11 +94,11 @@ class OutputOnly(TaskType):
         """See TaskType.get_auto_managers."""
         return []
 
-    def _uses_checker(self):
+    def _uses_checker(self) -> bool:
         return self.output_eval == OutputOnly.OUTPUT_EVAL_CHECKER
 
     @staticmethod
-    def _get_user_output_filename(job):
+    def _get_user_output_filename(job: Job):
         return OutputOnly.USER_OUTPUT_FILENAME_TEMPLATE % \
             job.operation.testcase_codename
 
@@ -123,7 +124,7 @@ class OutputOnly(TaskType):
             return
 
         # First and only step: eval the user output.
-        box_success, outcome, text = eval_output(
+        box_success, outcome, text, admin_text = eval_output(
             file_cacher, job,
             OutputOnly.CHECKER_CODENAME if self._uses_checker() else None,
             user_output_digest=job.files[user_output_filename].digest)
@@ -132,5 +133,6 @@ class OutputOnly(TaskType):
         job.success = box_success
         job.outcome = str(outcome) if outcome is not None else None
         job.text = text
+        job.admin_text = admin_text
         # There is no actual evaluation, so no statistics.
         job.plus = {} if box_success else None

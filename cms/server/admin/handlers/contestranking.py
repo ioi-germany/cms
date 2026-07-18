@@ -48,13 +48,15 @@ class RankingHandler(BaseHandler):
 
         # This massive joined load gets all the information which we will need
         # to generating the rankings.
-        self.contest = self.sql_session.query(Contest)\
-            .filter(Contest.id == contest_id)\
-            .options(joinedload('participations'))\
-            .options(joinedload('participations.submissions'))\
-            .options(joinedload('participations.submissions.token'))\
-            .options(joinedload('participations.submissions.results'))\
+        self.contest: Contest = (
+            self.sql_session.query(Contest)
+            .filter(Contest.id == contest_id)
+            .options(joinedload("participations"))
+            .options(joinedload("participations.submissions"))
+            .options(joinedload("participations.submissions.token"))
+            .options(joinedload("participations.submissions.results"))
             .first()
+        )
 
         # Preprocess participations: get data about teams, scores
         show_teams = False
@@ -65,7 +67,7 @@ class RankingHandler(BaseHandler):
             total_score = 0.0
             partial = False
             for task in self.contest.tasks:
-                t_score, t_partial = task_score(p, task, rounded=True)
+                t_score, t_partial = task_score(p, task)
                 p.scores.append((t_score, t_partial))
                 total_score += t_score
                 partial = partial or t_partial
@@ -92,7 +94,7 @@ class RankingHandler(BaseHandler):
             # globally) have been scored
             include_partial = False
 
-            contest = self.r_params["contest"]
+            contest: Contest = self.r_params["contest"]
 
             row = ["Username", "User"]
             if show_teams:

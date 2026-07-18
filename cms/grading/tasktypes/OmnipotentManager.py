@@ -30,16 +30,21 @@ import tempfile
 from functools import reduce
 
 from cms import config, rmtree
-from cms.db import Executable
-from cms.grading.ParameterTypes import ParameterTypeChoice, ParameterTypeInt
 from cms.grading.Sandbox import wait_without_std, Sandbox
-from cms.grading.languagemanager import LANGUAGES, get_language
-from cms.grading.steps import compilation_step, evaluation_step_before_run, \
-    evaluation_step_after_run, extract_outcome_and_text, \
-    human_evaluation_message, merge_execution_stats, trusted_step
-from cms.grading.tasktypes import check_files_number
-from cms.grading.tasktypes import TaskType, check_executables_number, \
-    check_manager_present, create_sandbox, delete_sandbox
+from cms.grading.languagemanager import get_language
+from cms.grading.steps import (
+    evaluation_step_before_run,
+    evaluation_step_after_run,
+    extract_outcome_and_text,
+    human_evaluation_message,
+    trusted_step,
+)
+from cms.grading.tasktypes import (
+    check_executables_number,
+    check_manager_present,
+    create_sandbox,
+    delete_sandbox,
+)
 from cms.grading.tasktypes.Communication import Communication
 
 logger = logging.getLogger(__name__)
@@ -112,7 +117,7 @@ class OmnipotentManager(Communication):
         manager_digest = job.managers[self.MANAGER_FILENAME].digest
 
         # Create FIFO dirs and first batch of FIFos
-        fifo_dir_base = tempfile.mkdtemp(dir=config.temp_dir)
+        fifo_dir_base = tempfile.mkdtemp(dir=config.global_.temp_dir)
 
         def fifo_dir(i, j):
             p = os.path.join(fifo_dir_base, f"fifo{i}_{j}")
@@ -120,7 +125,7 @@ class OmnipotentManager(Communication):
                 os.mkdir(p)
             return p
 
-        abortion_control_fifo_dir = tempfile.mkdtemp(dir=config.temp_dir)
+        abortion_control_fifo_dir = tempfile.mkdtemp(dir=config.global_.temp_dir)
         fifo_solution_quitter = os.path.join(abortion_control_fifo_dir, "sq")
         fifo_manager_quitter = os.path.join(abortion_control_fifo_dir, "mq")
         os.mkfifo(fifo_solution_quitter)
@@ -144,14 +149,15 @@ class OmnipotentManager(Communication):
 
         # Create the manager sandbox and copy manager and input and
         # reference output.
-        sandbox_mgr = create_sandbox(file_cacher, name="manager_evaluate")
+        sandbox_mgr = create_sandbox(0, file_cacher, name="manager_evaluate")
         job.sandboxes.append(sandbox_mgr.get_root_path())
         sandbox_mgr.create_file_from_storage(
-            self.MANAGER_FILENAME, manager_digest, executable=True)
+            self.MANAGER_FILENAME, manager_digest, file_cacher, executable=True
+        )
         sandbox_mgr.create_file_from_storage(
-            self.INPUT_FILENAME, job.input)
-        sandbox_mgr.create_file_from_storage(
-            self.OK_FILENAME, job.output)
+            self.INPUT_FILENAME, job.input, file_cacher
+        )
+        sandbox_mgr.create_file_from_storage(self.OK_FILENAME, job.output, file_cacher)
 
         # We could use trusted_step for the manager, since it's fully
         # admin-controlled. But trusted_step is only synchronous at the moment.
@@ -172,8 +178,10 @@ class OmnipotentManager(Communication):
         def sandbox_fifo_dir(i, j):
             return f"{sandbox_fifo_dir_base}/fifo{i}_{j}"
 
-        manager_time_limit = max(self.num_processes * (job.time_limit + 1.0),
-                                 config.trusted_sandbox_max_time_s)
+        manager_time_limit = max(
+            self.num_processes * (job.time_limit + 1.0),
+            config.sandbox.trusted_sandbox_max_time_s,
+        )
         manager_dirs_map = {abortion_control_fifo_dir:
                                 (sandbox_abortion_control_fifo_dir, "rw")}
 
@@ -192,11 +200,12 @@ class OmnipotentManager(Communication):
             sandbox_mgr,
             manager_command,
             manager_time_limit,
-            config.trusted_sandbox_max_memory_kib * 1024,
+            config.sandbox.trusted_sandbox_max_memory_kib * 1024,
             dirs_map=manager_dirs_map,
             writable_files=[self.OUTPUT_FILENAME],
             stdin_redirect=self.INPUT_FILENAME,
-            multiprocess=True)
+            multiprocess=True,
+        )
 
         solution_quitter = open(fifo_solution_quitter, "r")
         manager_quitter = open(fifo_manager_quitter, "w")
@@ -304,13 +313,16 @@ class OmnipotentManager(Communication):
                       flush=True)
 
             # Create the user sandbox(es) and copy the executable.
-            sandbox_user = [create_sandbox(file_cacher, name="user_evaluate")
-                            for i in indices]
+            sandbox_user = [
+                create_sandbox(i + 1, file_cacher, name="user_evaluate_" + str(i))
+                for i in indices
+            ]
             job.sandboxes.extend(s.get_root_path() for s in sandbox_user)
 
             for i in indices:
                 sandbox_user[i].create_file_from_storage(
-                    executable_filename, executable_digest, executable=True)
+                    executable_filename, executable_digest, file_cacher, executable=True
+                )
 
                 # Prepare the user submissions
                 language = get_language(job.language)
@@ -452,9 +464,9 @@ class OmnipotentManager(Communication):
         job.text = text
         job.plus = stats_user
 
-        delete_sandbox(sandbox_mgr, job.success, job.keep_sandbox)
+        delete_sandbox(sandbox_mgr, job.success, file_cacher, job.keep_sandbox)
         for s in sandbox_user:
-            delete_sandbox(s, job.success, job.keep_sandbox)
-        if job.success and not config.keep_sandbox and not job.keep_sandbox:
+            delete_sandbox(s, job.success, file_cacher, job.keep_sandbox)
+        if job.success and not config.worker.keep_sandbox and not job.keep_sandbox:
             rmtree(fifo_dir_base)
             rmtree(abortion_control_fifo_dir)

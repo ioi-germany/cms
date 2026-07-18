@@ -10,6 +10,7 @@
 # Copyright © 2016 Masaki Hara <ackie.h.gmai@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
 # Copyright © 2018 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2026 Tobias Lenz <t_lenz94@web.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -55,7 +56,7 @@ __all__ = [
     # contest
     "Contest", "Announcement",
     # user
-    "User", "Team", "Participation", "Message", "Question", "Group",
+    "Group", "User", "Team", "Participation", "Message", "Question",
     # admin
     "Admin",
     # task
@@ -67,8 +68,6 @@ __all__ = [
     # usertest
     "UserTest", "UserTestFile", "UserTestManager", "UserTestResult",
     "UserTestExecutable",
-    # printjob
-    "PrintJob",
     # init
     "init_db",
     # drop
@@ -82,9 +81,9 @@ __all__ = [
 
 # Instantiate or import these objects.
 
-version = 44
+version = 48
 
-engine = create_engine(config.database, echo=config.database_debug,
+engine = create_engine(config.database.url, echo=config.database.debug,
                        pool_timeout=60, pool_recycle=120)
 
 metadata = MetaData(engine)
@@ -98,14 +97,13 @@ from .base import Base
 from .fsobject import FSObject, LargeObject
 from .admin import Admin
 from .contest import Contest, Announcement
-from .user import User, Team, Participation, Message, Question, Group
+from .user import Group, User, Team, Participation, Message, Question
 from .task import Task, Statement, Attachment, Spoiler, Dataset, \
     Manager, Testcase
 from .submission import Submission, File, Token, SubmissionResult, \
     Executable, Evaluation
 from .usertest import UserTest, UserTestFile, UserTestManager, \
     UserTestResult, UserTestExecutable
-from .printjob import PrintJob
 
 from .init import init_db
 from .drop import drop_db
@@ -121,14 +119,14 @@ configure_mappers()
 # The following is a method of Dataset that cannot be put in the right
 # file because of circular dependencies.
 
-def get_submission_results_for_dataset(self, dataset):
+def get_submission_results_for_dataset(self, dataset) -> list[SubmissionResult]:
     """Return a list of all submission results against the specified
     dataset.
 
     Also preloads the executable and evaluation objects relative to
     the submission results.
 
-    returns ([SubmissionResult]): list of submission results.
+    returns: list of submission results.
 
     """
     # We issue this query manually to optimize it: we load all

@@ -2,21 +2,18 @@
 <html lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <link rel="shortcut icon" href="{{ url("static", "favicon.ico") }}" />
-    <link rel="stylesheet" type="text/css" href="{{ url("static", "reset.css") }}">
-    <link rel="stylesheet" type="text/css" href="{{ url("static", "aws_style.css") }}">
-    <script src="{{ url("static", "web_rpc.js") }}"></script>
-    <script src="{{ url("static", "aws_utils.js") }}"></script>
-    <script src="{{ url("static", "jq", "jquery-3.6.0.min.js") }}"></script>
-    <script src="{{ url("static", "jq", "jquery.jqplot.min.js") }}"></script>
-    <script src="{{ url("static", "jq", "jqplot.dateAxisRenderer.min.js") }}"></script>
-    <script src="{{ url("static", "jq", "jqplot.enhancedLegendRenderer.min.js") }}"></script>
-    <script src="{{ url("static", "sh", "shCore.js") }}"></script>
-    <script src="{{ url("static", "sh", "shBrushCpp.js") }}"></script>
-    <script src="{{ url("static", "sh", "shBrushDelphi.js") }}"></script>
-    <link rel="stylesheet" type="text/css" href="{{ url("static", "jq", "jquery.jqplot.min.css") }}"/>
-    <link rel="stylesheet" type="text/css" href="{{ url("static", "sh", "shCore.css") }}"/>
-    <link rel="stylesheet" type="text/css" href="{{ url("static", "sh", "shThemeDefault.css") }}"/>
+    <link rel="shortcut icon" href="{{ static_url("static", "favicon.ico") }}" />
+    <link rel="stylesheet" type="text/css" href="{{ static_url("static", "reset.css") }}">
+    <link rel="stylesheet" type="text/css" href="{{ static_url("static", "aws_style.css") }}">
+    <script src="{{ static_url("static", "web_rpc.js") }}"></script>
+    <script src="{{ static_url("static", "aws_utils.js") }}"></script>
+    <script src="{{ static_url("static", "jq", "jquery-3.6.0.min.js") }}"></script>
+    <script src="{{ static_url("static", "jq", "jquery.jqplot.min.js") }}"></script>
+    <script src="{{ static_url("static", "jq", "jqplot.dateAxisRenderer.min.js") }}"></script>
+    <script src="{{ static_url("static", "jq", "jqplot.enhancedLegendRenderer.min.js") }}"></script>
+    <link rel="stylesheet" type="text/css" href="{{ static_url("static", "jq", "jquery.jqplot.min.css") }}"/>
+    <link rel="stylesheet" type="text/css" href="{{ static_url("static", "prism.css") }}">
+    <script src="{{ static_url("static", "prism.js") }}" data-manual></script>
 
     {% if contest is none %}
     <title>Admin</title>
@@ -29,22 +26,20 @@
 function init()
 {
     {% if contest is none %}
-    utils = new CMS.AWSUtils("{{ url() }}", {{ timestamp|make_timestamp }}, 0, 0, 0, 0, -1);
-    utils.update_notifications();
-    setInterval(function() { utils.update_notifications(); }, 15000);
+    utils = new CMS.AWSUtils("{{ url() }}", {{ timestamp|make_timestamp }}, 0, 0, 0, 0, 0);
     {% else %}
     utils = new CMS.AWSUtils("{{ url() }}", {{ timestamp|make_timestamp }},
-        {{ contest.main_group.start|make_timestamp }}, {{ contest.main_group.stop|make_timestamp }},
-        {{ contest.main_group.analysis_start|make_timestamp }}, {{ contest.main_group.analysis_stop|make_timestamp }},
-        {{ phase }});
+        {{ contest.main_group.start|make_timestamp }},
+        {{ contest.main_group.stop|make_timestamp }},
+        {{ contest.main_group.analysis_start|make_timestamp }},
+        {{ contest.main_group.analysis_stop|make_timestamp }},
+        {{ contest.main_group.analysis_enabled | int }});
 
-    {% if phase < 3 %}
     utils.update_remaining_time();
-    var timer = setInterval(function() { utils.update_remaining_time(timer); }, 1000);
+    setInterval(function() { utils.update_remaining_time(); }, 1000);
     {% endif %}
     utils.update_notifications();
     setInterval(function() { utils.update_notifications(); }, 15000);
-    {% endif %}
 
     $(document).click(utils.hide_subpage);
 
@@ -52,6 +47,8 @@ function init()
     // that are added in the future.
     $(document).delegate('.toggling_on', 'click', utils.toggle_visibility);
     $(document).delegate('.toggling_off', 'click', utils.toggle_visibility);
+
+    $(".diff-radio").change(utils.update_diff_ids);
 
     {% block js_init %}{% endblock js_init %}
 }
@@ -83,9 +80,9 @@ $(document).ready(init);
           <h1 class="child">{{ contest.name }}</h1>
           {% endif %}
         </div>
-        {% if config.secret_key == config.secret_key_default %}
+        {% if config.web_server.secret_key == config.web_server.DEFAULT_SECRET_KEY %}
         <div class="secret_notice">
-          Change secret_key in cms.conf!<br/>
+          Change secret_key in cms.toml!<br/>
           For example,<br/>
           {{ get_hex_random_key() }}
         </div>
@@ -252,11 +249,10 @@ $(document).ready(init);
       <div id="border"></div>
       <div id="core">
         <div id="notifications" class="notifications"></div>
-        <div id="subpage" onclick="var event = arguments[0] || window.event; event.stopPropagation()">
-          <div id="subpage_border"></div>
-          <div id="subpage_background"></div>
+        <dialog id="subpage_popup">
+          <button id="subpage_close">x</button>
           <div id="subpage_content"></div>
-        </div>
+        </dialog>
         {% block core %}{% endblock core %}
       </div>
 

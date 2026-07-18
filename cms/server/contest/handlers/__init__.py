@@ -23,30 +23,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from .communication import \
-    CommunicationHandler, \
-    QuestionHandler
-from .main import \
-    LoginHandler, \
-    LogoutHandler, \
-    RegistrationHandler, \
-    StartHandler, \
-    NotificationsHandler, \
-    PrintingHandler, \
-    DocumentationHandler, \
-    CaptchaHandler
-from .task import \
-    TaskDescriptionHandler, \
-    TaskStatementViewHandler, \
-    TaskAttachmentViewHandler, \
-    TaskSpoilerViewHandler
-from .tasksubmission import \
-    SubmitHandler, \
-    TaskSubmissionsHandler, \
-    SubmissionStatusHandler, \
-    SubmissionDetailsHandler, \
-    SubmissionFileHandler, \
-    UseTokenHandler
 from .taskusertest import \
     UserTestInterfaceHandler, \
     UserTestHandler, \
@@ -54,6 +30,34 @@ from .taskusertest import \
     UserTestDetailsHandler, \
     UserTestIOHandler, \
     UserTestFileHandler
+from .tasksubmission import \
+    SubmitHandler, \
+    TaskSubmissionsHandler, \
+    SubmissionStatusHandler, \
+    SubmissionDetailsHandler, \
+    SubmissionFileHandler, \
+    UseTokenHandler
+from .task import \
+    TaskDescriptionHandler, \
+    TaskStatementViewHandler, \
+    TaskAttachmentViewHandler, \
+    TaskSpoilerViewHandler
+from .main import \
+    LoginHandler, \
+    LogoutHandler, \
+    RegistrationHandler, \
+    StartHandler, \
+    NotificationsHandler, \
+    DocumentationHandler, \
+    CaptchaHandler
+from .communication import \
+    CommunicationHandler, \
+    QuestionHandler
+from .api import \
+    ApiLoginHandler, \
+    ApiSubmissionListHandler, \
+    ApiSubmitHandler, \
+    ApiTaskListHandler
 
 
 HANDLERS = [
@@ -65,14 +69,13 @@ HANDLERS = [
     (r"/register", RegistrationHandler),
     (r"/start", StartHandler),
     (r"/notifications", NotificationsHandler),
-    (r"/printing", PrintingHandler),
     (r"/documentation", DocumentationHandler),
     (r"/captcha", CaptchaHandler),
 
     # Tasks
 
     (r"/tasks/(.*)/description", TaskDescriptionHandler),
-    (r"/tasks/(.*)/statements/(.*)", TaskStatementViewHandler),
+    (r"/tasks/(.*)/statements/([^/]*)(?:/.*)?", TaskStatementViewHandler),
     (r"/tasks/(.*)/attachments/(.*)", TaskAttachmentViewHandler),
     (r"/tasks/(.*)/spoilers/(.*)", TaskSpoilerViewHandler),
 
@@ -100,6 +103,12 @@ HANDLERS = [
 
     (r"/communication", CommunicationHandler),
     (r"/question", QuestionHandler),
+
+    # API
+    (r"/api/login", ApiLoginHandler),
+    (r"/api/task_list", ApiTaskListHandler),
+    (r"/api/(.*)/submit", ApiSubmitHandler),
+    (r"/api/(.*)/submission_list", ApiSubmissionListHandler),
 
     # The following prefixes are handled by WSGI middlewares:
     # * /static, defined in cms/io/web_service.py

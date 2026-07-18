@@ -24,13 +24,27 @@
 {% set can_play_token_now = can_play_token and tokens_info[2] is none %}
 
 {% block additional_js %}
+// Define TASK_LANGUAGES for task-specific language filtering
+var TASK_LANGUAGES = {
+{% for lang in task.get_allowed_languages() or [] %}
+    '{{ lang }}': {
+{% for extension in (lang|to_language).source_extensions %}
+        '{{ extension }}': true,
+{% endfor %}
+    },
+{% endfor %}
+};
 
 $(document).on("click", ".submission_list tbody tr td.status .details", function (event) {
     var submission_id = $(this).parent().parent().attr("data-submission");
     var modal = $("#submission_detail");
     var modal_body = modal.children(".modal-body");
-    modal_body.html('<div class="loading"><img src="{{ url("static", "loading.gif") }}"/>{% trans %}loading...{% endtrans %}</div>');
-    modal_body.load(utils.contest_url("tasks", "{{ task.name }}", "submissions", submission_id, "details"), function() {
+    modal_body.html('<div class="loading"><img src="{{ static_url("static", "loading.gif") }}"/>{% trans %}loading...{% endtrans %}</div>');
+    modal_body.load(utils.contest_url("tasks", "{{ task.name }}", "submissions", submission_id, "details"), function(response, status, xhr) {
+        if(status != "success") {
+            $(this).html("{% trans %}Error loading details, please refresh the page.{% endtrans %}");
+            return;
+        }
         $(".score_details .subtask .subtask-head").each(function () {
             $(this).prepend("<i class=\"icon-chevron-right\"></i>");
         });
@@ -94,7 +108,7 @@ update_score = function(score_elem, task_score_elem,
     task_score_span.text(task_score_message);
     if (task_score_is_partial) {
         task_score_span.append(
-            $("<img class=\"details\" src=\"{{ url("static", "loading.gif") }}\"/>"));
+            $("<img class=\"details\" src=\"{{ static_url("static", "loading.gif") }}\"/>"));
     }
     task_score_elem.removeClass("undefined");
     task_score_elem.removeClass("score_0");
@@ -112,7 +126,7 @@ update_scores = function (submission_id, data) {
 
     if (!terminal_status) {
         row.children("td.status").append(
-            $("<img class=\"details\" src=\"{{ url("static", "loading.gif") }}\"/>"));
+            $("<img class=\"details\" src=\"{{ static_url("static", "loading.gif") }}\"/>"));
     } else {
         row.children("td.status").append(
             $("<a class=\"details\">{% trans %}details{% endtrans %}</a>"));
@@ -201,15 +215,15 @@ $(document).ready(function () {
     {% if score_type.max_public_score > 0 and score_type.public_score_header is defined %}
         {# Show the public score (alone, if everything is public or tokens are disabled, or together with the tokened score). #}
     <div id="task_score_public"
-         class="{{ "span6" if two_task_scores else "span12" }} well well-small task_score {{ get_score_class(public_score, score_type.max_public_score, task.score_precision) }}">
+         class="{{ "span6" if two_task_scores else "span12" }} well well-small task_score {{ get_score_class(public_score, score_type.max_public_score) }}">
         <span>
         {{ score_type.public_score_header }}
         </span>
       <br/>
         <span class="score">
-            {{ score_type.format_score(public_score, score_type.max_public_score, none, task.score_precision, translation=translation) }}
+            {{ score_type.format_score(public_score, score_type.max_public_score, none, translation=translation) }}
         {% if is_score_partial %}
-            <img src="{{ url("static", "loading.gif") }}" />
+            <img src="{{ static_url("static", "loading.gif") }}" />
         {% endif %}
         </span>
     </div>
@@ -218,7 +232,7 @@ $(document).ready(function () {
     {% if can_use_tokens or score_type.feedback() == "full" or actual_phase == 3 %}
         {# Show the tokened score (alone if everything is non-public, or together with the public score). #}
     <div id="task_score_tokened"
-         class="{{ "span6" if two_task_scores else "span12" }}  well well-small task_score {{ get_score_class(actual_score if score_type.feedback() == "full" or actual_phase == 3 else tokened_score, score_type.max_score, task.score_precision) if can_use_tokens or score_type.feedback() == "full" or actual_phase == 3 else "undefined" }}">
+         class="{{ "span6" if two_task_scores else "span12" }}  well well-small task_score {{ get_score_class(actual_score if score_type.feedback() == "full" or actual_phase == 3 else tokened_score, score_type.max_score) if can_use_tokens or score_type.feedback() == "full" or actual_phase == 3 else "undefined" }}">
         <span>
         {% if score_type.private_score_header is defined %}
           {{ score_type.private_score_header }}
@@ -227,9 +241,9 @@ $(document).ready(function () {
       <br/>
         <span class="score">
         {% if can_use_tokens or score_type.feedback() == "full" or actual_phase == 3  %}
-            {{ score_type.format_score(actual_score if score_type.feedback() == "full" or actual_phase == 3 else tokened_score, score_type.max_score, none, task.score_precision, translation=translation) }}
+            {{ score_type.format_score(actual_score if score_type.feedback() == "full" or actual_phase == 3 else tokened_score, score_type.max_score, none, translation=translation) }}
             {% if is_score_partial %}
-            <img src="{{ url("static", "loading.gif") }}" />
+            <img src="{{ static_url("static", "loading.gif") }}" />
             {% endif %}
         {% else %}
             {% trans %}N/A{% endtrans %}
@@ -241,48 +255,50 @@ $(document).ready(function () {
 </div>
 {% endif %}
 
+{% if actual_phase == 0 or actual_phase == 3 or participation.unrestricted or (0 <= actual_phase <= 3 and contest.allow_unofficial_submission_before_analysis_mode) %}
+
 <h2 style="margin-bottom: 10px">{% trans %}Submit a solution{% endtrans %}</h2>
 
-{% set task_type = get_task_type(dataset=task.active_dataset) %}
-{% if task_type.ALLOW_PARTIAL_SUBMISSION %}
+  {% set task_type = get_task_type(dataset=task.active_dataset) %}
+  {% if task_type.ALLOW_PARTIAL_SUBMISSION %}
   <p><strong>{% trans %}You may submit any subset of outputs in a single submission.{% endtrans %}</strong></p>
-{% endif %}
+  {% endif %}
 
-{% if submissions_left is not none %}
+  {% if submissions_left is not none %}
     <div class="span5">
         <p>
         {% trans submissions_left=submissions_left %}You can submit {{ submissions_left }} more solution(s).{% endtrans %}
         </p>
     </div>
-{% endif %}
+  {% endif %}
 
 <div id="submit_solution" class="row">
     <div class="span5">
         <form class="form-horizontal" enctype="multipart/form-data" action="{{ contest_url("tasks", task.name, "submit") }}" method="POST">
             {{ xsrf_form_html|safe }}
             <fieldset>
-{% for filename in task.submission_format %}
+  {% for filename in task.submission_format %}
                 <div class="control-group">
                     <label class="control-label" for="input{{ loop.index0 }}">{{ filename|replace(".%l", ": ") }}</label>
                     <div class="controls">
                         <input type="file" class="input-xlarge"
                                id="input{{ loop.index0 }}" name="{{ filename }}"
                                onchange="CMS.CWSUtils.filter_languages($(this).parents('form').find('select[name=language] option'),
-                                                                       $(this).parents('form').find('input[type=file]'))"/>
+                                                                       $(this).parents('form').find('input[type=file]'), TASK_LANGUAGES)"/>
                     </div>
                 </div>
-{% endfor %}
-{% if task.submission_format|any("endswith", ".%l") %}
+  {% endfor %}
+  {% if task.submission_format|any("endswith", ".%l") %}
                 <div class="control-group">
                     <div class="controls">
                         <select name="language">
-{% for lang in contest.languages %}
+  {% for lang in task.get_allowed_languages() or [] %}
                             <option value="{{ lang }}">{{ lang }}</option>
-{% endfor %}
+  {% endfor %}
                         </select>
                     </div>
                 </div>
-{% endif %}
+  {% endif %}
                 <div class="control-group">
                     <div class="controls">
                         <button type="submit" class="btn btn-success">{% trans %}Submit{% endtrans %}</button>
@@ -292,7 +308,7 @@ $(document).ready(function () {
             </fieldset>
         </form>
     </div>
-{% if task.submission_format|length > 1 and not task.submission_format|any("endswith", ".%l") %}
+  {% if task.submission_format|length > 1 and not task.submission_format|any("endswith", ".%l") %}
     <div class="span4">
         <form class="form-horizontal" enctype="multipart/form-data" action="{{ contest_url("tasks", task.name, "submit") }}" method="POST">
             {{ xsrf_form_html|safe }}
@@ -312,9 +328,10 @@ $(document).ready(function () {
             </fieldset>
         </form>
     </div>
-{% endif %}
+  {% endif %}
 </div>
 
+{% endif %}
 
 <h2 style="margin: 40px 0 10px">{% trans %}Previous submissions{% endtrans %}</h2>
 
@@ -368,6 +385,7 @@ $(document).ready(function () {
     {% set more_than_one_block = True %}
   {{ macro_submission.rows(
       url,
+      static_url,
       contest_url,
       translation,
       xsrf_form_html,
@@ -377,6 +395,7 @@ $(document).ready(function () {
       can_use_tokens,
       can_play_token,
       can_play_token_now,
+      tokens_info,
       submissions_download_allowed,
       false,
       true) }}
@@ -388,6 +407,7 @@ $(document).ready(function () {
 <h3>{% trans %}Unofficial submissions{% endtrans %}</h3>
   {{ macro_submission.rows(
       url,
+      static_url,
       contest_url,
       translation,
       xsrf_form_html,
@@ -397,6 +417,7 @@ $(document).ready(function () {
       can_use_tokens,
       can_play_token,
       can_play_token_now,
+      tokens_info,
       submissions_download_allowed,
       false,
       false) }}
@@ -408,6 +429,7 @@ $(document).ready(function () {
 
 {{ macro_submission.rows(
     url,
+    static_url,
     contest_url,
     translation,
     xsrf_form_html,
@@ -417,6 +439,7 @@ $(document).ready(function () {
     can_use_tokens,
     can_play_token,
     can_play_token_now,
+    tokens_info,
     submissions_download_allowed,
     true,
     false) }}

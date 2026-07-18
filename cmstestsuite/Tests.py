@@ -20,6 +20,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import cmstestsuite.tasks.batch_and_output as batch_and_output
 import cmstestsuite.tasks.batch_fileio as batch_fileio
 import cmstestsuite.tasks.batch_fileio_managed as batch_fileio_managed
 import cmstestsuite.tasks.batch_stdio as batch_stdio
@@ -32,11 +33,13 @@ import cmstestsuite.tasks.communication_many_stdio_stubbed \
 import cmstestsuite.tasks.communication_stdio as communication_stdio
 import cmstestsuite.tasks.communication_stdio_stubbed \
     as communication_stdio_stubbed
+import cmstestsuite.tasks.interactive as interactive
+import cmstestsuite.tasks.interactive_many as interactive_many
 import cmstestsuite.tasks.outputonly as outputonly
 import cmstestsuite.tasks.outputonly_comparator as outputonly_comparator
 import cmstestsuite.tasks.twosteps as twosteps
 import cmstestsuite.tasks.twosteps_comparator as twosteps_comparator
-from cmstestsuite.Test import Test, CheckOverallScore, CheckCompilationFail, \
+from cmstestsuite.Test import CheckMemoryLimit, Test, CheckOverallScore, CheckCompilationFail, \
     CheckTimeout, CheckTimeoutWall, CheckNonzeroReturn, CheckUserTestEvaluated
 
 
@@ -92,6 +95,66 @@ ALL_TESTS = [
          },
          languages=ALL_LANGUAGES,
          checks=[CheckOverallScore(100, 100)]),
+
+    Test('interactive-correct',
+         task=interactive, filenames=['interactive-correct.%l'],
+         languages=(LANG_CPP, LANG_CPP14, LANG_CPP17, LANG_CPP20, LANG_PYTHON3, LANG_PYPY3),
+         checks=[CheckOverallScore(100, 100)]),
+
+    Test('interactive-wrong',
+         task=interactive, filenames=['interactive-wrong.%l'],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(0, 100)]),
+
+    Test('interactive-sleep',
+         task=interactive, filenames=['interactive-sleep.%l'],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(0, 100), CheckTimeoutWall()]),
+
+    Test('interactive-tle',
+         task=interactive, filenames=['interactive-tle.%l'],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(0, 100), CheckTimeout()]),
+
+    Test('interactive-crash',
+         task=interactive, filenames=['interactive-crash.%l'],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(0, 100), CheckNonzeroReturn()]),
+
+    Test('interactive-wrong-protocol',
+         task=interactive, filenames=['interactive-wrong-protocol.%l'],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(0, 100)]),
+
+    Test('interactive-many-correct',
+         task=interactive_many, filenames=['interactive-many-correct.%l'],
+         languages=(LANG_CPP, LANG_CPP14, LANG_CPP17, LANG_CPP20),
+         checks=[CheckOverallScore(100, 100)]),
+
+    Test('interactive-many-wrong',
+         task=interactive_many, filenames=['interactive-many-wrong.%l'],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(0, 100)]),
+
+    Test('interactive-many-early-wa',
+         task=interactive_many, filenames=['interactive-many-early-wa.%l'],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(0, 100)]),
+
+    Test('interactive-many-sleep',
+         task=interactive_many, filenames=['interactive-many-sleep.%l'],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(0, 100), CheckTimeoutWall()]),
+
+    Test('interactive-many-tle',
+         task=interactive_many, filenames=['interactive-many-tle.%l'],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(0, 100), CheckTimeout()]),
+
+    Test('interactive-many-crash',
+         task=interactive_many, filenames=['interactive-many-crash.%l'],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(0, 100), CheckNonzeroReturn()]),
 
     Test('correct-freopen',
          task=batch_fileio, filenames=['correct-freopen.%l'],
@@ -256,12 +319,12 @@ ALL_TESTS = [
          task=batch_stdio, filenames=['oom-static.%l'],
          languages=(LANG_C, LANG_CPP, LANG_CPP14,
                     LANG_CPP17, LANG_CPP20, LANG_PASCAL),
-         checks=[CheckOverallScore(0, 100)]),
+         checks=[CheckOverallScore(0, 100), CheckMemoryLimit()]),
 
     Test('oom-heap',
          task=batch_stdio, filenames=['oom-heap.%l'],
          languages=ALL_LANGUAGES,
-         checks=[CheckOverallScore(0, 100)]),
+         checks=[CheckOverallScore(0, 100), CheckMemoryLimit()]),
 
     # Tasks with graders.
 
@@ -382,6 +445,58 @@ ALL_TESTS = [
                                               "twosteps-correct-second.%l"],
          languages=(LANG_C,),
          checks=[CheckOverallScore(0, 100)]),
+
+
+    # BatchAndOutput
+    Test('batchandoutput-batchonly-correct',
+         task=batch_and_output, filenames=[
+             "output-0-stdio.%l", None, None, None],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(50, 100)]),
+
+    Test('batchandoutput-batchonly-incorrect',
+         task=batch_and_output, filenames=[
+             "output-1-stdio.%l", None, None, None],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(0, 100)]),
+
+    Test('batchandoutput-outputonly-correct',
+         task=batch_and_output, filenames=[
+             None, "outputonly-1.txt", "outputonly-1.txt", "outputonly-0.txt"],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(75, 100)]),
+
+    Test('batchandoutput-outputonly-incorrect',
+         task=batch_and_output, filenames=[
+             None, "outputonly-0.txt", "outputonly-0.txt", "outputonly-1.txt"],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(0, 100)]),
+
+    Test('batchandoutput-mixed-correct',
+         task=batch_and_output, filenames=[
+             "output-0-stdio.%l", "outputonly-1.txt", "outputonly-1.txt", "outputonly-0.txt"],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(100, 100)]),
+
+    Test('batchandoutput-mixed-incorrect',
+         task=batch_and_output, filenames=[
+             "output-1-stdio.%l", "outputonly-0.txt", "outputonly-0.txt", "outputonly-1.txt"],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(0, 100)]),
+
+    Test('batchandoutput-tle',
+         task=batch_and_output, filenames=[
+             "timeout-cputime.%l", "outputonly-1.txt", "outputonly-1.txt", "outputonly-0.txt"],
+         languages=(LANG_CPP,),
+         checks=[CheckOverallScore(75, 100)]),
+
+    # TODO(veluca): are these the semantics we want?
+    Test('batchandoutput-compile-fail',
+         task=batch_and_output, filenames=[
+             "compile-fail.%l", "outputonly-1.txt", "outputonly-1.txt", "outputonly-0.txt"],
+         languages=(LANG_CPP,),
+         checks=[CheckCompilationFail()]),
+
 
     # Writing to files not allowed.
 

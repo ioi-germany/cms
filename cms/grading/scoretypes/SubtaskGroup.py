@@ -28,8 +28,6 @@ import json
 import logging
 import copy
 
-from six import iteritems
-
 logger = logging.getLogger(__name__)
 
 
@@ -584,7 +582,7 @@ class SubtaskGroup(ScoreType):
         expected_final_score_info = submission_info["expected_final_score_info"]
 
         expectations = {tuple(json.loads(key)): val for key, val
-                        in iteritems(submission_info["expected"])}
+                        in submission_info["expected"].items()}
         case_expectations = submission_info["expected_case"]
         possible_task = expectations[()]
 

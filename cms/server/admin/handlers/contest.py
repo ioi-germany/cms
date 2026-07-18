@@ -10,6 +10,9 @@
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 # Copyright © 2016 Amir Keivan Mohtashami <akmohtashami97@gmail.com>
 # Copyright © 2018 William Di Luigi <williamdiluigi@gmail.com>
+# Copyright © 2026 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2026 Chuyang Wang <mail@chuyang-wang.de>
+# Copyright © 2026 Jonathan Baumann <Jonathan.Baumann@edu.ruhr-uni-bochum.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,7 +32,7 @@
 """
 
 from cms import ServiceCoord, get_service_shards, get_service_address
-from cms.db import Contest, Group, Participation, Submission
+from cms.db import Contest, Participation, Group, Submission
 from cmscommon.datetime import make_datetime
 
 from .base import BaseHandler, SimpleContestHandler, SimpleHandler, \
@@ -78,7 +81,7 @@ class AddContestHandler(
 
 class ContestHandler(SimpleContestHandler("contest.html")):
     @require_permission(BaseHandler.PERMISSION_ALL)
-    def post(self, contest_id):
+    def post(self, contest_id: str):
         contest = self.safe_get_item(Contest, contest_id)
 
         try:
@@ -89,8 +92,7 @@ class ContestHandler(SimpleContestHandler("contest.html")):
 
             assert attrs.get("name") is not None, "No contest name specified."
 
-            allowed_localizations = \
-                self.get_argument("allowed_localizations", "")
+            allowed_localizations: str = self.get_argument("allowed_localizations", "")
             if allowed_localizations:
                 attrs["allowed_localizations"] = \
                     [x.strip() for x in allowed_localizations.split(",")
@@ -103,6 +105,7 @@ class ContestHandler(SimpleContestHandler("contest.html")):
             self.get_bool(attrs, "submissions_download_allowed")
             self.get_bool(attrs, "allow_questions")
             self.get_bool(attrs, "allow_user_tests")
+            self.get_bool(attrs, "allow_unofficial_submission_before_analysis_mode")
             self.get_bool(attrs, "block_hidden_participations")
             self.get_bool(attrs, "allow_password_authentication")
             self.get_bool(attrs, "allow_registration")
@@ -120,6 +123,7 @@ class ContestHandler(SimpleContestHandler("contest.html")):
             self.get_int(attrs, "max_submission_number")
             self.get_int(attrs, "max_user_test_number")
             self.get_timedelta_sec(attrs, "min_submission_interval")
+            self.get_timedelta_sec(attrs, "min_submission_interval_grace_period")
             self.get_timedelta_sec(attrs, "min_user_test_interval")
 
             self.get_string(attrs, "timezone", empty=None)
@@ -129,6 +133,7 @@ class ContestHandler(SimpleContestHandler("contest.html")):
             assert main_group_id != "null", "Please select a valid main group"
 
             attrs["main_group"] = self.safe_get_item(Group, main_group_id)
+            self.get_group_settings(contest.main_group)
 
             # Update the contest.
             contest.set_attrs(attrs)
@@ -150,7 +155,7 @@ class OverviewHandler(BaseHandler):
 
     """
     @require_permission(BaseHandler.AUTHENTICATED)
-    def get(self, contest_id=None):
+    def get(self, contest_id: str | None = None):
         if contest_id is not None:
             self.contest = self.safe_get_item(Contest, contest_id)
 
@@ -160,7 +165,7 @@ class OverviewHandler(BaseHandler):
 
 class ResourcesListHandler(BaseHandler):
     @require_permission(BaseHandler.AUTHENTICATED)
-    def get(self, contest_id=None):
+    def get(self, contest_id: str | None = None):
         if contest_id is not None:
             self.contest = self.safe_get_item(Contest, contest_id)
 

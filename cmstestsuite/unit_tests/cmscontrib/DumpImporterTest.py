@@ -22,7 +22,6 @@ import json
 import os
 import unittest
 
-# Needs to be first to allow for monkey patching the DB connection string.
 from cmstestsuite.unit_tests.databasemixin import DatabaseMixin
 
 from cms.db import Contest, User, FSObject, Session, version
@@ -50,12 +49,13 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
             "name": "contestname",
             "description": "contest description 你好",
             "tasks": ["task_key"],
-            "groups": ["group_key"],
+            "participations": ["part_key"],
             "main_group": "group_key",
         },
         "group_key": {
             "_class": "Group",
-            "name": "groupname",
+            "contest": "contest_key",
+            "name": "default",
         },
         "task_key": {
             "_class": "Task",
@@ -98,6 +98,7 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
         },
         "sub_key": {
             "_class": "Submission",
+            "opaque_id": 458958398291,
             "timestamp": 1_234_567_890.123,
             "participation": "part_key",
             "task": "task_key",
@@ -153,19 +154,17 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
             skip_generated=skip_generated,
             skip_submissions=skip_submissions,
             skip_user_tests=False,
-            skip_users=skip_users,
-            skip_print_jobs=False).do_import()
+            skip_users=skip_users).do_import()
 
     def write_dump(self, dump):
         destination = self.get_path("contest.json")
         with open(destination, "wt", encoding="utf-8") as f:
             json.dump(dump, f, indent=4, sort_keys=True)
 
-    def write_files(self, data):
+    def write_files(self, data: dict[str, tuple[str, bytes]]):
         """Write files and descriptions on the filesystem.
 
-        data ({str: (str, bytes)}): dictionary mapping digest to description
-            and content.
+        data: dictionary mapping digest to description and content.
 
         """
         f_path = self.makedirs("files")
@@ -194,7 +193,7 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
         self.assertCountEqual([(t.name, t.title) for t in c.tasks],
                               task_names_and_titles)
         self.assertCountEqual([(u.user.username, u.user.last_name)
-                                for u in c.participations],
+                               for u in c.participations],
                               usernames_and_last_names)
 
     def assertContestNotInDb(self, name):
@@ -309,7 +308,6 @@ class TestDumpImporter(DatabaseMixin, FileSystemMixin, unittest.TestCase):
         self.assertUserNotInDb("username")
         self.assertFileNotInDb(TestDumpImporter.GENERATED_FILE_DIGEST)
         self.assertFileNotInDb(TestDumpImporter.NON_GENERATED_FILE_DIGEST)
-
 
     def test_import_old(self):
         """Test importing an old dump.

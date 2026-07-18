@@ -12,6 +12,8 @@
 # Copyright © 2016 Peyman Jabbarzade Ganje <peyman.jabarzade@gmail.com>
 # Copyright © 2017 Valentin Rosca <rosca.valentin2012@gmail.com>
 # Copyright © 2021 Manuel Gundlach <manuel.gundlach@gmail.com>
+# Copyright © 2026 Tobias Lenz <t_lenz94@web.de>
+# Copyright © 2026 Chuyang Wang <mail@chuyang-wang.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -39,10 +41,7 @@ except:
     # Monkey-patch: Tornado 4.5.3 does not work on Python 3.11 by default
     collections.MutableMapping = collections.abc.MutableMapping
 
-try:
-    import tornado4.web as tornado_web
-except ImportError:
-    import tornado.web as tornado_web
+import tornado.web
 
 from cms.db import Contest, Group, Message, Participation, Submission, User, \
     Team
@@ -107,13 +106,15 @@ class RemoveParticipationHandler(BaseHandler):
     def get(self, contest_id, user_id):
         self.contest = self.safe_get_item(Contest, contest_id)
         user = self.safe_get_item(User, user_id)
-        participation = self.sql_session.query(Participation)\
-                            .filter(Participation.contest_id == contest_id)\
-                            .filter(Participation.user_id == user_id)\
-                            .first()
+        participation: Participation = (
+            self.sql_session.query(Participation)
+            .filter(Participation.contest_id == contest_id)
+            .filter(Participation.user_id == user_id)
+            .first()
+        )
         # Check that the participation is valid.
         if participation is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
         submission_query = self.sql_session.query(Submission)\
             .filter(Submission.participation == participation)
@@ -128,10 +129,12 @@ class RemoveParticipationHandler(BaseHandler):
         self.contest = self.safe_get_item(Contest, contest_id)
         user = self.safe_get_item(User, user_id)
 
-        participation = self.sql_session.query(Participation)\
-            .filter(Participation.user == user)\
-            .filter(Participation.contest == self.contest)\
+        participation: Participation = (
+            self.sql_session.query(Participation)
+            .filter(Participation.user == user)
+            .filter(Participation.contest == self.contest)
             .first()
+        )
 
         # Unassign the user from the contest.
         self.sql_session.delete(participation)
@@ -152,9 +155,9 @@ class AddContestUserHandler(BaseHandler):
         self.contest = self.safe_get_item(Contest, contest_id)
 
         try:
-            user_id = self.get_argument("user_id")
+            user_id: str = self.get_argument("user_id")
             assert user_id != "null", "Please select a valid user"
-            group_id = self.get_argument("group_id")
+            group_id: str = self.get_argument("group_id")
             assert group_id != "null", "Please select a valid group"
         except Exception as error:
             self.service.add_notification(
@@ -166,8 +169,8 @@ class AddContestUserHandler(BaseHandler):
         group = self.safe_get_item(Group, group_id)
 
         # Create the participation.
-        participation = Participation(contest=self.contest,
-                                      user=user, group=group)
+        participation = Participation(contest=self.contest, user=user,
+                                      group=group)
         self.sql_session.add(participation)
 
         if self.try_commit():
@@ -186,14 +189,16 @@ class ParticipationHandler(BaseHandler):
     @require_permission(BaseHandler.AUTHENTICATED)
     def get(self, contest_id, user_id):
         self.contest = self.safe_get_item(Contest, contest_id)
-        participation = self.sql_session.query(Participation)\
-                            .filter(Participation.contest_id == contest_id)\
-                            .filter(Participation.user_id == user_id)\
-                            .first()
+        participation: Participation = (
+            self.sql_session.query(Participation)
+            .filter(Participation.contest_id == contest_id)
+            .filter(Participation.user_id == user_id)
+            .first()
+        )
 
         # Check that the participation is valid.
         if participation is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
         submission_query = self.sql_session.query(Submission)\
             .filter(Submission.participation == participation)
@@ -211,14 +216,16 @@ class ParticipationHandler(BaseHandler):
             self.url("contest", contest_id, "user", user_id, "edit")
 
         self.contest = self.safe_get_item(Contest, contest_id)
-        participation = self.sql_session.query(Participation)\
-                            .filter(Participation.contest_id == contest_id)\
-                            .filter(Participation.user_id == user_id)\
-                            .first()
+        participation: Participation = (
+            self.sql_session.query(Participation)
+            .filter(Participation.contest_id == contest_id)
+            .filter(Participation.user_id == user_id)
+            .first()
+        )
 
         # Check that the participation is valid.
         if participation is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
         try:
             attrs = participation.get_attrs()
@@ -236,12 +243,23 @@ class ParticipationHandler(BaseHandler):
             # Update the participation.
             participation.set_attrs(attrs)
 
+            # Update the group of the participant
+            group_id = self.get_argument("group_id")
+            participation.group = self.safe_get_item(Group, group_id)
+
             # Update the team
             self.get_string(attrs, "team")
-            team = self.sql_session.query(Team)\
-                       .filter(Team.code == attrs["team"])\
-                       .first()
-            participation.team = team
+            team_code = attrs["team"]
+
+            if team_code:  # If a team code is provided
+                team: Team | None = (
+                    self.sql_session.query(Team).filter(Team.code == team_code).first()
+                )
+                if team is None:
+                    raise ValueError(f"Team with code '{team_code}' does not exist")
+                participation.team = team
+            else:  # If no team code is provided, set to None
+                participation.team = None
 
             group_id = self.get_argument("group_id")
             participation.group = self.safe_get_item(Group, group_id)
@@ -267,14 +285,16 @@ class MessageHandler(BaseHandler):
     def post(self, contest_id, user_id):
         user = self.safe_get_item(User, user_id)
         self.contest = self.safe_get_item(Contest, contest_id)
-        participation = self.sql_session.query(Participation)\
-            .filter(Participation.contest == self.contest)\
-            .filter(Participation.user == user)\
+        participation: Participation | None = (
+            self.sql_session.query(Participation)
+            .filter(Participation.contest == self.contest)
+            .filter(Participation.user == user)
             .first()
+        )
 
         # check that the participation is valid
         if participation is None:
-            raise tornado_web.HTTPError(404)
+            raise tornado.web.HTTPError(404)
 
         message = Message(make_datetime(),
                           self.get_argument("message_subject", ""),
