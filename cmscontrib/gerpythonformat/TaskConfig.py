@@ -265,8 +265,8 @@ class MySubtask(Scope):
         save (bool): TODO
 
         name (string): name of this test case; the test case object will be
-                       accessible as an attribute with this name of the 
-                       subtask object; the subtask should not already have a 
+                       accessible as an attribute with this name of the
+                       subtask object; the subtask should not already have a
                        field with this name;
                        by default, we take gNR where NR is the index of this
                        test case (starting at 0)
@@ -1766,7 +1766,7 @@ class TaskConfig(CommonConfig, Scope):
         """
         for t in getattr(self.task, subtask_name).cases:
             self.add_testcase(t, **kwargs)
-            
+
     @exported_function
     def subsume_group(self, group_name, *args, subtask_name=None, **kwargs):
         """
@@ -2169,27 +2169,24 @@ class TaskConfig(CommonConfig, Scope):
     def _makedataset(self, file_cacher, tdb):
         def make_subtask_parameters(s):
             return {
-                'name': s.description,
-                'key': list(s.unique_name),
-                'sample': s.sample,
-                'points': s.points,
-                'testcases': "|".join(c.codename for c in s.cases),
-                'scorestyle': s.scorestyle
+                "name": s.description,
+                "key": list(s.unique_name),
+                "sample": s.sample,
+                "max_score": s.points,
+                "testcases": "|".join(c.codename for c in s.cases),
+                "scorestyle": s.scorestyle,
             }
 
-        score_type_parameters = \
-        {
-            'feedback': self.feedback,
-            'multiscore': self.multiscore,
-            'subtasks': [make_subtask_parameters(s) for s in self.subtasks],
-        }
+        score_type_parameters = [make_subtask_parameters(s) for s in self.subtasks]
 
-        ddb = Dataset(task=tdb,
-                      description=self._dataset,
-                      task_type=self.tasktype,
-                      task_type_parameters=self.tasktypeparameters,
-                      score_type="GroupMin",
-                      score_type_parameters=score_type_parameters)
+        ddb = Dataset(
+            task=tdb,
+            description=self._dataset,
+            task_type=self.tasktype,
+            task_type_parameters=self.tasktypeparameters,
+            score_type="GroupMin",
+            score_type_parameters=score_type_parameters,
+        )
         ddb.time_limit = float(self._timelimit)
         ddb.memory_limit = self._memorylimit * 1024 * 1024
 
@@ -2607,6 +2604,8 @@ class TaskConfig(CommonConfig, Scope):
                 # uses it
                 evaluation_job.operation.testcase_codename = codename
                 evaluation_job.to_submission(submission_result)
+                # the dataset is viewonly, so we have to add it manually
+                submission_result.evaluations[-1].dataset = ddb
             submission_result.set_evaluation_outcome()
             print("\033[2K\033[1G", end='', flush=True)
 
@@ -2617,8 +2616,7 @@ class TaskConfig(CommonConfig, Scope):
 
         def w(details, stat_desc, length, z=False):
             status, desc = stat_desc
-            return pad_left(v(status, details.strip() + " " + desc, z), 
-                            length)
+            return pad_left(v(status, details.strip() + " " + desc, z), length)
 
         def v(status, desc, z=False):
             return {  -1 : red,
@@ -2639,10 +2637,19 @@ class TaskConfig(CommonConfig, Scope):
             with myheader(st["name"], st["verdict"]):
                 print_msg(st["verdict"][2], use_ellipsis=False)
                 print()
-                print(indent(side_by_side([bold("Time"), bold("Memory"),
-                                           bold("Answer"), 
-                                           bold("Grader response")],
-                                          [2, 14, 27, 37])))
+                print(
+                    indent(
+                        side_by_side(
+                            [
+                                bold("Time"),
+                                bold("Memory"),
+                                bold("Answer"),
+                                bold("Grader response"),
+                            ],
+                            [2, 14, 27, 37],
+                        )
+                    )
+                )
 
                 for c in st["cases"]:
                     l = [(b, (a)) for a, b in c["line"]]

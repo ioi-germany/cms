@@ -35,7 +35,7 @@ task.
 import json
 import logging
 import re
-from typing import TypedDict, NotRequired
+from typing import TypedDict, NotRequired, cast
 from abc import ABCMeta, abstractmethod
 
 from cms import FEEDBACK_LEVEL_RESTRICTED
@@ -44,7 +44,7 @@ from cms.grading.steps import EVALUATION_MESSAGES
 from cms.locale import Translation, DEFAULT_TRANSLATION
 from cms.server.jinja2_toolbox import GLOBAL_ENVIRONMENT
 from cms.grading import format_status_text
-from cms.grading.scoring import UnitTest
+from cms.grading.scoring import ScoreVerdict, UnitTest
 from jinja2 import Template
 
 
@@ -232,6 +232,8 @@ class ScoreTypeGroupParametersDict(TypedDict):
     testcases: int | str | list[str]
     threshold: NotRequired[float]
     always_show_testcases: NotRequired[bool]
+    key: NotRequired[list[str]]
+    name: NotRequired[str]
 
 
 # the format of parameters is impossible to type-hint correctly, it seems...
@@ -600,8 +602,86 @@ class ScoreTypeGroup(ScoreTypeAlone):
     NEGATIVE_SCORE_EXPECTED = "N.B.: You expected a negative score for " \
                               "this group---why?"
 
+    def compute_group_verdict(
+        self,
+        expected: list[str | tuple[float, float]],
+        testcase_results: list[list[str]],
+        scores: list[float],
+        parameter: ScoreTypeGroupParametersDict,
+    ):
+        """Determine the verdict and a reason for a single group of a unit test.
+
+        expected: the expectations declared for this group
+        testcase_results: the results obtained for each of the group's testcases.
+        scores: the score for each testcase.
+
+        """
+        results = set(reason for r in testcase_results for reason in r)
+        meaningful_scores = [
+            score
+            for r, score in zip(testcase_results, scores)
+            if UnitTest.meaningful_score(r)
+        ]
+
+        # check score
+        score_expectations = UnitTest.get_intervals(expected) or [(1.0, 1.0)]
+        score_verdict: ScoreVerdict
+        if meaningful_scores:
+            subtask_score = self.reduce(meaningful_scores, parameter)
+            score_verdict = UnitTest.judge_score(subtask_score, score_expectations)
+        else:
+            score_verdict = ScoreVerdict.OK
+
+        missing: list[str] = []
+
+        # judge this group
+        if "arbitrary" in expected:
+            res = (1337, ScoreTypeGroup.IGN, ScoreTypeGroup.GRP_IGNORED)
+
+        # check time and memory
+        elif any(x not in expected for x in results if not UnitTest.ignore(x)):
+            res = (-1, ScoreTypeGroup.FAILED, ScoreTypeGroup.GRP_TOO_LOW)
+
+        elif score_verdict == ScoreVerdict.TOO_LOW:
+            res = (-1, ScoreTypeGroup.FAILED, ScoreTypeGroup.GRP_TOO_LOW)
+
+        # no "time" or "memory" verdict, maybe "time?" or "memory?"?
+        elif any(x.endswith("?") and x[:-1] not in expected for x in results):
+            res = (0, ScoreTypeGroup.AMBIG, ScoreTypeGroup.GRP_AMBIGUOUS)
+
+        # time and memory limits okay---but is this a bad thing?
+        elif ("time" in expected or "memory" in expected) and (
+            "time" not in results and "memory" not in results
+        ):
+            res = (-1, ScoreTypeGroup.FAILED, ScoreTypeGroup.GRP_TOO_HIGH)
+            missing = (["time"] if "time" in expected else []) + (
+                ["memory"] if "memory" in expected else []
+            )
+
+        elif score_verdict == ScoreVerdict.OK:
+            res = (1, ScoreTypeGroup.OKAY, ScoreTypeGroup.GRP_OKAY)
+
+        else:
+            res = (-1, ScoreTypeGroup.FAILED, ScoreTypeGroup.GRP_TOO_HIGH)
+
+        status, short, desc = res
+
+        # sanity checks
+        zero_verdict = UnitTest.judge_score(0.0, score_expectations)
+        if zero_verdict == ScoreVerdict.TOO_HIGH and "arbitrary" not in expected:
+            desc += "\n\n" + ScoreTypeGroup.NEGATIVE_SCORE_EXPECTED
+
+        if (
+            zero_verdict == ScoreVerdict.TOO_LOW
+            and ("time" in expected or "memory" in expected)
+            and "arbitrary" not in expected
+        ):
+            desc += "\n\n" + ScoreTypeGroup.IMPOSSIBLE_EXPECTATIONS
+
+        return (status, short, desc), missing
+
     def compute_unit_test_score(
-        self, submission_result: SubmissionResult, submission_info: str
+        self, submission_result: SubmissionResult, _submission_info: str | None
     ):
         """Compute the score of a unit test.
 
@@ -619,27 +699,31 @@ class ScoreTypeGroup(ScoreTypeAlone):
                     memory: 33659290                      in bytes
 
         """
-        if submission_info is None:
-            return {"unit_test": True, # should this be False?
-                    "verdict": (-1, "Not a Unit Test")}
+        if _submission_info is None:
+            return {
+                "unit_test": True,  # should this be False?
+                "verdict": (-1, "Not a Unit Test"),
+            }
+        if any(not isinstance(subtask, dict) for subtask in self.parameters):
+            return {
+                "unit_test": False,
+                "verdict": (-1, "Unit Tests not available for this ScoreType"),
+            }
 
-        submission_info = json.loads(submission_info)
-        expectations = {
+        submission_info: dict = json.loads(_submission_info)
+        expectations: dict[tuple, list[str | tuple[float, float]]] = {
             tuple(json.loads(key)): val
             for key, val in submission_info["expected"].items()
         }
 
-        useful = set()
-        essential = set()
+        useful: set[str] = set()
+        essential: set[str] = set()
         cases_by_subtask = self.retrieve_target_testcases()
-        all_cases = {c for s in cases_by_subtask
-                       for c in s}
-        dominated = {d : {c for c in all_cases if c != d}
-                     for d in all_cases}
+        all_cases = {c for s in cases_by_subtask for c in s}
+        dominated = {d: {c for c in all_cases if c != d} for d in all_cases}
 
         # Actually, this means it didn't even compile
         if not submission_result.evaluated():
-            subtasks_failed = True
             subtasks = []
         else:
             evaluations = dict((ev.codename, ev)
@@ -647,109 +731,44 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
             subtasks = []
 
-            for subtask, testcases in zip(self.parameters["subtasks"], cases_by_subtask):
-                subtasks.append({
-                    "name": subtask["name"],
-                    "cases": [],
-                    "verdict": (42, "", "")
-                    })
+            for _subtask, testcases in zip(self.parameters, cases_by_subtask):
+                subtask = cast(ScoreTypeGroupParametersDict, _subtask)
+                subtasks.append(
+                    {"name": subtask["name"], "cases": [], "verdict": (42, "", "")}
+                )
 
                 expected = expectations[tuple(subtask["key"])]
-                scores = []
-                meaningful_scores = []
-                cases = []
-                results = []
+                scores: list[float] = []
+                cases: list[str] = []
+                results: list[list[str]] = []
 
                 for tc in testcases:
                     ev = evaluations[tc] # TODO: adjust this if we want to support multiscoring
                     r = UnitTest.get_result(submission_info["limits"], ev)
                     this_score = float(ev.outcome)
                     scores.append(this_score)
-
-                    if UnitTest.meaningful_score(r):
-                        meaningful_scores.append(this_score)
-
                     cases.append(tc)
-                    results += r
+                    results.append(r)
 
-                # check score
-                score_expectations = UnitTest.get_intervals(expected) or \
-                                     [[1.0, 1.0]]
-                if meaningful_scores:
-                    subtask_score = self.reduce(meaningful_scores, subtask)
-                    score_verdict = UnitTest.judge_score(subtask_score,
-                                                         score_expectations)
-                else:
-                    score_verdict = 0
-
-                missing = []
-
-                # judge this group
-                if "arbitrary" in expected:
-                    subtasks[-1]["verdict"] = (1337, ScoreTypeGroup.IGN,
-                                               ScoreTypeGroup.GRP_IGNORED)
-
-                # check time and memory
-                elif any(x not in expected for x in results
-                                           if not UnitTest.ignore(x)):
-                    subtasks[-1]["verdict"] = (-1, ScoreTypeGroup.FAILED,
-                                               ScoreTypeGroup.GRP_TOO_LOW)
-
-                # score too low?
-                elif score_verdict < 0:
-                    subtasks[-1]["verdict"] = (-1, ScoreTypeGroup.FAILED,
-                                               ScoreTypeGroup.GRP_TOO_LOW)
-
-                # no "time" or "memory" verdict, maybe "time?" or "memory?"?
-                elif any(x.endswith("?") and x[:-1] not in expected
-                         for x in results):
-                    subtasks[-1]["verdict"] = (0, ScoreTypeGroup.AMBIG,
-                                               ScoreTypeGroup.GRP_AMBIGUOUS)
-
-                # time and memory limits okay---but is this a bad thing?
-                elif ("time" in expected or "memory" in expected) and \
-                     ("time" not in results and "memory" not in results \
-                      and "0.0" not in results):
-                    subtasks[-1]["verdict"] = (-1, ScoreTypeGroup.FAILED,
-                                               ScoreTypeGroup.GRP_TOO_HIGH)
-                    missing = (["time"] if "time" in expected else []) + \
-                              (["memory"] if "memory" in expected else [])
-
-                elif score_verdict == 0:
-                    subtasks[-1]["verdict"] = (1, ScoreTypeGroup.OKAY,
-                                               ScoreTypeGroup.GRP_OKAY)
-
-                else:
-                    subtasks[-1]["verdict"] = (-1, ScoreTypeGroup.FAILED,
-                                               ScoreTypeGroup.GRP_TOO_HIGH)
-
-                # sanity checks
-                def append_to_verdict(st, msg):
-                    status, short, desc = st["verdict"]
-                    st["verdict"] = (status, short, desc + "\n\n" + msg)
-
-                if UnitTest.judge_score(0.0, score_expectations) > 0 and \
-                   "arbitrary" not in expected:
-                    append_to_verdict(subtasks[-1],
-                                      ScoreTypeGroup.NEGATIVE_SCORE_EXPECTED)
-
-                if UnitTest.judge_score(0.0, score_expectations) < 0 and \
-                   ("time" in expected or "memory" in expected) and \
-                   "arbitrary" not in expected:
-                    append_to_verdict(subtasks[-1],
-                                      ScoreTypeGroup.IMPOSSIBLE_EXPECTATIONS)
+                subtasks[-1]["verdict"], missing = self.compute_group_verdict(
+                    expected, results, scores, subtask
+                )
 
                 for tc in testcases:
                     ev = evaluations[tc] # TODO: adjust this if we want to support multiscoring
                     r = UnitTest.get_result(submission_info["limits"], ev)
-                    l = self.case_line(r, expected, missing)
-                    g = format_status_text((ev.text)).strip()
+                    line = self.case_line(r, expected, missing)
+                    grader_text = format_status_text((ev.text)).strip()
 
-                    subtasks[-1]["cases"].append({"line": l,
-                                                  "grader": g,
-                                                  "time": ev.execution_time,
-                                                  "memory": ev.execution_memory,
-                                                  "codename": tc})
+                    subtasks[-1]["cases"].append(
+                        {
+                            "line": line,
+                            "grader": grader_text,
+                            "time": ev.execution_time,
+                            "memory": ev.execution_memory,
+                            "codename": tc,
+                        }
+                    )
 
                 subtasks[-1]["max_runtime"] = \
                     max((c["time"] for c in subtasks[-1]["cases"]),
@@ -761,7 +780,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
                 """
                 Check testcase utility
                 """
-                if subtask["points"] == 0: # used to be subtask["sample"]
+                if subtask["max_score"] == 0:  # used to be subtask["sample"]
                     continue
 
                 for i, tc in enumerate(testcases):
@@ -772,12 +791,14 @@ class ScoreTypeGroup(ScoreTypeAlone):
                     dominated[tc] &= \
                         {cases[j] for j in self.dominated_by(scores, i, subtask)}
 
-        prec = submission_info["score_precision"]
+        prec = self.score_precision
         total_score = self.compute_score(submission_result)[0]
-        expected_score = submission_info["expected_score"]
-        score_okay = \
-            round(expected_score[0], prec) <= round(total_score, prec) \
-                                           <= round(expected_score[1], prec)
+        expected_score: tuple[float, float] = submission_info["expected_score"]
+        score_okay = (
+            round(expected_score[0], prec)
+            <= total_score
+            <= round(expected_score[1], prec)
+        )
         okay = score_okay and not any(s["verdict"][0] <= 0 for s in subtasks)
 
         return {
@@ -795,58 +816,66 @@ class ScoreTypeGroup(ScoreTypeAlone):
             "useful": list(useful)
         }
 
-    def case_line(self, results, expected, missing):
+    def case_line(
+        self,
+        results: list[str],
+        expected: list[str | tuple[float, float]],
+        missing: list[str],
+    ):
         """Information about a single testcase as part of a group
            This function returns a list of pairs, where the first entry
            visualises the respective result and the second one is >0
            iff the result is as expected
         """
-        symbols = ['✓', '≈', '✗', '―']
+        symbols = ["✓", "≈", "✗", "―"]
 
-        def badness(key, r):
-            if key in r:
+        def badness(reason, r):
+            if reason in r:
                 return 2
-            elif key + '?' in r:
+            elif reason + "?" in r:
                 return 1
             else:
                 return 0
 
-        def get_int(x, y):
-            if x > y:
+        def get_int(actual: int, expected: int):
+            if actual > expected:
                 return -1
-            elif x == y:
+            elif actual == expected:
                 return 1
             else:
                 return 0
 
-        L = []
+        line: list[tuple[str, int]] = []
 
         # TODO: do something more clever here, like marking the time entry red when we
         # expected TLE for this group but all cases ran in time and memory?
-        for x in ['time', 'memory']:
-            this_badness = badness(x, results)
-            exp_badness = badness(x, expected)
+        for reason in ["time", "memory"]:
+            this_badness = badness(reason, results)
+            exp_badness = badness(reason, expected)
 
-            if x in missing:
-                L.append((symbols[this_badness], -1))
+            if reason in missing:
+                line.append((symbols[this_badness], -1))
             else:
-                L.append((symbols[this_badness],
-                         get_int(this_badness, exp_badness)))
+                line.append((symbols[this_badness], get_int(this_badness, exp_badness)))
 
         if UnitTest.meaningful_score(results):
             scores = [x for x in results if UnitTest.is_score(x)]
             assert len(scores) == 1
-            L.append((scores[0], 0)) # TODO: let the score type do something clever here?
+            line.append(
+                (scores[0], 0)
+            )  # TODO: let the score type do something clever here?
         else:
-            L.append((symbols[-1], 0))
+            line.append((symbols[-1], 0))
 
         if "arbitrary" in expected:
-            for i in range(0, len(L)):
-                L[i] = (L[i][0], 0)
+            for i in range(0, len(line)):
+                line[i] = (line[i][0], 0)
 
-        return L
+        return line
 
-    def essential_testcase(self, scores, idx, parameter):
+    def essential_testcase(
+        self, scores: list[float], idx: int, parameter: ScoreTypeGroupParametersDict
+    ):
         """
         Helper method for testcase utility that decides whether removing a
         given testcase from a given group would affect the scoring of a
@@ -856,7 +885,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
             given submission
         idx (int): the index of the testcase in question in the scores
             parameter
-        parameter (list): the parameters of the current subtagroupsk
+        parameter (list): the parameters of the current subtask
         """
         if len(scores) == 1:
             return True
@@ -865,7 +894,9 @@ class ScoreTypeGroup(ScoreTypeAlone):
         score_exc = self.reduce(scores[:idx] + scores[idx + 1:], parameter)
         return score_inc + ScoreTypeGroup.THRESHOLD_STRICT < score_exc
 
-    def weak_testcase(self, scores, idx, parameter):
+    def weak_testcase(
+        self, scores: list[float], idx: int, parameter: ScoreTypeGroupParametersDict
+    ):
         """
         Helper method for testcase utility that decides whether a testcase
         is a "weak" for a given group and submission, meaning whether it
@@ -886,7 +917,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
             given submission
         idx (int): the index of the testcase in question in the scores
             parameter
-        parameter (list): the parameters of the current subtagroupsk
+        parameter (list): the parameters of the current subtask
         """
         if self.essential_testcase(scores, idx, parameter):
             return False
@@ -900,7 +931,9 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
         return score_exc > score_inc + ScoreTypeGroup.THRESHOLD_LAX
 
-    def dominated_by(self, scores, idx, parameter):
+    def dominated_by(
+        self, scores: list[float], idx: int, parameter: ScoreTypeGroupParametersDict
+    ):
         """
         Helper method for testcase utility that determines for a given testcase
         x all cases y in the current group such that x is (not necessarily

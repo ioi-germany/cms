@@ -24,10 +24,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import namedtuple
+from enum import Enum
 
 from sqlalchemy.orm import joinedload
 
 from cms.db import Submission, Dataset, Participation, Task
+from cms.db.submission import Evaluation
 from cmscommon.constants import \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK, SCORE_MODE_MAX_TOKENED_LAST
 
@@ -305,16 +307,36 @@ def _task_score_max(
     return max_score
 
 
+class LimitVerdict(Enum):
+    OK = 1
+    EXCEEDED = -1
+    AMBIGUOUS = 0
+
+
+class ScoreVerdict(Enum):
+    OK = 0
+    TOO_LOW = -1
+    TOO_HIGH = 1
+
+
 class UnitTest:
-    """Functions for basic unit tests
-    """
+    """Functions for basic unit tests"""
+
     @staticmethod
-    def get_result(limits, evaluation):
+    def _check_limit(value: float, weak_limit: float, strong_limit: float):
+        if value > weak_limit:
+            return LimitVerdict.EXCEEDED
+        if value < strong_limit:
+            return LimitVerdict.OK
+        return LimitVerdict.AMBIGUOUS
+
+    @staticmethod
+    def get_result(limits: dict, evaluation: Evaluation):
         """Collect information about the evaluation.
 
         limits (dict): a dictionary with entries weak_time_limit and
                        strong_time_limit
-        evaluation (Evaluation): the Evaluation object to study
+        evaluation: the Evaluation object to study
 
         return ([unicode]): a list of reasons of failure:
                             time, time?, memory, memory? and possibly a
@@ -322,103 +344,99 @@ class UnitTest:
                             been satisfied)
 
         """
-        result = []
-
-        def check(val, weak, strong):
-            if val > weak:
-                return -1
-            if val < strong:
-                return 1
-            else:
-                return 0
+        result: list[str] = []
 
         # check time constraints
         # TODO What if this is None?
         if evaluation.execution_time is not None:
-            timeverdict = check(float(evaluation.execution_time),
-                                float(limits["weak_time_limit"]),
-                                float(limits["strong_time_limit"]))
+            timeverdict = UnitTest._check_limit(
+                float(evaluation.execution_time),
+                float(limits["weak_time_limit"]),
+                float(limits["strong_time_limit"]),
+            )
 
             if "wall clock limit exceeded" in (evaluation.text)[0]:
-                timeverdict = -1
+                timeverdict = LimitVerdict.EXCEEDED
 
-            if timeverdict == -1:
+            if timeverdict == LimitVerdict.EXCEEDED:
                 result.append("time")
-            elif timeverdict == 0:
+            elif timeverdict == LimitVerdict.AMBIGUOUS:
                 result.append("time?")
 
         # check memory constraints
         # TODO What if this is None?
         if evaluation.execution_memory is not None:
-            memverdict = check(float(evaluation.execution_memory) / 2**20,
-                               float(limits["weak_mem_limit"]),
-                               float(limits["strong_mem_limit"]))
+            memverdict = UnitTest._check_limit(
+                float(evaluation.execution_memory) / 2**20,
+                float(limits["weak_mem_limit"]),
+                float(limits["strong_mem_limit"]),
+            )
             if "violating memory limits" in (evaluation.text)[0]:
-                memverdict = -1
-            if memverdict == -1:
+                memverdict = LimitVerdict.EXCEEDED
+            if memverdict == LimitVerdict.EXCEEDED:
                 result.append("memory")
-            elif memverdict == 0:
+            elif memverdict == LimitVerdict.AMBIGUOUS:
                 result.append("memory?")
 
         # check solution (if possible)
-        if UnitTest.meaningful_score(result):
+        if UnitTest.meaningful_score(result) and evaluation.outcome is not None:
             result.append(evaluation.outcome)
 
         return result
 
     @staticmethod
-    def ignore(x):
-        return UnitTest.is_score(x) or x == "time?" or x == "memory?"
+    def ignore(reason: str):
+        return UnitTest.is_score(reason) or reason in ("time?", "memory?")
 
     @staticmethod
-    def is_score(x):
+    def is_score(reason: str):
         try:
-            float(x)
+            float(reason)
             return True
-        except:
+        except Exception:
             return False
 
     @staticmethod
-    def remove_scores(l):
-        return [x for x in l if not UnitTest.is_score(x)]
+    def remove_scores(results: list[str]):
+        return [reason for reason in results if not UnitTest.is_score(reason)]
 
     @staticmethod
-    def compare_score(score, interval):
+    def compare_score(score: float, interval: tuple[float, float]):
         if score < interval[0]:
-            return -1
+            return ScoreVerdict.TOO_LOW
         if score > interval[1]:
-            return 1
-        return 0
+            return ScoreVerdict.TOO_HIGH
+        return ScoreVerdict.OK
 
     @staticmethod
-    def meaningful_score(results):
+    def meaningful_score(results: list[str]):
         """Test whether the score actually makes sense
         """
-        return not('time' in results or 'memory' in results)
+        return not ("time" in results or "memory" in results)
 
     @staticmethod
-    def is_interval(x):
-        if not isinstance(x, list):
+    def is_interval(value: object):
+        if not isinstance(value, list) and not isinstance(value, tuple):
             return False
-        if len(x) != 2:
+        if len(value) != 2:
             return False
 
-        return UnitTest.is_score(x[0]) and UnitTest.is_score(x[1])
+        return UnitTest.is_score(value[0]) and UnitTest.is_score(value[1])
 
     @staticmethod
-    def get_intervals(l):
-        return [x for x in l if UnitTest.is_interval(x)]
+    def get_intervals(expectations: list) -> list[tuple[float, float]]:
+        return [(x[0], x[1]) for x in expectations if UnitTest.is_interval(x)]
 
     @staticmethod
-    def remove_intervals(l):
-        return [x for x in l if not UnitTest.is_interval(x)]
+    def remove_intervals(expectations: list):
+        return [x for x in expectations if not UnitTest.is_interval(x)]
 
     @staticmethod
-    def judge_score(x, intervals):
-        l = [UnitTest.compare_score(x, i) for i in intervals]
+    def judge_score(score: float, intervals: list[tuple[float, float]]):
+        comparisons = [UnitTest.compare_score(score, i) for i in intervals]
 
-        if any(x < 0 for x in l):
-            return -1
-        if any(x > 0 for x in l):
-            return 1
-        return 0
+        if any(x == ScoreVerdict.TOO_LOW for x in comparisons):
+            return ScoreVerdict.TOO_LOW
+        if any(x == ScoreVerdict.TOO_HIGH for x in comparisons):
+            return ScoreVerdict.TOO_HIGH
+        return ScoreVerdict.OK
