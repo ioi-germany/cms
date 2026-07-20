@@ -345,7 +345,7 @@ class SubmissionDetailsHandler(ContestHandler):
             # what the task says.
             is_analysis_mode = self.r_params["actual_phase"] == 3
             if submission.is_unit_test():
-                raw_details = sr.unit_test_score_details
+                raw_details = sr.unit_test_score_details["subtasks"]
             elif score_type.feedback() == "full" or submission.tokened() or \
                  is_analysis_mode:
                 raw_details = sr.score_details

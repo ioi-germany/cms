@@ -722,6 +722,8 @@ class ScoreTypeGroup(ScoreTypeAlone):
         all_cases = {c for s in cases_by_subtask for c in s}
         dominated = {d: {c for c in all_cases if c != d} for d in all_cases}
 
+        total_score, normal_subtasks, _, _, _ = self.compute_score(submission_result)
+
         # Actually, this means it didn't even compile
         if not submission_result.evaluated():
             subtasks = []
@@ -731,11 +733,14 @@ class ScoreTypeGroup(ScoreTypeAlone):
 
             subtasks = []
 
-            for _subtask, testcases in zip(self.parameters, cases_by_subtask):
+            for _subtask, testcases, normal_subtask in zip(
+                self.parameters, cases_by_subtask, normal_subtasks
+            ):
                 subtask = cast(ScoreTypeGroupParametersDict, _subtask)
-                subtasks.append(
-                    {"name": subtask["name"], "cases": [], "verdict": (42, "", "")}
-                )
+                subtasks.append(normal_subtask)
+                if "name" in subtask:
+                    subtasks[-1]["name"] = subtask["name"]
+                subtasks[-1]["verdict"] = (42, "", "")
 
                 expected = expectations[tuple(subtask["key"])]
                 scores: list[float] = []
@@ -754,28 +759,25 @@ class ScoreTypeGroup(ScoreTypeAlone):
                     expected, results, scores, subtask
                 )
 
-                for tc in testcases:
+                for tc_idx, tc in enumerate(testcases):
                     ev = evaluations[tc] # TODO: adjust this if we want to support multiscoring
                     r = UnitTest.get_result(submission_info["limits"], ev)
                     line = self.case_line(r, expected, missing)
                     grader_text = format_status_text((ev.text)).strip()
 
-                    subtasks[-1]["cases"].append(
-                        {
-                            "line": line,
-                            "grader": grader_text,
-                            "time": ev.execution_time,
-                            "memory": ev.execution_memory,
-                            "codename": tc,
-                        }
-                    )
+                    testcase = subtasks[-1]["testcases"][tc_idx]
+                    testcase["line"] = line
+                    testcase["grader"] = grader_text
+                    testcase["codename"] = tc
+                    testcase["show_in_restricted_feedback"] = True
+                    testcase["show_in_oi_restricted_feedback"] = True
 
-                subtasks[-1]["max_runtime"] = \
-                    max((c["time"] for c in subtasks[-1]["cases"]),
-                        default=None)
-                subtasks[-1]["max_memory"] = \
-                    max((c["memory"] for c in subtasks[-1]["cases"]),
-                        default=None)
+                subtasks[-1]["max_runtime"] = max(
+                    (c["time"] for c in subtasks[-1]["testcases"]), default=None
+                )
+                subtasks[-1]["max_memory"] = max(
+                    (c["memory"] for c in subtasks[-1]["testcases"]), default=None
+                )
 
                 """
                 Check testcase utility
@@ -792,7 +794,6 @@ class ScoreTypeGroup(ScoreTypeAlone):
                         {cases[j] for j in self.dominated_by(scores, i, subtask)}
 
         prec = self.score_precision
-        total_score = self.compute_score(submission_result)[0]
         expected_score: tuple[float, float] = submission_info["expected_score"]
         score_okay = (
             round(expected_score[0], prec)
