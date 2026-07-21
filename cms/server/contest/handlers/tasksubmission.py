@@ -144,19 +144,12 @@ class TaskSubmissionsHandler(ContestHandler):
             .all()
         )
 
-        score_type = task.active_dataset.score_type_object
-
         public_score, is_public_score_partial = task_score(
             participation, task, public=True)
         tokened_score, is_tokened_score_partial = task_score(
             participation, task, only_tokened=True)
-        actual_score, is_actual_score_partial = task_score(
-            participation, task)
-
-        # The first two should be the same, anyway.
-        is_score_partial = \
-            is_public_score_partial or is_tokened_score_partial or \
-            (is_actual_score_partial and score_type.feedback() == "full")
+        # These two should be the same, anyway.
+        is_score_partial = is_public_score_partial or is_tokened_score_partial
 
         submissions_left_contest = None
         if self.contest.max_submission_number is not None:
@@ -189,7 +182,6 @@ class TaskSubmissionsHandler(ContestHandler):
                     task=task, submissions=submissions,
                     public_score=public_score,
                     tokened_score=tokened_score,
-                    actual_score=actual_score,
                     is_score_partial=is_score_partial,
                     tokens_task=task.token_mode,
                     tokens_info=tokens_info,
@@ -230,23 +222,13 @@ class SubmissionStatusHandler(ContestHandler):
             .options(joinedload(Submission.token))\
             .options(joinedload(Submission.results))\
             .all()
-
-        score_type = task.active_dataset.score_type_object
-
         data["task_public_score"], public_score_is_partial = \
             task_score(participation, task, public=True)
         data["task_tokened_score"], tokened_score_is_partial = \
             task_score(participation, task, only_tokened=True)
-
-        if score_type.feedback() == "full" or \
-           self.r_params["actual_phase"] == 3:
-            data["task_actual_score"], actual_score_is_partial = \
-                task_score(participation, task)
-
         # These two should be the same, anyway.
         data["task_score_is_partial"] = \
-            public_score_is_partial or tokened_score_is_partial or \
-            (score_type.feedback() == "full" and actual_score_is_partial)
+            public_score_is_partial or tokened_score_is_partial
 
         score_type = task.active_dataset.score_type_object
         data["task_public_score_message"] = score_type.format_score(
@@ -255,11 +237,6 @@ class SubmissionStatusHandler(ContestHandler):
         data["task_tokened_score_message"] = score_type.format_score(
             data["task_tokened_score"], score_type.max_score, None,
             translation=self.translation)
-
-        if score_type.feedback() == "full":
-            data["task_actual_score_message"] = score_type.format_score(
-                data["task_actual_score"], score_type.max_score, None,
-                translation=self.translation)
 
     @api_login_required
     @actual_phase_required(0, 1, 2, 3, 4)
@@ -291,7 +268,7 @@ class SubmissionStatusHandler(ContestHandler):
             self.add_task_score(submission.participation, task, data)
 
             score_type = task.active_dataset.score_type_object
-            if True:
+            if score_type.max_public_score > 0:
                 data["max_public_score"] = score_type.max_public_score
                 if data["status"] == SubmissionResult.SCORED:
                     data["public_score"] = sr.public_score
@@ -299,14 +276,12 @@ class SubmissionStatusHandler(ContestHandler):
                         sr.public_score, score_type.max_public_score,
                         sr.public_score_details,
                         translation=self.translation)
-            if (
-                submission.token is not None
-                or self.r_params["actual_phase"] == 3
-                or score_type.feedback() == "full"
-                or submission.is_unit_test()
-            ):
+            if score_type.max_public_score < score_type.max_score:
                 data["max_score"] = score_type.max_score
-                if data["status"] == SubmissionResult.SCORED:
+                if data["status"] == SubmissionResult.SCORED \
+                        and (submission.token is not None
+                             or self.r_params["actual_phase"] == 3
+                             or submission.is_unit_test()):
                     data["score"] = sr.score
                     data["score_message"] = score_type.format_score(
                         sr.score, score_type.max_score,
@@ -345,9 +320,8 @@ class SubmissionDetailsHandler(ContestHandler):
             # what the task says.
             is_analysis_mode = self.r_params["actual_phase"] == 3
             if submission.is_unit_test():
-                raw_details = sr.unit_test_score_details["subtasks"]
-            elif score_type.feedback() == "full" or submission.tokened() or \
-                 is_analysis_mode:
+                raw_details = sr.unit_test_score_details
+            elif submission.tokened() or is_analysis_mode:
                 raw_details = sr.score_details
             else:
                 raw_details = sr.public_score_details

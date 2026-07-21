@@ -32,7 +32,10 @@ from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, \
     merge_constraints, read_frequency, check_bounds
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX_SUBTASK
-from cms import FEEDBACK_LEVEL_FULL, FEEDBACK_LEVEL_RESTRICTED
+from cms import (
+    FEEDBACK_LEVEL_FULL,
+    FEEDBACK_LEVEL_OI_RESTRICTED,
+)
 from cms.db import Task, Statement, Testcase, Dataset, \
     Attachment, Spoiler, Manager, Submission, File, \
     SubmissionResult
@@ -1992,10 +1995,10 @@ class TaskConfig(CommonConfig, Scope):
         Additionally, used time and memory are hidden in those groups.
 
         """
-        self._feedback_level = FEEDBACK_LEVEL_RESTRICTED
+        self._feedback_level = FEEDBACK_LEVEL_OI_RESTRICTED
 
     def _has_restricted_feedback_level(self):
-        return self._feedback_level == FEEDBACK_LEVEL_RESTRICTED
+        return self._feedback_level == FEEDBACK_LEVEL_OI_RESTRICTED
 
     def score_mode(self):
         if self._score_mode is None:
@@ -2651,7 +2654,7 @@ class TaskConfig(CommonConfig, Scope):
                     )
                 )
 
-                for c in st["cases"]:
+                for c in st["testcases"]:
                     l = [(b, (a)) for a, b in c["line"]]
                     ftime = "%.3fs" % c["time"]
                     if c["memory"] is None:

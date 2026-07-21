@@ -43,13 +43,14 @@ unit_test (boolean): whether to display only the unit tests (true) or
 {% endif %}
         <col class="status"/>
 {% if score_type is defined %}
-    {% if 0 < score_type.max_public_score %}
+    {% if 0 < score_type.max_public_score < score_type.max_score %}
         <col class="public_score"/>
+        <col class="total_score"/>
+        {% set num_cols = num_cols + 2 %}
+    {% else %}
+        <col class="total_score"/>
         {% set num_cols = num_cols + 1 %}
     {% endif %}
-        <col class="total_score"/>
-    {% set num_cols = num_cols + 1 %}
-
 {% endif %}
 {% if submissions_download_allowed %}
         <col class="files"/>
@@ -71,10 +72,12 @@ unit_test (boolean): whether to display only the unit tests (true) or
 {% endif %}
             <th class="status">{% trans %}Status{% endtrans %}</th>
 {% if score_type is defined %}
-    {% if 0 < score_type.max_public_score and score_type.public_score_header is defined %}
-            <th class="public_score"> {{ score_type.public_score_header }} </th>
+    {% if 0 < score_type.max_public_score < score_type.max_score %}
+            <th class="public_score">{% trans %}Public score{% endtrans %}</th>
+            <th class="total_score">{% trans %}Total score{% endtrans %}</th>
+    {% else %}
+            <th class="total_score">{% trans %}Score{% endtrans %}</th>
     {% endif %}
-            <th class="total_score">{% trans %}Actual score{% endtrans %} </th>
 {% endif %}
 {% if unit_test %}
             <th class="verdict">{% trans %}Verdict{% endtrans %}</th>
@@ -202,8 +205,8 @@ unit_test (bool): whether this is a unit test
     </td>
     {% endif %}
 {% endif %}
-{% if score_type is defined %}
-    {% if status == SubmissionResult.SCORED and (s.token is not none or actual_phase == 3 or score_type.feedback() == "full" or unit_test) %}
+{% if score_type is defined and score_type.max_public_score < score_type.max_score %}
+    {% if status == SubmissionResult.SCORED and (s.token is not none or actual_phase == 3 or unit_test) %}
     <td class="total_score {{ get_score_class(sr.score, score_type.max_score) }}">
         {{ score_type.format_score(sr.score, score_type.max_score, sr.score_details, translation=translation) }}
     </td>
