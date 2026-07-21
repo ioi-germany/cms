@@ -129,12 +129,7 @@ class ContestHandler(SimpleContestHandler("contest.html")):
             self.get_string(attrs, "timezone", empty=None)
             self.get_int(attrs, "score_precision")
 
-            main_group_id = self.get_argument("main_group_id")
-            assert main_group_id != "null", "Please select a valid main group"
-
-            attrs["main_group"] = self.safe_get_item(Group, main_group_id)
             self.get_group_settings(contest.main_group)
-
             # Update the contest.
             contest.set_attrs(attrs)
 
