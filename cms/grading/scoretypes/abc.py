@@ -176,7 +176,6 @@ class ScoreType(metaclass=ABCMeta):
         """
         pass
 
-    @abstractmethod
     def num_sample_cases(self) -> int:
         """Returns the number of sample testcases in this problem"""
         return 0
