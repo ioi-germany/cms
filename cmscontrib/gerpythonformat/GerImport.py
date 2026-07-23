@@ -227,7 +227,7 @@ class GerImport(Service):
                             session.query(Submission)
                             .filter(Submission.participation == test_pdb1)
                             .filter(Submission.task == tdb1)
-                            .filter(Submission.additional_info is not None)
+                            .filter(Submission.additional_info.isnot(None))
                             .all()
                         )
                         for sdb1 in sdb1s:
