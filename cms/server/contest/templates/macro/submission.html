@@ -43,6 +43,10 @@ unit_test (boolean): whether to display only the unit tests (true) or
 {% endif %}
         <col class="status"/>
 {% if score_type is defined %}
+    {% if 0 < score_type.max_sample_score %}
+        <col class="sample_score"/>
+        {% set num_cols = num_cols + 1 %}
+    {% endif %}
     {% if 0 < score_type.max_public_score < score_type.max_score %}
         <col class="public_score"/>
         <col class="total_score"/>
@@ -72,6 +76,9 @@ unit_test (boolean): whether to display only the unit tests (true) or
 {% endif %}
             <th class="status">{% trans %}Status{% endtrans %}</th>
 {% if score_type is defined %}
+    {% if 0 < score_type.max_sample_score %}
+            <th class="sample_score">{% trans %}Sample Score{% endtrans %}</th>
+    {% endif %}
     {% if 0 < score_type.max_public_score < score_type.max_score %}
             <th class="public_score">{% trans %}Public score{% endtrans %}</th>
             <th class="total_score">{% trans %}Total score{% endtrans %}</th>
@@ -194,6 +201,18 @@ unit_test (bool): whether this is a unit test
         <a class="details">{% trans %}details{% endtrans %}</a>
 {% endif %}
     </td>
+{% if score_type is defined and score_type.max_sample_score > 0 %}
+    {% if status == SubmissionResult.SCORED %}
+    {% set sample_score = sr.public_score_details|map(attribute='sample_score', default=0.0)|sum %}
+    <td class="sample_score {{ get_score_class(sample_score, score_type.max_sample_score) }}">
+        {{ score_type.format_score(sample_score, score_type.max_sample_score, none, translation=translation) }}
+    </td>
+    {% else %}
+    <td class="sample_score undefined">
+        {% trans %}N/A{% endtrans %}
+    </td>
+    {% endif %}
+{% endif %}
 {% if score_type is defined and score_type.max_public_score > 0 %}
     {% if status == SubmissionResult.SCORED %}
     <td class="public_score {{ get_score_class(sr.public_score, score_type.max_public_score) }}">

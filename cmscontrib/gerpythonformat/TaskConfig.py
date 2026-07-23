@@ -2540,19 +2540,25 @@ class TaskConfig(CommonConfig, Scope):
             return float(rel * self._timelimit)
 
         sdb.additional_info = json.dumps(
-            {"limits": {"weak_time_limit": t_abs(submission.weak_time_limit),
-                        "strong_time_limit": t_abs(
-                            submission.strong_time_limit),
-                        "weak_mem_limit": m_abs(submission.weak_mem_limit),
-                        "strong_mem_limit": m_abs(
-                            submission.strong_mem_limit)},
-             "unit_test": True,
-             "expected": submission.expectations,
-             "expected_case": submission.case_expectations,
-             "expected_score": submission.score,
-             "expected_score_info": submission.score_info,
-             "task_name": self.name,
-             "score_precision": tdb.score_precision}, sort_keys=True)
+            {
+                "limits": {
+                    "weak_time_limit": t_abs(submission.weak_time_limit),
+                    "strong_time_limit": t_abs(submission.strong_time_limit),
+                    "weak_mem_limit": m_abs(submission.weak_mem_limit),
+                    "strong_mem_limit": m_abs(submission.strong_mem_limit),
+                },
+                "unit_test": True,
+                "expected": submission.expectations,
+                "expected_case": submission.case_expectations,
+                "expected_score": submission.score,
+                "expected_score_info": submission.score_info,
+                "expected_sample_score": submission.sample_score,
+                "expected_sample_score_info": submission.sample_score_info,
+                "task_name": self.name,
+                "score_precision": tdb.score_precision,
+            },
+            sort_keys=True,
+        )
 
         return sdb
 

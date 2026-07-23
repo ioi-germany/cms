@@ -511,6 +511,9 @@ td.token_rules p:last-child {
     width: 20%;
 }
 
+.submission_list colgroup col.sample_score {
+    width: 20%;
+}
 .submission_list colgroup col.total_score {
     width: 20%;
 }
@@ -557,11 +560,13 @@ td.token_rules p:last-child {
 }
 
 .submission_list td.public_score.undefined,
+.submission_list td.sample_score.undefined,
 .unit_test_list tr.unit_test_undefined > td.verdict {
     color: #AAA;
 }
 
-.submission_list td.public_score.score_0 {
+.submission_list td.public_score.score_0,
+.submission_list td.sample_score.score_0 {
     background-color: hsla(0, 100%, 50%, 0.4);
 }
 
@@ -570,7 +575,8 @@ td.unit_test_failed {
     background-color: hsla(0, 100%, 50%, 0.4) !important;
 }
 
-.submission_list tr:hover td.public_score.score_0 {
+.submission_list tr:hover td.public_score.score_0,
+.submission_list tr:hover td.sample_score.score_0 {
     background-color: hsla(0, 100%, 50%, 0.5);
 }
 
@@ -580,18 +586,22 @@ tr:hover td.unit_test_failed {
 }
 
 tr.unit_test_failed > td.verdict {
-    background-color: hsla(0, 100%, 50%, 0.7) !important;
+    color: darkred;
+    font-weight: 700;
 }
 
-.submission_list td.public_score.score_0_100 {
+.submission_list td.public_score.score_0_100,
+.submission_list td.sample_score.score_0_100 {
     background-color: hsla(60, 100%, 50%, 0.4);
 }
 
-.submission_list tr:hover td.public_score.score_0_100 {
+.submission_list tr:hover td.public_score.score_0_100,
+.submission_list tr:hover td.sample_score.score_0_100 {
     background-color: hsla(60, 100%, 50%, 0.5);
 }
 
-.submission_list td.public_score.score_100 {
+.submission_list td.public_score.score_100,
+.submission_list td.sample_score.score_100 {
     background-color: hsla(120, 100%, 50%, 0.4);
 }
 
@@ -600,7 +610,8 @@ td.unit_test_ok {
     background-color: hsla(120, 100%, 50%, 0.4) !important;
 }
 
-.submission_list tr:hover td.public_score.score_100 {
+.submission_list tr:hover td.public_score.score_100,
+.submission_list tr:hover td.sample_score.score_100 {
     background-color: hsla(120, 100%, 50%, 0.5);
 }
 
@@ -610,7 +621,8 @@ tr:hover > td.unit_test_ok {
 }
 
 .unit_test_list tr.unit_test_ok > td.verdict {
-    background-color: hsla(120, 100%, 50%, 0.7) !important;
+    color: darkgreen;
+    font-weight: 700;
 }
 
 .submission_list td.total_score.undefined,
@@ -644,7 +656,7 @@ th.short {
 }
 
 .submission_list tr:hover td.total_score.score_0_100,
-.submission_List tr:hover td.unit_test.score_0_100 {
+.submission_list tr:hover td.unit_test.score_0_100 {
     background-color: hsla(60, 100%, 50%, 0.8);
 }
 
@@ -770,10 +782,6 @@ th.short {
 #submission_detail table.testcase-list thead th.execution-time,
 #submission_detail table.testcase-list thead th.memory-used {
     width: 100px;
-}
-
-#submission_detail table.testcase-list thead th.group {
-    width: 8%;
 }
 
 #submission_detail table.testcase-list tbody tr:not(.undefined) td.outcome {

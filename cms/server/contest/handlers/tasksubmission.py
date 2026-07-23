@@ -268,6 +268,19 @@ class SubmissionStatusHandler(ContestHandler):
             self.add_task_score(submission.participation, task, data)
 
             score_type = task.active_dataset.score_type_object
+            if score_type.max_sample_score > 0:
+                data["max_sample_score"] = score_type.max_sample_score
+                if data["status"] == SubmissionResult.SCORED:
+                    sample_score = sum(
+                        st.get("sample_score", 0.0) for st in sr.public_score_details
+                    )
+                    data["sample_score"] = sample_score
+                    data["sample_score_message"] = score_type.format_score(
+                        sample_score,
+                        score_type.max_sample_score,
+                        None,
+                        translation=self.translation,
+                    )
             if score_type.max_public_score > 0:
                 data["max_public_score"] = score_type.max_public_score
                 if data["status"] == SubmissionResult.SCORED:

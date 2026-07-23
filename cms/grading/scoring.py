@@ -262,16 +262,6 @@ def _task_score_max_subtask(
         except Exception:
             pass
 
-        # TODO: it would be better to harmonize this with the format in the CMS;
-        # however, because of unit tests this would me mean we'd have to change
-        # the format the rest of the CMS uses...
-        try:
-            subtask_scores = dict((i, s["score"])
-                                  for i, s in enumerate(details["subtasks"])
-                                  if not s["sample"])
-        except Exception:
-            pass
-
         if subtask_scores is None or len(subtask_scores) == 0:
             # Task's score type is not group, assume a single subtask.
             subtask_scores = {1: score}

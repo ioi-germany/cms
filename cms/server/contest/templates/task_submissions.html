@@ -104,17 +104,19 @@ update_score = function(score_elem, task_score_elem,
     }
 
     // Task score.
-    var task_score_span = task_score_elem.find(".score");
-    task_score_span.text(task_score_message);
-    if (task_score_is_partial) {
-        task_score_span.append(
-            $("<img class=\"details\" src=\"{{ static_url("static", "loading.gif") }}\"/>"));
+    if (!!task_score_elem) {
+      var task_score_span = task_score_elem.find(".score");
+      task_score_span.text(task_score_message);
+      if (task_score_is_partial) {
+          task_score_span.append(
+              $("<img class=\"details\" src=\"{{ static_url("static", "loading.gif") }}\"/>"));
+      }
+      task_score_elem.removeClass("undefined");
+      task_score_elem.removeClass("score_0");
+      task_score_elem.removeClass("score_0_100");
+      task_score_elem.removeClass("score_100");
+      task_score_elem.addClass(get_score_class(task_score, max_score));
     }
-    task_score_elem.removeClass("undefined");
-    task_score_elem.removeClass("score_0");
-    task_score_elem.removeClass("score_0_100");
-    task_score_elem.removeClass("score_100");
-    task_score_elem.addClass(get_score_class(task_score, max_score));
 };
 
 update_scores = function (submission_id, data) {
@@ -141,6 +143,10 @@ update_scores = function (submission_id, data) {
         if (is_unit_test) {
             row.children("td.total_score").text(data["score_message"]);
             row.children("td.total_score").removeClass("undefined");
+{% if score_type.max_public_score > 0 %}
+            row.children("td.sample_score").text(data["sample_score_message"]);
+            row.children("td.sample_score").removeClass("undefined");
+{% endif %}
 
             row.removeClass("unit_test_undefined");
             row.children("td.verdict").text(data["verdict"][1]);
@@ -155,6 +161,13 @@ update_scores = function (submission_id, data) {
                 data["score"], data["score_message"],
                 data["task_tokened_score"], data["task_tokened_score_message"],
                 data["task_score_is_partial"], data["max_score"]);
+{% endif %}
+{% if score_type.max_public_score > 0 %}
+            update_score(
+                row.children("td.sample_score"), null,
+                data["sample_score"], data["sample_score_message"],
+                null, null,
+                data["task_score_is_partial"], data["max_sample_score"]);
 {% endif %}
         }
 

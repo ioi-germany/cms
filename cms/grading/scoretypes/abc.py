@@ -82,6 +82,7 @@ class ScoreType(metaclass=ABCMeta):
         try:
             self.max_score, self.max_public_score, self.ranking_headers = \
                 self.max_scores()
+            self.max_sample_score = self.num_sample_cases()
         except Exception as e:
             raise ValueError(
                 "Unable to instantiate score type (probably due to invalid "
@@ -174,6 +175,11 @@ class ScoreType(metaclass=ABCMeta):
 
         """
         pass
+
+    @abstractmethod
+    def num_sample_cases(self) -> int:
+        """Returns the number of sample testcases in this problem"""
+        return 0
 
     @abstractmethod
     def compute_score(
@@ -271,7 +277,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
     {% endif %}
     <div class="subtask-head">
         <span class="title">
-    {% if "name" in st %}
+    {% if "name" in st and st["name"] %}
             {{ st["name"] }}
     {% else %}
             {% trans index=st["idx"] %}Subtask {{ index }}{% endtrans %}
@@ -374,7 +380,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
 {% else %}{# Unit test #}
 <h2 style="margin-top:0px;">{{ details["unit_test_name"] }}</h2>
 <h3>{% trans %}Score{% endtrans %}</h3>
-{% if "sample_score_okay" in details and details["sample_score_okay"] %}
+{% if "sample_score_okay" in details and details["sample_score_okay"] is not none %}
 <div class="subtask {% if details["sample_score_okay"] %}correct{% else %}notcorrect{% endif %}">
     <div class="subtask-head">
         <span class="title" style="margin-top:-2px;">
@@ -435,7 +441,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
     {% endif %}
     <div class="subtask-head">
         <span class="title" style="margin-top:-2px;">
-    {% if "name" in st %}
+    {% if "name" in st and st["name"] %}
             {{ st["name"] }}
     {% else %}
             {% trans index=st["idx"] %}Subtask {{ index }}{% endtrans %}
@@ -608,6 +614,17 @@ class ScoreTypeGroup(ScoreTypeAlone):
         else:
             return group_parameter.get("name", None)
 
+    def is_sample_subtask(self, group_parameter: ScoreTypeGroupParameters) -> bool:
+        return self.get_max_score(group_parameter) == 0
+
+    def num_sample_cases(self) -> int:
+        cnt = 0
+        targets = self.retrieve_target_testcases()
+        for st_idx, parameter in enumerate(self.parameters):
+            if self.is_sample_subtask(parameter):
+                cnt += len(targets[st_idx])
+        return cnt
+
     def max_scores(self):
         """See ScoreType.max_score."""
         score = 0.0
@@ -685,13 +702,21 @@ class ScoreTypeGroup(ScoreTypeAlone):
                 else:
                     public_testcases.append({"idx": tc_idx})
 
-            st_score_fraction = self.reduce(
-                [float(evaluations[tc_idx].outcome) for tc_idx in target],
-                parameter)
+            scores = [float(evaluations[tc_idx].outcome) for tc_idx in target]
+            st_score_fraction = self.reduce(scores, parameter)
             st_score = st_score_fraction * self.get_max_score(parameter)
             rounded_score = round(st_score, score_precision)
+            sample_score = 0.0
+            if self.is_sample_subtask(parameter):
+                sample_score = round(sum(scores), score_precision)
 
-            if tc_first_lowest_idx is not None and st_score_fraction < 1.0 and not self.get_always_show_testcases(parameter):
+            if (
+                tc_first_lowest_idx is not None
+                and st_score_fraction < 1.0
+                and not self.get_always_show_testcases(parameter)
+                # always display the testcases for sample subtasks
+                and not self.is_sample_subtask(parameter)
+            ):
                 for tc in testcases:
                     if not self.public_testcases[tc["idx"]]:
                         continue
@@ -701,17 +726,21 @@ class ScoreTypeGroup(ScoreTypeAlone):
                         tc["idx"] == tc_first_lowest_idx)
 
             score += rounded_score
-            subtasks.append({
-                "idx": st_idx,
-                "name": name,
-                # We store the fraction so that an "example" testcase
-                # with a max score of zero is still properly rendered as
-                # correct or incorrect.
-                "score_fraction": st_score_fraction,
-                # But we also want the properly rounded score for display.
-                "score": rounded_score,
-                "max_score": self.get_max_score(parameter),
-                "testcases": testcases})
+            subtasks.append(
+                {
+                    "idx": st_idx,
+                    "name": name,
+                    # We store the fraction so that an "example" testcase
+                    # with a max score of zero is still properly rendered as
+                    # correct or incorrect.
+                    "score_fraction": st_score_fraction,
+                    # But we also want the properly rounded score for display.
+                    "score": rounded_score,
+                    "sample_score": sample_score,
+                    "max_score": self.get_max_score(parameter),
+                    "testcases": testcases,
+                }
+            )
             if all(self.public_testcases[tc_idx] for tc_idx in target):
                 public_score += rounded_score
                 public_subtasks.append(subtasks[-1])
@@ -872,6 +901,8 @@ class ScoreTypeGroup(ScoreTypeAlone):
         dominated = {d: {c for c in all_cases if c != d} for d in all_cases}
 
         total_score, subtask_details, _, _, _ = self.compute_score(sr)
+        sample_score = 0.0
+        prec = sr.submission.task.score_precision
 
         # Actually, this means it didn't even compile
         if not sr.evaluated():
@@ -924,21 +955,21 @@ class ScoreTypeGroup(ScoreTypeAlone):
                 """
                 Check testcase utility
                 """
-                if subtask["max_score"] == 0:  # used to be subtask["sample"]
-                    continue
+                if self.is_sample_subtask(parameter):  # used to be subtask["sample"]
+                    # in a sample subtask each testcase is effectively worth 1 point
+                    sample_score += round(sum(scores), prec)
+                else:
+                    for i, tc in enumerate(subtask_detail["testcases"]):
+                        codename = tc["idx"]
+                        if self.essential_testcase(scores, i, subtask):
+                            essential.add(codename)
+                        elif not self.weak_testcase(scores, i, subtask):
+                            useful.add(codename)
+                        dominated[codename] &= {
+                            subtask_detail["testcases"][j]["idx"]
+                            for j in self.dominated_by(scores, i, subtask)
+                        }
 
-                for i, tc in enumerate(subtask_detail["testcases"]):
-                    codename = tc["idx"]
-                    if self.essential_testcase(scores, i, subtask):
-                        essential.add(codename)
-                    elif not self.weak_testcase(scores, i, subtask):
-                        useful.add(codename)
-                    dominated[codename] &= {
-                        subtask_detail["testcases"][j]["idx"]
-                        for j in self.dominated_by(scores, i, subtask)
-                    }
-
-        prec = sr.submission.task.score_precision
         expected_score: tuple[float, float] = submission_info["expected_score"]
         score_okay = (
             round(expected_score[0], prec)
@@ -946,6 +977,19 @@ class ScoreTypeGroup(ScoreTypeAlone):
             <= round(expected_score[1], prec)
         )
         okay = score_okay and not any(s["verdict"][0] <= 0 for s in subtasks)
+        sample_score_okay = None
+        has_sample_subtask = any(s for s in subtasks if self.is_sample_subtask(s))
+        if has_sample_subtask:
+            sample_score = round(sample_score, prec)
+            expected_sample_score: tuple[float, float] = submission_info[
+                "expected_sample_score"
+            ]
+            sample_score_okay = (
+                round(expected_sample_score[0], prec)
+                <= sample_score
+                <= round(expected_sample_score[1], prec)
+            )
+            okay &= sample_score_okay
 
         return {
             "unit_test": True,
@@ -953,8 +997,11 @@ class ScoreTypeGroup(ScoreTypeAlone):
             "subtasks": subtasks,
             "verdict": (1, ScoreTypeGroup.OKAY) if okay else (0, ScoreTypeGroup.FAILED),
             "score_okay": score_okay,
+            "sample_score_okay": sample_score_okay,
             "score": total_score,
+            "sample_score": sample_score,
             "expected_score": submission_info["expected_score_info"],
+            "expected_sample_score": submission_info["expected_sample_score_info"],
             "dominated": {d: list(u) for d, u in dominated.items()},
             "essential": list(essential),
             "useful": list(useful),
