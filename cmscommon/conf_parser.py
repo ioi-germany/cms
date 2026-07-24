@@ -193,8 +193,8 @@ def parse_typed_obj(
             # having elements of different types (anything else).
             list_mode = len(args) == 2 and args[1] == Ellipsis
 
-        if not isinstance(data, list):
-            raise ConfigTypeError(path, "a list", data)
+        if not isinstance(data, list) and not isinstance(data, tuple):
+            raise ConfigTypeError(path, "a list or a tuple", data)
 
         result = []
         if list_mode:
