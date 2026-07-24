@@ -40,6 +40,7 @@ from abc import ABCMeta, abstractmethod
 
 from cms import FEEDBACK_LEVEL_RESTRICTED
 from cms.db import SubmissionResult
+from cms.db.types import AdditionalInfo
 from cms.grading.steps import EVALUATION_MESSAGES
 from cms.locale import Translation, DEFAULT_TRANSLATION
 from cms.server.jinja2_toolbox import GLOBAL_ENVIRONMENT
@@ -199,8 +200,11 @@ class ScoreType(metaclass=ABCMeta):
         """
         pass
 
-    def compute_unit_test_score(self, submission_result,
-                                submission_info):
+    def compute_unit_test_score(
+        self,
+        submission_result: SubmissionResult,
+        submission_info: AdditionalInfo | None,
+    ):
         """
         You might want to override this
         """
@@ -860,7 +864,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
         return (status, short, desc), missing
 
     def compute_unit_test_score(
-        self, sr: SubmissionResult, _submission_info: str | None
+        self, sr: SubmissionResult, submission_info: AdditionalInfo | None
     ):
         """Compute the score of a unit test.
 
@@ -876,7 +880,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
                     grader: (42, "No expl. exp.")         grader response
 
         """
-        if _submission_info is None:
+        if submission_info is None:
             return {
                 "unit_test": True,  # should this be False?
                 "verdict": (-1, "Not a Unit Test"),
@@ -887,10 +891,8 @@ class ScoreTypeGroup(ScoreTypeAlone):
                 "verdict": (-1, "Unit Tests not available for this ScoreType"),
             }
 
-        submission_info: dict = json.loads(_submission_info)
-        expectations: dict[tuple, list[str | tuple[float, float]]] = {
-            tuple(json.loads(key)): val
-            for key, val in submission_info["expected"].items()
+        expectations = {
+            tuple(json.loads(key)): val for key, val in submission_info.expected.items()
         }
 
         useful: set[str] = set()
@@ -922,7 +924,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
                 for tc in subtask_detail["testcases"]:
                     # TODO: adjust this if we want to support multiscoring
                     ev = evaluations[tc["idx"]]
-                    r = UnitTest.get_result(submission_info["limits"], ev)
+                    r = UnitTest.get_result(submission_info.limits, ev)
                     this_score = float(ev.outcome)
                     scores.append(this_score)
                     results.append(r)
@@ -969,7 +971,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
                             for j in self.dominated_by(scores, i, subtask)
                         }
 
-        expected_score: tuple[float, float] = submission_info["expected_score"]
+        expected_score = submission_info.expected_score
         score_okay = (
             round(expected_score[0], prec)
             <= total_score
@@ -980,9 +982,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
         has_sample_subtask = any(s for s in subtasks if self.is_sample_subtask(s))
         if has_sample_subtask:
             sample_score = round(sample_score, prec)
-            expected_sample_score: tuple[float, float] = submission_info[
-                "expected_sample_score"
-            ]
+            expected_sample_score = submission_info.expected_sample_score
             sample_score_okay = (
                 round(expected_sample_score[0], prec)
                 <= sample_score
@@ -999,8 +999,8 @@ class ScoreTypeGroup(ScoreTypeAlone):
             "sample_score_okay": sample_score_okay,
             "score": total_score,
             "sample_score": sample_score,
-            "expected_score": submission_info["expected_score_info"],
-            "expected_sample_score": submission_info["expected_sample_score_info"],
+            "expected_score": submission_info.expected_score_info,
+            "expected_sample_score": submission_info.expected_sample_score_info,
             "dominated": {d: list(u) for d, u in dominated.items()},
             "essential": list(essential),
             "useful": list(useful),

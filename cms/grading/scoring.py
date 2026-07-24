@@ -30,6 +30,7 @@ from sqlalchemy.orm import joinedload
 
 from cms.db import Submission, Dataset, Participation, Task
 from cms.db.submission import Evaluation
+from cms.db.types import LimitInfo
 from cmscommon.constants import \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK, SCORE_MODE_MAX_TOKENED_LAST
 
@@ -321,7 +322,7 @@ class UnitTest:
         return LimitVerdict.AMBIGUOUS
 
     @staticmethod
-    def get_result(limits: dict, evaluation: Evaluation):
+    def get_result(limits: LimitInfo, evaluation: Evaluation):
         """Collect information about the evaluation.
 
         limits (dict): a dictionary with entries weak_time_limit and
@@ -340,9 +341,9 @@ class UnitTest:
         # TODO What if this is None?
         if evaluation.execution_time is not None:
             timeverdict = UnitTest._check_limit(
-                float(evaluation.execution_time),
-                float(limits["weak_time_limit"]),
-                float(limits["strong_time_limit"]),
+                evaluation.execution_time,
+                limits.weak_time_limit,
+                limits.strong_time_limit,
             )
 
             if "wall clock limit exceeded" in (evaluation.text)[0]:
@@ -357,9 +358,9 @@ class UnitTest:
         # TODO What if this is None?
         if evaluation.execution_memory is not None:
             memverdict = UnitTest._check_limit(
-                float(evaluation.execution_memory) / 2**20,
-                float(limits["weak_mem_limit"]),
-                float(limits["strong_mem_limit"]),
+                evaluation.execution_memory / 2**20,
+                limits.weak_mem_limit,
+                limits.strong_mem_limit,
             )
             if "violating memory limits" in (evaluation.text)[0]:
                 memverdict = LimitVerdict.EXCEEDED

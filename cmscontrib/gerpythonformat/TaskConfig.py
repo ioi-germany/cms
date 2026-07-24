@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from cms.db.types import AdditionalInfo, LimitInfo
 from cms.db.user import Participation
 from cmscontrib.gerpythonformat.Executable import Executable
 from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \
@@ -189,7 +190,7 @@ class MySubtask(Scope):
         self.task.subtask_stack.pop()
 
     @property
-    def unique_name(self):
+    def unique_name(self) -> tuple:
         return (self.name,)
 
     @property
@@ -974,7 +975,7 @@ class MySubmission(object):
                                   MySubmission.score_machine_readable(0.0)],
                     "resources": ["time", "memory"]}
 
-        def encode(key):
+        def encode(key) -> list[str | tuple[float, float]]:
             try:
                 return keywords[key]
             except KeyError:
@@ -987,10 +988,10 @@ class MySubmission(object):
             except:
                 raise Exception("Unknown expected result '{}'".format(k))
 
-        self.expectations = {(): []}
+        self._expectations: dict[tuple, list[str | tuple[float, float]]] = {(): []}
 
         for s in self.task.subtasks:
-            self.expectations[s.unique_name] = []
+            self._expectations[s.unique_name] = []
 
         self.case_expectations = {}
 
@@ -1004,7 +1005,7 @@ class MySubmission(object):
                 if isinstance(item, MyCase):
                     self.case_expectations[item.codename] += encode(key)
                 elif isinstance(item, MySubtask):
-                    self.expectations[item.unique_name] += encode(key)
+                    self._expectations[item.unique_name] += encode(key)
                 else:
                     raise ValueError("unit test expectations can only be"
                                      "specified for subtasks and cases")
@@ -1012,7 +1013,7 @@ class MySubmission(object):
         # JSON doesn't allow lists nor tuples as keys so we dump them, too
         self.expectations = {
             json.dumps(key, sort_keys=True): val
-            for key, val in self.expectations.items()
+            for key, val in self._expectations.items()
         }
 
     def _should_test(self, local_test):
@@ -1036,17 +1037,17 @@ class MySubmission(object):
                        for f in self.filenames)
 
     @staticmethod
-    def score_machine_readable(x):
+    def score_machine_readable(x) -> tuple[float, float]:
         """
         Turn the score expectation as indicated by the user into something
         that is easily comprehensable by the score type
         """
         if x == "arbitrary":
-            return [float("-inf"), float("inf")]
+            return (float("-inf"), float("inf"))
 
         try:
             float(x)
-            return [float(x), float(x)]
+            return (float(x), float(x))
         except TypeError:
             pass
 
@@ -2539,25 +2540,23 @@ class TaskConfig(CommonConfig, Scope):
         def t_abs(rel):
             return float(rel * self._timelimit)
 
-        sdb.additional_info = json.dumps(
-            {
-                "limits": {
-                    "weak_time_limit": t_abs(submission.weak_time_limit),
-                    "strong_time_limit": t_abs(submission.strong_time_limit),
-                    "weak_mem_limit": m_abs(submission.weak_mem_limit),
-                    "strong_mem_limit": m_abs(submission.strong_mem_limit),
-                },
-                "unit_test": True,
-                "expected": submission.expectations,
-                "expected_case": submission.case_expectations,
-                "expected_score": submission.score,
-                "expected_score_info": submission.score_info,
-                "expected_sample_score": submission.sample_score,
-                "expected_sample_score_info": submission.sample_score_info,
-                "task_name": self.name,
-                "score_precision": tdb.score_precision,
-            },
-            sort_keys=True,
+        limits = LimitInfo(
+            weak_time_limit=t_abs(submission.weak_time_limit),
+            strong_time_limit=t_abs(submission.strong_time_limit),
+            weak_mem_limit=m_abs(submission.weak_mem_limit),
+            strong_mem_limit=m_abs(submission.strong_mem_limit),
+        )
+        sdb.additional_info = AdditionalInfo(
+            limits=limits,
+            unit_test=True,
+            expected=submission.expectations,
+            expected_case=submission.case_expectations,
+            expected_score=submission.score,
+            expected_score_info=submission.score_info,
+            expected_sample_score=submission.sample_score,
+            expected_sample_score_info=submission.sample_score_info,
+            task_name=self.name,
+            score_precision=tdb.score_precision,
         )
 
         return sdb

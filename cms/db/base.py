@@ -34,6 +34,7 @@ from sqlalchemy.types import \
     BigInteger
 
 from cms.db.session import Session
+from cms.db.types import AdditionalInfoJSONB
 
 from . import engine, metadata, CastingArray, Codename, Filename, \
     FilenameSchema, FilenameSchemaArray, Digest
@@ -59,6 +60,7 @@ _TYPE_MAP = {
     FilenameSchemaArray: list,
     CIDR: (ipaddress.IPv4Network, ipaddress.IPv6Network),
     JSONB: object,
+    AdditionalInfoJSONB: object,
 }
 
 

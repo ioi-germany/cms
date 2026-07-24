@@ -37,7 +37,6 @@ testcase".
 
 import logging
 from typing import Self
-import json
 
 from cms.db import (
     Dataset,
@@ -52,6 +51,7 @@ from cms.db import (
     SubmissionResult,
     UserTestResult,
 )
+from cms.db.types import LimitInfo
 from cms.grading.languagemanager import get_language
 from cms.service.esoperations import ESOperation
 
@@ -636,15 +636,18 @@ class EvaluationJob(Job):
             (submission.id, testcase.codename)
 
         if submission.additional_info is None:
-            additional_limits = {}
+            additional_limits = LimitInfo(
+                weak_mem_limit=dataset.memory_limit,
+                strong_mem_limit=dataset.memory_limit,
+                weak_time_limit=dataset.time_limit,
+                strong_time_limit=dataset.time_limit,
+            )
         else:
-            additional_info = json.loads(submission.additional_info)
-            additional_limits = additional_info.get("limits", {})
+            additional_info = submission.additional_info
+            additional_limits = additional_info.limits
 
-        time_limit = additional_limits.get("weak_time_limit",
-                                           dataset.time_limit)
-        memory_limit = additional_limits.get("weak_mem_limit",
-                                             dataset.memory_limit)
+        time_limit = additional_limits.weak_time_limit
+        memory_limit = additional_limits.weak_mem_limit
 
         # dict() is required to detach the dictionary that gets added
         # to the Job from the control of SQLAlchemy

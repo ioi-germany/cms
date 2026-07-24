@@ -40,6 +40,7 @@ from sqlalchemy.schema import Column, ForeignKey, ForeignKeyConstraint, \
 from sqlalchemy.types import Integer, Float, String, Unicode, DateTime, Enum, \
     BigInteger
 
+from cms.db.types import AdditionalInfo, AdditionalInfoJSONB
 from cmscommon.datetime import make_datetime
 from . import Filename, FilenameSchema, Digest, Base, Participation, Task, \
     Dataset, Testcase
@@ -117,8 +118,8 @@ class Submission(Base):
         return self.comment.split("\n", 1)[0]
 
     # Unit test parameters (None if the submission is not a unit test)
-    additional_info: str = Column(
-        String,
+    additional_info: AdditionalInfo | None = Column(
+        AdditionalInfoJSONB,
         nullable=True)
 
     # These one-to-many relationships are the reversed directions of
@@ -199,8 +200,7 @@ class Submission(Base):
         if self.additional_info is None:
             return False
 
-        ai = json.loads(self.additional_info)
-        assert ai["unit_test"] is True
+        assert self.additional_info.unit_test is True
         return True
 
     @classmethod

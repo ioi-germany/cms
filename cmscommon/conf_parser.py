@@ -83,39 +83,77 @@ def join_path(path: str, new_part: str):
 # list[X], dict[str, X]
 
 def parse_config_obj(data: object, obj_class: type[_T], path: str) -> _T:
+    return parse_typed_obj(
+        data, obj_class, path, error_cls=ConfigError, strip_trailing_underscore=True
+    )
+
+
+def parse_typed_obj(
+    data: object,
+    obj_class: type[_T],
+    path: str,
+    error_cls: type[Exception] = TypeError,
+    strip_trailing_underscore: bool = False,
+) -> _T:
+    fn = lambda path, expected, got: error_cls(
+        f"Expected {path} to be {expected}, got {type(got).__name__}"
+    )
     if typing.get_origin(obj_class) in (typing.Union, types.UnionType):
-        # The only unions we support are " | None", for optionals.
+        # The only unions we support are " | X", for primitive types X or optionals.
         args = typing.get_args(obj_class)
-        assert len(args) == 2 and args[1] is type(None)
-        # If we reached this function, then we are trying to parse `data` as a
-        # value of type `obj_class`. TOML has no `null`, so this means `data`
-        # must match the non-None side of the union.
-        obj_class = args[0]
+        non_primitive = [
+            t for t in args if t not in (str, int, bool, float, type(None))
+        ]
+        assert len(non_primitive) <= 1
+        # we first check if `data` is some primitive type and then
+        # try to parse it as the only non-primitive type
+        ordered = sorted(args, key=lambda t: t in non_primitive)
+        for arg in ordered:
+            try:
+                return parse_typed_obj(
+                    data, arg, path, error_cls, strip_trailing_underscore
+                )
+            except error_cls:
+                pass
+        raise fn(path, args, data)
+
+    if obj_class is type(None):
+        if data is not None:
+            raise fn(path, "null", data)
+        return typing.cast(_T, None)
 
     if dataclasses.is_dataclass(obj_class):
         if not isinstance(data, dict):
-            raise ConfigTypeError(path, "a table", data)
+            raise fn(path, "a table", data)
         kw_args = {}
         for field in dataclasses.fields(obj_class):
             if not field.init:
                 continue
             # Some field names are suffixed with _ because they would otherwise
             # conflict with python keywords.
-            config_name = field.name.removesuffix("_")
+            field_name = (
+                field.name.removesuffix("_")
+                if strip_trailing_underscore
+                else field.name
+            )
 
             is_required = (
                 field.default is dataclasses.MISSING
                 and field.default_factory is dataclasses.MISSING
             )
-            field_path = join_path(path, format_key(config_name))
-            if is_required and config_name not in data:
+            field_path = join_path(path, format_key(field_name))
+            if is_required and field_name not in data:
                 raise ConfigError(f"Key {field_path} is required")
 
-            if config_name in data:
-                kw_args[field.name] = parse_config_obj(
-                    data[config_name], typing.cast(type[_T], field.type), field_path
+            if field_name in data:
+                kw_args[field.name] = parse_typed_obj(
+                    data[field_name],
+                    typing.cast(type[_T], field.type),
+                    field_path,
+                    error_cls,
+                    strip_trailing_underscore,
                 )
-                del data[config_name]
+                del data[field_name]
 
         for k in data:
             thispath = join_path(path, format_key(k))
@@ -129,11 +167,17 @@ def parse_config_obj(data: object, obj_class: type[_T], path: str) -> _T:
         value_type = args[1]
 
         if not isinstance(data, dict):
-            raise ConfigTypeError(path, "a table", data)
+            raise fn(path, "a table", data)
 
         result = {}
         for k, v in data.items():
-            result[k] = parse_config_obj(v, value_type, join_path(path, format_key(k)))
+            result[k] = parse_typed_obj(
+                v,
+                value_type,
+                join_path(path, format_key(k)),
+                error_cls,
+                strip_trailing_underscore,
+            )
 
         # As far as I can tell, Python's type system doesn't support narrowing
         # _T based on runtime checks of obj_class, so the simplest way to get
@@ -156,27 +200,43 @@ def parse_config_obj(data: object, obj_class: type[_T], path: str) -> _T:
         if list_mode:
             value_type = args[0]
             for i, x in enumerate(data):
-                result.append(parse_config_obj(x, value_type, path + f"[{i}]"))
+                result.append(
+                    parse_typed_obj(
+                        x,
+                        value_type,
+                        path + f"[{i}]",
+                        error_cls,
+                        strip_trailing_underscore,
+                    )
+                )
         else:
             if len(args) != len(data):
                 raise ConfigError(
                     f"Expected {path} to have {len(args)} elements, got {len(data)}"
                 )
             for i, (type_, val) in enumerate(zip(args, data)):
-                result.append(parse_config_obj(val, type_, path + f"[{i}]"))
+                result.append(
+                    parse_typed_obj(
+                        val,
+                        type_,
+                        path + f"[{i}]",
+                        error_cls,
+                        strip_trailing_underscore,
+                    )
+                )
 
         # typing.cast isn't enough to make the type checker happy here.
         return obj_class(result)  # type: ignore
 
     elif obj_class in (str, int, bool):
         if not isinstance(data, obj_class):
-            raise ConfigTypeError(path, obj_class.__name__, data)
+            raise fn(path, obj_class.__name__, data)
         return data
 
     elif obj_class is float:
         # Allow specifying floats as ints.
         if not isinstance(data, int | float):
-            raise ConfigTypeError(path, "float", data)
+            raise fn(path, "float", data)
         return typing.cast(_T, float(data))
 
     else:
