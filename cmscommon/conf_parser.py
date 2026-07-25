@@ -143,7 +143,7 @@ def parse_typed_obj(
             )
             field_path = join_path(path, format_key(field_name))
             if is_required and field_name not in data:
-                raise ConfigError(f"Key {field_path} is required")
+                raise error_cls(f"Key {field_path} is required")
 
             if field_name in data:
                 kw_args[field.name] = parse_typed_obj(
@@ -194,7 +194,7 @@ def parse_typed_obj(
             list_mode = len(args) == 2 and args[1] == Ellipsis
 
         if not isinstance(data, list) and not isinstance(data, tuple):
-            raise ConfigTypeError(path, "a list or a tuple", data)
+            raise fn(path, "a list or a tuple", data)
 
         result = []
         if list_mode:
@@ -211,7 +211,7 @@ def parse_typed_obj(
                 )
         else:
             if len(args) != len(data):
-                raise ConfigError(
+                raise error_cls(
                     f"Expected {path} to have {len(args)} elements, got {len(data)}"
                 )
             for i, (type_, val) in enumerate(zip(args, data)):
