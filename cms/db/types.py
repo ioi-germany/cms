@@ -273,19 +273,23 @@ class AdditionalInfo:
     score_precision: int
 
 
-class AdditionalInfoJSONB(TypeDecorator):
+class DataclassJSONB(TypeDecorator):
     impl = JSONB
+
+    def __init__(self, cls, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cls = cls
 
     def process_bind_param(self, value, dialect):
         if value is None:
             return None
         if isinstance(value, dict):
-            value = parse_typed_obj(value, AdditionalInfo, "")
-        elif not isinstance(value, AdditionalInfo):
+            value = parse_typed_obj(value, self.cls, "")
+        elif not isinstance(value, self.cls):
             raise TypeError(f"got unexpected value of type {type(value)}")
         return asdict(value)
 
     def process_result_value(self, value, dialect):
         if value is None:
             return None
-        return parse_typed_obj(value, AdditionalInfo, "")
+        return parse_typed_obj(value, self.cls, "")

@@ -27,8 +27,6 @@
 
 """
 
-import json
-
 from datetime import datetime
 import random
 from sqlalchemy import Boolean
@@ -40,7 +38,7 @@ from sqlalchemy.schema import Column, ForeignKey, ForeignKeyConstraint, \
 from sqlalchemy.types import Integer, Float, String, Unicode, DateTime, Enum, \
     BigInteger
 
-from cms.db.types import AdditionalInfo, AdditionalInfoJSONB
+from cms.db.types import AdditionalInfo, DataclassJSONB
 from cmscommon.datetime import make_datetime
 from . import Filename, FilenameSchema, Digest, Base, Participation, Task, \
     Dataset, Testcase
@@ -119,7 +117,7 @@ class Submission(Base):
 
     # Unit test parameters (None if the submission is not a unit test)
     additional_info: AdditionalInfo | None = Column(
-        AdditionalInfoJSONB,
+        DataclassJSONB(AdditionalInfo),
         nullable=True)
 
     # These one-to-many relationships are the reversed directions of
