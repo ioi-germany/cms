@@ -389,7 +389,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
         <span class="title" style="margin-top:-2px;">
             {% trans %}Sample score{% endtrans %}
         </span>
-        <span class="score">
+        <span class="score unit_test">
             {% if details["sample_score_okay"] %}OKAY{% else %}FAILED{% endif %}
         </span>
     </div>
@@ -414,7 +414,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
         <span class="title" style="margin-top:-2px;">
             {% trans %}Score{% endtrans %}
         </span>
-        <span class="score">
+        <span class="score unit_test">
             {% if details["score_okay"] %}OKAY{% else %}FAILED{% endif %}
         </span>
     </div>
@@ -450,7 +450,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
             {% trans index=st["idx"] %}Subtask {{ index }}{% endtrans %}
     {% endif %}
         </span>
-        <span class="score">
+        <span class="score unit_test">
             {{ st["verdict"][1] }}
         </span>
     </div>
@@ -880,9 +880,9 @@ class ScoreTypeGroup(ScoreTypeAlone):
                     grader: (42, "No expl. exp.")         grader response
 
         """
-        if submission_info is None:
+        if submission_info is None or not submission_info.unit_test:
             return {
-                "unit_test": True,  # should this be False?
+                "unit_test": False,
                 "verdict": (-1, "Not a Unit Test"),
             }
         if any(not isinstance(subtask, dict) for subtask in self.parameters):

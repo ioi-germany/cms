@@ -593,6 +593,7 @@ class BaseHandler(CommonRequestHandler):
         page_size: the number of submissions per page.
 
         """
+        # first query non-unit tests, then sort by timestamp
         query = query\
             .options(subqueryload(Submission.task))\
             .options(subqueryload(Submission.participation))\
@@ -600,7 +601,8 @@ class BaseHandler(CommonRequestHandler):
             .options(subqueryload(Submission.token))\
             .options(subqueryload(Submission.results)
                      .subqueryload(SubmissionResult.evaluations))\
-            .order_by(Submission.timestamp.desc())
+            .order_by(Submission.additional_info.is_(None).desc(),\
+                     Submission.timestamp.desc())
 
         offset = page * page_size
         count = query.count()

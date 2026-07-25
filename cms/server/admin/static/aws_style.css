@@ -731,46 +731,46 @@ table.jqplot-table-legend {
 }
 
 /* UNIT TESTS */
-#evaluation_user .subtask .subtask-head {
+#evaluation_user .score_details .subtask .subtask-head {
     margin-top: 16px;
 }
-
-#evaluation_user .subtask .subtask-head .score {
-    border-radius: 8px;
-    font-weight: 700;
-    padding: 4px;
-    width: fit-content;
+.score_details .subtask .subtask-head {
+    margin-top: 2px;
+    margin-bottom: 2px;
 }
 
-#evaluation_user .subtask.notcorrect .subtask-head .score {
+.score_details .subtask .subtask-head .score.unit_test {
+    font-weight: 700;
+    padding: 4px;
+}
+
+.score_details .subtask.notcorrect .subtask-head .score.unit_test {
     color: #cc0000;
 }
 
-#evaluation_user .subtask.correct .subtask-head .score {
+.score_details .subtask.correct .subtask-head .score.unit_test {
     color: #4e9a06;
 }
 
-#evaluation_user .subtask.partiallycorrect .subtask-head .score {
+.score_details .subtask.partiallycorrect .subtask-head .score.unit_test {
     color: #ffb300;
 }
 
-tr.unit_test_failed>td,
 td.unit_test_failed {
     background-color: hsla(0, 100%, 50%, 0.4);
 }
 
-tr.unit_test_failed:hover>td,
-tr:hover td.unit_test_failed {
+tr:has(td:not([rowspan]):hover)>td.unit_test_failed:not([rowspan]),
+td.unit_test_failed[rowspan]:hover {
     background-color: hsla(0, 100%, 50%, 0.5);
 }
 
-tr.unit_test_ok>td,
 td.unit_test_ok {
     background-color: hsla(120, 100%, 50%, 0.4);
 }
 
-tr.unit_test_ok:hover>td,
-tr:hover>td.unit_test_ok {
+tr:has(td:not([rowspan]):hover)>td.unit_test_ok:not([rowspan]),
+td.unit_test_ok[rowspan]:hover {
     background-color: hsla(120, 100%, 50%, 0.5);
 }
 

@@ -910,9 +910,9 @@ CMS.AWSUtils.prototype.render_markdown_preview = function(target) {
 CMS.AWSUtils.prototype.update_diffchooser = function() {
     var el = document.getElementById("diffchooser");
     if(el.open) {
-        $("#submissions_table").addClass("diff-open");
+        $("#submissions_table, #submissions_table_unit_tests").addClass("diff-open");
     } else {
-        $("#submissions_table").removeClass("diff-open");
+        $("#submissions_table, #submissions_table_unit_tests").removeClass("diff-open");
     }
 }
 

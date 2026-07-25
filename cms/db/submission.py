@@ -140,7 +140,7 @@ class Submission(Base):
 
     # Unit test parameters (None if the submission is not a unit test)
     additional_info: AdditionalInfo | None = Column(
-        DataclassJSONB(AdditionalInfo),
+        DataclassJSONB(AdditionalInfo, none_as_null=True),
         nullable=True)
 
     # These one-to-many relationships are the reversed directions of
