@@ -739,6 +739,10 @@ table.jqplot-table-legend {
     margin-bottom: 2px;
 }
 
+#submissions_table_unit_tests .score_details td:last-child,
+#submissions_table_unit_tests .score_details th:last-child {
+    border-right: 1px solid #637D53;
+}
 .score_details .subtask .subtask-head .score.unit_test {
     font-weight: 700;
     padding: 4px;
