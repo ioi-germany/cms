@@ -730,7 +730,49 @@ table.jqplot-table-legend {
     width: auto;
 }
 
+/* UNIT TESTS */
+#evaluation_user .subtask .subtask-head {
+    margin-top: 16px;
+}
 
+#evaluation_user .subtask .subtask-head .score {
+    border-radius: 8px;
+    font-weight: 700;
+    padding: 4px;
+    width: fit-content;
+}
+
+#evaluation_user .subtask.notcorrect .subtask-head .score {
+    color: #cc0000;
+}
+
+#evaluation_user .subtask.correct .subtask-head .score {
+    color: #4e9a06;
+}
+
+#evaluation_user .subtask.partiallycorrect .subtask-head .score {
+    color: #ffb300;
+}
+
+tr.unit_test_failed>td,
+td.unit_test_failed {
+    background-color: hsla(0, 100%, 50%, 0.4);
+}
+
+tr.unit_test_failed:hover>td,
+tr:hover td.unit_test_failed {
+    background-color: hsla(0, 100%, 50%, 0.5);
+}
+
+tr.unit_test_ok>td,
+td.unit_test_ok {
+    background-color: hsla(120, 100%, 50%, 0.4);
+}
+
+tr.unit_test_ok:hover>td,
+tr:hover>td.unit_test_ok {
+    background-color: hsla(120, 100%, 50%, 0.5);
+}
 
 /* OTHERS */
 span.info {
@@ -768,3 +810,5 @@ th.diff-only, td.diff-only {
 table.diff-open th.diff-only, table.diff-open td.diff-only {
     display: table-cell;
 }
+
+

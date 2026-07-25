@@ -1055,7 +1055,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
             line.append((symbols[-1], 0))
 
         if "arbitrary" in expected:
-            for i in range(0, len(line)):
+            for i in range(len(line)):
                 line[i] = (line[i][0], 0)
 
         return line
