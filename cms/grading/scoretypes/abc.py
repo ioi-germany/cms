@@ -460,8 +460,8 @@ class ScoreTypeGroup(ScoreTypeAlone):
             <col class="short">
             <col class="short">
             <col class="short">
-            <col style="width:38%;">
-            <col style="width:38%;">
+            <col style="max-width:38%;">
+            <col style="max-width:38%;">
             <thead>
                 <tr>
                     <th class="idx">{% trans %}#{% endtrans %}</th>
