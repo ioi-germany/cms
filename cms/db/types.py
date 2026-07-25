@@ -265,9 +265,9 @@ class AdditionalInfo:
     unit_test: bool
     expected: dict[str, list[str | tuple[float, float]]]
     expected_case: dict[str, list[str | tuple[float, float]]]
-    expected_score: tuple[float, float]
+    expected_score: tuple[float, float] | None
     expected_score_info: str
-    expected_sample_score: tuple[float, float]
+    expected_sample_score: tuple[float, float] | None
     expected_sample_score_info: str
     task_name: str
     score_precision: int
@@ -276,32 +276,6 @@ class AdditionalInfo:
 class AdditionalInfoJSONB(TypeDecorator):
     impl = JSONB
 
-    # some of the ranges are unbounded, which is represented by 'inf's
-    # To make sure that the serialization doesn't break, we map those
-    # values to strings
-    _INF = {float("inf"): "Infinity", float("-inf"): "-Infinity"}
-    _INF_REV = {v: k for k, v in _INF.items()}
-
-    def _make_json_safe(self, obj):
-        if isinstance(obj, float):
-            if obj in self._INF:
-                return self._INF[obj]
-            return obj
-        if isinstance(obj, dict):
-            return {k: self._make_json_safe(v) for k, v in obj.items()}
-        if isinstance(obj, (list, tuple)):
-            return [self._make_json_safe(v) for v in obj]
-        return obj
-
-    def _make_json_unsafe(self, obj):
-        if isinstance(obj, str) and obj in self._INF_REV:
-            return self._INF_REV[obj]
-        if isinstance(obj, dict):
-            return {k: self._make_json_unsafe(v) for k, v in obj.items()}
-        if isinstance(obj, list):
-            return [self._make_json_unsafe(v) for v in obj]
-        return obj
-
     def process_bind_param(self, value, dialect):
         if value is None:
             return None
@@ -309,9 +283,9 @@ class AdditionalInfoJSONB(TypeDecorator):
             value = parse_typed_obj(value, AdditionalInfo, "")
         elif not isinstance(value, AdditionalInfo):
             raise TypeError(f"got unexpected value of type {type(value)}")
-        return self._make_json_safe(asdict(value))
+        return asdict(value)
 
     def process_result_value(self, value, dialect):
         if value is None:
             return None
-        return parse_typed_obj(self._make_json_unsafe(value), AdditionalInfo, "")
+        return parse_typed_obj(value, AdditionalInfo, "")

@@ -909,7 +909,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
         if not sr.evaluated():
             subtasks = []
         else:
-            evaluations = dict((ev.codename, ev) for ev in sr.evaluations)
+            evaluations = {ev.codename: ev for ev in sr.evaluations}
 
             subtasks = []
 
@@ -971,22 +971,19 @@ class ScoreTypeGroup(ScoreTypeAlone):
                             for j in self.dominated_by(scores, i, subtask)
                         }
 
-        expected_score = submission_info.expected_score
-        score_okay = (
-            round(expected_score[0], prec)
-            <= total_score
-            <= round(expected_score[1], prec)
-        )
+        def score_in_range(score: float, expected: tuple[float, float] | None):
+            if expected is None:
+                return True
+            return round(expected[0], prec) <= score <= round(expected[1], prec)
+
+        score_okay = score_in_range(total_score, submission_info.expected_score)
         okay = score_okay and not any(s["verdict"][0] <= 0 for s in subtasks)
         sample_score_okay = None
         has_sample_subtask = any(s for s in subtasks if self.is_sample_subtask(s))
         if has_sample_subtask:
             sample_score = round(sample_score, prec)
-            expected_sample_score = submission_info.expected_sample_score
-            sample_score_okay = (
-                round(expected_sample_score[0], prec)
-                <= sample_score
-                <= round(expected_sample_score[1], prec)
+            sample_score_okay = score_in_range(
+                sample_score, submission_info.expected_sample_score
             )
             okay &= sample_score_okay
 

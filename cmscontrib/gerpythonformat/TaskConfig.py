@@ -4,6 +4,7 @@
 # Copyright © 2013-2026 Tobias Lenz <t_lenz94@web.de>
 # Copyright © 2013-2022 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2022 Manuel Gundlach <manuel.gundlach@gmail.com>
+# Copyright © 2026 Erik Sünderhauf <erik.suenderhauf@gmx.de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -935,15 +936,21 @@ class MyCase(object):
 
 
 class MySubmission(object):
-    def __init__(self, task, filenames, score, sample_score,
+    def __init__(self, task, filenames, score, sample_score="arbitrary",
                  expected={},
                  weak_time_limit=None, strong_time_limit=None,
                  weak_mem_limit=None, strong_mem_limit=None):
         self.task = task
         self.filenames = filenames
-        self.score = MySubmission.score_machine_readable(score)
+        self.score = (
+            None if score == "arbitrary" else MySubmission.score_machine_readable(score)
+        )
         self.score_info = MySubmission.score_human_readable(score)
-        self.sample_score = MySubmission.score_machine_readable(sample_score)
+        self.sample_score = (
+            None
+            if sample_score == "arbitrary"
+            else MySubmission.score_machine_readable(sample_score)
+        )
         self.sample_score_info = MySubmission.score_human_readable(sample_score)
 
         if weak_time_limit is None:
@@ -1040,24 +1047,24 @@ class MySubmission(object):
     def score_machine_readable(x) -> tuple[float, float]:
         """
         Turn the score expectation as indicated by the user into something
-        that is easily comprehensable by the score type
+        that is easily comprehensable by the score type, i.e. a (low, high)
+        interval
         """
-        if x == "arbitrary":
-            return (float("-inf"), float("inf"))
-
         try:
             float(x)
             return (float(x), float(x))
         except TypeError:
             pass
 
-        return x
+        return tuple(x)
 
     @staticmethod
     def score_human_readable(x):
         """
         Pretty print the score expectation as indicated by the user
         """
+        if x is None:
+            return "arbitrary"
         return str(x)
 
 

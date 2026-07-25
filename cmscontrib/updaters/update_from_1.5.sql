@@ -111,7 +111,7 @@ ALTER TABLE participations ADD COLUMN unofficial BOOLEAN NOT NULL;
 ALTER TABLE questions ADD COLUMN last_action timestamp without time zone;
 ALTER TABLE questions ADD COLUMN reply_source VARCHAR;
 ALTER TABLE submission_results ADD COLUMN unit_test_score_details jsonb;
-ALTER TABLE submissions ADD COLUMN additional_info VARCHAR;
+ALTER TABLE submissions ADD COLUMN additional_info jsonb;
 
 CREATE TABLE spoilers (
     id SERIAL PRIMARY KEY,
