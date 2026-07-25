@@ -29,8 +29,7 @@ from enum import Enum
 from sqlalchemy.orm import joinedload
 
 from cms.db import Submission, Dataset, Participation, Task
-from cms.db.submission import Evaluation
-from cms.db.types import LimitInfo
+from cms.db.submission import Evaluation, LimitInfo
 from cmscommon.constants import \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK, SCORE_MODE_MAX_TOKENED_LAST
 

@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from cms.db.types import AdditionalInfo, LimitInfo
+from cms.db.submission import AdditionalInfo, LimitInfo
 from cms.db.user import Participation
 from cmscontrib.gerpythonformat.Executable import Executable
 from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \

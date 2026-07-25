@@ -21,7 +21,7 @@
 
 """
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 
 import psycopg2.extras
 import sqlalchemy
@@ -250,27 +250,6 @@ event.listen(metadata, "after_drop", Digest.get_drop_command())
 @compiles(Digest)
 def compile_digest(element, compiler, **kw):
     return Digest.domain_name
-
-@dataclass
-class LimitInfo:
-    weak_time_limit: float
-    strong_time_limit: float
-    weak_mem_limit: int
-    strong_mem_limit: int
-
-
-@dataclass
-class AdditionalInfo:
-    limits: LimitInfo
-    unit_test: bool
-    expected: dict[str, list[str | tuple[float, float]]]
-    expected_case: dict[str, list[str | tuple[float, float]]]
-    expected_score: tuple[float, float] | None
-    expected_score_info: str
-    expected_sample_score: tuple[float, float] | None
-    expected_sample_score_info: str
-    task_name: str
-    score_precision: int
 
 
 class DataclassJSONB(TypeDecorator):

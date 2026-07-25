@@ -40,7 +40,7 @@ from abc import ABCMeta, abstractmethod
 
 from cms import FEEDBACK_LEVEL_RESTRICTED
 from cms.db import SubmissionResult
-from cms.db.types import AdditionalInfo
+from cms.db.submission import AdditionalInfo
 from cms.grading.steps import EVALUATION_MESSAGES
 from cms.locale import Translation, DEFAULT_TRANSLATION
 from cms.server.jinja2_toolbox import GLOBAL_ENVIRONMENT

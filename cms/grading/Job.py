@@ -51,7 +51,7 @@ from cms.db import (
     SubmissionResult,
     UserTestResult,
 )
-from cms.db.types import LimitInfo
+from cms.db.submission import LimitInfo
 from cms.grading.languagemanager import get_language
 from cms.service.esoperations import ESOperation
 
