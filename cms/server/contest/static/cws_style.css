@@ -587,7 +587,7 @@ td.unit_test_failed[rowspan]:hover {
 }
 
 tr.unit_test_failed > td.verdict {
-    color: darkred;
+    color: #440000;
     font-weight: 700;
 }
 
@@ -623,7 +623,7 @@ td.unit_test_ok[rowspan]:hover {
 }
 
 .unit_test_list tr.unit_test_ok > td.verdict {
-    color: darkgreen;
+    color: #003300;
     font-weight: 700;
 }
 
