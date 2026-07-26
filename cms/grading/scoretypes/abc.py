@@ -888,7 +888,7 @@ class ScoreTypeGroup(ScoreTypeAlone):
         if any(not isinstance(subtask, dict) for subtask in self.parameters):
             return {
                 "unit_test": False,
-                "verdict": (-1, "Unit Tests not available for this ScoreType"),
+                "verdict": (-1, "Unit Tests not available for these parameters"),
             }
 
         expectations = {
@@ -916,8 +916,22 @@ class ScoreTypeGroup(ScoreTypeAlone):
             for parameter, subtask_detail in zip(self.parameters, subtask_details):
                 subtask = cast(ScoreTypeGroupParametersDict, parameter)
                 subtask_detail["name"] = self.get_subtask_name(subtask)
+                subtasks.append(subtask_detail)
+                subtask_id = subtask_detail["name"] or subtask_detail["idx"]
 
-                expected = expectations[tuple(subtask["key"])]
+                if "key" not in subtask:
+                    logger.info(
+                        f"Subtask {subtask_id} contains no key, ignoring unit tests for it"
+                    )
+                    continue
+                key = tuple(subtask["key"])
+                if key not in expectations:
+                    logger.error(
+                        f"Submission {sr.submission_id} contains no "
+                        f"expectations for subtask {subtask_id}"
+                    )
+                    continue
+                expected = expectations[key]
                 scores: list[float] = []
                 results: list[list[str]] = []
 
@@ -951,7 +965,6 @@ class ScoreTypeGroup(ScoreTypeAlone):
                 subtask_detail["max_memory"] = max(
                     (c["memory"] for c in subtask_detail["testcases"]), default=None
                 )
-                subtasks.append(subtask_detail)
 
                 """
                 Check testcase utility
