@@ -778,6 +778,39 @@ td.unit_test_ok[rowspan]:hover {
     background-color: hsla(120, 100%, 50%, 0.5);
 }
 
+/* TESTCASE UTILITY */
+.tci-badge {
+    padding: 1px 4px;
+    margin-left: 2px;
+    border-radius: 4px;
+    font-weight: 700;
+    color: #ffffff;
+    cursor: help;
+}
+
+.tci-badge.essential {
+    background-color: #800080;
+}
+
+.tci-badge.probably_useful {
+    background-color: #90ee90;
+}
+
+.tci-badge.to_inspect {
+    background-color: #0000ff;
+}
+
+.tci-badge.probably_useless {
+    background-color: #ffa500;
+}
+
+.tci-badge.useless {
+    background-color: #ff0000;
+}
+
+.tci-badge.strong_sample {
+    background-color: #ffff00;
+}
 /* OTHERS */
 span.info {
     color: #6DC942;

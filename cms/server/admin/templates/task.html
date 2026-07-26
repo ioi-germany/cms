@@ -489,10 +489,21 @@ $("select[name=task_type_{{ dataset.id }}]").change(function() {
           </tr>
         </thead>
         <tbody>
+          {% set stats = testcase_utility.get(dataset.id) if testcase_utility is defined else none %}
           {% for codename, testcase in dataset.testcases|dictsort(by="key") %}
+          {% set stat = stats.get(codename) if stats is not none else none %}
           <tr>
             <td style="font-weight:bold;">{{ loop.index }}</td>
-            <td>{{ codename }}</td>
+            <td>
+              {{ codename }}
+              {% if stat and (not stat.sample or stat.strong_sample) %}
+                <span class="tci-badge {{ stat.relevance.name }}"
+                      title="{{ stat.relevance.value }}: {{ stat.description }}
+{% if stat.essential_for %}Essential for: {{ stat.essential_for|join(', ') }}{% endif %}
+{% if stat.strictly_dominated_by %}Dominated by: {{ stat.strictly_dominated_by|join(', ') }}{% endif %}
+{% if stat.similar_to %}Similar to: {{ stat.similar_to|join(', ') }}{% endif %}">{{ stat.relevance.value[0] }}</span>
+              {% endif %}
+            </td>
             <td style="font-weight:bold;">
               <input type="checkbox" name="testcase_{{ testcase.id }}_public" {% if testcase.public %}checked{% endif %} />
             </td>

@@ -31,6 +31,12 @@ import logging
 import traceback
 
 import collections
+
+from cms.grading.scoretypes.abc import ScoreTypeGroup
+from cms.grading.scoretypes.testcase_utility import (
+    TestcaseRelevance,
+    evaluate_testcase_relevance,
+)
 try:
     collections.MutableMapping
 except:
@@ -116,10 +122,21 @@ class TaskHandler(BaseHandler):
         self.r_params = self.render_params()
         self.r_params["task"] = task
         self.r_params["primary_statements"] = task.primary_statements
-        self.r_params["submissions"] = \
-            self.sql_session.query(Submission)\
+        submissions = self.sql_session.query(Submission)\
                 .join(Task).filter(Task.id == task_id)\
                 .order_by(Submission.timestamp.desc()).all()
+        unit_tests: list[Submission] = [s for s in submissions if s.is_unit_test()]
+        testcase_utility: dict[int, dict[str, TestcaseRelevance]] = {}
+        for d in task.datasets:
+            if not isinstance(d.score_type_object, ScoreTypeGroup):
+                continue
+            results = [res for s in unit_tests if (res := s.get_result(d)) is not None]
+            if results:
+                testcase_utility[d.id] = evaluate_testcase_relevance(
+                    results, d.score_type_object
+                )
+        self.r_params["testcase_utility"] = testcase_utility
+        self.r_params["submissions"] = submissions
         self.render("task.html", **self.r_params)
 
     @require_permission(BaseHandler.PERMISSION_ALL)
