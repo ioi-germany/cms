@@ -24,7 +24,7 @@ RELEVANCE_DESCRIPTIONS = {
     ),
     Relevance.to_inspect: (
         "I",
-        "This testcase gives a very similar score as some other testcases for every"
+        "This testcase gives a very similar score as some other testcases for every "
         + "unit test; you might want to have a closer look whether you need it.",
     ),
     Relevance.probably_useless: (

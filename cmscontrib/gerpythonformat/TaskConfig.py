@@ -2642,19 +2642,9 @@ class TaskConfig(CommonConfig, Scope):
             with myheader(st["name"], st["verdict"]):
                 print_msg(st["verdict"][2], use_ellipsis=False)
                 print()
-                print(
-                    indent(
-                        side_by_side(
-                            [
-                                bold("Time"),
-                                bold("Memory"),
-                                bold("Answer"),
-                                bold("Grader response"),
-                            ],
-                            [2, 14, 27, 37],
-                        )
-                    )
-                )
+                print(indent(side_by_side(
+                    [bold("Codename"), bold("Time"), bold("Memory"), bold("Answer"), bold("Grader response")],
+                    [0, 12, 22, 34, 44])))
 
                 for c in st["testcases"]:
                     l = [(b, (a)) for a, b in c["line"]]
@@ -2667,13 +2657,13 @@ class TaskConfig(CommonConfig, Scope):
                     fmem = w(fmem, l[1], 10, z=True)
                     fans = v(*l[2], z=True)
                     fresp = add_line_breaks(c["grader"],
-                                            remaining_line_length() - 37)
-                    print(indent(side_by_side([ftime, fmem, fans, fresp],
-                                              [0, 12, 27, 37])))
+                                            remaining_line_length() - 44)
+                    print(indent(side_by_side([c["idx"], ftime, fmem, fans, fresp],
+                                              [2, 10, 19, 34, 44])))
 
                 print()
                 print(indent("     max. runtime in this group: " +
-                                bold("%.3fs" % st["max_runtime"])))
+                                bold("{:.3f}s".format(st["max_runtime"]))))
                 print(indent("max. memory usage in this group: " +
                                 bold("%.1fMB" %
                                     (float(st["max_memory"]) / 2**20))))
