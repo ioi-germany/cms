@@ -14,16 +14,34 @@ class Relevance(Enum):
     strong_sample = "Strong sample testcase"
 
 RELEVANCE_DESCRIPTIONS = {
-    Relevance.essential: "Removing this testcase would change the score of at least one unit test.",
-    Relevance.probably_useful: "This testcase is useful, but not essential from what I can tell (that's great!)",
-    Relevance.to_inspect: "For each fixed unit test, this testcase gets very similar scores; you might "
-    "want to have a closer look whether you need it",
-    Relevance.probably_useless: "This testcases is probably useless as there are other testcases which are at least as "
-    "strong across all unit tests (i.e. which always produce scores which are lower or at least "
-    "close to the score of this testcase)",
-    Relevance.useless: "This testcase is useless, i.e. removing it does not even come close to "
-    "affecting scoring (for example because every unit test succeeds on them)",
-    Relevance.strong_sample: "This sample testcase is relevant for scoring—that's... kind of disturbing to be honest.",
+    Relevance.essential: (
+        "E",
+        "Removing this testcase would change the score of at least one unit test.",
+    ),
+    Relevance.probably_useful: (
+        "P+",
+        "This testcase is useful, but not essential from what I can tell (that's great!)",
+    ),
+    Relevance.to_inspect: (
+        "I",
+        "This testcase gives a very similar score as some other testcases for every"
+        + "unit test; you might want to have a closer look whether you need it.",
+    ),
+    Relevance.probably_useless: (
+        "P?",
+        "This testcases is probably useless as there are other testcases which are at least as "
+        + "strong across all unit tests (i.e. which always produce scores which are lower or at least "
+        + "close to the score of this testcase)",
+    ),
+    Relevance.useless: (
+        "U",
+        "This testcase is useless, i.e. removing it does not even come close to "
+        + "affecting scoring (for example because every unit test succeeds on them)",
+    ),
+    Relevance.strong_sample: (
+        "!",
+        "This sample testcase is relevant for scoring—that's... kind of disturbing to be honest.",
+    ),
 }
 
 
@@ -36,8 +54,12 @@ class TestcaseRelevance:
     similar_to: list[str] = field(default_factory=list)
 
     @property
+    def badge_letter(self) -> str:
+        return RELEVANCE_DESCRIPTIONS[self.relevance][0]
+
+    @property
     def description(self) -> str:
-        return RELEVANCE_DESCRIPTIONS[self.relevance]
+        return RELEVANCE_DESCRIPTIONS[self.relevance][1]
 
     @property
     def strong_sample(self) -> bool:
@@ -84,7 +106,7 @@ def evaluate_testcase_relevance(
         strict_dominators = [d for d in dominated[tc] if tc not in dominated[d]]
         if strict_dominators:
             probably_useless.add(tc)
-            strictly_dominated[tc] = strict_dominators[:]
+            strictly_dominated[tc] = sorted(strict_dominators[:])
         elif len(dominated[tc]) == 0:
             probably_useful.add(tc)
         else:

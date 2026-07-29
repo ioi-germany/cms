@@ -21,6 +21,11 @@
 
 from cms.db.submission import AdditionalInfo, LimitInfo
 from cms.db.user import Participation
+from cms.grading.scoretypes.abc import ScoreTypeGroup
+from cms.grading.scoretypes.testcase_utility import (
+    Relevance,
+    evaluate_testcase_relevance,
+)
 from cmscontrib.gerpythonformat.Executable import Executable
 from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \
     header, red, green, gray, yellow, blue, lightgreen, orange, purple, bold, \
@@ -2231,7 +2236,7 @@ class TaskConfig(CommonConfig, Scope):
 
         failed = []
         unit_tests = []
-        unit_test_results = {}
+        unit_test_results = []
 
         # Test submissions
         for s in self.testsubmissions:  # submissions are saved because they
@@ -2254,8 +2259,11 @@ class TaskConfig(CommonConfig, Scope):
                     if not okay:
                         failed.append(code)
 
+                    sr = SubmissionResult()
+                    sr.unit_test_score_details = details
+                    sr.submission = sdb
+                    unit_test_results.append(sr)
                     unit_tests.append(code)
-                    unit_test_results[code] = details
 
         if len(self.testsubmissions) == 0:
             print()
@@ -2278,67 +2286,36 @@ class TaskConfig(CommonConfig, Scope):
             print()
 
             if tcimp:
-                self._testcase_importance(unit_test_results)
+                self._testcase_importance(unit_test_results, ddb.score_type_object)
 
         return sdbs
 
-    def _testcase_importance(self, unit_test_results):
-        essential = {}
-        useful = set()
-        dominated = {d.codename: {c.codename for c in self.cases
-                                  if c.codename != d.codename}
-                     for d in self.cases}
+    def _testcase_importance(
+        self, unit_test_results: list[SubmissionResult], score_type: ScoreTypeGroup
+    ):
+        relevance = evaluate_testcase_relevance(unit_test_results, score_type)
 
-        for u, details in unit_test_results.items():
-            useful |= set(details["useful"])
+        def get_cases(r):
+            return {tc: s for tc, s in relevance.items() if s.relevance == r}
 
-            for e in details["essential"]:
-                if e not in essential:
-                    essential[e] = []
-                essential[e].append(u)
-
-            for id in dominated.keys():
-                dominated[id] &= set(details["dominated"][id])
-        samples = {c.codename for s in self.subtasks if s.sample # TODO: s.points == 0?
-                              for c in s.cases}
-        private = {c.codename for s in self.subtasks
-                              for c in s.cases} - samples
-
-        essential_cases = sorted(list(essential))
-        potentially_useful_cases = sorted(c for c in useful
-                                          if c not in essential)
-        useless_cases = sorted(list(private - (set(essential) | useful)))
-        probably_useless = []
-        probably_useful = []
-        to_inspect = []
-        strictly_dominated = {}
-
-        for c in potentially_useful_cases:
-            D = [d for d in dominated[c] if c not in dominated[d]]
-            num_dominated = len(D)
-
-            if num_dominated > 0:
-                probably_useless.append(c)
-                strictly_dominated[c] = D[:]
-            elif len(dominated[c]) == 0:
-                probably_useful.append(c)
-            else:
-                to_inspect.append(c)
+        def has_cases(r):
+            return len(get_cases(r)) > 0
 
         def color(c):
             id = c.codename
-            if id in samples:
-                if id in essential or id in probably_useful or id in to_inspect:
+            stats = relevance[id]
+            if stats.sample:
+                if stats.strong_sample:
                     return yellow(str(id))
                 else:
                     return gray(str(id))
-            elif id in essential:
+            elif stats.relevance == Relevance.essential:
                 return purple(str(id))
-            elif id in probably_useful:
+            elif stats.relevance == Relevance.probably_useful:
                 return lightgreen(str(id))
-            elif id in to_inspect:
+            elif stats.relevance == Relevance.to_inspect:
                 return blue(str(id))
-            elif id in probably_useless:
+            elif stats.relevance == Relevance.probably_useless:
                 return orange(str(id))
             else:
                 return red(str(id))
@@ -2355,7 +2332,7 @@ class TaskConfig(CommonConfig, Scope):
                           use_ellipsis=False)
                 print()
 
-            if len(essential_cases) > 0:
+            if has_cases(Relevance.essential):
                 with header(purple("Essential"), 3):
                     print_msg("The following testcases are essential, i.e. "
                               "removing any of them would immediately affect "
@@ -2364,24 +2341,32 @@ class TaskConfig(CommonConfig, Scope):
                               "the quality of your other testcases):",
                               use_ellipsis=False)
                     print()
-                    for c in essential_cases:
-                        print_msg(purple(bold(nice(c)) + " is essential for "
-                                  "the following submission(s): " +
-                                  ", ".join(essential[c])),
-                                  use_ellipsis = True)
+                    for c, stats in get_cases(Relevance.essential).items():
+                        print_msg(
+                            purple(
+                                bold(nice(c)) + " is essential for "
+                                "the following submission(s): "
+                                + ", ".join(stats.essential_for)
+                            ),
+                            use_ellipsis=True,
+                        )
                     print()
 
-            if len(probably_useful) > 0:
+            if has_cases(Relevance.probably_useful):
                 with header(lightgreen("Probably useful"), 3):
                     print_msg("The following testcases are useful, but not "
                               "essential from what I can tell (that's great!):",
                               use_ellipsis=False)
                     print()
-                    print_msg(lightgreen(nice_list(probably_useful)),
-                              use_ellipsis=False)
+                    print_msg(
+                        lightgreen(
+                            nice_list(get_cases(Relevance.probably_useful).keys())
+                        ),
+                        use_ellipsis=False,
+                    )
                     print()
 
-            if len(to_inspect) > 0:
+            if has_cases(Relevance.to_inspect):
                 with header(blue("To inspect"), 3):
                     print_msg("For each fixed submission, the following "
                               "testcases get very similar scores; you might "
@@ -2395,9 +2380,8 @@ class TaskConfig(CommonConfig, Scope):
                     # solve the clique problem here (and we're in the case that
                     # the task author should have a closer look anyhow...)
                     X = set()
-                    for c in to_inspect:
-                        component = frozenset(d for d in dominated[c]
-                                                if c in dominated[d]) | {c}
+                    for c, stats in get_cases(Relevance.to_inspect).items():
+                        component = frozenset(stats.similar_to) | {c}
                         if component not in X:
                             X.add(component)
                             print_msg(blue("[" + nice_list(component) + "]"),
@@ -2405,7 +2389,7 @@ class TaskConfig(CommonConfig, Scope):
 
                     print()
 
-            if len(probably_useless) > 0:
+            if has_cases(Relevance.probably_useless):
                 with header(orange("Probably useless"), 3):
                     print_msg("The following testcases are probably useless as "
                               "there are other testcases which are at least as "
@@ -2414,13 +2398,18 @@ class TaskConfig(CommonConfig, Scope):
                               "close to the score of this testcase)",
                               use_ellipsis=False)
                     print()
-                    for c, d in strictly_dominated.items():
-                        print_msg(orange(bold(nice(c)) +
-                                  " is dominated by each of the following: " +
-                                  nice_list(d)), use_ellipsis=True)
+                    for c, stats in get_cases(Relevance.probably_useless).items():
+                        print_msg(
+                            orange(
+                                bold(nice(c))
+                                + " is dominated by each of the following: "
+                                + nice_list(stats.strictly_dominated_by)
+                            ),
+                            use_ellipsis=True,
+                        )
                     print()
 
-            if len(useless_cases) > 0:
+            if has_cases(Relevance.useless):
                 with header(red("Useless"), 3):
                     print_msg("The following testcases are useless, i.e. "
                               "removing them does not even come close to "
@@ -2428,22 +2417,23 @@ class TaskConfig(CommonConfig, Scope):
                               "submission succeeds on them):",
                               use_ellipsis=False)
                     print()
-                    print_msg(red(nice_list(useless_cases)), use_ellipsis=False)
+                    print_msg(
+                        red(nice_list(get_cases(Relevance.useless).keys())),
+                        use_ellipsis=False,
+                    )
                     print()
 
-            useful_sample = [id for id in samples
-                                if id in essential or id in probably_useful or
-                                   id in to_inspect]
-
-            if len(useful_sample) != 0:
+            if has_cases(Relevance.strong_sample):
                 with header(yellow("Warning: strong public testcases"), 3):
                     print_msg("At least one public testcase is relevant for "
                               "scoring (listed below, see the above output for "
                               "further details)—that's... kind of disturbing "
                               "to be honest.", use_ellipsis=False)
                     print()
-                    print_msg(yellow(nice_list(useful_sample)),
-                              use_ellipsis=False)
+                    print_msg(
+                        yellow(nice_list(get_cases(Relevance.strong_sample).keys())),
+                        use_ellipsis=False,
+                    )
                     print()
 
     def _makesubmission(

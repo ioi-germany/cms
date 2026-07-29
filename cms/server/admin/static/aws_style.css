@@ -784,33 +784,50 @@ td.unit_test_ok[rowspan]:hover {
     margin-left: 2px;
     border-radius: 4px;
     font-weight: 700;
-    color: #ffffff;
+    color: #fff;
     cursor: help;
+    line-height: 1rem;
+    min-width: 8px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 4px;
+    display: inline-block;
+}
+
+.codename {
+    position: relative;
+    margin-left: -10px;
 }
 
 .tci-badge.essential {
-    background-color: #800080;
+    background-color: #b0f;
 }
 
 .tci-badge.probably_useful {
-    background-color: #90ee90;
+    background-color: #6c4;
 }
 
 .tci-badge.to_inspect {
-    background-color: #0000ff;
+    background-color: #07f;
 }
 
 .tci-badge.probably_useless {
-    background-color: #ffa500;
+    background-color: #d60;
 }
 
 .tci-badge.useless {
-    background-color: #ff0000;
+    background-color: #c02;
 }
 
 .tci-badge.strong_sample {
-    background-color: #ffff00;
+    background-color: #fa0;
+    color: #000;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    padding: 4px 6px 0px 6px;
+    border-radius: 0;
 }
+
 /* OTHERS */
 span.info {
     color: #6DC942;
