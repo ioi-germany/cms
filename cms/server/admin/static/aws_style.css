@@ -787,10 +787,9 @@ td.unit_test_ok[rowspan]:hover {
     color: #fff;
     cursor: help;
     line-height: 1rem;
-    min-width: 8px;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
+    min-width: 10px;
+    position: relative;
+    top: 0%;
     margin-left: 4px;
     display: inline-block;
 }
