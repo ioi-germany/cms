@@ -77,7 +77,7 @@
 
 % Sample for (standard) batch tasks
 \setlength{\LTpost}{\medskipamount}
-\def\myc@ption#1#2#3{\noalign{\bfseries\large #3}}
+\def\myc@ption#1#2#3{\noalign{\hbox to\linewidth{\bfseries\large #3\hfil}}}
 \def\showcases{\removelastskip\par\bigskip\begingroup%
 % This is evil: we hijack LT@makecaption to force longtable to place the heading
 % same page as the table...
