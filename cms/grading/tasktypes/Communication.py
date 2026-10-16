@@ -110,19 +110,12 @@ class Communication(TaskType):
         "compilation",
         "",
         {COMPILATION_ALONE: "Submissions are self-sufficient",
-         COMPILATION_STUB: "Submissions are compiled with a grader"})
+         COMPILATION_GRADER: "Submissions are compiled with a grader"})
 
     _NUM_PROCESSES = ParameterTypeInt(
         "Number of Processes",
         "num_processes",
         "")
-
-    _COMPILATION = ParameterTypeChoice(
-        "Compilation",
-        "compilation",
-        "",
-        {COMPILATION_ALONE: "Submissions are self-sufficient",
-         COMPILATION_GRADER: "Submissions are compiled with a grader"})
 
     _USER_IO = ParameterTypeChoice(
         "User I/O",
@@ -278,13 +271,13 @@ class Communication(TaskType):
 
         # Create FIFOs.
         fifo_dir = [tempfile.mkdtemp(dir=config.global_.temp_dir) for i in indices]
-        if not self._uses_stub():
+        if not self._uses_grader():
             abortion_control_fifo_dir = tempfile.mkdtemp(dir=config.global_.temp_dir)
         fifo_user_to_manager = [
             os.path.join(fifo_dir[i], "u%d_to_m" % i) for i in indices]
         fifo_manager_to_user = [
             os.path.join(fifo_dir[i], "m_to_u%d" % i) for i in indices]
-        if not self._uses_stub():
+        if not self._uses_grader():
             fifo_solution_quitter = os.path.join(abortion_control_fifo_dir, "sq")
             fifo_manager_quitter = os.path.join(abortion_control_fifo_dir, "mq")
         for i in indices:
@@ -293,7 +286,7 @@ class Communication(TaskType):
             os.chmod(fifo_dir[i], 0o755)
             os.chmod(fifo_user_to_manager[i], 0o666)
             os.chmod(fifo_manager_to_user[i], 0o666)
-        if not self._uses_stub():
+        if not self._uses_grader():
             os.mkfifo(fifo_solution_quitter)
             os.mkfifo(fifo_manager_quitter)
             os.chmod(abortion_control_fifo_dir, 0o755)
@@ -306,7 +299,7 @@ class Communication(TaskType):
             os.path.join(sandbox_fifo_dir[i], "u%d_to_m" % i) for i in indices]
         sandbox_fifo_manager_to_user = [
             os.path.join(sandbox_fifo_dir[i], "m_to_u%d" % i) for i in indices]
-        if not self._uses_stub():
+        if not self._uses_grader():
             sandbox_abortion_control_fifo_dir = "/abort"
             sandbox_fifo_solution_quitter = \
                 os.path.join(sandbox_abortion_control_fifo_dir, "sq")
@@ -340,7 +333,7 @@ class Communication(TaskType):
         for i in indices:
             manager_command += [sandbox_fifo_user_to_manager[i],
                                 sandbox_fifo_manager_to_user[i]]
-        if not self._uses_stub():
+        if not self._uses_grader():
             manager_command += [sandbox_fifo_solution_quitter,
                                 sandbox_fifo_manager_quitter]
         # We could use trusted_step for the manager, since it's fully
@@ -362,7 +355,7 @@ class Communication(TaskType):
         manager_dirs_map: dict[str, tuple[str | None, str | None]] = dict(
             (fifo_dir[i], (sandbox_fifo_dir[i], "rw")) for i in indices
         )
-        if not self._uses_stub():
+        if not self._uses_grader():
             manager_dirs_map[abortion_control_fifo_dir] = \
                 (sandbox_abortion_control_fifo_dir, "rw")
         manager_ = evaluation_step_before_run(
@@ -423,7 +416,7 @@ class Communication(TaskType):
             # but it's only bool if wait=True, which it isn't here.
             processes[i] = typing.cast(subprocess.Popen, the_process)
 
-        if not self._uses_stub():
+        if not self._uses_grader():
             # Manager still running but wants to quit
             if solution_quitter.read() == "<3":
                 wait_without_std(processes)
@@ -433,7 +426,7 @@ class Communication(TaskType):
         # Wait for the processes to conclude, without blocking them on I/O.
         wait_without_std(processes + [manager])
 
-        if not self._uses_stub():
+        if not self._uses_grader():
             solution_quitter.close()
             if manager_quitter_open:
                 manager_quitter.close()
@@ -507,5 +500,5 @@ class Communication(TaskType):
         if job.success and not config.worker.keep_sandbox and not job.keep_sandbox:
             for d in fifo_dir:
                 rmtree(d)
-            if not self._uses_stub():
+            if not self._uses_grader():
                 rmtree(abortion_control_fifo_dir)

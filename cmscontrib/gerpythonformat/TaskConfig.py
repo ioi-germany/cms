@@ -1584,7 +1584,7 @@ class TaskConfig(CommonConfig, Scope):
             for end in self.std_extensions():
                 p = os.path.join(self.wdir, "interface." + end)
                 if not self.standalone_task or os.path.exists(p):
-                    self.managers["stub." + end] = p
+                    self.managers["grader." + end] = p
             if os.path.exists(os.path.join(self.wdir, "lib.h")):
                 self.managers["%s.h" % self.name] = \
                     os.path.join(self.wdir, "lib.h")
@@ -1592,8 +1592,11 @@ class TaskConfig(CommonConfig, Scope):
                 self.managers["%slib.pas" % self.name] = \
                     os.path.join(self.wdir, "lib.pas")
         self.managers["manager"] = manager.get_path()
-        self.tasktypeparameters = ([num_processes, "stub" if stub else "alone",
-                                    "fifo_io"])
+        self.tasktypeparameters = [
+            num_processes,
+            "grader" if stub else "alone",
+            "fifo_io",
+        ]
 
     @exported_function
     def output_generator(self, s: Executable):
