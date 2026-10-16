@@ -805,9 +805,8 @@ class ScoreTypeGroup(ScoreTypeAlone):
                 else:
                     public_testcases.append({"idx": tc_idx})
 
-            st_score_fraction = self.reduce(
-                [float(evaluations[tc_idx].outcome) for tc_idx in target], parameter
-            )
+            scores = [float(evaluations[tc_idx].outcome) for tc_idx in target]
+            st_score_fraction = self.reduce(scores, parameter)
             st_score = st_score_fraction * self.get_max_score(parameter)
             rounded_score = round(st_score, score_precision)
             sample_score = 0.0
