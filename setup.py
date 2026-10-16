@@ -171,7 +171,6 @@ setup(
             "cmsRemoveUser=cmscontrib.RemoveUser:main",
             "cmsSolutionChecker=cmscontrib.SolutionChecker:main",
             "cmsSpoolExporter=cmscontrib.SpoolExporter:main",
-            "cmsMake=cmstaskenv.cmsMake:main",
             "cmsPrometheusExporter=cmscontrib.PrometheusExporter:main",
             "cmsGerMake=cmscontrib.gerpythonformat.GerMake:main",
             "cmsGerMakeTask=cmscontrib.gerpythonformat.GerMakeTask:main",
