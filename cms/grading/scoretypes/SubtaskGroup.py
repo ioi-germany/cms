@@ -671,9 +671,9 @@ class SubtaskGroup(ScoreType):
                                     "memory": ev.execution_memory,
                                     "codename": idx})
 
-                    status, short, desc = \
-                        UnitTest.judge_group(case_results, extended_results,
-                                            possible, [])
+                    status, short, desc = UnitTest.judge_subtask(
+                        case_results, extended_results, possible, []
+                    )
 
                     if cases_failed:
                         if status > 0:

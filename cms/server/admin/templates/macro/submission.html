@@ -31,7 +31,42 @@ dataset (Dataset|None): the dataset to show results for, or if not defined use
 
 {{ macro_pages.selector(page_url, page, pages) }}
 
-<table class="bordered" id="submissions_table">
+{% set ns = namespace(unit_tests=[], other=[]) %}
+{% for s in submissions %}
+  {% if s.is_unit_test() %}
+    {% set ns.unit_tests = ns.unit_tests + [s] %}
+  {% else %}
+    {% set ns.other = ns.other + [s] %}
+  {% endif %}
+{% endfor %}
+
+{% if ns.other or page == 0 %}
+<h3 style="margin-top: 8px;">Submissions</h3>
+{{ table(admin, url, ns.other, dataset, false) }}
+{% endif %}
+
+{% if ns.unit_tests or page == pages-1 %}
+<h3 style="margin-top: 8px;">Unit Tests</h3>
+{{ table(admin, url, ns.unit_tests, dataset, true) }}
+{% endif %}
+
+{% endif %}
+{%- endmacro %}
+
+{% macro table(admin, url, submissions, dataset, unit_tests) -%}
+{#
+Render a table of submission data.
+
+admin (Admin): the logged in admin.
+url (Url): the URL instance referring to the root of AWS.
+submissions ([Submissions]): the list of submissions to display in the table
+    (current page only).
+dataset (Dataset|None): the dataset to show results for, or if not defined use
+    the active one.
+unit_tests (bool): whether the submissions are unit tests or not
+#}
+{% if submissions %}
+<table class="bordered" id="submissions_table{% if unit_tests %}_unit_tests{% endif %}">
   <thead>
     <tr>
       <th class="diff-only">-</th>
@@ -54,6 +89,8 @@ dataset (Dataset|None): the dataset to show results for, or if not defined use
     {% endfor %}
   </tbody>
 </table>
+{% else %}
+<p>No submissions found</p>
 {% endif %}
 {%- endmacro %}
 
@@ -141,7 +178,11 @@ dataset (Dataset|None): the dataset to show results for, or if not defined use
       Scored ({{ sr.score }} / {{ max_score }})
       <div id="evaluation_{{ s.id }}" class="score_details" style="display: none;">
         {% if score_type is defined %}
-          {{ score_type.get_html_details(sr.score_details, FEEDBACK_LEVEL_FULL)|safe }}
+          {% if s.is_unit_test() %}
+            {{ score_type.get_html_details(sr.unit_test_score_details, FEEDBACK_LEVEL_FULL)|safe }}
+          {% else %}
+            {{ score_type.get_html_details(sr.score_details, FEEDBACK_LEVEL_FULL)|safe }}
+          {% endif %}
         {% else %}
         [Cannot get score type - see logs]
         {% endif %}

@@ -24,10 +24,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import namedtuple
+from enum import Enum
 
 from sqlalchemy.orm import joinedload
 
 from cms.db import Submission, Dataset, Participation, Task
+from cms.db.submission import Evaluation, LimitInfo
 from cmscommon.constants import \
     SCORE_MODE_MAX, SCORE_MODE_MAX_SUBTASK, SCORE_MODE_MAX_TOKENED_LAST
 
@@ -175,12 +177,12 @@ def task_score(
         score = _task_score_max_tokened_last(score_details_tokened)
     else:
         raise ValueError("Unknown score mode '%s'" % task.score_mode)
-    
-    # The following line should be unnecessary since subtask scores 
-    # are rounded. However we are using floats not Decimals 
-    # and this can cause errors. So we round again to be sure. 
+
+    # The following line should be unnecessary since subtask scores
+    # are rounded. However we are using floats not Decimals
+    # and this can cause errors. So we round again to be sure.
     score = round(score, task.score_precision)
-    
+
     return score, partial
 
 
@@ -260,16 +262,6 @@ def _task_score_max_subtask(
         except Exception:
             pass
 
-        # TODO: it would be better to harmonize this with the format in the CMS;
-        # however, because of unit tests this would me mean we'd have to change
-        # the format the rest of the CMS uses...
-        try:
-            subtask_scores = dict((i, s["score"])
-                                  for i, s in enumerate(details["subtasks"])
-                                  if not s["sample"])
-        except Exception:
-            pass
-
         if subtask_scores is None or len(subtask_scores) == 0:
             # Task's score type is not group, assume a single subtask.
             subtask_scores = {1: score}
@@ -305,16 +297,36 @@ def _task_score_max(
     return max_score
 
 
+class LimitVerdict(Enum):
+    OK = 1
+    EXCEEDED = -1
+    AMBIGUOUS = 0
+
+
+class ScoreVerdict(Enum):
+    OK = 0
+    TOO_LOW = -1
+    TOO_HIGH = 1
+
+
 class UnitTest:
-    """Functions for basic unit tests
-    """
+    """Functions for basic unit tests"""
+
     @staticmethod
-    def get_result(limits, evaluation):
+    def _check_limit(value: float, weak_limit: float, strong_limit: float):
+        if value > weak_limit:
+            return LimitVerdict.EXCEEDED
+        if value < strong_limit:
+            return LimitVerdict.OK
+        return LimitVerdict.AMBIGUOUS
+
+    @staticmethod
+    def get_result(limits: LimitInfo, evaluation: Evaluation):
         """Collect information about the evaluation.
 
         limits (dict): a dictionary with entries weak_time_limit and
                        strong_time_limit
-        evaluation (Evaluation): the Evaluation object to study
+        evaluation: the Evaluation object to study
 
         return ([unicode]): a list of reasons of failure:
                             time, time?, memory, memory? and possibly a
@@ -322,244 +334,99 @@ class UnitTest:
                             been satisfied)
 
         """
-        result = []
-
-        def check(val, weak, strong):
-            if val > weak:
-                return -1
-            if val < strong:
-                return 1
-            else:
-                return 0
+        result: list[str] = []
 
         # check time constraints
         # TODO What if this is None?
         if evaluation.execution_time is not None:
-            timeverdict = check(float(evaluation.execution_time),
-                                float(limits["weak_time_limit"]),
-                                float(limits["strong_time_limit"]))
+            timeverdict = UnitTest._check_limit(
+                evaluation.execution_time,
+                limits.weak_time_limit,
+                limits.strong_time_limit,
+            )
 
             if "wall clock limit exceeded" in (evaluation.text)[0]:
-                timeverdict = -1
+                timeverdict = LimitVerdict.EXCEEDED
 
-            if timeverdict == -1:
+            if timeverdict == LimitVerdict.EXCEEDED:
                 result.append("time")
-            elif timeverdict == 0:
+            elif timeverdict == LimitVerdict.AMBIGUOUS:
                 result.append("time?")
 
         # check memory constraints
         # TODO What if this is None?
         if evaluation.execution_memory is not None:
-            memverdict = check(float(evaluation.execution_memory) / 2**20,
-                               float(limits["weak_mem_limit"]),
-                               float(limits["strong_mem_limit"]))
+            memverdict = UnitTest._check_limit(
+                evaluation.execution_memory / 2**20,
+                limits.weak_mem_limit,
+                limits.strong_mem_limit,
+            )
             if "violating memory limits" in (evaluation.text)[0]:
-                memverdict = -1
-            if memverdict == -1:
+                memverdict = LimitVerdict.EXCEEDED
+            if memverdict == LimitVerdict.EXCEEDED:
                 result.append("memory")
-            elif memverdict == 0:
+            elif memverdict == LimitVerdict.AMBIGUOUS:
                 result.append("memory?")
 
         # check solution (if possible)
-        if UnitTest.meaningful_score(result):
+        if UnitTest.meaningful_score(result) and evaluation.outcome is not None:
             result.append(evaluation.outcome)
 
         return result
 
     @staticmethod
-    def ignore(x, l):
-        return UnitTest.is_score(x) or ("time" in l and x == "time?") or\
-                                       ("memory" in l and x == "memory?")
+    def ignore(reason: str):
+        return UnitTest.is_score(reason) or reason in ("time?", "memory?")
 
     @staticmethod
-    def is_score(x):
+    def is_score(reason: str):
         try:
-            float(x)
+            float(reason)
             return True
-        except:
+        except Exception:
             return False
 
     @staticmethod
-    def get_scores(l):
-        return [float(x) for x in l if UnitTest.is_score(x)]
+    def remove_scores(results: list[str]):
+        return [reason for reason in results if not UnitTest.is_score(reason)]
 
     @staticmethod
-    def remove_scores(l):
-        return [x for x in l if not UnitTest.is_score(x)]
-
-    @staticmethod
-    def score(results):
-        """Get the minimum score of a list of results.
-
-        results ([unicode]): list of results
-                             (time, time?, memory, memory? or a score)
-
-        return (float): minimum score (1.0 if no score is present)
-
-        """
-        return min(UnitTest.get_scores(results) + [1.0])
-
-    @staticmethod
-    def compare_score(score, interval):
+    def compare_score(score: float, interval: tuple[float, float]):
         if score < interval[0]:
-            return -1
+            return ScoreVerdict.TOO_LOW
         if score > interval[1]:
-            return 1
-        return 0
+            return ScoreVerdict.TOO_HIGH
+        return ScoreVerdict.OK
 
     @staticmethod
-    def meaningful_score(results):
+    def meaningful_score(results: list[str]):
         """Test whether the score actually makes sense
         """
-        return not('time' in results or 'memory' in results)
+        return not ("time" in results or "memory" in results)
 
     @staticmethod
-    def is_interval(x):
-        if not isinstance(x, list):
+    def is_interval(value: object):
+        if not isinstance(value, list) and not isinstance(value, tuple):
             return False
-        if len(x) != 2:
+        if len(value) != 2:
             return False
 
-        return UnitTest.is_score(x[0]) and UnitTest.is_score(x[1])
+        return UnitTest.is_score(value[0]) and UnitTest.is_score(value[1])
 
     @staticmethod
-    def get_intervals(l):
-        return [x for x in l if UnitTest.is_interval(x)]
+    def get_intervals(expectations: list) -> list[tuple[float, float]]:
+        return [(x[0], x[1]) for x in expectations if UnitTest.is_interval(x)]
 
     @staticmethod
-    def remove_intervals(l):
-        return [x for x in l if not UnitTest.is_interval(x)]
+    def remove_intervals(expectations: list):
+        return [x for x in expectations if not UnitTest.is_interval(x)]
 
     @staticmethod
-    def case_line(results, mandatory, _optional, c=['✓', '≈', '✗', '―']):
-        """Information about a single testcase as part of a group
-           This function returns a list of pairs, where the first entry
-           visualises the respective result and the second one is >0
-           iff the result is as expected
-        """
-        optional = _optional + mandatory
+    def judge_score(score: float, intervals: list[tuple[float, float]]):
+        comparisons = [UnitTest.compare_score(score, i) for i in intervals]
 
-        def badness(key, r):
-            if key in r:
-                return 2
-            if key + '?' in r:
-                return 1
-            else:
-                return 0
-
-        def get_int(b):
-            if b:
-                return 1
-            else:
-                return -1
-
-        L = []
-
-        for x in ['time', 'memory']:
-            L.append((c[badness(x, results)],
-                      get_int((x in results or x not in mandatory) and
-                              badness(x, results) <= badness(x, optional))))
-
-        if UnitTest.meaningful_score(results):
-            s = UnitTest.score(results)
-
-            optional_intervals = UnitTest.get_intervals(optional)
-            if len(optional_intervals) == 0:
-                optional_intervals = [[1.0, 1.0]]
-
-            score_okay = all(UnitTest.compare_score(s, i) == 0
-                             for i in UnitTest.get_intervals(mandatory)) and \
-                         all(UnitTest.compare_score(s, i) != -1
-                             for i in optional_intervals)
-            L.append((s, get_int(score_okay)))
-        else:
-            L.append((c[-1], 0))
-
-        if "arbitrary" in optional:
-            for i in range(0, len(L)):
-                L[i] = (L[i][0], 0)
-
-        return L
-
-    @staticmethod
-    def judge_score(x, intervals):
-        l = [UnitTest.compare_score(x, i) for i in intervals]
-
-        if any(x < 0 for x in l):
-            return -1
-        if any(x > 0 for x in l):
-            return 1
-        return 0
-
-    @staticmethod
-    def judge_scores(scores, intervals):
-        if len(scores) == 0:
-            return 0
-        else:
-            return min(UnitTest.judge_score(s, intervals) for s in scores)
-
-    @staticmethod
-    def judge_group(results, _extended_results, mandatory, _optional):
-        """Judge a whole group given a concatenated list of the results of
-           the individual cases
-           extended_results contains results of testcases with explicit
-           expectations
-        """
-        optional = _optional + mandatory
-        extended_results = results + _extended_results
-
-        if "arbitrary" in mandatory:
-            return (1337, "ignored", "You specified that this specific "
-                    "outcome should be ignored (please only do this if you're "
-                    "really sure that's what you want).")
-
-        if "arbitrary" in optional and len(mandatory) != 0:
-            raise Exception("Undefined behaviour: you specified the outcome of "
-                            "a group as arbitrary while giving specific "
-                            "expectations for at least one testcase in this "
-                            "group. I don't know what to do.")
-
-        scores = UnitTest.get_scores(results)
-
-        # When checking whether the score is too low we also care about the
-        # optional score constraints
-        intervals = UnitTest.get_intervals(optional) or [[1.0, 1.0]]
-        score_verdict = UnitTest.judge_scores(scores, intervals)
-
-        if score_verdict == -1 or any(x not in optional for x in results
-                                      if not UnitTest.ignore(x,
-                                          ['time', 'memory'])):
-            return (-2, "failed", "The submission failed for a reason "
-                    "you did not expect (or score too low).")
-
-        if any(x.endswith("?") for x in results
-               if not UnitTest.ignore(x, optional)):
-            return (0, "ambiguous", "It is not clear whether the submission "
-                       "respects the limits.")
-
-        # When checking whether the score is too high we only care about the
-        # mandatory score constraints
-        intervals = UnitTest.get_intervals(mandatory) or [[1.0, 1.0]]
-        score_verdict = UnitTest.judge_scores(scores, intervals)
-
-        mandatory = UnitTest.remove_intervals(mandatory)
-
-        if (score_verdict == 0 and (len(mandatory) == 0 or
-                                    UnitTest.score(results) != 1.0)) or\
-           any(x in extended_results for x in mandatory):
-            return (1, "okay", "... all shall be well.")
-
-        return (-1, "failed",
-                "You expected the submission to fail but it didn't "
-                "(or score too high).")
-
-    @staticmethod
-    def judge_case(results, mandatory, optional):
-        """Judge a single testcase
-        """
-        if "arbitrary" in mandatory:
-            raise Exception("Undefined behaviour: you specified the outcome of "
-                            "a testcase as arbitrary. I don't know what to do")
-
-        a, b, c = UnitTest.judge_group(results, [], mandatory, optional)
-        return a, c
+        if any(x == ScoreVerdict.TOO_LOW for x in comparisons):
+            return ScoreVerdict.TOO_LOW
+        if any(x == ScoreVerdict.TOO_HIGH for x in comparisons):
+            return ScoreVerdict.TOO_HIGH
+        return ScoreVerdict.OK

@@ -96,6 +96,8 @@ class ContestConfig(CommonConfig):
 
     This object is exported as a variable called :samp:`contest`.
     """
+
+    # TODO: clean up and deprecate all but the restricted_feedback option
     no_feedback = ("no", True)
     partial_feedback = ("partial", True)
     full_feedback = ("full", True)

@@ -21,11 +21,15 @@
 
 """
 
+from dataclasses import asdict
+
 import psycopg2.extras
 import sqlalchemy
 from sqlalchemy import DDL, event, TypeDecorator, Unicode
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.ext.compiler import compiles
+
+from cmscommon.conf_parser import parse_typed_obj
 
 from . import metadata
 
@@ -246,3 +250,25 @@ event.listen(metadata, "after_drop", Digest.get_drop_command())
 @compiles(Digest)
 def compile_digest(element, compiler, **kw):
     return Digest.domain_name
+
+
+class DataclassJSONB(TypeDecorator):
+    impl = JSONB
+
+    def __init__(self, cls, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cls = cls
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, dict):
+            value = parse_typed_obj(value, self.cls, "")
+        elif not isinstance(value, self.cls):
+            raise TypeError(f"got unexpected value of type {type(value)}")
+        return asdict(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return parse_typed_obj(value, self.cls, "")

@@ -730,7 +730,102 @@ table.jqplot-table-legend {
     width: auto;
 }
 
+/* UNIT TESTS */
+#evaluation_user .score_details .subtask .subtask-head {
+    margin-top: 16px;
+}
+.score_details .subtask .subtask-head {
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
 
+#submissions_table_unit_tests .score_details td:last-child,
+#submissions_table_unit_tests .score_details th:last-child {
+    border-right: 1px solid #637D53;
+}
+.score_details .subtask .subtask-head .score.unit_test {
+    font-weight: 700;
+    padding: 4px;
+}
+
+.score_details .subtask.notcorrect .subtask-head .score.unit_test {
+    color: #cc0000;
+}
+
+.score_details .subtask.correct .subtask-head .score.unit_test {
+    color: #4e9a06;
+}
+
+.score_details .subtask.partiallycorrect .subtask-head .score.unit_test {
+    color: #ffb300;
+}
+
+td.unit_test_failed {
+    background-color: hsla(0, 100%, 50%, 0.4);
+}
+
+tr:has(td:not([rowspan]):hover)>td.unit_test_failed:not([rowspan]),
+td.unit_test_failed[rowspan]:hover {
+    background-color: hsla(0, 100%, 50%, 0.5);
+}
+
+td.unit_test_ok {
+    background-color: hsla(120, 100%, 50%, 0.4);
+}
+
+tr:has(td:not([rowspan]):hover)>td.unit_test_ok:not([rowspan]),
+td.unit_test_ok[rowspan]:hover {
+    background-color: hsla(120, 100%, 50%, 0.5);
+}
+
+/* TESTCASE UTILITY */
+.tci-badge {
+    padding: 1px 4px;
+    margin-left: 2px;
+    border-radius: 4px;
+    font-weight: 700;
+    color: #fff;
+    cursor: help;
+    line-height: 1rem;
+    min-width: 10px;
+    position: relative;
+    top: 0%;
+    margin-left: 4px;
+    display: inline-block;
+}
+
+.codename {
+    position: relative;
+    margin-left: -10px;
+}
+
+.tci-badge.essential {
+    background-color: #b0f;
+}
+
+.tci-badge.probably_useful {
+    background-color: #6c4;
+}
+
+.tci-badge.to_inspect {
+    background-color: #07f;
+}
+
+.tci-badge.probably_useless {
+    background-color: #d60;
+}
+
+.tci-badge.useless {
+    background-color: #c02;
+}
+
+.tci-badge.strong_sample {
+    background-color: #fa0;
+    color: #000;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    padding: 4px 6px 0px 6px;
+    border-radius: 0;
+}
 
 /* OTHERS */
 span.info {
@@ -768,3 +863,5 @@ th.diff-only, td.diff-only {
 table.diff-open th.diff-only, table.diff-open td.diff-only {
     display: table-cell;
 }
+
+

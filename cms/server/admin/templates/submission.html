@@ -10,7 +10,7 @@
   {% set status = sr.get_status() %}
 {% endif %}
 <div class="core_title">
-  <h1>Submission {{ s.id }} (Task: <a href="{{ url("task", s.task.id) }}">{{ s.task.name }}</a>)</h1>
+  <h1>Submission {{ s.id }} (Task: <a href="{{ url("task", s.task.id) }}">{{ s.task.name }}</a>{% if s.is_unit_test() %}; Unit Test{% endif %})</h1>
 </div>
 
 {% set dataset_selector_par_url = url("submission", s.id) %}
@@ -235,7 +235,9 @@
 
   <div class="score_details" id="evaluation_{{ s.id }}">
     {% if st is defined %}
-      {% if s.tokened() %}
+      {% if s.is_unit_test() %}
+        {{ st.get_html_details(sr.unit_test_score_details, s.task.feedback_level)|safe }}
+      {% elif s.tokened() %}
         {{ st.get_html_details(sr.score_details, s.task.feedback_level)|safe }}
       {% else %}
         {{ st.get_html_details(sr.public_score_details, s.task.feedback_level)|safe }}

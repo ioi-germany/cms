@@ -27,8 +27,7 @@
 
 """
 
-import json
-
+from dataclasses import dataclass
 from datetime import datetime
 import random
 from sqlalchemy import Boolean
@@ -40,9 +39,32 @@ from sqlalchemy.schema import Column, ForeignKey, ForeignKeyConstraint, \
 from sqlalchemy.types import Integer, Float, String, Unicode, DateTime, Enum, \
     BigInteger
 
+from cms.db.types import DataclassJSONB
 from cmscommon.datetime import make_datetime
 from . import Filename, FilenameSchema, Digest, Base, Participation, Task, \
     Dataset, Testcase
+
+
+@dataclass
+class LimitInfo:
+    weak_time_limit: float
+    strong_time_limit: float
+    weak_mem_limit: int
+    strong_mem_limit: int
+
+
+@dataclass
+class AdditionalInfo:
+    limits: LimitInfo
+    unit_test: bool
+    expected: dict[str, list[str | tuple[float, float]]]
+    expected_case: dict[str, list[str | tuple[float, float]]]
+    expected_score: tuple[float, float] | None
+    expected_score_info: str
+    expected_sample_score: tuple[float, float] | None
+    expected_sample_score_info: str
+    task_name: str
+    score_precision: int
 
 
 class Submission(Base):
@@ -117,8 +139,8 @@ class Submission(Base):
         return self.comment.split("\n", 1)[0]
 
     # Unit test parameters (None if the submission is not a unit test)
-    additional_info: str = Column(
-        String,
+    additional_info: AdditionalInfo | None = Column(
+        DataclassJSONB(AdditionalInfo, none_as_null=True),
         nullable=True)
 
     # These one-to-many relationships are the reversed directions of
@@ -199,8 +221,7 @@ class Submission(Base):
         if self.additional_info is None:
             return False
 
-        ai = json.loads(self.additional_info)
-        assert ai["unit_test"] is True
+        assert self.additional_info.unit_test is True
         return True
 
     @classmethod
