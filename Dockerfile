@@ -93,7 +93,7 @@ EOF
 ENV LANG=C.UTF-8
 
 ########################################
-FROM base as tex
+FROM base AS tex
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked <<EOF
 #!/bin/bash -ex
@@ -138,7 +138,7 @@ ENTRYPOINT ["/home/cmsuser/docker-entrypoint.sh"]
 CMD ["sleep", "infinity"]
 
 ########################################
-FROM base as slim
+FROM base AS slim
 # Set cmsuser as default user
 USER cmsuser
 
@@ -158,7 +158,7 @@ ENTRYPOINT ["/home/cmsuser/docker-entrypoint.sh"]
 CMD ["sleep", "infinity"]
 
 ########################################
-FROM base as dev
+FROM base AS dev
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked <<EOF
 #!/bin/bash -ex
