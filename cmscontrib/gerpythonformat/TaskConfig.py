@@ -51,6 +51,7 @@ from cms.grading.languagemanager import get_language
 from cms.grading.Job import CompilationJob, EvaluationJob, Job
 from cms.rules.Rule import JobRule, ZipRule
 from cms.service.esoperations import ESOperation
+from dataclasses import asdict
 from datetime import datetime
 import copy
 import json
@@ -1226,6 +1227,8 @@ class TaskConfig(CommonConfig, Scope):
         self._makeallzip()
         if self.tasktype == "OutputOnly":
             self._makeinputzip()
+        # Make the file with test submissions and their expectations.
+        self._maketestsubmissionexpectations()
 
         self._collect_garbage()
 
@@ -2085,6 +2088,15 @@ class TaskConfig(CommonConfig, Scope):
         ZipRule(self.rules, zipname, contents).ensure()
         self.attachment(zipname, "%s_input.zip" % self.name)
 
+    def _maketestsubmissionexpectations(self):
+        res = []
+        for s in self.testsubmissions:
+            sjs = {'filenames': s.filenames,
+                   'additional_info': asdict(self._test_submission_additional_info(s))}
+            res.append(sjs)
+        with open("test-submission-expectations.json", "w") as fout:
+            json.dump(res, fout)
+
     def _collect_garbage(self):
         """
         Delete directories of test cases that weren't made in this run.
@@ -2533,6 +2545,11 @@ class TaskConfig(CommonConfig, Scope):
             sdb.files[our_filename] = File(our_filename, digest,
                                            submission=sdb)
 
+        sdb.additional_info = self._test_submission_additional_info(submission, tdb)
+
+        return sdb
+
+    def _test_submission_additional_info(self, submission: Submission):
         # Unit tests
         def m_abs(rel):
             return max(int(rel * self._memorylimit * 1024 * 1024), 1)
@@ -2546,7 +2563,7 @@ class TaskConfig(CommonConfig, Scope):
             weak_mem_limit=m_abs(submission.weak_mem_limit),
             strong_mem_limit=m_abs(submission.strong_mem_limit),
         )
-        sdb.additional_info = AdditionalInfo(
+        return AdditionalInfo(
             limits=limits,
             unit_test=True,
             expected=submission.expectations,
@@ -2556,10 +2573,8 @@ class TaskConfig(CommonConfig, Scope):
             expected_sample_score=submission.sample_score,
             expected_sample_score_info=submission.sample_score_info,
             task_name=self.name,
-            score_precision=tdb.score_precision,
+            score_precision=0,  # TODO It seems like we don't support other score precisions.
         )
-
-        return sdb
 
     def _do_test_submission(self, sdb: Submission, ddb: Dataset):
         """

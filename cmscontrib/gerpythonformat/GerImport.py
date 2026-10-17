@@ -175,8 +175,8 @@ class GerImport(Service):
                         u.team = user_team1(username)
 
                 # The test user participation.
-                test_pdb = pdbs[contestconfig._mytestuser.username]
-                test_pdb1 = pdb1s[contestconfig._mytestuser.username]
+                # test_pdb = pdbs[contestconfig._mytestuser.username]
+                # test_pdb1 = pdb1s[contestconfig._mytestuser.username]
 
                 # This is an ugly hack to prevent problems when reordering or
                 # adding tasks. Since we delete after adding and updating,
@@ -200,51 +200,51 @@ class GerImport(Service):
                                 tdb.active_dataset.description).first()
                     assert ddb1 is not None
                     v.active_dataset = ddb1
-                tdb1s = _update_list_with_key(cdb1.tasks,
-                                              tdbs,
-                                              lambda t : t.name,
-                                              preserve_old=False,
-                                              update_value_fn=update_task,
-                                              creator_fn=task_creator)
-                tdbs = {t.name : t for t in tdbs}
-
-                if not self.no_test:
-                    ans = input("Replace (perhaps not yet existent) test "
-                        "submissions? (This will cause workers to crash if "
-                        "there are still test submissions pending!) [y/N] ") \
-                            .strip().lower()
-                    if ans not in ["y", "yes"]:
-                        self.no_test = True
-
-                sdb1ss = {}
-                if not self.no_test:
-                    logger.warning("Replacing test submissions")
-                    for t in contestconfig.tasks:
-                        tdb = tdbs[t]
-                        tdb1 = tdb1s[t]
-                        # Mark old test submissions for deletion.
-                        sdb1s = (
-                            session.query(Submission)
-                            .filter(Submission.participation == test_pdb1)
-                            .filter(Submission.task == tdb1)
-                            .filter(Submission.additional_info.isnot(None))
-                            .all()
-                        )
-                        for sdb1 in sdb1s:
-                            assert sdb1.is_unit_test()
-                            _to_delete.append(sdb1)
-
-                        # Create test submissions in the database.
-                        sdbs = contestconfig.tasks[t]._make_test_submissions(
-                            test_pdb, tdb, False)
-                        sdb1s = []
-                        for sdb in sdbs:
-                            sdb1 = _copy(sdb)
-                            sdb1.task = tdb1
-                            sdb1.participation = test_pdb1
-                            session.add(sdb1)
-                            sdb1s.append(sdb1)
-                        sdb1ss[t] = sdb1s
+                _update_list_with_key(cdb1.tasks,
+                                      tdbs,
+                                      lambda t : t.name,
+                                      preserve_old=False,
+                                      update_value_fn=update_task,
+                                      creator_fn=task_creator)
+                # tdbs = {t.name : t for t in tdbs}
+                #
+                # if not self.no_test:
+                #     ans = input("Replace (perhaps not yet existent) test "
+                #         "submissions? (This will cause workers to crash if "
+                #         "there are still test submissions pending!) [y/N] ") \
+                #             .strip().lower()
+                #     if ans not in ["y", "yes"]:
+                #         self.no_test = True
+                #
+                # sdb1ss = {}
+                # if not self.no_test:
+                #     logger.warning("Replacing test submissions")
+                #     for t in contestconfig.tasks:
+                #         tdb = tdbs[t]
+                #         tdb1 = tdb1s[t]
+                #         # Mark old test submissions for deletion.
+                #         sdb1s = (
+                #             session.query(Submission)
+                #             .filter(Submission.participation == test_pdb1)
+                #             .filter(Submission.task == tdb1)
+                #             .filter(Submission.additional_info.isnot(None))
+                #             .all()
+                #         )
+                #         for sdb1 in sdb1s:
+                #             assert sdb1.is_unit_test()
+                #             _to_delete.append(sdb1)
+                #
+                #         # Create test submissions in the database.
+                #         sdbs = contestconfig.tasks[t]._make_test_submissions(
+                #             test_pdb, tdb, False)
+                #         sdb1s = []
+                #         for sdb in sdbs:
+                #             sdb1 = _copy(sdb)
+                #             sdb1.task = tdb1
+                #             sdb1.participation = test_pdb1
+                #             session.add(sdb1)
+                #             sdb1s.append(sdb1)
+                #         sdb1ss[t] = sdb1s
 
                 for v in _to_delete:
                     if isinstance(v, Task):
@@ -290,16 +290,16 @@ class GerImport(Service):
 
                 session.commit()
 
-                if not self.no_test:
-                    evaluation_service = self.connect_to(
-                        ServiceCoord("EvaluationService", 0))
-                    for t in contestconfig.tasks:
-                        sdb1s = sdb1ss[t]
-                        # Notify EvaluationService of the new test submissions.
-                        for sdb1 in sdb1s:
-                            evaluation_service.new_submission(
-                                submission_id=sdb1.id)
-                    evaluation_service.disconnect()
+                # if not self.no_test:
+                #     evaluation_service = self.connect_to(
+                #         ServiceCoord("EvaluationService", 0))
+                #     for t in contestconfig.tasks:
+                #         sdb1s = sdb1ss[t]
+                #         # Notify EvaluationService of the new test submissions.
+                #         for sdb1 in sdb1s:
+                #             evaluation_service.new_submission(
+                #                 submission_id=sdb1.id)
+                #     evaluation_service.disconnect()
 
                 logger.info("Import finished (new contest id: %s).",
                             cdb.id if cdb1 is None else cdb1.id)
@@ -316,9 +316,7 @@ def main():
                         help="source directory",
                         type=utf8_decoder)
     parser.add_argument("-nt", "--no-test", action="store_true",
-                        help="don't change test submissions; without this "
-                        "flag, all test submissions are deleted and then re-"
-                        "added.")
+                        help="don't submit test submissions.")
     parser.add_argument("-sl", "--safe-latex", action="store_true",
                         help="Safely compile latex documents in a sandbox")
     parser.add_argument("-c", "--clean", action="store_true",
