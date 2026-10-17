@@ -258,7 +258,8 @@ class TmrCompat(object):
         out = os.path.join(self.wdir, dest)
         box(" TMR EXPORT ", "writing task-maker-rust task to {}".format(
             os.path.relpath(out, os.getcwd())))
-        for d in ("statement", "gen", "sol", os.path.join("gen", "static")):
+        for d in ("statement", "gen", "sol", "att",
+                  os.path.join("gen", "static")):
             dd = os.path.join(out, d)
             if not os.path.isdir(dd):
                 os.makedirs(dd)
@@ -307,11 +308,21 @@ class TmrCompat(object):
         samples = list(self.saved)
 
         # --- statement samples: statement/<name>.(input|output)<i>.txt -
+        # samples must also appear in att/ as symlinks into statement/
+        # (tmr's AttSampleFiles sanity check; the booklet uses the
+        # canonicalized paths)
+        att = os.path.join(out, "att")
+        if not os.path.isdir(att):
+            os.makedirs(att)
         for i, case in enumerate(samples):
-            shutil.copy(case.infile, os.path.join(
-                out, "statement", "%s.input%d.txt" % (name, i)))
-            shutil.copy(case.outfile, os.path.join(
-                out, "statement", "%s.output%d.txt" % (name, i)))
+            for kind, attr in (("input", "infile"), ("output", "outfile")):
+                fname = "%s.%s%d.txt" % (name, kind, i)
+                shutil.copy(getattr(case, attr), os.path.join(
+                    out, "statement", fname))
+                link = os.path.join(att, fname)
+                if os.path.islink(link) or os.path.isfile(link):
+                    os.remove(link)
+                os.symlink(os.path.join("..", "statement", fname), link)
 
         # --- static testcases: gen/static/<name>_<codename>.in ---------
         copied = {}
