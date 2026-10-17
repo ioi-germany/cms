@@ -30,14 +30,13 @@ import re
 import shutil
 
 from cmscontrib.gerpythonformat.CommonConfig import exported_function
-from cmscontrib.gerpythonformat.Messenger import box, red, yellow, bold, \
-    header
+from cmscontrib.gerpythonformat.Messenger import box, green, yellow, bold
 
 
 def _tmr_warn(self, feature, detail):
     """Loudly report a tmr construct (in)compatibility and record it."""
     msg = bold("task-maker-rust: ") + feature + " — " + detail
-    box(red(" TMR INCOMPATIBLE "), msg)
+    box(" TMR INCOMPATIBLE ", yellow(msg))
     if not hasattr(self, "tmr_incompatibilities"):
         self.tmr_incompatibilities = []
     self.tmr_incompatibilities.append(feature + ": " + detail)
@@ -257,7 +256,7 @@ class TmrCompat(object):
         from cmscontrib.gerpythonformat.ConstraintParser import Constraint
 
         out = os.path.join(self.wdir, dest)
-        box(yellow(" TMR EXPORT "), "writing task-maker-rust task to {}".format(
+        box(" TMR EXPORT ", "writing task-maker-rust task to {}".format(
             os.path.relpath(out, os.getcwd())))
         for d in ("statement", "gen", "sol", os.path.join("gen", "static")):
             dd = os.path.join(out, d)
@@ -416,7 +415,7 @@ class TmrCompat(object):
                      "(set TMR_TEMPLATE or pass template=); statement/"
                      "english.typ needs it")
 
-        box(yellow(" TMR EXPORT "), "exported to {}".format(out))
+        box(" TMR EXPORT ", green("exported to {}".format(out)))
         return out
 
     # -- statement conversion helpers (typst -> typst, data-driven) ----
@@ -601,8 +600,8 @@ class TmrCompat(object):
         entries = getattr(self, "tmr_incompatibilities", [])
         self.tmr_incompatibilities = []  # report once
         if not entries:
-            box(yellow(" TMR "), "no task-maker-rust incompatibilities "
-                "detected")
+            box(" TMR ", green("no task-maker-rust incompatibilities "
+                "detected"))
             return
         body = "\n".join("- " + e for e in entries)
-        box(red(" TMR INCOMPATIBILITIES (%d) " % len(entries)), body)
+        box(" TMR INCOMPATIBILITIES (%d) " % len(entries), yellow(body))
