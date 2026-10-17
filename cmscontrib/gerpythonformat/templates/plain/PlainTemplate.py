@@ -502,15 +502,15 @@ class PlainTemplate(Template):
                 if value[0] is not None:
                     lower_entries.append(
                         '"{}:{}": (${}$,),\n'.format(
-                            i, key, Constraint.pretty_typst(value[0])))
+                            i, key, Constraint.typst_bound(value[0])))
                 if value[1] is not None:
                     upper_entries.append(
                         '"{}:{}": (${}$,),\n'.format(
-                            i, key, Constraint.pretty_typst(value[1])))
+                            i, key, Constraint.typst_bound(value[1])))
                 if value[0] == value[1] and value[0] is not None:
                     value_entries.append(
                         '"{}:{}": (${}$,),\n'.format(
-                            i, key, Constraint.pretty_typst(value[0])))
+                            i, key, Constraint.typst_bound(value[0])))
             return curr_constraints
 
         lower_entries = []

@@ -1,0 +1,23 @@
+// Translated strings for the lg template, German
+// (mirrors translation-de.tex; imported by taskinfo.typ)
+
+#let t-task = "Aufgabe"
+#let t-subtask = "Teilaufgabe"
+#let t-point = "Punkt"
+#let t-points = "Punkte"
+#let t-sample = "Beispiel"
+#let t-samples = "Beispiele"
+#let t-program = "Dein Programm"
+#let t-return = "Rückgabewert"
+#let t-explanation = "Erläuterung"
+#let t-limits = "Limits"
+#let t-time = "Zeit"
+#let t-memory = "Speicher"
+#let t-input = "Eingabe"
+#let t-output = "Ausgabe"
+#let t-constraints = "Beschränkungen"
+#let t-and = " und"
+#let t-ands = " und"
+#let t-implementation = "Implementierung"
+#let t-scoring = "Bewertung"
+#let t-samplegrader = "Testprogramm"

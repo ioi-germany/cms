@@ -28,6 +28,24 @@ import os
 import shutil
 
 
+def read_typst(filename):
+    """Callable supplying the contents of a .typ template file that lives
+    next to this module.
+
+    typst has no textual include like latex's \\input, and the template
+    functions must see the generated taskinfo data in their scope, so the
+    files are embedded into taskinfo.typ at build time; the .typ files
+    are the source of truth (mirrors contestheader.tex).
+    """
+    path = os.path.join(os.path.dirname(__file__), filename)
+
+    def content():
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+
+    return content
+
+
 class LgTemplate(PlainTemplate):
     def __init__(self, contest, short_name):
         super(LgTemplate, self).__init__(contest)
@@ -72,13 +90,19 @@ class LgTemplate(PlainTemplate):
         task.supply("latex", def_latex("taskheader",
                                        input_latex("taskheader.tex")))
 
-        # Provide translation-{de,en}.tex
+        # Provide translation-{de,en}.tex and their typst counterparts
         shutil.copy(os.path.join(os.path.dirname(__file__),
                                      "translation-de.tex"),
                         os.path.join(task.wdir, "translation-de.tex"))
         shutil.copy(os.path.join(os.path.dirname(__file__),
                                      "translation-en.tex"),
                         os.path.join(task.wdir, "translation-en.tex"))
+        shutil.copy(os.path.join(os.path.dirname(__file__),
+                                     "translation-de.typ"),
+                        os.path.join(task.wdir, "translation-de.typ"))
+        shutil.copy(os.path.join(os.path.dirname(__file__),
+                                     "translation-en.typ"),
+                        os.path.join(task.wdir, "translation-en.typ"))
 
         # Provide common asy files
         shutil.copyfile(os.path.join(os.path.dirname(__file__), "graphics.cfg"),
@@ -114,32 +138,38 @@ class LgTemplate(PlainTemplate):
         task.supply("typst", lg_logo)
         task.supply("typst", lambda: "#let ifrestricted = {}\n".format(
             "true" if task._has_restricted_feedback_level() else "false"))
-        task.supply("typst", LG_TYPST)
-        task.supply("typst", TMR_TYPST)
+        # typst functions and the task-maker-rust compatibility aliases;
+        # source of truth is contestheader.typ / tmr-compat.typ
+        task.supply("typst", read_typst("contestheader.typ"))
+        task.supply("typst", read_typst("tmr-compat.typ"))
+
+    def typst_languages(self):
+        """Languages for which a translation-<lang>.typ exists."""
+        tdir = os.path.dirname(__file__)
+        return {f[len("translation-"):-len(".typ")]
+                for f in os.listdir(tdir)
+                if f.startswith("translation-") and f.endswith(".typ")}
 
     def typst_language(self, task):
         # Language is set by compiletypst from the statement file name
         # suffix; the contestheader defaults to German, so we do too.
+        langs = self.typst_languages()
         lang = getattr(task, "typst_language", None) or "de"
-        if lang in LG_TRANSLATIONS:
+        if lang in langs:
             return lang
         # variant language tags (e.g. "en-isc") reuse the base language's
         # translated strings
         base = lang.split("-")[0]
-        return base if base in LG_TRANSLATIONS else "de"
+        return base if base in langs else "de"
 
     def supply_typst_translations(self, task):
         """Provide the translated strings (mirroring translation-{de,en}.tex)
-        as typst definitions for the current document language.
+        by importing translation-<lang>.typ (copied into the working
+        directory by ontask; taskinfo re-exports the definitions).
         """
         def translations():
-            lang = self.typst_language(task)
-            table = LG_TRANSLATIONS.get(lang, LG_TRANSLATIONS["de"])
-            out = ""
-            for name, text in table.items():
-                out += '#let t-{} = "{}"\n'.format(
-                    name, text.replace("\\", "\\\\").replace('"', '\\"'))
-            return out
+            return '#import "translation-{}.typ": *\n'.format(
+                self.typst_language(task))
 
         task.supply("typst", translations)
 
@@ -366,304 +396,4 @@ class LgTemplate(PlainTemplate):
                 self.contest.compile(filename)
 
 
-# Translated strings, mirroring translation-{en,de}.tex (only the subset
-# that the typst contestheader currently uses).
-LG_TRANSLATIONS = {
-    "en": {
-        "task": "Task",
-        "subtask": "Subtask",
-        "point": "point",
-        "points": "points",
-        "sample": "Sample",
-        "samples": "Samples",
-        "program": "Your program",
-        "return": "Return value",
-        "explanation": "Explanation",
-        "limits": "Limits",
-        "time": "Time",
-        "memory": "Memory",
-        "input": "Input",
-        "output": "Output",
-        "constraints": "Constraints",
-        "and": " and",
-        "ands": ", and",
-        "implementation": "Implementation",
-        "scoring": "Scoring",
-        "samplegrader": "Sample grader",
-    },
-    "de": {
-        "task": "Aufgabe",
-        "subtask": "Teilaufgabe",
-        "point": "Punkt",
-        "points": "Punkte",
-        "sample": "Beispiel",
-        "samples": "Beispiele",
-        "program": "Dein Programm",
-        "return": "Rückgabewert",
-        "explanation": "Erläuterung",
-        "limits": "Limits",
-        "time": "Zeit",
-        "memory": "Speicher",
-        "input": "Eingabe",
-        "output": "Ausgabe",
-        "constraints": "Beschränkungen",
-        "and": " und",
-        "ands": " und",
-        "implementation": "Implementierung",
-        "scoring": "Bewertung",
-        "samplegrader": "Testprogramm",
-    },
-}
 
-
-# Typst functions of the lg template; supplied after all data so that the
-# closures can refer to taskinfo's definitions (mirrors contestheader.tex).
-LG_TYPST = r"""
-#let highlightcolor = rgb("#c20e1a")
-
-// Semantic helpers so statements stay free of styling numbers (mirrors the
-// official IOI typst template's philosophy: statements are pure semantics).
-// TeX statements write `{\LARGE\bfseries \taskname}` and an explicit
-// `\vspace{1em}` on top of `\parskip=\smallskipamount`; typst has no
-// additive par glue, so the absorbed total is defined once here and
-// statements only call `#tasktitle[...]` / `#sep`.
-#let tasktitle(body) = text(size: 1.4em, weight: "bold")[#body]
-#let sep = v(1.45em)
-
-#let taskheader(body) = {
-  // Fira Sans text + Fira Math, mirroring the latex template.
-  set text(font: "Fira Sans", size: 10pt)
-  // NOTE: `set math(font:)` inside a function body is rejected by the
-  // trimmed typst binary ("expected function, found module"); setting the
-  // text font on equations achieves the same (math picks up the family's
-  // OpenType MATH table).
-  show math.equation: set text(font: "Fira Math")
-  set par(spacing: 0.5em, justify: true)
-  set par(first-line-indent: 0em)
-  set heading(numbering: none, supplement: none)
-  // NOTE: the trimmed binary rejects heading above/below overrides; the
-  // heading's built-in spacing is used as-is (same for every heading,
-  // including Samples and Limits, so their above-gaps match by structure).
-  // The trimmed typst binary ignores above/below spacing on blocks around
-  // headings; explicit v() skips restore the latex template's rhythm.
-  show heading: it => {
-    v(if it.level == 1 { 1.2em } else { 0.9em })
-    it
-    v(0.45em)
-  }
-  show raw: set text(font: "Fira Mono", size: 9pt)
-  set page(
-    paper: "a4",
-    margin: (left: 2.5cm, right: 2.5cm, top: 3.25cm, bottom: 1.5cm),
-    header: context align(right)[
-      // Fixed-height box pins the header bottom to match the TeX
-      // reference (ink bottom ~74pt from page top); v(1fr) pushes the
-      // grid down inside it (grid align inside the header is unreliable
-      // in the trimmed binary).
-      #box(height: 65pt)[
-        #v(1fr)
-        #grid(
-          columns: (auto, 1pt, auto),
-          // gaps measured from the TeX render: logo->bar ~13pt,
-          // bar->text ~1em (tikz outer xsep)
-          column-gutter: (13pt, 1em),
-          inset: 0pt,
-          align: horizon,
-          // NOTE: scale() inside a header grid cell gets applied twice
-          // (image is fitted to the cell first); set the width directly.
-          if lg-logo != none { image("logo-typst.pdf", width: 44.1pt) },
-          box(width: 100%, height: 2.9em, fill: highlightcolor),
-          text(fill: luma(102), size: 10pt)[
-            // paragraph line breaks give the same leading as TeX's \\
-            #align(start)[
-              #text(weight: "bold")[#contestname]\
-              #t-task:#h(0.5em)#text(weight: "bold")[#taskname]
-            ]
-          ],
-        )
-      ]
-    ],
-    footer: context {
-      // NOTE: do not raise the footer with v() — negative skips here
-      // overflow the footer box and collide with full pages (e.g. the
-      // sample table reaching the bottom margin).
-      align(center)[
-        #counter(page).at(here()).first()/#counter(page).final().first()
-      ]
-    },
-  )
-  set list(marker: box(width: 4pt, height: 4pt, fill: highlightcolor))
-  body
-}
-
-// Fancy testcase table: the box wraps ONLY the header row (like TeX's
-// \hline above/below the header with | at the outer column edges), an
-// empty spacer column between Input and Output, and gray-filled sample
-// cells (mirrors mktestcasetable / \cellcolor[gray]{.9}). The trimmed
-// typst binary draws stroke dicts on table cells as FULL outlines, so
-// the header rules are strokes on the header cell blocks themselves.
-#let testcasetable() = {
-  // raw blocks have their own padding by default; drop it so the cell
-  // inset alone controls the text padding (like verbatim in latex).
-  show raw: set block(inset: 0pt)
-  table(
-    // gray cells fill to the margins, gap between them == vertical
-    // row gutter (3.3pt), centered by the symmetric 1fr columns
-    columns: (1fr, 3.3pt, 1fr),
-    inset: 0pt,
-    row-gutter: 3.3pt,
-    stroke: none,
-    fill: (x, y) => if y > 0 and x != 1 { luma(229) },
-    table.header(
-      block(width: 100%, inset: (x: 4pt, y: 3pt),
-            stroke: (top: 0.5pt + black, bottom: 0.5pt + black,
-                    left: 0.5pt + black))[#align(center)[#text(font: "Fira Sans", weight: "regular")[#t-input]]],
-      // spacer header cell: nbsp keeps its height in sync with the labels
-      block(width: 100%, inset: (x: 4pt, y: 3pt),
-            stroke: (top: 0.5pt + black, bottom: 0.5pt + black))[#text(size: 10pt)[#sym.space.nobreak]],
-      block(width: 100%, inset: (x: 4pt, y: 3pt),
-            stroke: (top: 0.5pt + black, bottom: 0.5pt + black,
-                    right: 0.5pt + black))[#align(center)[#text(font: "Fira Sans", weight: "regular")[#t-output]]],
-    ),
-    ..{
-      for i in range(numsamples) {
-        (
-          // box() makes the cell atomic so an input/output pair never
-          // splits across pages (the trimmed binary rejects block
-          // breakable:/blocked: arguments)
-          box(block(width: 100%, inset: (x: 4pt, y: 5pt))[#{tc-in.at(i)}]),
-          [],
-          box(block(width: 100%, inset: (x: 4pt, y: 5pt))[#{tc-out.at(i)}]),
-        )
-      }
-    },
-  )
-}
-
-#let showcases() = {
-  // TeX: caption is a \subsection* in the longtable firsthead with
-  // LTpre=0pt and no \bigskip in \showcases, so the space above
-  // "Samples" equals the space above any other heading (e.g. Limits).
-  heading(level: 2, numbering: none)[
-    #(if numsamples == 1 { t-sample } else { t-samples })
-  ]
-  testcasetable()
-}
-
-#let showlimits() = {
-  heading(level: 2, numbering: none)[#t-limits]
-  // paragraph line breaks (natural leading) match TeX's \\
-  align(start)[
-    #t-time: #timelimit\
-    #t-memory: #memlimit
-  ]
-}
-
-#let standardpart() = {
-  showcases()
-  showlimits()
-}
-
-// Subtask headings with hanging layout (mirrors \subtask/\sthelper)
-#let subtask(body) = {
-  sub-counter.step()
-  context {
-    let n = sub-counter.get().first()
-    let pts = subtaskpoints(n)
-    let unit = if pts == "1" { t-point } else { t-points }
-    // Run-in label, like \st@sk in the lg template: bold label, then body;
-    // continuation lines get a hanging indent so they align under the body.
-    // (block above/below spacing is ignored by the trimmed binary -> v())
-    v(0.7em)
-    block({
-      set par(hanging-indent: 4.2em, first-line-indent: 0em)
-      text(weight: "bold", [#t-subtask #n (#pts #unit).])
-      h(0.5em)
-      body
-    })
-  }
-}
-"""
-
-
-# task-maker-rust statement API aliases (see the tmr docs
-# ioi-task-format.typ); supplied after LG_TYPST so they can wrap it.
-# tmr takes this data from gen.toml/task.toml; here it comes from our
-# taskinfo instead, so tmr arguments that carry such data are accepted
-# and ignored (noted per alias). The statement content itself (titles,
-# constraint values) still uses our taskinfo accessors.
-TMR_TYPST = r"""
-// tmr wraps the statement body in `#statement[...]`; that is our
-// taskheader.
-#let statement(body) = taskheader(body)
-
-// Localized section headings. tmr uses bare content values (#constraints,
-// not #constraints()); the heading elements are created at definition
-// time, i.e. before taskheader's `set heading(numbering: none)` applies,
-// so numbering is disabled explicitly here.
-#let implementation = heading(level: 2, numbering: none)[#t-implementation]
-#let constraints = heading(level: 2, numbering: none)[#t-constraints]
-#let scoring = heading(level: 2, numbering: none)[#t-scoring]
-#let explanation = heading(level: 2, numbering: none)[#t-explanation]
-#let samplegrader = heading(level: 2, numbering: none)[#t-samplegrader]
-
-// tmr renders a format line under "Input format"/"Output format"; we
-// mirror the lg section headings and place the body underneath.
-#let inputformat(body) = {
-  heading(level: 2, numbering: none)[#t-input]
-  body
-}
-#let outputformat(body) = {
-  heading(level: 2, numbering: none)[#t-output]
-  body
-}
-
-// Highlight boxes (plain typst stand-ins for the tmr template boxes).
-#let note(body) = {
-  v(0.5em)
-  block(width: 100%, inset: (x: 8pt, y: 6pt), fill: luma(245),
-        stroke: 0.5pt + luma(180))[#body]
-  v(0.5em)
-}
-#let warn(body) = {
-  v(0.5em)
-  block(width: 100%, inset: (x: 8pt, y: 6pt), fill: rgb("#fff4f4"),
-        stroke: 0.8pt + highlightcolor)[#body]
-  v(0.5em)
-}
-
-// tmr reads the sample count from gen.toml; here it is numsamples, so
-// any argument is accepted and ignored.
-#let examples(..args) = showcases()
-
-// tmr passes each subtask's gen.toml constants to its lambda; there are
-// no named constants here, so the lambda gets an empty dict and reads
-// values via currconstraints()/currconstraint(name). index-start is
-// accepted but ignored: lg numbers subtasks from 1.
-#let subtasks(fs, index-start: 0) = {
-  for f in fs {
-    subtask(f((:)))
-  }
-}
-
-// OIS-style subtasks with explicit points; the points come from the task
-// config here, so the second argument is ignored.
-#let ois-subtasks(fs, points) = subtasks(fs)
-
-// Grader function signatures: one boxed raw line per (lang, signature).
-#let signatures(sigs) = {
-  v(0.5em)
-  for s in sigs {
-    block(width: 100%, inset: (x: 6pt, y: 3pt),
-          stroke: 0.5pt + luma(180))[#raw(s.at(1))]
-    v(0.3em)
-  }
-}
-
-// tmr hides the editorial unless show_solutions=true is passed; we have
-// no such switch here, so it is always shown.
-#let editorial(body) = {
-  heading(level: 1, numbering: none)[Editorial]
-  body
-}
-"""

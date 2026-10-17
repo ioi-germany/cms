@@ -235,59 +235,55 @@ class Constraint(object):
 
     def typst(self):
         """
-        Render this constraint as typst math (including $ delimiters), as
-        close to the latex rendering as possible.
+        Render this constraint as typst math (including $ delimiters).
+
+        Generated NATIVELY from the parsed data (variable values and
+        bounds) -- no latex string is rewritten. Semantic values from the
+        constraint DSL (e.g. "a_i", "10^5") are typst math already; a
+        typeset annotation is only reused when it contains no latex
+        commands (those cannot be represented faithfully in typst).
         """
         s = "$"
 
-        typeset_variable_list = [Constraint.latex_to_typst(v.typeset or v.val)
+        typeset_variable_list = [Constraint.typst_value(v)
                                   for v in self.variables]
 
         if self.max is not None and self.max == self.min:
             s += "=".join(typeset_variable_list)
-            s += "= {}".format(Constraint.pretty_typst(self.min))
+            s += "= {}".format(Constraint.typst_bound(self.min))
 
         elif self.max is None:
             s += ", ".join(typeset_variable_list)
-            s += ">= {}".format(Constraint.pretty_typst(self.min))
+            s += ">= {}".format(Constraint.typst_bound(self.min))
         else:
             if self.min is not None:
-                s += "{} <= ".format(Constraint.pretty_typst(self.min))
+                s += "{} <= ".format(Constraint.typst_bound(self.min))
             s += ", ".join(typeset_variable_list)
-            s += " <= {}".format(Constraint.pretty_typst(self.max))
+            s += " <= {}".format(Constraint.typst_bound(self.max))
         s += "$"
         return s
 
     @staticmethod
-    def latex_to_typst(s):
-        """
-        Convert simple latex math snippets (as produced by this module) to
-        typst math. This is best-effort: exotic latex math is not handled.
-        """
-        # Longest replacements first
-        for old, new in [(r"\leq", "<="),
-                         (r"\geq", ">="),
-                         (r"\neq", "!="),
-                         (r"\cdot", "dot"),
-                         (r"\times", "*"),
-                         (r"\div", "/"),
-                         (r"\le", "<="),
-                         (r"\ge", ">="),
-                         (r"\ne", "!="),
-                         (r"\,", "#h(0.17em)"),
-                         (r"\;", "#h(0.28em)"),
-                         (r"\!", ""),
-                         ("{", ""),
-                         ("}", "")]:
-            s = s.replace(old, new)
-        return s
+    def typst_escape(s):
+        """Escape the few characters special in typst math; subscripts,
+        superscripts and arithmetic need no processing. Must be applied to
+        RAW values, before typst markup (e.g. digit-grouping thin spaces)
+        is inserted."""
+        return s.replace("#", "\\#").replace("%", "\\%")
 
     @staticmethod
-    def pretty_typst(v):
-        if v.typeset is not None:
-            return Constraint.latex_to_typst(v.typeset)
-        else:
-            return Constraint.prettify(v.val, sep="#h(0.17em)")
+    def typst_value(v):
+        """Native typst rendering of a TypesetValue: the semantic value
+        with typst digit-grouping thin spaces; plain-text annotations are
+        kept, latex ones fall back to the semantic value."""
+        raw = v.typeset if (v.typeset is not None
+                             and "\\" not in v.typeset) else v.val
+        return Constraint.prettify(Constraint.typst_escape(raw),
+                                   sep="#h(0.17em)")
+
+    @staticmethod
+    def typst_bound(v):
+        return Constraint.typst_value(v)
 
     def terminal(self):
         vars = ", ".join(v.val for v in self.variables)
