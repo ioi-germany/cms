@@ -1,0 +1,61 @@
+\basicheader
+\usepackage{xstring}
+
+% IOI statements are in English: use a dot as decimal marker.
+% The plain header installs a comma in an \AtBeginDocument hook, so
+% register ours there as well (hooks run in order of registration).
+\AtBeginDocument{\sisetup{output-decimal-marker={.}}}
+
+% --- English wording -------------------------------------------------------
+% A small fixed dictionary; statements may use these macros for the
+% usual labels.
+\def\tTask{Task}
+\def\tSubtask{Subtask}
+\def\tPoint{point}
+\def\tPoints{points}
+\def\tSample{Sample}
+\def\tSamples{Samples}
+\def\tConstraints{Constraints}
+\def\tLimits{Limits}
+\def\tTime{Time}
+\def\tMemory{Memory}
+\def\tInput{Input}
+\def\tOutput{Output}
+
+% Page header: contest on the left, task on the right.
+\lhead{\textbf{\contestname}}
+\rhead{\tTask\enspace\textbf{\taskname}}
+
+\makeatletter
+
+% --- Subtask headings ------------------------------------------------------
+% Each \subtask prints "Subtask <n> (<p> points)." hanging-aligned with
+% the widest such heading.
+\def\sthelper#1#2{{\sffamily\bfseries \tSubtask\ #1 (\IfInteger{#2}{\ifnum#2=1 #2~\tPoint\else #2~\tPoints\fi}{#2~\tPoints}).\enspace\hss}}
+\newcount\stcount
+\stcount=0
+\def\st#1{\setbox0=\hbox{\sthelper{9}{99}}\global\advance\stcount by 1 \par\ifdim\lastskip<\smallskipamount\removelastskip\smallskip\fi\noindent\hangindent=\wd0 \hangafter=1%
+\setbox1=\hbox{\sthelper{\the\stcount}{#1}\hss}%
+\ifdim\wd1>\wd0\box1\else\hbox to \wd0{\unhbox1\hss}\fi\ignorespaces}
+\def\subtask{\count1=\stcount \advance\count1 by 1 \st{\subtaskpoints{\the\count1}}}
+
+% --- Constraints -----------------------------------------------------------
+\def\currconstraint#1{\scopedconstraint{\the\stcount}{#1}}
+\def\currconstraints{\@ifstar{\currconstraint{@ll*}}{\currconstraint{@ll}}}
+\def\currconstraintupper#1{\scopedconstraintupper{\the\stcount}{#1}}
+\def\currconstraintlower#1{\scopedconstraintlower{\the\stcount}{#1}}
+\def\currconstraintvalue#1{\scopedconstraintvalue{\the\stcount}{#1}}
+
+% --- Samples and limits ----------------------------------------------------
+\def\showcases{\ifnum\numsamples=0\else\sheading{\tSamples}\testcasetable\par\medskip\fi}
+\def\showlimits{\sheading{\tLimits}\tTime: \timelimit\\ \tMemory: \memlimit}
+\def\standardpart{\showcases\showlimits}
+
+\makeatother
+
+% --- Subtask accounting ----------------------------------------------------
+% The statement must mention every non-sample subtask exactly once...
+\AtEndDocument{\ifnum\stcount=\numsubtasks\else\PackageError{ioi-template}{Not all subtasks are contained in the task statement!\MessageBreak You should call \protect\subtask\space precisely as often as there are subtasks, not counting the public one. If for some reason you do not want to do this, you can call \protect\flushsubtasks\space after all calls to \protect\subtask\space and \protect\st}{You should call \protect\subtask\space (or \protect\st) precisely as often as there are subtasks, not counting the public one. If for some reason you do not want to do this, you can call \protect\flushsubtasks\space after all calls to \protect\subtask\space and \protect\st}\fi}
+
+% ... or not (only use this if you know what you are doing).
+\def\flushsubtasks{\global\stcount=\numsubtasks}
