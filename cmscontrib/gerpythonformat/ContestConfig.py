@@ -169,6 +169,8 @@ class ContestConfig(CommonConfig):
         else:
             self.token_equ_fp = None
 
+        self._score_precision = 0
+
         # there is no upstream for contest
         self.bequeathing = False
         self.inheriting = False
@@ -349,6 +351,17 @@ class ContestConfig(CommonConfig):
 
         """
         self._allow_registration = allow
+
+    @exported_function
+    def score_precision(self, prec):
+        """
+        The scores for this contest will be rounded to this number of
+        decimal places.
+
+        prec (int): number of decimal places
+
+        """
+        self._score_precision = prec
 
     @exported_function
     def user_group(self, s, start, stop, analysis_start=None, analysis_stop=None, per_user_time=None):
@@ -616,6 +629,7 @@ class ContestConfig(CommonConfig):
         cdb.min_submission_interval_grace_period = (
             self.min_submission_interval_grace_period
         )
+        cdb.score_precision = self._score_precision
 
         self.usersdb = {}
         self.participationsdb = {}

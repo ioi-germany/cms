@@ -1152,6 +1152,8 @@ class TaskConfig(CommonConfig, Scope):
         self.tasktype = None
         self.saved = []
 
+        self._score_precision = 0
+
         self.everything_checked = True
 
         self._statements = {}
@@ -1467,6 +1469,17 @@ class TaskConfig(CommonConfig, Scope):
         """
         if localname is not None:
             self.spoilers[publicname] = os.path.abspath(localname)
+
+    @exported_function
+    def score_precision(self, prec):
+        """
+        The scores for this task will be rounded to this number of
+        decimal places.
+
+        prec (int): number of decimal places
+
+        """
+        self._score_precision = prec
 
     def std_extensions(self):
         _EXTENSIONS = ["cpp", "pas", "java", "py"]
@@ -2211,6 +2224,7 @@ class TaskConfig(CommonConfig, Scope):
         tdb.min_user_test_interval = self.min_user_test_interval
         tdb.feedback_level = self._feedback_level
         tdb.score_mode = self.score_mode()
+        tdb.score_precision = self._score_precision
 
         if self.tasktype == "OutputOnly":
             tdb.submission_format = [
