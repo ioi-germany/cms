@@ -242,6 +242,20 @@ int main(int argc, char **argv) {
             perror("generator: pipe");
             return 1;
         }
+        // if the sandbox started us with fd 0/1/2 closed, pipe() hands
+        // out those numbers; move the ends above the std descriptors so
+        // the dup2/close below cannot destroy the pipe itself
+        for (int i = 0; i < 2; i++) {
+            if (fds[i] <= STDERR_FILENO) {
+                int t = dup(fds[i]);
+                if (t < 0) {
+                    perror("generator: dup");
+                    return 1;
+                }
+                close(fds[i]);
+                fds[i] = t;
+            }
+        }
         FILE *pin = fdopen(fds[1], "w");
         if (pin == NULL) {
             perror("generator: fdopen");
