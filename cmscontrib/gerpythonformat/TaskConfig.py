@@ -37,6 +37,7 @@ from cmscontrib.gerpythonformat.Executable import ExitCodeException, \
     InternalPython, CPPProgram
 from cmscontrib.gerpythonformat.ConstraintParser import ConstraintList, \
     merge_constraints, read_frequency, check_bounds
+from cmscontrib.gerpythonformat.TmrCompat import TmrCompat
 from cmscommon.constants import SCORE_MODE_MAX_TOKENED_LAST, \
     SCORE_MODE_MAX_SUBTASK
 from cms import (
@@ -1094,7 +1095,7 @@ class MyStatement(object):
         self.primary = primary
 
 
-class TaskConfig(CommonConfig, Scope):
+class TaskConfig(TmrCompat, CommonConfig, Scope):
     """
     Class for task configuration files.
 
@@ -1235,6 +1236,11 @@ class TaskConfig(CommonConfig, Scope):
     def _readconfig(self, filename):
         with header("Loading task {}".format(self.name), depth=2):
             super(TaskConfig, self)._readconfig(filename)
+
+        # Loud summary if any task-maker-rust alias was used (no-op
+        # otherwise).
+        if getattr(self, "tmr_incompatibilities", None):
+            self.report_tmr_incompatibilities()
 
         print_msg("Creating test case zip files")
         # Automatically make a ZIP file containing the saved test cases
