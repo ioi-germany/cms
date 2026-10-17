@@ -1599,6 +1599,67 @@ class TaskConfig(CommonConfig, Scope):
         ]
 
     @exported_function
+    def interactive(
+        self,
+        controller,
+        stub=True,
+        num_processes=1,
+        concurrent=True,
+        controller_memory_limit=None,
+        controller_time_limit=None,
+        controller_wall_limit=None,
+    ):
+        """
+        Specify this to be an interactive task.
+
+        controller (CPPProgram): executable communicating with the contestant
+                              submissions
+                              (must at least implement get_path() to get
+                              the file name of the executable)
+
+        Submissions are linked together with interface.{c,cpp,pas,py,...}.
+        num_processes:        e.g. set to 2 for a Two-Step task
+        """
+        self.tasktype = "Interactive"
+        if controller_memory_limit is None:
+            default_mem_limit = 2048
+            print_msg(
+                "No memory limit for the controller set, "
+                f"defaulting to {default_mem_limit}MB",
+                warning=True,
+            )
+            # This should be in MB
+            controller_memory_limit = default_mem_limit
+        if controller_time_limit is None:
+            print_msg(
+                "No time limit for the controller set, defaulting to 1s", warning=True
+            )
+            controller_time_limit = 1
+        if controller_wall_limit is None:
+            print_msg(
+                "No wall limit for the controller set, "
+                "defaulting to twice the time limit",
+                warning=True,
+            )
+            controller_wall_limit = 2 * controller_time_limit
+        if stub:
+            for end in self.std_extensions():
+                p = os.path.join(self.wdir, "interface." + end)
+                if not self.standalone_task or os.path.exists(p):
+                    self.managers["grader." + end] = p
+            if os.path.exists(os.path.join(self.wdir, "lib.h")):
+                self.managers["%s.h" % self.name] = os.path.join(self.wdir, "lib.h")
+        self.managers["controller"] = controller.get_path()
+        self.tasktypeparameters = [
+            num_processes,
+            "grader" if stub else "alone",
+            concurrent,
+            controller_memory_limit,
+            controller_time_limit,
+            controller_wall_limit,
+        ]
+
+    @exported_function
     def output_generator(self, s: Executable):
         """
         Set the output file generator.
