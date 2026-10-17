@@ -1979,6 +1979,9 @@ class TaskConfig(CommonConfig, Scope):
                 testcase(...)
 
         """
+        if isinstance(prog, MyCase):
+            raise Exception("To add an existing test case `tc` to a subtask, call 'add_testcase(tc)', not 'testcase(tc)'")
+
         if not kwargs.get("save") and self.minimal:
             print_msg("Skipping testcase (minimal mode)")
             if len(self.group_stack) > 0:
