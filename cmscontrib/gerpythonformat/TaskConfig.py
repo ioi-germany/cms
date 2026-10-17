@@ -2659,7 +2659,7 @@ class TaskConfig(CommonConfig, Scope):
             expected_sample_score=submission.sample_score,
             expected_sample_score_info=submission.sample_score_info,
             task_name=self.name,
-            score_precision=0,  # TODO It seems like we don't support other score precisions.
+            score_precision=self._score_precision,
         )
 
     def _do_test_submission(self, sdb: Submission, ddb: Dataset):
