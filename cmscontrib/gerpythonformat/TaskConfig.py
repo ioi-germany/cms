@@ -512,6 +512,14 @@ class MySubtask(Scope):
         else:
             print_msg(green(bold("...all shall be well\n")))
 
+    def _dummy_case(self, name):
+        if name is None:
+            name = "t" + str(len(self.cases))
+
+        setattr(self, name, None)
+        self.cases.append(None)
+
+
 class MyGroup(Scope):
     """
     :ivar subtask: The subtask this group belongs to
