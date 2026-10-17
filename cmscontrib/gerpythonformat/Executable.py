@@ -185,10 +185,11 @@ class Executable(object):
         stdinstring = kwargs.pop("stdinstring", None)
         stdout = kwargs.pop("stdout", None)
         stderr = kwargs.pop("stderr", None)
+        hide_stderr = kwargs.pop("hide_stderr", False)
         dependencies = kwargs.pop("dependencies", [])
 
         return self.run(args, kwargs, stdin=stdin, stdinstring=stdinstring,
-                        stdout=stdout, stderr=stderr,
+                        stdout=stdout, stderr=stderr, hide_stderr=hide_stderr,
                         dependencies=dependencies)
 
 
@@ -230,7 +231,7 @@ class ParamsExecutable(Executable):
                         stderr=stderr, dependencies=dependencies)
 
     def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
-            stderr=None, dependencies=[]):
+            stderr=None, hide_stderr=False, dependencies=[]):
         k = kwargs.copy()
         k.update(self.kwargs)
         if stdin is None:
@@ -239,7 +240,8 @@ class ParamsExecutable(Executable):
             stdinstring = self.stdinstring
         return self.parent.run(args + self.args, k, stdin=stdin,
                                stdinstring=stdinstring, stdout=stdout,
-                               stderr=stderr, dependencies=dependencies)
+                               stderr=stderr, hide_stderr=hide_stderr,
+                               dependencies=dependencies)
 
     def __str__(self):
         return "{} with additional arguments {}" \
@@ -359,11 +361,11 @@ class CPPProgram(Executable):
                         stderr=stderr, dependencies=dependencies)
 
     def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
-            stderr=None, dependencies=[]):
+            stderr=None, hide_stderr=False, dependencies=[]):
         self.compilenow()
         r = self._exerule(args, kwargs, stdin, stdinstring, stdout,
                     stderr, dependencies).ensure()
-        if stderr is None:
+        if stderr is None and not hide_stderr:
             print_block(r.err)
         if r.code != 0:
             raise ExitCodeException(
@@ -429,7 +431,7 @@ class InternalPython(Executable):
         return hasher.hexdigest()
 
     def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
-            stderr=None, dependencies=[]):
+            stderr=None, hide_stderr=False, dependencies=[]):
         # TODO: treat dependencies specially?
         kwargs = kwargs.copy()
         if stdin is not None:
@@ -481,10 +483,10 @@ class ExternalPython(Executable):
         self.function = function
 
     def _exerule(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
-            stderr=None, dependencies=[]):
-        if stdin is not None or stdinstring is not None or stderr is not None:
+            stderr=None, hide_stderr=False, dependencies=[]):
+        if stdin is not None or stdinstring is not None or stderr is not None or hide_stderr:
             raise ExitCodeException(
-                "Stdin, stdinstring and stderr are not implemented "
+                "Stdin, stdinstring, stderr and hide_stderr are not implemented "
                 "for ext_script.")
         return PythonFunctionRule(self.rulesdir,
                            self.path,
@@ -496,9 +498,9 @@ class ExternalPython(Executable):
                            dependencies=dependencies)
 
     def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
-            stderr=None, dependencies=[]):
+            stderr=None, hide_stderr=False, dependencies=[]):
         self._exerule(args, kwargs, stdin, stdinstring, stdout,
-                       stderr, dependencies).ensure()
+                       stderr, hide_stderr, dependencies).ensure()
 
     def __str__(self):
         return "<external>"
@@ -555,10 +557,10 @@ class ExternalScript(Executable):
                         dependonexe=False, dependencies=dependencies)
 
     def run(self, args, kwargs, stdin=None, stdinstring=None, stdout=None,
-            stderr=None, dependencies=[]):
+            stderr=None, hide_stderr=False, dependencies=[]):
         r = self._exerule(args, kwargs, stdin, stdinstring, stdout,
-                       stderr, dependencies).ensure()
-        if stderr is None:
+                       stderr, hide_stderr, dependencies).ensure()
+        if stderr is None and not hide_stderr:
             print_block(r.err)
         if r.code != 0:
             raise ExitCodeException(
