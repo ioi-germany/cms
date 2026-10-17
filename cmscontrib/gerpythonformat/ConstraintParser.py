@@ -233,6 +233,62 @@ class Constraint(object):
         s += "$"
         return s
 
+    def typst(self):
+        """
+        Render this constraint as typst math (including $ delimiters), as
+        close to the latex rendering as possible.
+        """
+        s = "$"
+
+        typeset_variable_list = [Constraint.latex_to_typst(v.typeset or v.val)
+                                  for v in self.variables]
+
+        if self.max is not None and self.max == self.min:
+            s += "=".join(typeset_variable_list)
+            s += "= {}".format(Constraint.pretty_typst(self.min))
+
+        elif self.max is None:
+            s += ", ".join(typeset_variable_list)
+            s += ">= {}".format(Constraint.pretty_typst(self.min))
+        else:
+            if self.min is not None:
+                s += "{} <= ".format(Constraint.pretty_typst(self.min))
+            s += ", ".join(typeset_variable_list)
+            s += " <= {}".format(Constraint.pretty_typst(self.max))
+        s += "$"
+        return s
+
+    @staticmethod
+    def latex_to_typst(s):
+        """
+        Convert simple latex math snippets (as produced by this module) to
+        typst math. This is best-effort: exotic latex math is not handled.
+        """
+        # Longest replacements first
+        for old, new in [(r"\leq", "<="),
+                         (r"\geq", ">="),
+                         (r"\neq", "!="),
+                         (r"\cdot", "dot"),
+                         (r"\times", "*"),
+                         (r"\div", "/"),
+                         (r"\le", "<="),
+                         (r"\ge", ">="),
+                         (r"\ne", "!="),
+                         (r"\,", "#h(0.17em)"),
+                         (r"\;", "#h(0.28em)"),
+                         (r"\!", ""),
+                         ("{", ""),
+                         ("}", "")]:
+            s = s.replace(old, new)
+        return s
+
+    @staticmethod
+    def pretty_typst(v):
+        if v.typeset is not None:
+            return Constraint.latex_to_typst(v.typeset)
+        else:
+            return Constraint.prettify(v.val, sep="#h(0.17em)")
+
     def terminal(self):
         vars = ", ".join(v.val for v in self.variables)
 
@@ -347,6 +403,9 @@ class ConstraintList(object):
 
     def latex(self):
         return [c.latex() for c in self.constraints]
+
+    def typst(self):
+        return [c.typst() for c in self.constraints]
 
     def terminal(self):
         return ", ".join(c.terminal() for c in self.constraints)

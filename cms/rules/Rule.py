@@ -22,8 +22,10 @@ import hashlib
 import io
 import json
 import os
+import shutil
 import stat
 import subprocess
+import sys
 import time
 
 from cms import config
@@ -498,8 +500,10 @@ class GCCRule(CommandRule):
 
         """
         gcc_command = ["g++", "-O2", "-std=gnu++20", "-Wall", "-o", output,
-                       "-MMD", "-MF", ".deps", "-static",
-                       "-fdiagnostics-color=always"]
+                       "-MMD", "-MF", ".deps", "-fdiagnostics-color=always"]
+        if sys.platform.startswith("linux"):
+            # Static linking is not supported by macOS toolchains.
+            gcc_command.append("-static")
         for l in libdirs:
             gcc_command += ["-I", l]
         gcc_command += sources
@@ -573,6 +577,75 @@ class LaTeXRule(CommandRule):
         # Latexmk seems to output latin_1 instead of utf8.
         self.result.log['out'] = readfile(".out", "latin_1")
         self.result.log['err'] = readfile(".err", "latin_1")
+
+
+class TypstRule(CommandRule):
+    def __init__(self, rulesdir, source, output, extra=[]):
+        """Compiles a typst source to PDF using typst.
+        The dependencies are automatically detected (via --deps).
+
+        rulesdir (string): directory used for persistent data
+
+        source (string): the typst file to compile
+
+        output (string): the pdf file to produce
+
+        extra (list): additional command line arguments passed to typst
+
+        """
+        command = ["typst", "compile", "--deps", ".typdeps"] + extra + \
+                  [source, output]
+        # Make the TeX Live fonts available (Fira Sans/Mono/Math etc.),
+        # mirroring what (Lua)LaTeX would use.
+        if shutil.which("kpsewhich") is not None:
+            try:
+                texmf = subprocess.check_output(
+                    ["kpsewhich", "--var-value", "TEXMFDIST"],
+                    text=True).strip()
+                fontdir = os.path.join(texmf, "fonts", "opentype")
+                if os.path.isdir(fontdir):
+                    command = ["typst", "compile",
+                             "--font-path", fontdir,
+                             "--deps", ".typdeps"] + extra + [source, output]
+            except subprocess.SubprocessError:
+                pass
+        super(TypstRule, self).__init__(rulesdir, command, dependonexe=False)
+        self.source = source
+        self.output = output
+        self.extra = extra
+
+    def mission(self):
+        return {'cwd': os.getcwd(),
+                'type': 'typst',
+                'source': self.source,
+                'output': self.output,
+                'extra': self.extra}
+
+    def pre_run(self):
+        # Delete the dependencies file before running typst to ensure
+        # that we don't read a left-over dependencies file in the end
+        # (if typst fails to write the dependencies file).
+        deletefile(".typdeps")
+
+    def post_run(self):
+        # Don't save the result if typst failed.
+        # (We don't reliably detect when a previously missing file was added,
+        # for example when a missing package was installed.)
+        if self.result.log['code']:
+            self.result.badfail = True
+        self.result.add_dependency(self.source)
+        self.result.add_output(self.output)
+        if not os.path.exists(".typdeps"):
+            self.result.badfail = True
+            return
+        try:
+            with io.open(".typdeps", 'r', encoding="utf-8") as f:
+                deps = json.load(f).get("inputs", [])
+        except ValueError:
+            self.result.badfail = True
+            return
+        for dep in deps:
+            self.result.add_dependency(dep)
 
 
 class SafeLaTeXRule(Rule):

@@ -21,13 +21,14 @@ from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \
     header, box, yellow, highlight_latex
 from cmscontrib.gerpythonformat.Executable import CPPProgram, InternalPython, ExternalScript, \
     ExternalPython, asy_keyword_list
-from cms.rules.Rule import LaTeXRule, SafeLaTeXRule, CommandRule, ZipRule
+from cms.rules.Rule import LaTeXRule, SafeLaTeXRule, CommandRule, ZipRule, \
+    TypstRule
 from cms.grading.languages.c11_gcc import C11Gcc
 from cms.grading.languages.cpp20_gpp import Cpp20Gpp
 from cms.grading.languages.java_jdk import JavaJDK
 from cms.grading.languages.pascal_fpc import PascalFpc
 from cms.grading.languages.python3_pypy import Python3PyPy
-from cmscontrib.gerpythonformat.Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy
+from cmscontrib.gerpythonformat.Supplement import easycall, def_latex, escape_latex, def_asy, escape_asy, def_typst
 import inspect
 import io
 import os
@@ -89,7 +90,7 @@ class CommonConfig(object):
         self.supplements = defaultdict(Supplement)
         self.supplement_ext_to_key = defaultdict(list)
         # These extensions can also be used as keys:
-        for ext in ["cpp", "latex", "asy"]:
+        for ext in ["cpp", "latex", "typst", "asy"]:
             self.supplement_ext_to_key[ext].append(ext)
 
         # The dictionary containing the variables that will be made accessible
@@ -179,6 +180,10 @@ class CommonConfig(object):
     @exported_function
     def supply_latex(self, name, f):
         self.supply("latex", def_latex(name, escape_latex(f)))
+
+    @exported_function
+    def supply_typst(self, name, f):
+        self.supply("typst", def_typst(name, f))
 
     @exported_function
     def supply_asy(self, name, f):
@@ -369,6 +374,99 @@ class CommonConfig(object):
         return output
 
     @exported_function
+    def compiletypst(self, basename, safe=None, ignore=set(),
+                     ignore_ext=set((".py", ".cpp")), do_copy=set()):
+        """
+        Use typst to compile basename.typ to basename.pdf .
+
+        This command also creates a directory basename.kit containing all the
+        files necessary to compile the typst source. This can be useful for
+        translation sessions.
+
+        basename (string): base of the typst and pdf file names
+
+        safe (boolean): accepted for symmetry with compilelatex; there is
+                        no typst sandbox, so compilation happens unsandboxed
+
+        ignore (set of strings): unused (accepted for symmetry with
+                                 compilelatex)
+
+        ignore_ext (set of strings): unused (accepted for symmetry with
+                                      compilelatex)
+
+        do_copy (set of strings): unused (accepted for symmetry with
+                                   compilelatex)
+
+        return (string): file name of the generated pdf file
+
+        """
+        source = basename + ".typ"
+        output = basename + ".pdf"
+
+        if self.ignore_latex:
+            return None
+
+        if self.relevant_language is not None and \
+            not basename.lower().endswith(self.relevant_language.lower()):
+            return None
+
+        # Best-effort detection of the document language from the file name
+        # (e.g. statement-de -> de); templates default to German otherwise.
+        if "-" in basename:
+            self.typst_language = basename.rsplit("-", 1)[-1].lower()
+        else:
+            self.typst_language = None
+
+        with header("Compiling {} to {} using Typst"
+                    .format(self.short_path(source), self.short_path(output)),
+                    depth=10):
+            if safe:
+                box(" WARNING ", yellow("No sandbox available for typst "
+                                        "compilation; compiling unsandboxed."))
+
+            # typst cannot read EPS; convert the logo (if any) to PDF
+            # (cached; requires ghostscript, silently skipped otherwise).
+            if os.path.isfile("logo.eps") and shutil.which("gs") is not None:
+                conv = CommandRule(self.rules,
+                                   ["gs", "-q", "-dBATCH", "-dNOPAUSE",
+                                    "-sDEVICE=pdfwrite", "-dEPSCrop",
+                                    "-o", "logo-typst.pdf", "logo.eps"],
+                                   dependencies=["logo.eps"],
+                                   outputs=["logo-typst.pdf"],
+                                   dependonexe=False).ensure()
+                if conv.code != 0:
+                    raise Exception("EPS conversion failed")
+
+            self._build_supplements("typst")
+
+            r = TypstRule(self.rules, source, output).ensure()
+
+            print_block(highlight_latex(r.out, self.verbose_latex))
+            print_block(highlight_latex(r.err, self.verbose_latex))
+
+            if r.code != 0:
+                raise Exception("Compilation failed")
+
+            # Create "translation kit" containing all important dependencies
+            kit_directory = basename + ".kit"
+            if os.path.exists(kit_directory):
+                shutil.rmtree(kit_directory)
+            for dep in r.dependencies:
+                depabs = os.path.abspath(dep)
+                wdirpath = os.path.abspath(self.wdir) + '/'
+                # We don't want to include global files, etc.
+                if depabs.startswith(wdirpath):
+                    basefile = depabs[len(wdirpath):]
+                    basefiledir = os.path.join(kit_directory,
+                                               os.path.dirname(basefile))
+                    if not os.path.exists(basefiledir):
+                        os.makedirs(basefiledir)
+
+                    shutil.copy(depabs, os.path.join(kit_directory, basefile))
+
+        return output
+
+    @exported_function
     def compileasy(self, basename, stdin=None, output=None, **kwargs):
         """
         Compile and run an asymptote file to generate a pdf file.
@@ -417,7 +515,8 @@ class CommonConfig(object):
     def compile(self, filename, **kwargs):
         """
         Compile, automatically guessing appropriate extensions and
-        compilation methods. See compilecpp, compilelatex, compileasy.
+        compilation methods. See compilecpp, compilelatex, compiletypst,
+        compileasy.
 
         filename (string): name of the file to compile or its
                            basename (without extension)
@@ -427,6 +526,7 @@ class CommonConfig(object):
         """
         extmap = {".cpp": self.compilecpp,
                   ".tex": self.compilelatex,
+                  ".typ": self.compiletypst,
                   ".asy": self.compileasy}
 
         basename, extension = os.path.splitext(filename)

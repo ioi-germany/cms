@@ -76,12 +76,16 @@
 
 
 % Sample for (standard) batch tasks
-\setlength{\LTpost}{\medskipamount}
-\def\myc@ption#1#2#3{\noalign{\hbox to\linewidth{\bfseries\large #3\hfil}}}
-\def\showcases{\removelastskip\par\bigskip\begingroup%
-% This is evil: we hijack LT@makecaption to force longtable to place the heading
-% same page as the table...
-%\let\LT@makecaption=\myc@ption
+% LTpost 0pt: the space above the following \sheading{Limits} should be
+% the heading's own beforeskip, same as above "Samples"
+\setlength{\LTpost}{0pt}
+% the caption is a \subsection* emitted here, outside the longtable, right
+% before \testcasetable — the same vertical-mode path \showlimits uses for
+% "Limits" — so both headings get the same beforeskip. (\noalign skips
+% inside longtable were unreliable.) LTpre 0pt and no \bigskip so the table
+% hugs the heading.
+\def\showcases{\removelastskip\par\begingroup\setlength{\LTpre}{0pt}%
+\sheading{\ifnum\numsamples=1{\tSample}\else{\tSamples}\fi}%
 \begingroup%
 \microtypesetup{activate=false}%
 \testcasetable%

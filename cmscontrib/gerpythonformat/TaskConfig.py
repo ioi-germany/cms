@@ -264,6 +264,13 @@ class MySubtask(Scope):
 
         return mystr(self.points)
 
+    def _dummy_case(self, name):
+        if name is None:
+            name = "t" + str(len(self.cases))
+
+        setattr(self, name, None)
+        self.cases.append(None)
+
     @exported_function
     def add_testcase(self, case, save=False, name=None, still_to_check=True):
         """
@@ -1259,6 +1266,9 @@ class TaskConfig(CommonConfig, Scope):
         def new_compilelatex(basename, *args, **kwargs):
             return basename + ".pdf"
 
+        def new_compiletypst(basename, *args, **kwargs):
+            return basename + ".pdf"
+
         def new_compileasy(basename, *args, output=None, **kwargs):
             if output is None:
                 output = basename + ".pdf"
@@ -1267,6 +1277,7 @@ class TaskConfig(CommonConfig, Scope):
         def new_compile(filename, **kwargs):
             extmap = {
                 ".tex": new_compilelatex,
+                ".typ": new_compiletypst,
                 ".asy": new_compileasy,
             }
 
@@ -1294,6 +1305,7 @@ class TaskConfig(CommonConfig, Scope):
         self.exported["compile"] = new_compile
         self.exported["compileasy"] = new_compileasy
         self.exported["compilelatex"] = new_compilelatex
+        self.exported["compiletypst"] = new_compiletypst
         self.exported["subtask"] = new_subtask
 
         try:
