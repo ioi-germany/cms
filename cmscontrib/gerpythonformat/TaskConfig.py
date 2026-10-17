@@ -2545,7 +2545,7 @@ class TaskConfig(CommonConfig, Scope):
             sdb.files[our_filename] = File(our_filename, digest,
                                            submission=sdb)
 
-        sdb.additional_info = self._test_submission_additional_info(submission, tdb)
+        sdb.additional_info = self._test_submission_additional_info(submission)
 
         return sdb
 
