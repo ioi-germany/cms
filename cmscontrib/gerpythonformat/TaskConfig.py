@@ -894,6 +894,9 @@ class MyCase(object):
             os.mkdir(self.directory)
         self._create_link()
         self.public = True
+        # the Executable that generated this case (set by make_testcase);
+        # None for cases not produced through the generator pipeline
+        self.prog = None
         # Strings specifying in which subtasks/groups this case can be found
         self.locations = []
 
@@ -1755,6 +1758,9 @@ class TaskConfig(TmrCompat, CommonConfig, Scope):
         with header("Generating test case {} ({})"
                     .format(codename, hashname), depth=5):
             case = MyCase(self, codename, hashname)
+            # keep the generating program so tmr_export can JIT the
+            # generator pipeline
+            case.prog = prog
 
             prog(stdout=case.infile)
 
