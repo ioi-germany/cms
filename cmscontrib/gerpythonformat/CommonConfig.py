@@ -412,7 +412,11 @@ class CommonConfig(object):
 
         # Best-effort detection of the document language from the file name
         # (e.g. statement-de -> de); templates default to German otherwise.
-        if "-" in basename:
+        # For statements the whole suffix is the language, so variant tags
+        # like "statement-en-isc" report "en-isc" (templates normalize).
+        if basename.startswith("statement-"):
+            self.typst_language = basename[len("statement-"):].lower()
+        elif "-" in basename:
             self.typst_language = basename.rsplit("-", 1)[-1].lower()
         else:
             self.typst_language = None
