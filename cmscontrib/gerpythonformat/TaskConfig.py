@@ -159,8 +159,18 @@ class MySubtask(Scope):
     :ivar scorestyle: score style (for multiscoring)
     """
 
-    def __init__(self, task, description, name, points, sample, foldername,
-                 scorestyle, individual):
+    def __init__(
+        self,
+        task,
+        description,
+        name,
+        points,
+        sample,
+        foldername,
+        scorestyle,
+        individual,
+        output_only=False,
+    ):
         super(MySubtask, self).__init__(task)
         self.task = task
         self.description = description
@@ -181,6 +191,9 @@ class MySubtask(Scope):
         self.soft_constraints_stats = []
         self.soft_constraints_stats_acc = []
         self.soft_spec_stats = {}
+        # allow output_only submissions for BatchAndOutput tasktype
+        # for the entire subtask
+        self.output_only = output_only
 
     def __enter__(self):
         self.indenter = header("Subtask {}".format(self.description),
@@ -265,7 +278,9 @@ class MySubtask(Scope):
         return mystr(self.points)
 
     @exported_function
-    def add_testcase(self, case, save=False, name=None, still_to_check=True):
+    def add_testcase(
+        self, case, save=False, name=None, still_to_check=True, output_only=False
+    ):
         """
         Add a previously generated test case to the current subtask.
         The testcase will be checked with the current test case checkers.
@@ -391,6 +406,8 @@ class MySubtask(Scope):
 
         if save:
             self.task.saved.append(case)
+        if output_only or self.output_only:
+            self.task.output_only_cases.append(case)
 
         case.locations.append(self.name + "." + name)
 
@@ -1151,6 +1168,7 @@ class TaskConfig(CommonConfig, Scope):
         self.managers = {}
         self.tasktype = None
         self.saved = []
+        self.output_only_cases = []
 
         self._score_precision = 0
 
@@ -1526,6 +1544,19 @@ class TaskConfig(CommonConfig, Scope):
                            partial scoring subtask)
         """
         self.tasktype = "Batch"
+        self._batch_common(input, output, comparator, library)
+        self.multiscore = multiscore
+
+    @exported_function
+    def batch_and_output(self, input="", output="", comparator=None, library=False):
+        """
+        Specify this to be a batch and outputonly task.
+        """
+        self.tasktype = "BatchAndOutput"
+        self._batch_common(input, output, comparator, library)
+        self.tasktypeparameters.append("")
+
+    def _batch_common(self, input, output, comparator, library):
         grader_param = "alone"
         if library:
             grader_param = "grader"
@@ -1543,8 +1574,7 @@ class TaskConfig(CommonConfig, Scope):
         if comparator is not None:
             evaluation_param = "comparator"
             self.managers["checker"] = comparator.get_path()
-        self.tasktypeparameters = ([grader_param, [input, output], evaluation_param])
-        self.multiscore = multiscore
+        self.tasktypeparameters = [grader_param, [input, output], evaluation_param]
 
     @exported_function
     def outputonly(self, comparator=None):
@@ -2229,13 +2259,15 @@ class TaskConfig(CommonConfig, Scope):
         tdb.score_mode = self.score_mode()
         tdb.score_precision = self._score_precision
 
+        tdb.submission_format = []
         if self.tasktype == "OutputOnly":
-            tdb.submission_format = [
-                "output_%s.txt" % c.codename
-                for c in self.cases]
-        else:
-            tdb.submission_format = [
-                "%s.%%l" % self.name]
+            tdb.submission_format += [f"output_{c.codename}.txt" for c in self.cases]
+        elif self.tasktype == "BatchAndOutput":
+            tdb.submission_format += [
+                f"output_{c.codename}.txt" for c in self.output_only_cases
+            ]
+        if self.tasktype != "OutputOnly":
+            tdb.submission_format += [f"{self.name}.%l"]
         tdb.attachments = {}
         tdb.spoilers = {}
         tdb.statements = {}
@@ -2271,6 +2303,13 @@ class TaskConfig(CommonConfig, Scope):
 
         return tdb
 
+    def _get_task_type_parameter(self):
+        if self.tasktype == "BatchAndOutput":
+            self.tasktypeparameters[3] = ",".join(
+                x.codename for x in self.task.output_only_cases
+            )
+        return self.tasktypeparameters
+
     def _makedataset(self, file_cacher, tdb):
         def make_subtask_parameters(s):
             return {
@@ -2288,7 +2327,7 @@ class TaskConfig(CommonConfig, Scope):
             task=tdb,
             description=self._dataset,
             task_type=self.tasktype,
-            task_type_parameters=self.tasktypeparameters,
+            task_type_parameters=self._get_task_type_parameter(),
             score_type="GroupMin",
             score_type_parameters=score_type_parameters,
         )
@@ -2559,13 +2598,17 @@ class TaskConfig(CommonConfig, Scope):
         # This ensure that the user sent one file for every name in
         # submission format and no more. Less is acceptable if task
         # type says so.
-        task_type = get_task_type(name=self.tasktype,
-                                  parameters=self.tasktypeparameters)
+        task_type = get_task_type(
+            name=self.tasktype, parameters=self._get_task_type_parameter()
+        )
         required = set(tdb.submission_format)
         provided = set(os.path.basename(f) for f in files)
-        if not (required == provided or (task_type.ALLOW_PARTIAL_SUBMISSION
-                                         and required.issuperset(provided))
-                or len(required) == len(provided) == 1):
+        if not (
+            required == provided
+            or (task_type.ALLOW_PARTIAL_SUBMISSION and required.issuperset(provided))
+            or len(required) == len(provided) == 1
+            or task_type.name == "BatchAndOutput"
+        ):
             raise Exception(
                 "Invalid submission format! Please select the correct files.")
 
