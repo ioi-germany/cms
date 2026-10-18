@@ -513,6 +513,14 @@ class MySubtask(Scope):
         else:
             print_msg(green(bold("...all shall be well\n")))
 
+    def _dummy_case(self, name):
+        if name is None:
+            name = "t" + str(len(self.cases))
+
+        setattr(self, name, None)
+        self.cases.append(None)
+
+
 class MyGroup(Scope):
     """
     :ivar subtask: The subtask this group belongs to
@@ -1132,6 +1140,8 @@ class TaskConfig(CommonConfig, Scope):
         self.tasktype = None
         self.saved = []
 
+        self._score_precision = 0
+
         self.everything_checked = True
 
         self._statements = {}
@@ -1450,6 +1460,17 @@ class TaskConfig(CommonConfig, Scope):
         if localname is not None:
             self.spoilers[publicname] = os.path.abspath(localname)
 
+    @exported_function
+    def score_precision(self, prec):
+        """
+        The scores for this task will be rounded to this number of
+        decimal places.
+
+        prec (int): number of decimal places
+
+        """
+        self._score_precision = prec
+
     def std_extensions(self):
         _EXTENSIONS = ["cpp", "pas", "java", "py"]
 
@@ -1586,6 +1607,67 @@ class TaskConfig(CommonConfig, Scope):
             num_processes,
             "grader" if stub else "alone",
             "fifo_io",
+        ]
+
+    @exported_function
+    def interactive(
+        self,
+        controller,
+        stub=True,
+        num_processes=1,
+        concurrent=True,
+        controller_memory_limit=None,
+        controller_time_limit=None,
+        controller_wall_limit=None,
+    ):
+        """
+        Specify this to be an interactive task.
+
+        controller (CPPProgram): executable communicating with the contestant
+                              submissions
+                              (must at least implement get_path() to get
+                              the file name of the executable)
+
+        Submissions are linked together with interface.{c,cpp,pas,py,...}.
+        num_processes:        e.g. set to 2 for a Two-Step task
+        """
+        self.tasktype = "Interactive"
+        if controller_memory_limit is None:
+            default_mem_limit = 2048
+            print_msg(
+                "No memory limit for the controller set, "
+                f"defaulting to {default_mem_limit}MB",
+                warning=True,
+            )
+            # This should be in MB
+            controller_memory_limit = default_mem_limit
+        if controller_time_limit is None:
+            print_msg(
+                "No time limit for the controller set, defaulting to 1s", warning=True
+            )
+            controller_time_limit = 1
+        if controller_wall_limit is None:
+            print_msg(
+                "No wall limit for the controller set, "
+                "defaulting to twice the time limit",
+                warning=True,
+            )
+            controller_wall_limit = 2 * controller_time_limit
+        if stub:
+            for end in self.std_extensions():
+                p = os.path.join(self.wdir, "interface." + end)
+                if not self.standalone_task or os.path.exists(p):
+                    self.managers["grader." + end] = p
+            if os.path.exists(os.path.join(self.wdir, "lib.h")):
+                self.managers["%s.h" % self.name] = os.path.join(self.wdir, "lib.h")
+        self.managers["controller"] = controller.get_path()
+        self.tasktypeparameters = [
+            num_processes,
+            "grader" if stub else "alone",
+            concurrent,
+            controller_memory_limit,
+            controller_time_limit,
+            controller_wall_limit,
         ]
 
     @exported_function
@@ -1887,6 +1969,9 @@ class TaskConfig(CommonConfig, Scope):
                 testcase(...)
 
         """
+        if isinstance(prog, MyCase):
+            raise Exception("To add an existing test case `tc` to a subtask, call 'add_testcase(tc)', not 'testcase(tc)'")
+
         if not kwargs.get("save") and self.minimal:
             print_msg("Skipping testcase (minimal mode)")
             if len(self.group_stack) > 0:
@@ -2141,6 +2226,7 @@ class TaskConfig(CommonConfig, Scope):
         tdb.min_user_test_interval = self.min_user_test_interval
         tdb.feedback_level = self._feedback_level
         tdb.score_mode = self.score_mode()
+        tdb.score_precision = self._score_precision
 
         if self.tasktype == "OutputOnly":
             tdb.submission_format = [
@@ -2532,7 +2618,7 @@ class TaskConfig(CommonConfig, Scope):
             sdb.files[our_filename] = File(our_filename, digest,
                                            submission=sdb)
 
-        sdb.additional_info = self._test_submission_additional_info(submission, tdb)
+        sdb.additional_info = self._test_submission_additional_info(submission)
 
         return sdb
 
@@ -2559,7 +2645,7 @@ class TaskConfig(CommonConfig, Scope):
             expected_sample_score=submission.sample_score,
             expected_sample_score_info=submission.sample_score_info,
             task_name=self.name,
-            score_precision=0,  # TODO It seems like we don't support other score precisions.
+            score_precision=self._score_precision,
         )
 
     def _do_test_submission(self, sdb: Submission, ddb: Dataset):
