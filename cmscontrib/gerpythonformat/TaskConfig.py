@@ -1252,7 +1252,7 @@ class TaskConfig(CommonConfig, Scope):
         self._makesavedzip()
         # Automatically make a ZIP file containing all test cases for analysis mode
         self._makeallzip()
-        if self.tasktype == "OutputOnly":
+        if self.tasktype in ("OutputOnly", "BatchAndOutput"):
             self._makeinputzip()
 
         self._collect_garbage()
@@ -2193,9 +2193,12 @@ class TaskConfig(CommonConfig, Scope):
         Create and add an attachment containing the input files (mostly
         for output-only tasks).
         """
+        cases = (
+            self.output_only_cases if self.tasktype == "BatchAndOutput" else self.cases
+        )
         zipname = os.path.join(self.wdir, "inputs.zip")
         contents = {}
-        for c in self.cases:
+        for c in cases:
             contents["input_{}.txt".format(c.codename)] = c.infile
         ZipRule(self.rules, zipname, contents).ensure()
         self.attachment(zipname, "%s_input.zip" % self.name)
