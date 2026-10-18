@@ -2803,12 +2803,17 @@ class TaskConfig(CommonConfig, Scope):
                     print(indent(side_by_side([c["idx"], ftime, fmem, fans, fresp],
                                               [2, 10, 19, 34, 44])))
 
+                if st["max_runtime"] is None:
+                    max_runtime = "??? s"
+                else:
+                    max_runtime = "{:.3f}s".format(st["max_runtime"])
+                if st["max_memory"] is None:
+                    max_memory = "??? MB"
+                else:
+                    max_memory = "%.1fMB" % (float(st["max_memory"]) / 2**20)
                 print()
-                print(indent("     max. runtime in this group: " +
-                                bold("{:.3f}s".format(st["max_runtime"]))))
-                print(indent("max. memory usage in this group: " +
-                                bold("%.1fMB" %
-                                    (float(st["max_memory"]) / 2**20))))
+                print(indent("     max. runtime in this group: " + bold(max_runtime)))
+                print(indent("max. memory usage in this group: " + bold(max_memory)))
 
             print()
 
