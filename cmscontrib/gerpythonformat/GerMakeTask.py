@@ -62,14 +62,17 @@ class GerMakeTask:
         self.tcimp = not ntcimp
 
     def prepare(self):
-        # Unset stack size limit
+        # Unset stack size limit (may be forbidden, e.g. on macOS)
         INFTY = int(.75 * virtual_memory().total)
-        resource.setrlimit(resource.RLIMIT_STACK, (INFTY, INFTY))
+        try:
+            resource.setrlimit(resource.RLIMIT_STACK, (INFTY, INFTY))
+        except (ValueError, OSError):
+            pass
 
         self.wdir = os.path.join(self.odir, self.task, "build")
 
         if self.clean:
-            shutil.rmtree(self.wdir)
+            shutil.rmtree(self.wdir, ignore_errors=True)
 
         if not os.path.exists(self.wdir):
             os.mkdir(self.wdir)

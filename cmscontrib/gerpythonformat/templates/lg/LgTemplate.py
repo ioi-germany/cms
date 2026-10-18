@@ -28,6 +28,24 @@ import os
 import shutil
 
 
+def read_typst(filename):
+    """Callable supplying the contents of a .typ template file that lives
+    next to this module.
+
+    typst has no textual include like latex's \\input, and the template
+    functions must see the generated taskinfo data in their scope, so the
+    files are embedded into taskinfo.typ at build time; the .typ files
+    are the source of truth (mirrors contestheader.tex).
+    """
+    path = os.path.join(os.path.dirname(__file__), filename)
+
+    def content():
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+
+    return content
+
+
 class LgTemplate(PlainTemplate):
     def __init__(self, contest, short_name):
         super(LgTemplate, self).__init__(contest)
@@ -72,13 +90,19 @@ class LgTemplate(PlainTemplate):
         task.supply("latex", def_latex("taskheader",
                                        input_latex("taskheader.tex")))
 
-        # Provide translation-{de,en}.tex
+        # Provide translation-{de,en}.tex and their typst counterparts
         shutil.copy(os.path.join(os.path.dirname(__file__),
                                      "translation-de.tex"),
                         os.path.join(task.wdir, "translation-de.tex"))
         shutil.copy(os.path.join(os.path.dirname(__file__),
                                      "translation-en.tex"),
                         os.path.join(task.wdir, "translation-en.tex"))
+        shutil.copy(os.path.join(os.path.dirname(__file__),
+                                     "translation-de.typ"),
+                        os.path.join(task.wdir, "translation-de.typ"))
+        shutil.copy(os.path.join(os.path.dirname(__file__),
+                                     "translation-en.typ"),
+                        os.path.join(task.wdir, "translation-en.typ"))
 
         # Provide common asy files
         shutil.copyfile(os.path.join(os.path.dirname(__file__), "graphics.cfg"),
@@ -101,6 +125,53 @@ class LgTemplate(PlainTemplate):
             task.supply("latex", r"\restrictedtrue")
 
         self.mktestcasetable(task)
+
+        # --- typst support (mirror of the latex setup above) ---
+        self.supply_typst_translations(task)
+
+        def lg_logo():
+            # Compiled by compiletypst from logo.eps using ghostscript
+            if os.path.isfile(os.path.join(task.wdir, "logo-typst.pdf")):
+                return '#let lg-logo = scale(45%)[#image("logo-typst.pdf")]\n'
+            return "#let lg-logo = none\n"
+
+        task.supply("typst", lg_logo)
+        task.supply("typst", lambda: "#let ifrestricted = {}\n".format(
+            "true" if task._has_restricted_feedback_level() else "false"))
+        # typst functions and the task-maker-rust compatibility aliases;
+        # source of truth is contestheader.typ / tmr-compat.typ
+        task.supply("typst", read_typst("contestheader.typ"))
+        task.supply("typst", read_typst("tmr-compat.typ"))
+
+    def typst_languages(self):
+        """Languages for which a translation-<lang>.typ exists."""
+        tdir = os.path.dirname(__file__)
+        return {f[len("translation-"):-len(".typ")]
+                for f in os.listdir(tdir)
+                if f.startswith("translation-") and f.endswith(".typ")}
+
+    def typst_language(self, task):
+        # Language is set by compiletypst from the statement file name
+        # suffix; the contestheader defaults to German, so we do too.
+        langs = self.typst_languages()
+        lang = getattr(task, "typst_language", None) or "de"
+        if lang in langs:
+            return lang
+        # variant language tags (e.g. "en-isc") reuse the base language's
+        # translated strings
+        base = lang.split("-")[0]
+        return base if base in langs else "de"
+
+    def supply_typst_translations(self, task):
+        """Provide the translated strings (mirroring translation-{de,en}.tex)
+        by importing translation-<lang>.typ (copied into the working
+        directory by ontask; taskinfo re-exports the definitions).
+        """
+        def translations():
+            return '#import "translation-{}.typ": *\n'.format(
+                self.typst_language(task))
+
+        task.supply("typst", translations)
 
     def score_mode_year(self, score_mode):
         """
@@ -125,15 +196,20 @@ class LgTemplate(PlainTemplate):
                r"""\multicolumn{1}{c|}{\sffamily\tOutput} \\ """ \
                r"""\hline"""
 
+        # NOTE the "Samples" heading is emitted by \showcases (in
+        # contestheader.tex) just before \testcasetable — outside the
+        # longtable, exactly like \showlimits emits its \sheading{Limits} —
+        # so the space above both headings comes from the same beforeskip.
+        # (\noalign skips inside longtable are unreliable: the negative
+        # \vskip before the heading had no measurable effect.)
         self.supply_case_table(
             task,
             start=r"""\begin{longtable}[l]{p{\inputwidth}@{\hskip0pt}p{.52cm}"""
                   r"""@{\hskip0pt}p{\outputwidth}}""" +
-                  r"""\caption*{\ifnum\numsamples=1{\tSample}"""
-                  r"""\else{\tSamples}\fi}\\""" + head +
+                  head +
                   r"""\noalign{\smallskip}\endfirsthead""" +
                   head + r"""\endhead""",
-            end=r"""\end{longtable}""",
+            end=r"""\noalign{\vskip-\smallskipamount}\end{longtable}""",
             aftereachline=r"\\ \noalign{\smallskip}",
             sep="&&",
             beforeeachcell=r"\cellcolor[gray]{.9}\vspace{-3.5ex}",
@@ -318,3 +394,6 @@ class LgTemplate(PlainTemplate):
                 self.contest._build_supplements_for_key("credentials")
                 self.contest._build_supplements_for_key("lang")
                 self.contest.compile(filename)
+
+
+

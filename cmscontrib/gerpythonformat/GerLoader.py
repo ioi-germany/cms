@@ -57,9 +57,12 @@ class GerLoader(Loader):
         """See docstring in class Loader.
 
         """
-        # Unset stack size limit
-        resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,
-                                                   resource.RLIM_INFINITY))
+        # Unset stack size limit (may be forbidden, e.g. on macOS)
+        try:
+            resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,
+                                                       resource.RLIM_INFINITY))
+        except (ValueError, OSError):
+            pass
 
         self.buildpath = os.path.join(self.path, "build")
         # We have to avoid copying the folder contest/build
