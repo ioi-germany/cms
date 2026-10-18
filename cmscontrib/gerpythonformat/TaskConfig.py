@@ -1821,7 +1821,8 @@ class TaskConfig(CommonConfig, Scope):
         return self.encapsulate(curried, stdoutstring)
 
     @exported_function
-    def subtask(self, description, points, name=None, sample=False, scorestyle=0, individual=False):
+    def subtask(self, description, points, name=None, sample=False, scorestyle=0, individual=False,
+                output_only=False):
         """
         Specify the start of a new subtask. The number of points awarded
         for a subtask is the sum of the numbers of points awarded for each
@@ -1850,6 +1851,9 @@ class TaskConfig(CommonConfig, Scope):
         scorestyle (int): score style (always 0 for usual tasks, general integer
                          for multiscoring tasks)
 
+        output_only (bool): whether all cases in this subtask should be
+                            output only cases
+
         return (MySubtask): object representing the created subtask
 
         """
@@ -1860,7 +1864,7 @@ class TaskConfig(CommonConfig, Scope):
         if sample:
             foldername += "_Public"
         subtask = MySubtask(self, description, name, points, sample, foldername,
-                            scorestyle, individual)
+                            scorestyle, individual, output_only)
 
         self.subtasks.append(subtask)
 

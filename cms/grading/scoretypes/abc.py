@@ -1060,10 +1060,20 @@ class ScoreTypeGroup(ScoreTypeAlone):
                     tc["show_in_oi_restricted_feedback"] = True
 
                 subtask_detail["max_runtime"] = max(
-                    (c["time"] for c in subtask_detail["testcases"]), default=None
+                    (
+                        c["time"]
+                        for c in subtask_detail["testcases"]
+                        if c["time"] is not None
+                    ),
+                    default=None,
                 )
                 subtask_detail["max_memory"] = max(
-                    (c["memory"] for c in subtask_detail["testcases"]), default=None
+                    (
+                        c["memory"]
+                        for c in subtask_detail["testcases"]
+                        if c["memory"] is not None
+                    ),
+                    default=None,
                 )
 
                 """
