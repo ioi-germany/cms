@@ -89,6 +89,8 @@ class TwoSteps(TaskType):
 
     ACCEPTED_PARAMETERS = [_EVALUATION]
 
+    testable = False
+
     @property
     def name(self):
         """See TaskType.name."""

@@ -89,6 +89,8 @@ class Interactive(TaskType):
         _CONTROLLER_WALL_LIMIT,
     ]
 
+    testable = False
+
     def __init__(self, parameters):
         super().__init__(parameters)
         self.process_limit = self.parameters[0]
