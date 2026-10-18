@@ -2787,7 +2787,10 @@ class TaskConfig(CommonConfig, Scope):
 
                 for c in st["testcases"]:
                     l = [(b, (a)) for a, b in c["line"]]
-                    ftime = "%.3fs" % c["time"]
+                    if c["time"] is None:
+                        ftime = "??? s"
+                    else:
+                        ftime = "{:.3f}s".format(c["time"])
                     if c["memory"] is None:
                         fmem = "??? MB"
                     else:
