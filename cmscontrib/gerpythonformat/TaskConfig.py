@@ -2609,12 +2609,12 @@ class TaskConfig(CommonConfig, Scope):
             name=self.tasktype, parameters=self._get_task_type_parameter()
         )
         required = set(tdb.submission_format)
-        provided = set(os.path.basename(f) for f in files)
+        provided = {os.path.basename(f) for f in files}
         if not (
             required == provided
             or (task_type.ALLOW_PARTIAL_SUBMISSION and required.issuperset(provided))
             or len(required) == len(provided) == 1
-            or task_type.name == "BatchAndOutput"
+            or (task_type.name == "BatchAndOutput" and len(provided - required) == 1)
         ):
             raise Exception(
                 "Invalid submission format! Please select the correct files.")
@@ -2624,16 +2624,22 @@ class TaskConfig(CommonConfig, Scope):
         # in file_digests (i.e. like they have already been sent to FS).
         submission_lang = None
 
+        def match_filename(user_filename):
+            if len(files) != 1 or user_filename in required:
+                return user_filename
+            if len(required) == 1:
+                return next(iter(required))
+            # we submitted a single %.l file and have to match
+            # it to the entry in required (relevant for BatchAndOutput)
+            return next(iter(f for f in required if f.find(".%l") != -1))
+
         # We need to ensure that everytime we have a .%l in our
         # filenames, the user has one amongst ".cpp", ".c", or ".pas,
         # and that all these are the same (i.e., no mixed-language
         # submissions).
 
         for user_filename in files:
-            if len(files) == 1:
-                our_filename = list(required)[0]
-            else:
-                our_filename = user_filename
+            our_filename = match_filename(user_filename)
             if our_filename.find(".%l") != -1:
                 lang = self.std_language(user_filename)
                 if lang is None:
@@ -2651,17 +2657,14 @@ class TaskConfig(CommonConfig, Scope):
             opaque_id=Submission.generate_opaque_id(None, participation.id),
             language=submission_lang,
             participation=participation,
-            comment="%s" % (", ".join(os.path.basename(f) for f in files)),
+            comment="{}".format(", ".join(os.path.basename(f) for f in files)),
             official=official,
         )
         sdb.task = tdb
         sdb.timestamp = datetime.utcnow()
         sdb.language = submission_lang
         for f in files:
-            if len(files) == 1:
-                our_filename = list(required)[0]
-            else:
-                our_filename = os.path.basename(f)
+            our_filename = match_filename(f)
             digest = self.file_cacher.put_file_from_path(
                 f,
                 "Test submission %s." %
