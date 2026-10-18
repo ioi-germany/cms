@@ -201,12 +201,14 @@ class MySubtask(Scope):
         self.indenter.start()
 
         self.task.subtask_stack.append(self)
+        self.task._curr_scope = self
         return self
 
     def __exit__(self, type, value, traceback):
         self._print_stats(type)
         self.indenter.stop()
         self.task.subtask_stack.pop()
+        self.task._curr_scope = self.task
 
     @property
     def unique_name(self) -> tuple:
@@ -312,9 +314,9 @@ class MySubtask(Scope):
 
         soft_results = None
 
-        for i, checker in enumerate(checkers):
+        for checker in checkers:
             curr = self.task._check(checker, case.infile, case.outfile,
-                                    case.codename, i + 1)
+                                    case.codename)
 
             if curr:
                 if soft_results:
@@ -573,6 +575,7 @@ class MyGroup(Scope):
                                depth=4)
         self.indenter.start()
         self.task.group_stack.append(self)
+        self.task._curr_scope = self
         return self
 
     @property
@@ -698,6 +701,7 @@ class MyGroup(Scope):
 
         self.indenter.stop()
         self.task.group_stack.pop()
+        self.task._curr_scope = self.subtask
 
     @property
     def unique_name(self):
@@ -752,9 +756,9 @@ class MyGroup(Scope):
 
         soft_results = None
 
-        for i, checker in enumerate(checkers):
+        for checker in checkers:
             curr = self.task._check(checker, case.infile, case.outfile,
-                                    case.codename, i + 1)
+                                    case.codename)
 
             if curr:
                 if soft_results:
@@ -1104,6 +1108,11 @@ class MyStatement(object):
         self.primary = primary
 
 
+class CheckerFailedError(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)
+
+
 class TaskConfig(CommonConfig, Scope):
     """
     Class for task configuration files.
@@ -1155,6 +1164,7 @@ class TaskConfig(CommonConfig, Scope):
 
         self._dataset = "imported"
 
+        self._curr_scope = self
         self.subtasks = []
         self.subtask_stack = []
         self.cases = []
@@ -1247,6 +1257,8 @@ class TaskConfig(CommonConfig, Scope):
         with header("Loading task {}".format(self.name), depth=2):
             super(TaskConfig, self)._readconfig(filename)
 
+        self._find_testcases_for_subtasks()
+
         print_msg("Creating test case zip files")
         # Automatically make a ZIP file containing the saved test cases
         self._makesavedzip()
@@ -1323,12 +1335,7 @@ class TaskConfig(CommonConfig, Scope):
         self.exported = original_exported
 
     def curr_scope(self):
-        if len(self.group_stack) > 0:
-            return self.group_stack[-1]
-        elif len(self.subtask_stack) > 0:
-            return self.subtask_stack[-1]
-        else:
-            return self
+        return self._curr_scope
 
     @exported_function
     def get_constraint(self, name):
@@ -2026,7 +2033,7 @@ class TaskConfig(CommonConfig, Scope):
             self.add_testcase(case, **kwargs)
         return self.subtask_stack[-1].cases[-1]
 
-    def _check(self, checker, infile, outfile, caseno, check_counter):
+    def _check(self, checker, infile, outfile, caseno, hide_stderr=False):
         if self.minimal:
             return
 
@@ -2034,14 +2041,14 @@ class TaskConfig(CommonConfig, Scope):
             raise Exception("Only checkers written in C++ are allowed.")
 
         try:
-            result = checker(outfile, stdin=infile,
+            result = checker(outfile, stdin=infile, hide_stderr=hide_stderr,
                              dependencies=[outfile])
 
             log = result.out
             return json.loads(log) if len(log) > 0 else None
 
         except ExitCodeException:
-            raise Exception(
+            raise CheckerFailedError(
                 "Checker {} judged case {} as wrong".format(checker, caseno))
 
     def _get_cases(self):
@@ -2143,6 +2150,38 @@ class TaskConfig(CommonConfig, Scope):
                 return SCORE_MODE_MAX_TOKENED_LAST
         else:
             return self._score_mode
+
+    def _find_testcases_for_subtasks(self):
+        """
+        Warn about test cases that could be but are not in a subtask.
+
+        """
+        for st in self.subtasks:
+            if st.sample:
+                continue
+            # We do this so that checkers get compiled with the subtask's constraints.
+            self._curr_scope = st
+
+
+            # Goes through all pairs (test case, non-sample subtask) with the test case not
+            # contained in the subtask. Prints a warning if the subtask's checker would accept
+            # the test case.
+            for case in self.cases:
+                if case in st.cases_set:
+                    continue
+                all_ok = True
+                for checker in st._get_checkers():
+                    try:
+                        self._check(checker, case.infile, case.outfile, case.codename,
+                                    hide_stderr=True)
+                    except CheckerFailedError:
+                        all_ok = False
+                        break
+                if all_ok:
+                    print_msg("Case {} could also have been in subtask {}."
+                              .format(case.codename, st.name), warning=True)
+
+            self._curr_scope = self
 
     def _printresult(self):
         if self.minimal:
