@@ -1001,33 +1001,20 @@ class MySubmission(object):
             except:
                 raise Exception("Unknown expected result '{}'".format(k))
 
-        self._expectations: dict[tuple, list[str | tuple[float, float]]] = {(): []}
+        self.expectations: dict[tuple, list[str | tuple[float, float]]] = {}
 
-        for s in self.task.subtasks:
-            self._expectations[s.unique_name] = []
+        id = {s.unique_name: i
+              for i,s in enumerate(self.task.subtasks)}
 
-        self.case_expectations = {}
-
-        for c in self.task.cases:
-            self.case_expectations[c.codename] = []
+        for i,_ in enumerate(self.task.subtasks):
+            self.expectations[i] = []
 
         # Convert the given lists of expected events to something more
         # readable for ScoreTypes
         for key, items in self.expected.items():
             for item in items:
-                if isinstance(item, MyCase):
-                    self.case_expectations[item.codename] += encode(key)
-                elif isinstance(item, MySubtask):
-                    self._expectations[item.unique_name] += encode(key)
-                else:
-                    raise ValueError("unit test expectations can only be"
-                                     "specified for subtasks and cases")
-
-        # JSON doesn't allow lists nor tuples as keys so we dump them, too
-        self.expectations = {
-            json.dumps(key, sort_keys=True): val
-            for key, val in self._expectations.items()
-        }
+                assert isinstance(item, MySubtask), "unit test expectations can only be specified for subtasks"
+                self.expectations[id[item.unique_name]] += encode(key)
 
     def _should_test(self, local_test):
         """
@@ -2567,7 +2554,6 @@ class TaskConfig(CommonConfig, Scope):
             limits=limits,
             unit_test=True,
             expected=submission.expectations,
-            expected_case=submission.case_expectations,
             expected_score=submission.score,
             expected_score_info=submission.score_info,
             expected_sample_score=submission.sample_score,

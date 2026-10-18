@@ -281,6 +281,7 @@ class ApiSubmissionFullDetailsHandler(ApiContestHandler):
 
         details = None
         if sr is not None and sr.scored():
-            details = score_type.get_json_details(sr.score_details, FEEDBACK_LEVEL_FULL)
+            print(sr)
+            details = score_type.get_json_details_full(sr.score_details)
 
         self.json({"details": details})

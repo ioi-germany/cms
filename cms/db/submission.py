@@ -57,8 +57,7 @@ class LimitInfo:
 class AdditionalInfo:
     limits: LimitInfo
     unit_test: bool
-    expected: dict[str, list[str | tuple[float, float]]]
-    expected_case: dict[str, list[str | tuple[float, float]]]
+    expected: dict[int, list[str | tuple[float, float]]]
     expected_score: tuple[float, float] | None
     expected_score_info: str
     expected_sample_score: tuple[float, float] | None

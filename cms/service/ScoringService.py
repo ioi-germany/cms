@@ -102,11 +102,6 @@ class ScoringExecutor(Executor[ScoringOperation]):
                 submission_result.ranking_score_details = \
                 score_type.compute_score(submission_result)
 
-            # Compute unit test score.
-            submission_result.unit_test_score_details = \
-                score_type.compute_unit_test_score(submission_result,
-                                                   submission.additional_info)
-
             if submission_result.scored_at is None:
                 submission_result.scored_at = make_datetime()
 

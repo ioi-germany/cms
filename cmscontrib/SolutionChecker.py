@@ -46,8 +46,15 @@ import re
 import sys
 import time
 from typing import Any
+from enum import Enum
 
 import requests
+
+from cms.grading import format_status_text
+from cmscontrib.gerpythonformat.Messenger import print_msg, print_block, \
+    header, red, green, gray, yellow, blue, lightgreen, orange, purple, bold, \
+    box, side_by_side, pad_left, add_line_breaks, \
+    remaining_line_length, indent, IndentManager
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +82,464 @@ class RedAlertFormatter(logging.Formatter):
         log_fmt = self.FORMATS.get(record.levelno, self.BASE_FORMAT)
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
+
+
+class LimitVerdict(Enum):
+    OK = 1
+    EXCEEDED = -1
+    AMBIGUOUS = 0
+
+
+class ScoreVerdict(Enum):
+    OK = 0
+    TOO_LOW = -1
+    TOO_HIGH = 1
+
+
+class UnitTest:
+    """Functions for basic unit tests"""
+
+    @staticmethod
+    def _check_limit(value: float, weak_limit: float, strong_limit: float):
+        if value > weak_limit:
+            return LimitVerdict.EXCEEDED
+        if value < strong_limit:
+            return LimitVerdict.OK
+        return LimitVerdict.AMBIGUOUS
+
+    @staticmethod
+    def get_result(limits: LimitInfo, details: Evaluation):
+        """Collect information about the evaluation.
+
+        limits (dict): a dictionary with entries weak_time_limit and
+                       strong_time_limit
+        evaluation: the Evaluation object to study
+
+        return ([unicode]): a list of reasons of failure:
+                            time, time?, memory, memory? and possibly a
+                            score < 1 (if the weak time and memory limits have
+                            been satisfied)
+
+        """
+        result: list[str] = []
+
+        # check time constraints
+        timeverdict = UnitTest._check_limit(
+            details["time"],
+            limits["weak_time_limit"],
+            limits["strong_time_limit"]
+        )
+
+        if (
+            "wall clock limit exceeded" in (details["text"]) or
+            details["time_limit_was_exceeded"]
+        ):
+            timeverdict = LimitVerdict.EXCEEDED
+        if timeverdict == LimitVerdict.EXCEEDED:
+            result.append("time")
+        elif timeverdict == LimitVerdict.AMBIGUOUS:
+            result.append("time?")
+
+        # check memory constraints
+        memverdict = UnitTest._check_limit(
+            details["memory"] / 2**20,
+            limits["weak_mem_limit"],
+            limits["strong_mem_limit"],
+        )
+
+        if (
+            ("violating memory limits" in (details["text"])) or
+            ("Execution killed by signal" in (details["text"]))
+        ):
+            memverdict = LimitVerdict.EXCEEDED
+
+        if memverdict == LimitVerdict.EXCEEDED:
+            result.append("memory")
+        elif memverdict == LimitVerdict.AMBIGUOUS:
+            result.append("memory?")
+
+        # check solution (if possible)
+        if UnitTest.meaningful_score(result) and details["score"] is not None:
+            result.append(details["score"])
+
+        return result
+
+    @staticmethod
+    def ignore(reason: str):
+        return UnitTest.is_score(reason) or reason in ("time?", "memory?")
+
+    @staticmethod
+    def is_score(reason: str):
+        try:
+            float(reason)
+            return True
+        except Exception:
+            return False
+
+    @staticmethod
+    def remove_scores(results: list[str]):
+        return [reason for reason in results if not UnitTest.is_score(reason)]
+
+    @staticmethod
+    def compare_score(score: float, interval: tuple[float, float]):
+        if score < interval[0]:
+            return ScoreVerdict.TOO_LOW
+        if score > interval[1]:
+            return ScoreVerdict.TOO_HIGH
+        return ScoreVerdict.OK
+
+    @staticmethod
+    def meaningful_score(results: list[str]):
+        """Test whether the score actually makes sense
+        """
+        return not ("time" in results or "memory" in results)
+
+    @staticmethod
+    def is_interval(value: object):
+        if not isinstance(value, list) and not isinstance(value, tuple):
+            return False
+        if len(value) != 2:
+            return False
+
+        return UnitTest.is_score(value[0]) and UnitTest.is_score(value[1])
+
+    @staticmethod
+    def get_intervals(expectations: list) -> list[tuple[float, float]]:
+        return [(x[0], x[1]) for x in expectations if UnitTest.is_interval(x)]
+
+    @staticmethod
+    def remove_intervals(expectations: list):
+        return [x for x in expectations if not UnitTest.is_interval(x)]
+
+    @staticmethod
+    def judge_score(score: float, intervals: list[tuple[float, float] | None]):
+        comparisons = [UnitTest.compare_score(score, i) for i in intervals if i]
+
+        if any(x == ScoreVerdict.TOO_LOW for x in comparisons):
+            return ScoreVerdict.TOO_LOW
+        if any(x == ScoreVerdict.TOO_HIGH for x in comparisons):
+            return ScoreVerdict.TOO_HIGH
+        return ScoreVerdict.OK
+
+    THRESHOLD_LAX = .1
+    THRESHOLD_STRICT = .05
+    THRESHOLD_VERY_STRICT = .01
+
+    GRP_IGNORED = "You specified that the outcome of this group should " \
+                  "be ignored (please only do this if you're really " \
+                  "sure that's what you want)."
+    GRP_TOO_LOW = "The submission failed for a reason you did not " \
+                  "expect (or score too low)."
+    GRP_AMBIGUOUS = "It is not clear whether the submission respects " \
+                    "the limits."
+    GRP_TOO_HIGH =  "You expected the submission to fail, but it didn't " \
+                    "(or score too high)."
+    GRP_OKAY = "... all shall be well"
+    FAILED = "FAILED"
+    OKAY = "OKAY"
+    AMBIG = "AMBIGUOUS"
+    IGN = "IGNORED"
+    IMPOSSIBLE_EXPECTATIONS = "N.B.: The expectations for this group " \
+                              "cannot be satisfied (expected failure due " \
+                              "to time or memory constraints, but at the " \
+                              "same time expected a positive score)."
+    NEGATIVE_SCORE_EXPECTED = "N.B.: You expected a negative score for " \
+                              "this group---why?"
+
+    @staticmethod
+    def compute_group_verdict(
+        expected: list[str | tuple[float, float]],
+        testcase_results: list[list[str]],
+        scores: list[float]
+    ):
+        """Determine the verdict and a reason for a single group of a unit test.
+
+        expected: the expectations declared for this group
+        testcase_results: the results obtained for each of the group's testcases.
+        scores: the score for each testcase.
+
+        """
+        results = set(reason for r in testcase_results
+                             for reason in UnitTest.remove_scores(r))
+        meaningful_scores = [
+            score
+            for r, score in zip(testcase_results, scores)
+            if UnitTest.meaningful_score(r)
+        ]
+
+        # check score
+        score_expectations = UnitTest.get_intervals(expected) or [(1.0, 1.0)]
+        score_verdict: ScoreVerdict
+        if meaningful_scores:
+            subtask_score = min(meaningful_scores)
+            score_verdict = UnitTest.judge_score(subtask_score, score_expectations)
+        else:
+            score_verdict = ScoreVerdict.OK
+
+        missing: list[str] = []
+
+        # judge this group
+        if "arbitrary" in expected:
+            res = (1337, UnitTest.IGN, UnitTest.GRP_IGNORED)
+
+        # check time and memory
+        elif any(x not in expected for x in results if not UnitTest.ignore(x)):
+            res = (-1, UnitTest.FAILED, UnitTest.GRP_TOO_LOW)
+
+        elif score_verdict == ScoreVerdict.TOO_LOW:
+            res = (-1, UnitTest.FAILED, UnitTest.GRP_TOO_LOW)
+
+        # no "time" or "memory" verdict, maybe "time?" or "memory?"?
+        elif any(x.endswith("?") and x[:-1] not in expected for x in results):
+            res = (0, UnitTest.AMBIG, UnitTest.GRP_AMBIGUOUS)
+
+        # time and memory limits okay---but is this a bad thing?
+        elif ("time" in expected or "memory" in expected) and (
+            "time" not in results and "memory" not in results
+        ):
+            res = (-1, UnitTest.FAILED, UnitTest.GRP_TOO_HIGH)
+            missing = (["time"] if "time" in expected else []) + (
+                ["memory"] if "memory" in expected else []
+            )
+
+        elif score_verdict == ScoreVerdict.OK:
+            res = (1, UnitTest.OKAY, UnitTest.GRP_OKAY)
+
+        else:
+            res = (-1, UnitTest.FAILED, UnitTest.GRP_TOO_HIGH)
+
+        status, short, desc = res
+
+        # sanity checks
+        zero_verdict = UnitTest.judge_score(0.0, score_expectations)
+        if zero_verdict == ScoreVerdict.TOO_HIGH and "arbitrary" not in expected:
+            desc += "\n\n" + UnitTest.NEGATIVE_SCORE_EXPECTED
+
+        if (
+            zero_verdict == ScoreVerdict.TOO_LOW
+            and ("time" in expected or "memory" in expected)
+            and "arbitrary" not in expected
+        ):
+            desc += "\n\n" + UnitTest.IMPOSSIBLE_EXPECTATIONS
+
+        return (status, short, desc), missing
+
+    @staticmethod
+    def is_sample_subtask(subtask):
+        return subtask["score"] == 0
+
+    @staticmethod
+    def compute_unit_test_score(sr, total_score, submission_info):
+        """Compute the score of a unit test.
+
+        Format of the returned details:
+            subtasks:
+                name: name of the subtask
+                verdict: (42, "", "")
+                max_runtime: 0.412
+                max_memory: 33659290                      in bytes
+                testcases:
+                    line: (,)                             case_line()
+                    grader: (42, "No expl. exp.")         grader response
+
+        """
+        prec = submission_info["score_precision"]
+        expectations = submission_info["expected"]
+
+        sample_score = 0
+
+        useful: set[str] = set()
+        essential: set[str] = set()
+        all_cases = {c["idx"] for s in sr for c in s["testcases"]}
+        dominated = {d: {c for c in all_cases if c != d} for d in all_cases}
+
+        for subtask in sr:
+            idx = str(subtask["idx"])
+            expected = expectations[idx]
+            scores: list[float] = []
+            results: list[list[str]] = []
+
+            for tc in subtask["testcases"]:
+                r = UnitTest.get_result(submission_info["limits"], tc)
+                this_score = tc.get("score", 0.0)
+                scores.append(this_score)
+                results.append(r)
+
+            subtask["verdict"], missing = UnitTest.compute_group_verdict(
+                expected, results, scores
+            )
+
+            for tc, r in zip(subtask["testcases"], results):
+                line = UnitTest.case_line(r, expected, missing)
+                grader_text = format_status_text(tc["text"]).strip()
+
+                tc["line"] = line
+                tc["grader"] = grader_text
+                # always give full feedback for a unit test
+                tc["show_in_restricted_feedback"] = True
+                tc["show_in_oi_restricted_feedback"] = True
+
+            subtask["max_runtime"] = max(
+                (c["time"] for c in subtask["testcases"]), default=None
+            )
+            subtask["max_memory"] = max(
+                (c["memory"] for c in subtask["testcases"]), default=None
+            )
+
+            """
+            Check testcase utility
+            """
+            if UnitTest.is_sample_subtask(subtask):
+                # in a sample subtask each testcase is effectively worth 1 point
+                sample_score += round(sum(scores), prec)
+            else:
+                for i, tc in enumerate(subtask["testcases"]):
+                    codename = tc["idx"]
+                    if UnitTest.essential_testcase(scores, i):
+                        essential.add(codename)
+                    elif not UnitTest.weak_testcase(scores, i):
+                        useful.add(codename)
+                    dominated[codename] &= {
+                        subtask["testcases"][j]["idx"]
+                        for j in UnitTest.dominated_by(scores, i)
+                    }
+
+        score_okay = (UnitTest.judge_score(total_score,
+                                           [submission_info["expected_score"]])
+                          == ScoreVerdict.OK)
+        okay = score_okay and not any(s["verdict"][0] <= 0 for s in sr)
+        sample_score_okay = None
+        has_sample_subtask = any(s for s in sr if UnitTest.is_sample_subtask(s))
+        if has_sample_subtask:
+            sample_score = round(sample_score, prec)
+            sample_score_okay = (UnitTest.judge_score(sample_score,
+                                    [submission_info["expected_sample_score"]])
+                                    == ScoreVerdict.OK)
+            okay &= sample_score_okay
+
+        return {
+            "subtasks": sr,
+            "verdict": (1, UnitTest.OKAY) if okay else (0, UnitTest.FAILED),
+            "score_okay": score_okay,
+            "sample_score_okay": sample_score_okay,
+            "score": total_score,
+            "sample_score": sample_score,
+            "expected_score": submission_info["expected_score_info"],
+            "expected_sample_score": submission_info["expected_sample_score_info"],
+            "dominated": {d: list(u) for d, u in dominated.items()},
+            "essential": list(essential),
+            "useful": list(useful),
+        }
+
+    @staticmethod
+    def case_line(
+        results: list[str],
+        expected: list[str | tuple[float, float]],
+        missing: list[str],
+    ):
+        """Information about a single testcase as part of a group
+           This function returns a list of pairs, where the first entry
+           visualises the respective result and the second one is >0
+           iff the result is as expected
+        """
+        symbols = ["✓", "≈", "✗", "―"]
+
+        def badness(reason, r):
+            if reason in r:
+                return 2
+            elif reason + "?" in r:
+                return 1
+            else:
+                return 0
+
+        def get_int(actual: int, expected: int):
+            if actual > expected:
+                return -1
+            elif actual == expected:
+                return 1
+            else:
+                return 0
+
+        line: list[tuple[str, int]] = []
+
+        # TODO: do something more clever here, like marking the time entry red when we
+        # expected TLE for this group but all cases ran in time and memory?
+        for reason in ["time", "memory"]:
+            this_badness = badness(reason, results)
+            exp_badness = badness(reason, expected)
+
+            if reason in missing:
+                line.append((symbols[this_badness], -1))
+            else:
+                line.append((symbols[this_badness], get_int(this_badness, exp_badness)))
+
+        if UnitTest.meaningful_score(results):
+            scores = [x for x in results if UnitTest.is_score(x)]
+            assert len(scores) == 1
+            line.append(
+                (scores[0], 0)
+            )  # TODO: let the score type do something clever here?
+        else:
+            line.append((symbols[-1], 0))
+
+        if "arbitrary" in expected:
+            for i in range(len(line)):
+                line[i] = (line[i][0], 0)
+
+        return line
+
+    @staticmethod
+    def essential_testcase(scores: list[float], idx: int):
+        """
+        Helper method for testcase utility that decides whether removing a
+        given testcase from a given group would affect the scoring of a
+        given submission
+
+        scores (list): the scores of all testcases in this group on a
+            given submission
+        idx (int): the index of the testcase in question in the scores
+            parameter
+        parameter (list): the parameters of the current subtask
+        """
+        if len(scores) == 1:
+            return True
+
+        case_score = scores[idx]
+        st_score = min(scores[:idx] + scores[(idx + 1):])
+
+        return case_score + UnitTest.THRESHOLD_STRICT < st_score
+
+    @staticmethod
+    def weak_testcase(scores: list[float], idx: int):
+        """
+        Helper method for testcase utility that decides whether a testcase
+        is a "weak" for a given group and submission, meaning whether it
+        is useless if our goal is to enforce that the given unit test
+        satisfies the expectations for the current group.
+
+        scores (list): the scores of all testcases in this group on a
+            given submission
+        idx (int): the index of the testcase in question in the scores
+            parameter
+        """
+        if UnitTest.essential_testcase(scores, idx):
+            return False
+
+        case_score = scores[idx]
+        st_score = min(scores)
+
+        return case_score > st_score + UnitTest.THRESHOLD_LAX
+
+    @staticmethod
+    def dominated_by(scores: list[float], idx: int):
+        """
+        Helper method for testcase utility that determines for a given testcase
+        x all cases y in the current group such that x is (not necessarily
+        strictly) weaker than y
+        """
+        return [i for i, s in enumerate(scores)
+                  if s < scores[idx] + UnitTest.THRESHOLD_VERY_STRICT]
+
 
 
 class SolutionChecker:
@@ -161,7 +626,7 @@ class SolutionChecker:
         self.auth_header = {"X-CMS-Authorization": data["login_data"]}
         logger.info("Successfully logged in as %s.", self.username)
 
-    def submit(self, task_name: str, file_path: str) -> str:
+    def submit(self, task_name: str, file_paths: str) -> str:
         task_list_url = f"{self.base_url}/api/task_list"
         response = self.session.get(task_list_url, headers=self.auth_header)
         response.raise_for_status()
@@ -174,10 +639,10 @@ class SolutionChecker:
         assert submission_format, f"Task {task_name} not found in task list"
 
         submit_url = f"{self.base_url}/api/{task_name}/submit"
-        filename = os.path.basename(file_path)
+        filenames = [os.path.basename(fp) for fp in file_paths]
         files = {}
         for fmt in submission_format:
-            files[fmt] = (filename, open(file_path, "rb"))
+            files[fmt] = (filenames[0], open(file_paths[0], "rb")) # FIXME!
 
         response = self.session.post(
             submit_url,
@@ -200,18 +665,10 @@ class SolutionChecker:
                 return data
             time.sleep(2)
 
-    def get_time_limit(self, task_name: str) -> float:
-        url = f"{self.base_url}/tasks/{task_name}/description"
-        response = self.session.get(url, headers=self.auth_header)
-        response.raise_for_status()
-        match = re.search(r"Time limit</th>\s*<td[^>]*>([\d.]+)\s*s", response.text)
-        assert match, "Could not find time limit in task description"
-        return float(match.group(1))
-
     def get_submission_details(
         self, task_name: str, submission_id: str
     ) -> list[dict[str, Any]] | None:
-        endpoint = "full_details" if self.admin_token is not None else "details"
+        endpoint = "full_details"
         url = (
             f"{self.base_url}/api/{task_name}/submissions/"
             f"{submission_id}/{endpoint}"
@@ -219,380 +676,6 @@ class SolutionChecker:
         response = self.session.get(url, headers=self.auth_header)
         response.raise_for_status()
         return response.json().get("details")
-
-    def has_slow_testcases(
-        self, details: list[dict[str, Any]] | None, time_limit: float
-    ) -> bool:
-        if not details:
-            return False
-
-        has_times = False
-        for item in details:
-            testcases = item.get("testcases")
-            if testcases is not None:
-                # Subtask structure
-                score = item.get("score", 0.0)
-                score_fraction = item.get("score_fraction", 0.0)
-                check_slow = (score is not None and score > 0) or (
-                    score_fraction is not None and score_fraction > 0
-                )
-                for tc in testcases:
-                    t = tc.get("time")
-                    if t is not None:
-                        has_times = True
-                        if check_slow and float(t) > time_limit * 0.5:
-                            return True
-            else:
-                # Flat testcase structure (e.g. Sum)
-                t = item.get("time")
-                if t is not None:
-                    has_times = True
-                    if float(t) > time_limit * 0.5:
-                        return True
-
-        if not has_times and not self.admin_token:
-            logger.warning(
-                "No testcase times found. Ensure feedback levels are "
-                "configured correctly or use --admin-token"
-            )
-        return False
-
-    @staticmethod
-    def get_max_execution_time(
-        details: list[dict[str, Any]] | None,
-    ) -> float | None:
-        if not isinstance(details, list):
-            return None
-        max_time = None
-        for item in details:
-            if not isinstance(item, dict):
-                continue
-            testcases = item.get("testcases")
-            if isinstance(testcases, list):
-                for tc in testcases:
-                    if not isinstance(tc, dict):
-                        continue
-                    t = tc.get("time")
-                    if t is not None:
-                        try:
-                            val = float(t)
-                            if max_time is None or val > max_time:
-                                max_time = val
-                        except (ValueError, TypeError):
-                            pass
-            else:
-                t = item.get("time")
-                if t is not None:
-                    try:
-                        val = float(t)
-                        if max_time is None or val > max_time:
-                            max_time = val
-                    except (ValueError, TypeError):
-                        pass
-        return max_time
-
-    @staticmethod
-    def get_testcase_status(tc: dict[str, Any]) -> str:
-        outcome = tc.get("outcome")
-        text_list = tc.get("text", [])
-        text_str = (
-            text_list[0]
-            if isinstance(text_list, list) and text_list
-            else str(text_list)
-        )
-        combined = f"{outcome} {text_str}".lower()
-        if "wall clock" in combined:
-            return "WallTimeLimitExceeded"
-        if tc.get("time_limit_was_exceeded", False) or "timed out" in combined:
-            return "TimeLimitExceeded"
-        if "memory limit" in combined:
-            return "MemoryLimitExceeded"
-        if "signal" in combined or "return code" in combined:
-            return "RuntimeError"
-        if outcome == "Correct" or "output is correct" in combined:
-            return "Accepted"
-        if outcome == "Partially correct":
-            return "PartialScore"
-        if (
-            outcome == "Not correct"
-            or "output isn't correct" in combined
-            or "wrong answer" in combined
-        ):
-            return "WrongAnswer"
-        return "Unknown"
-
-    def check_single_subtask(
-        self, st: dict[str, Any] | None, st_idx: int, check: str | None
-    ) -> str | None:
-        if check is None:
-            return None
-        if st is None:
-            return f"subtask {st_idx}: not found in submission details"
-
-        score_fraction = st.get("score_fraction")
-        score = st.get("score")
-        max_score = st.get("max_score")
-        testcases = st.get("testcases", [])
-        statuses = {
-            self.get_testcase_status(tc)
-            for tc in testcases
-            if "outcome" in tc or "text" in tc
-        }
-        statuses_list = sorted(statuses)
-
-        if check == "Accepted":
-            if (
-                (statuses and not statuses <= {"Accepted"})
-                or (score_fraction is not None and score_fraction < 1.0 - 1e-7)
-                or (
-                    score is not None
-                    and max_score is not None
-                    and score < max_score - 1e-7
-                )
-            ):
-                return (
-                    f"subtask {st_idx}: expected Accepted, got statuses "
-                    f"{statuses_list}"
-                )
-
-        elif check == "Zero":
-            if (score_fraction is not None and score_fraction > 1e-7) or (
-                score is not None and score > 1e-7
-            ):
-                return (
-                    f"subtask {st_idx}: expected Zero, got score "
-                    f"{score}/{max_score} and statuses {statuses_list}"
-                )
-
-        elif check == "PartialScore":
-            is_partial = False
-            if score_fraction is not None and 1e-7 < score_fraction < 1.0 - 1e-7:
-                is_partial = True
-            elif (
-                score is not None
-                and max_score is not None
-                and 1e-7 < score < max_score - 1e-7
-            ):
-                is_partial = True
-            elif "PartialScore" in statuses or (
-                "Accepted" in statuses and len(statuses - {"Accepted"}) > 0
-            ):
-                is_partial = True
-
-            if not is_partial:
-                return (
-                    f"subtask {st_idx}: expected PartialScore, got score "
-                    f"{score}/{max_score} and statuses {statuses_list}"
-                )
-
-        elif check in [
-            "WrongAnswer",
-            "TimeLimitExceeded",
-            "WallTimeLimitExceeded",
-            "MemoryLimitExceeded",
-            "RuntimeError",
-        ]:
-            if check not in statuses:
-                return (
-                    f"subtask {st_idx}: expected {check}, got statuses "
-                    f"{statuses_list}"
-                )
-
-        else:
-            return f"subtask {st_idx}: unknown check type '{check}'"
-
-        return None
-
-    def check_subtasks(
-        self, details: list[dict[str, Any]] | None, checks: list[str | None]
-    ) -> list[str]:
-        if details is None:
-            return ["Submission details unavailable for subtask checks."]
-
-        errors = []
-        subtasks_by_idx = {st.get("idx", i): st for i, st in enumerate(details)}
-
-        for st_idx, check in enumerate(checks):
-            st = subtasks_by_idx.get(st_idx)
-            err = self.check_single_subtask(st, st_idx, check)
-            if err is not None:
-                errors.append(err)
-
-        return errors
-
-    @staticmethod
-    def is_subtask_slow(st: dict[str, Any], time_limit: float) -> bool:
-        if not st:
-            return False
-        score = st.get("score", 0.0)
-        score_fraction = st.get("score_fraction", 0.0)
-        check_slow = (score is not None and score > 0) or (
-            score_fraction is not None and score_fraction > 0
-        )
-        if not check_slow:
-            return False
-        for tc in st.get("testcases", []):
-            t = tc.get("time")
-            if t is not None and float(t) > time_limit * 0.5:
-                return True
-        return False
-
-    STATUS_SHORT_CODES = {
-        "Accepted": "AC",
-        "WrongAnswer": "WA",
-        "TimeLimitExceeded": "TLE",
-        "WallTimeLimitExceeded": "WTL",
-        "MemoryLimitExceeded": "MLE",
-        "RuntimeError": "RTE",
-        "PartialScore": "PS",
-        "Zero": "0",
-        None: "-",
-    }
-
-    def format_report_table(
-        self,
-        results: list[dict[str, Any]],
-        time_limit: float,
-        use_color: bool = True,
-    ) -> str:
-        if not results:
-            return ""
-
-        RED = "\x1b[31;1m" if use_color else ""
-        GREEN = "\x1b[32;1m" if use_color else ""
-        YELLOW = "\x1b[33;1m" if use_color else ""
-        RSET = "\x1b[0m" if use_color else ""
-
-        num_subtasks = 0
-        for r in results:
-            crit_checks = r.get("criteria", {}).get("checks")
-            if crit_checks:
-                num_subtasks = max(num_subtasks, len(crit_checks))
-            details = r.get("details")
-            if isinstance(details, list):
-                num_subtasks = max(num_subtasks, len(details))
-
-        rows = []
-        for r in results:
-            sol_name = r["name"]
-            criteria = r.get("criteria", {})
-            checks = criteria.get("checks", [])
-            details = r.get("details")
-            compilation_failed = r.get("compilation_failed", False)
-            subtasks_by_idx = {}
-            if isinstance(details, list):
-                subtasks_by_idx = {st.get("idx", i): st for i, st in enumerate(details)}
-
-            row_cells = [(sol_name, "")]
-
-            for i in range(num_subtasks):
-                expected = checks[i] if i < len(checks) else None
-                cell_text = self.STATUS_SHORT_CODES.get(
-                    expected, str(expected) if expected is not None else "-"
-                )
-                cell_color = GREEN
-
-                if compilation_failed:
-                    cell_color = RED
-                else:
-                    st = subtasks_by_idx.get(i)
-                    if expected is not None:
-                        err = self.check_single_subtask(st, i, expected)
-                        if err is not None:
-                            cell_color = RED
-                        elif self.is_subtask_slow(st, time_limit):
-                            cell_color = YELLOW
-                        else:
-                            cell_color = GREEN
-                    else:
-                        if st and self.is_subtask_slow(st, time_limit):
-                            cell_color = YELLOW
-                        else:
-                            cell_color = GREEN
-
-                row_cells.append((cell_text, cell_color))
-
-            # Longest execution time
-            max_time = r.get("max_time")
-            if max_time is None:
-                max_time = self.get_max_execution_time(details)
-
-            if compilation_failed:
-                time_text = "-"
-                time_color = RED
-            elif max_time is not None:
-                time_text = f"{max_time:.3f}s"
-                if time_limit > 0 and max_time > time_limit:
-                    time_color = RED
-                elif time_limit > 0 and max_time > time_limit * 0.5:
-                    time_color = YELLOW
-                else:
-                    time_color = GREEN
-            else:
-                time_text = "-"
-                time_color = ""
-
-            row_cells.append((time_text, time_color))
-
-            if compilation_failed:
-                score_text = "CE"
-                expected_str = ""
-                total_color = RED
-            else:
-                score = r.get("score", 0.0)
-                min_score = criteria.get("min_score", 0.0)
-                max_score = criteria.get("max_score", 100.0)
-                score_unexpected = score < min_score - 1e-7 or score > max_score + 1e-7
-
-                score_text = f"{score:g}"
-                if score_unexpected:
-                    if abs(min_score - max_score) < 1e-7:
-                        expected_note = f"expected {min_score:g}"
-                    else:
-                        expected_note = f"expected {min_score:g}-{max_score:g}"
-                    expected_str = f" ({expected_note})"
-                else:
-                    expected_str = ""
-
-                if r.get("failed", False):
-                    total_color = RED
-                elif r.get("slow", False):
-                    total_color = YELLOW
-                else:
-                    total_color = GREEN
-
-            rows.append((row_cells, score_text, expected_str, total_color))
-
-        num_cols = max(len(row_cells) for row_cells, _, _, _ in rows)
-        col_widths = [0] * num_cols
-        score_col_width = 0
-
-        for row_cells, score_text, _, _ in rows:
-            for col_idx, (text, _) in enumerate(row_cells):
-                col_widths[col_idx] = max(col_widths[col_idx], len(text))
-            score_col_width = max(score_col_width, len(score_text))
-
-        lines = []
-        for row_cells, score_text, expected_str, total_color in rows:
-            row_strs = []
-            for col_idx, (text, color) in enumerate(row_cells):
-                w = col_widths[col_idx]
-                align_fmt = f"{text:<{w}}" if col_idx == 0 else f"{text:>{w}}"
-                if color:
-                    row_strs.append(f"{color}{align_fmt}{RSET}")
-                else:
-                    row_strs.append(align_fmt)
-
-            aligned_score = f"{score_text:>{score_col_width}}{expected_str}"
-            if total_color:
-                row_strs.append(f"{total_color}{aligned_score}{RSET}")
-            else:
-                row_strs.append(aligned_score)
-
-            lines.append("  ".join(row_strs))
-
-        return "\n".join(lines)
-
 
 def main():
     parser = argparse.ArgumentParser(description="CMS Solution Checker")
@@ -612,7 +695,8 @@ def main():
     parser.add_argument("--username", "-U", help="CMS username")
     parser.add_argument("--password", "-p", help="CMS password")
     parser.add_argument(
-        "--admin-token", "-a", help="CMS contest admin token for full details"
+        "--admin-token", "-a", help="CMS contest admin token",
+        required=True
     )
     parser.add_argument(
         "--quiet", "-q", action="store_true", help="Disable non-warnings"
@@ -641,15 +725,13 @@ def main():
         )
         checker.login()
 
-        time_limit = checker.get_time_limit(args.task)
-
         submissions = {}
         logger.info("Submitting %d solutions...", len(checks))
         for criteria in checks:
-            sol_path = criteria.get("path")
+            sol_path = criteria.get("filenames")
             sub_id = checker.submit(args.task, sol_path)
-            submissions[sol_path] = (sub_id, criteria)
-            logger.info("Submitted %s: %s", sol_path.split("/")[-1], sub_id)
+            submissions[sol_path[0]] = (sub_id, criteria)
+            logger.info("Submitted %s: %s", sol_path[0].split("/")[-1], sub_id)
 
         results = []
         has_failures = False
@@ -662,7 +744,7 @@ def main():
             errors = []
             score = 0.0
             details = None
-            slow = False
+            R = None
 
             if status:
                 if status.get("status") == 2:
@@ -670,39 +752,32 @@ def main():
                     compilation_failed = True
                     errors.append("Compilation failed.")
                 else:
+                    # TODO: remove these checks
                     score = status.get("public_score", 0.0)
-                    min_score = criteria.get("min_score", 0.0)
-                    max_score = criteria.get("max_score", 100.0)
-                    if score < min_score - 1e-7 or score > max_score + 1e-7:
+                    min_s = criteria.get("min_score", 0.0)
+                    max_s = criteria.get("max_score", 100.0)
+                    if (
+                        UnitTest.compare_score(score, [min_s, max_s]) !=
+                        ScoreVerdict.OK
+                    ):
                         failed = True
                         errors.append(
                             f"score {score} is not in range "
-                            f"[{min_score}, {max_score}]"
+                            f"[{min_s}, {max_s}]"
                         )
 
                     details = checker.get_submission_details(args.task, sub_id)
+                    info = criteria["additional_info"]
+                    R = UnitTest.compute_unit_test_score(details, score, info)
+                    if not R["verdict"][0]:
+                        failed = True
 
-                    if "checks" in criteria and criteria["checks"]:
-                        subtask_errors = checker.check_subtasks(
-                            details, criteria["checks"]
-                        )
-                        if subtask_errors:
-                            failed = True
-                            errors.extend(subtask_errors)
-
-                    if checker.has_slow_testcases(details, time_limit):
-                        slow = True
             else:
                 failed = True
                 errors.append("Evaluation failed.")
 
             if not failed:
                 logger.info("%20s: check successful", sol_name)
-                if slow:
-                    logger.warning(
-                        "%20s: some testcases took > 50%% of time limit",
-                        sol_name,
-                    )
             else:
                 has_failures = True
                 for err in errors:
@@ -715,17 +790,82 @@ def main():
                     "score": score,
                     "compilation_failed": compilation_failed,
                     "details": details,
-                    "max_time": checker.get_max_execution_time(details),
                     "failed": failed,
-                    "slow": slow,
+                    "result": R,
                 }
             )
 
-        # Print report table
-        table_str = checker.format_report_table(
-            results, time_limit, use_color=sys.stdout.isatty()
-        )
-        print("\n" + table_str)
+            # PRETTY PRINTING
+            # TODO: replace this by HTML output?
+            def w(details, stat_desc, length, z=False):
+                status, desc = stat_desc
+                return pad_left(v(status, details.strip() + " " + desc, z), length)
+
+            def v(status, desc, z=False):
+                return {  -1 : red,
+                        0 : (lambda x: str(x)) if z else yellow,
+                        1 : green,
+                        1337 : gray}[status](desc)
+
+            def myheader(name, status):
+                status, desc, _ = status
+                base_space = remaining_line_length() - 15
+                space = base_space - len(name) - len(desc)
+
+                return header(name + " " + (space - 2) * "═" + " " +
+                            v(status, desc), depth=3)
+
+            # Present verdict
+            with header(f"Unit test results for {sol_name}", depth=2):
+                for st in R["subtasks"]:
+                    with myheader(st["name"], st["verdict"]):
+                        print_msg(st["verdict"][2], use_ellipsis=False)
+                        print()
+                        print(indent(side_by_side(
+                            [bold("Codename"), bold("Time"), bold("Memory"), bold("Answer"), bold("Grader response")],
+                            [0, 12, 22, 34, 44])))
+
+                        for c in st["testcases"]:
+                            l = [(b, (a)) for a, b in c["line"]]
+                            ftime = "%.3fs" % c["time"]
+                            if c["memory"] is None:
+                                fmem = "??? MB"
+                            else:
+                                fmem = "%.1fMB" % (float(c["memory"]) / 2**20)
+                            ftime = w(ftime, l[0], 8, z=True)
+                            fmem = w(fmem, l[1], 10, z=True)
+                            fans = v(*l[2], z=True)
+                            fresp = add_line_breaks(c["grader"],
+                                                    remaining_line_length() - 44)
+
+                            print(indent(side_by_side([c["idx"], ftime, fmem, fans, fresp],
+                                                    [2, 10, 19, 34, 44])))
+
+                        print()
+                        print(indent("     max. runtime in this group: " +
+                                        bold("{:.3f}s".format(st["max_runtime"]))))
+                        print(indent("max. memory usage in this group: " +
+                                        bold("%.1fMB" %
+                                            (float(st["max_memory"]) / 2**20))))
+
+                print()
+
+            score_precision = criteria["additional_info"]["score_precision"]
+            score = R["score"]
+            rounded_score = round(score, score_precision)
+            if score != rounded_score:
+                score = "{} ({})".format(rounded_score, score)
+
+            score = green(score) if R["score_okay"] else red(score)
+            expected_score = R["expected_score"]
+            print_msg(f"score: {score}; expected: {expected_score}\n")
+
+        print()
+
+        if has_failures:
+            print_msg(red(bold("Some unit tests failed!")))
+        else:
+            print_msg(green(bold("All unit tests successful.")))
 
         return 1 if has_failures else 0
 
