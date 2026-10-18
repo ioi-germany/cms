@@ -1,0 +1,56 @@
+\input{language.tex}
+\documentclass[a4paper, 11pt]{scrartcl}
+\usepackage[a4paper, margin=2.5cm]{geometry}
+\usepackage{longtable}
+\usepackage{fancyhdr}
+\usepackage{siunitx}
+\usepackage{pdfpages}
+
+\renewcommand{\headrulewidth}{0pt}
+
+% English labels of the overview sheet (IOI statements are in English).
+\def\tOverviewSheet{Overview Sheet}
+\def\tContestant{Contestant}
+\def\tPassword{Password}
+\def\tGeneralRemarks{General Remarks}
+
+\makeatletter
+\def\mycleardoublepage{\ifodd\c@page\else\null\vfill\eject\fi}
+\makeatother
+
+\input{contest-overview.tex}
+
+% Print one overview page for a contestant:
+% #1 username, #2 "lastname, firstname", #3 password.
+\def\printoverviewpage#1#2#3{%
+  \pagestyle{fancy}%
+  \begin{center}
+    {\Huge\ttfamily\bfseries #1}\\[1.5ex]
+    {\LARGE #2}\\[1.5ex]
+    {\LARGE\ttfamily \tPassword: #3}
+  \end{center}
+
+  \subsection*{\tGeneralRemarks}
+  \begin{itemize}
+  \item Log in to the contest system with the username and the password
+    printed above.
+  \item Keep your login data private; do not share it with anyone.
+  \item You can read all task statements at any time during the contest.
+  \item Submit your solutions through the contest system. You may submit
+    as often as you like.
+  \end{itemize}
+
+  \printtaskoverview
+  \printscoring
+
+  \vfill
+  \clearpage
+  \pagestyle{empty}
+}
+
+\begin{document}
+\lhead{\textbf{\contestname}}
+\rhead{\tOverviewSheet\ \olympiadyear}
+\cfoot{\thepage}
+\input{overview-instructions.tex}
+\end{document}
