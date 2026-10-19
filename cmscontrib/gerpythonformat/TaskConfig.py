@@ -2668,6 +2668,7 @@ class TaskConfig(CommonConfig, Scope):
         submission_lang = None
 
         def match_filename(user_filename):
+            user_filename = os.path.basename(user_filename)
             if len(files) != 1 or user_filename in required:
                 return user_filename
             if len(required) == 1:
@@ -2784,11 +2785,16 @@ class TaskConfig(CommonConfig, Scope):
                 evaluation_job: EvaluationJob = EvaluationJob.from_submission(
                     evaluation_operation, sdb, ddb, submission_result
                 )
-                # Remove testcase_codename so the submission isn't re-evaluated
-                # when only the testcase's codename has changed.
-                evaluation_job.operation.testcase_codename = None
-                # Human-readable info would also contain testcase_codename
-                evaluation_job.info = None
+                if sdb.language is not None or self.tasktype not in (
+                    "BatchAndOutput",
+                    "OutputOnly",
+                ):
+                    # Remove testcase_codename so the submission isn't re-evaluated
+                    # when only the testcase's codename has changed. This should
+                    # not happen if a plain output.txt file is tested
+                    evaluation_job.operation.testcase_codename = None
+                    # Human-readable info would also contain testcase_codename
+                    evaluation_job.info = None
                 evaluation_job = self._run_job(evaluation_job)
                 # We insert the codename again because to_submission actually
                 # uses it
