@@ -169,6 +169,7 @@ class MySubtask(Scope):
         foldername,
         scorestyle,
         individual,
+        batch=True,
         output_only=False,
     ):
         super(MySubtask, self).__init__(task)
@@ -194,6 +195,8 @@ class MySubtask(Scope):
         # allow output_only submissions for BatchAndOutput tasktype
         # for the entire subtask
         self.output_only = output_only
+        # allow batch submissions for BatchAndOutput tasktype for the entire subtask
+        self.batch = batch
 
     def __enter__(self):
         self.indenter = header("Subtask {}".format(self.description),
@@ -279,7 +282,13 @@ class MySubtask(Scope):
 
     @exported_function
     def add_testcase(
-        self, case, save=False, name=None, still_to_check=True, output_only=False
+        self,
+        case,
+        save=False,
+        name=None,
+        still_to_check=True,
+        batch=True,
+        output_only=False,
     ):
         """
         Add a previously generated test case to the current subtask.
@@ -305,6 +314,12 @@ class MySubtask(Scope):
             # they would otherwise see the test case multiple times in
             # different places.
             return
+        if self.task.tasktype != "BatchAndOutput" and (not batch or output_only):
+            print_msg(
+                "You are trying to mark a case as non-batch / output_only. "
+                "This has no effect if the tasktype is not 'BatchAndOutput'",
+                warning=True,
+            )
 
         checkers = self._get_checkers()
         if len(checkers) == 0 and still_to_check:
@@ -408,6 +423,8 @@ class MySubtask(Scope):
             self.task.saved.append(case)
         if output_only or self.output_only:
             self.task.output_only_cases.append(case)
+            if batch or self.batch:
+                self.task.batch_and_output_cases.append(case)
 
         case.locations.append(self.name + "." + name)
 
@@ -1169,6 +1186,7 @@ class TaskConfig(CommonConfig, Scope):
         self.tasktype = None
         self.saved = []
         self.output_only_cases = []
+        self.batch_and_output_cases = []
 
         self._score_precision = 0
 
@@ -1821,8 +1839,17 @@ class TaskConfig(CommonConfig, Scope):
         return self.encapsulate(curried, stdoutstring)
 
     @exported_function
-    def subtask(self, description, points, name=None, sample=False, scorestyle=0, individual=False,
-                output_only=False):
+    def subtask(
+        self,
+        description,
+        points,
+        name=None,
+        sample=False,
+        scorestyle=0,
+        individual=False,
+        batch=True,
+        output_only=False,
+    ):
         """
         Specify the start of a new subtask. The number of points awarded
         for a subtask is the sum of the numbers of points awarded for each
@@ -1851,6 +1878,8 @@ class TaskConfig(CommonConfig, Scope):
         scorestyle (int): score style (always 0 for usual tasks, general integer
                          for multiscoring tasks)
 
+        batch (bool): whether it should be possible to submit all cases in this
+                      subtask via batch/procedure call
         output_only (bool): whether all cases in this subtask should be
                             output only cases
 
@@ -1863,8 +1892,18 @@ class TaskConfig(CommonConfig, Scope):
         foldername = "Subtask_" + str(len(self.subtasks))
         if sample:
             foldername += "_Public"
-        subtask = MySubtask(self, description, name, points, sample, foldername,
-                            scorestyle, individual, output_only)
+        subtask = MySubtask(
+            self,
+            description,
+            name,
+            points,
+            sample,
+            foldername,
+            scorestyle,
+            individual,
+            batch,
+            output_only,
+        )
 
         self.subtasks.append(subtask)
 
@@ -2200,6 +2239,8 @@ class TaskConfig(CommonConfig, Scope):
         cases = (
             self.output_only_cases if self.tasktype == "BatchAndOutput" else self.cases
         )
+        if not cases:
+            return
         zipname = os.path.join(self.wdir, "inputs.zip")
         contents = {}
         for c in cases:
@@ -2271,7 +2312,7 @@ class TaskConfig(CommonConfig, Scope):
             tdb.submission_format += [f"output_{c.codename}.txt" for c in self.cases]
         elif self.tasktype == "BatchAndOutput":
             tdb.submission_format += [
-                f"output_{c.codename}.txt" for c in self.output_only_cases
+                f"output_{c.codename}.txt" for c in self.batch_and_output_cases
             ]
         if self.tasktype != "OutputOnly":
             tdb.submission_format += [f"{self.name}.%l"]
@@ -2313,7 +2354,9 @@ class TaskConfig(CommonConfig, Scope):
     def _get_task_type_parameter(self):
         if self.tasktype == "BatchAndOutput":
             self.tasktypeparameters[3] = ",".join(
-                x.codename for x in self.task.output_only_cases
+                x.codename
+                for x in set(self.task.output_only_cases)
+                - set(self.task.batch_and_output_cases)
             )
         return self.tasktypeparameters
 
