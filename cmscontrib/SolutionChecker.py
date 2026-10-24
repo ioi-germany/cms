@@ -272,7 +272,8 @@ class UnitTest:
         score_verdict: ScoreVerdict
         if meaningful_scores:
             subtask_score = min(meaningful_scores)
-            score_verdict = UnitTest.judge_score(subtask_score, score_expectations)
+            score_verdict = UnitTest.judge_score(subtask_score,
+                                                 score_expectations)
         else:
             score_verdict = ScoreVerdict.OK
 
@@ -308,29 +309,15 @@ class UnitTest:
         else:
             res = (-1, UnitTest.FAILED, UnitTest.GRP_TOO_HIGH)
 
-        status, short, desc = res
-
-        # sanity checks
-        zero_verdict = UnitTest.judge_score(0.0, score_expectations)
-        if zero_verdict == ScoreVerdict.TOO_HIGH and "arbitrary" not in expected:
-            desc += "\n\n" + UnitTest.NEGATIVE_SCORE_EXPECTED
-
-        if (
-            zero_verdict == ScoreVerdict.TOO_LOW
-            and ("time" in expected or "memory" in expected)
-            and "arbitrary" not in expected
-        ):
-            desc += "\n\n" + UnitTest.IMPOSSIBLE_EXPECTATIONS
-
-        return (status, short, desc), missing
+        return res, missing
 
     @staticmethod
     def is_sample_subtask(subtask):
         return subtask["score"] == 0
 
     @staticmethod
-    def compute_unit_test_score(sr, total_score, submission_info):
-        """Compute the score of a unit test.
+    def check_unit_test(sr, total_score, submission_info):
+        """Check whether a unit test submission behaved as expected.
 
         Format of the returned details:
             subtasks:
@@ -386,13 +373,15 @@ class UnitTest:
                 (c["memory"] for c in subtask["testcases"]), default=None
             )
 
-            """
-            Check testcase utility
-            """
             if UnitTest.is_sample_subtask(subtask):
                 # in a sample subtask each testcase is effectively worth 1 point
                 sample_score += round(sum(scores), prec)
             else:
+                total_score += subtask["score"]
+
+                """
+                Check testcase utility
+                """
                 for i, tc in enumerate(subtask["testcases"]):
                     codename = tc["idx"]
                     if UnitTest.essential_testcase(scores, i):
@@ -540,19 +529,95 @@ class UnitTest:
         return [i for i, s in enumerate(scores)
                   if s < scores[idx] + UnitTest.THRESHOLD_VERY_STRICT]
 
+    @staticmethod
+    def solid_header(text, status, depth):
+        symbol = {2 : "▰", 3 : "═"}.get(depth, " ")
+
+        base_space = remaining_line_length() - 15
+        space = base_space - len(text) - len(status)
+        return header(text + " " + (space - 2) * symbol + " " + status, depth)
+
+    @staticmethod
+    def color_code(status, desc, z=False):
+        return {  -1 : red,
+                       0 : str if z else yellow,
+                       1 : green,
+                    1337 : gray}[status](desc)
+
+    @staticmethod
+    def present_verdict_ascii(sol_name, verdict, criteria):
+        v = UnitTest.color_code
+
+        def w(details, stat_desc, length, z=False):
+            status, desc = stat_desc
+            return pad_left(v(status, details.strip() + " " + desc, z), length)
+
+        def myheader(name, status):
+            status, desc, _ = status
+            return UnitTest.solid_header(name, v(status, desc), depth=3)
+
+        overall_verdict = verdict["verdict"][1]
+        if verdict["verdict"][0]:
+            overall_verdict = green(overall_verdict)
+        else:
+            overall_verdict = red(overall_verdict)
+
+        with UnitTest.solid_header(f"Unit Test results for {sol_name}",
+                                     overall_verdict, depth=2):
+            for st in verdict["subtasks"]:
+                with myheader(st["name"], st["verdict"]):
+                    print_msg(st["verdict"][2], use_ellipsis=False)
+                    print()
+                    print(indent(side_by_side(
+                        [bold("Code"), bold("Time"), bold("Memory"),
+                        bold("Answer"), bold("Grader response")],
+                        [0, 10, 20, 32, 42])))
+
+                    for c in st["testcases"]:
+                        l = [(b, (a)) for a, b in c["line"]]
+                        ftime = "%.3fs" % c["time"]
+                        if c["memory"] is None:
+                            fmem = "??? MB"
+                        else:
+                            fmem = "%.1fMB" % (float(c["memory"]) / 2**20)
+                        ftime = w(ftime, l[0], 8, z=True)
+                        fmem = w(fmem, l[1], 10, z=True)
+                        fans = v(*l[2], z=True)
+                        fresp = add_line_breaks(c["grader"],
+                                                remaining_line_length() - 44)
+
+                        print(indent(side_by_side(
+                            [c["idx"], ftime, fmem, fans, fresp],
+                            [0, 10, 17, 32, 42])))
+
+                    print()
+                    print(indent("     max. runtime in this group: " +
+                                    bold("{:.3f}s".format(st["max_runtime"]))))
+                    print(indent("max. memory usage in this group: " +
+                                    bold("%.1fMB" %
+                                        (float(st["max_memory"]) / 2**20))))
+            print()
+
+        score_precision = criteria["additional_info"]["score_precision"]
+        score = verdict["score"]
+        rounded_score = round(score, score_precision)
+        if score != rounded_score:
+            score = "{} ({})".format(rounded_score, score)
+
+        score = green(score) if verdict["score_okay"] else red(score)
+        expected_score = verdict["expected_score"]
+        print_msg(f"score: {score}; expected: {expected_score}\n")
 
 
-class SolutionChecker:
+class GerSolutionChecker:
     def __init__(
         self,
         base_url: str,
-        username: str | None = None,
-        password: str | None = None,
-        admin_token: str | None = None,
+        username: str,
+        admin_token: str
     ):
         self.base_url = base_url.rstrip("/")
         self.username = username
-        self.password = password
         self.admin_token = admin_token
         self.session = requests.Session()
         self.auth_header: dict[str, str] = {}
@@ -571,60 +636,20 @@ class SolutionChecker:
         return str(err)
 
     def login(self):
-        if self.admin_token is not None:
-            if self.username is None:
-                raise ValueError(
-                    "Admin token requires --username to specify user to impersonate."
-                )
-            login_url = f"{self.base_url}/api/login"
-            data = {"admin_token": self.admin_token, "username": self.username}
-            if self.password is not None:
-                data["password"] = self.password
-            try:
-                response = self.session.post(login_url, data=data)
-                response.raise_for_status()
-            except requests.exceptions.HTTPError as e:
-                err_msg = self._extract_error_message(e)
-                raise RuntimeError(
-                    f"Login with admin token failed: {err_msg}"
-                ) from None
-
-            res_data = response.json()
-            self.auth_header = {"X-CMS-Authorization": res_data["login_data"]}
-            logger.info("Successfully logged in with admin token as %s.", self.username)
-            return
-
-        if self.username is None and self.password is None:
-            logger.info("No credentials provided, assuming IP autologin.")
-            return
-
-        if self.username is None and self.password is not None:
-            raise ValueError(
-                "Password provided without username. Please specify --username."
-            )
-
-        if self.username is not None and self.password is None:
-            raise ValueError(
-                f"Username '{self.username}' provided without password. "
-                f"Please specify --password or use --admin-token."
-            )
-
         login_url = f"{self.base_url}/api/login"
+        data = {"admin_token": self.admin_token, "username": self.username}
         try:
-            response = self.session.post(
-                login_url,
-                data={"username": self.username, "password": self.password},
-            )
+            response = self.session.post(login_url, data=data)
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
             err_msg = self._extract_error_message(e)
             raise RuntimeError(
-                f"Login failed for user '{self.username}': {err_msg}"
+                f"Login with admin token failed: {err_msg}"
             ) from None
 
-        data = response.json()
-        self.auth_header = {"X-CMS-Authorization": data["login_data"]}
-        logger.info("Successfully logged in as %s.", self.username)
+        res_data = response.json()
+        self.auth_header = {"X-CMS-Authorization": res_data["login_data"]}
+        logger.info("Successfully logged in with admin token as %s.", self.username)
 
     def submit(self, task_name: str, file_paths: str) -> str:
         task_list_url = f"{self.base_url}/api/task_list"
@@ -692,8 +717,7 @@ def main():
         help="CMS contest URL (e.g. http://localhost:8888/contest)",
     )
     parser.add_argument("--task", "-t", required=True, help="Task name")
-    parser.add_argument("--username", "-U", help="CMS username")
-    parser.add_argument("--password", "-p", help="CMS password")
+    parser.add_argument("--username", "-U", required=True, help="CMS username")
     parser.add_argument(
         "--admin-token", "-a", help="CMS contest admin token",
         required=True
@@ -717,10 +741,9 @@ def main():
         checks = json.load(f)
 
     try:
-        checker = SolutionChecker(
+        checker = GerSolutionChecker(
             args.url,
             args.username,
-            args.password,
             admin_token=args.admin_token,
         )
         checker.login()
@@ -734,7 +757,7 @@ def main():
             logger.info("Submitted %s: %s", sol_path[0].split("/")[-1], sub_id)
 
         results = []
-        has_failures = False
+        failed_tests = []
         logger.info("Waiting for evaluations...")
         for sol_path, (sub_id, criteria) in submissions.items():
             sol_name = sol_path.split("/")[-1]
@@ -752,23 +775,9 @@ def main():
                     compilation_failed = True
                     errors.append("Compilation failed.")
                 else:
-                    # TODO: remove these checks
-                    score = status.get("public_score", 0.0)
-                    min_s = criteria.get("min_score", 0.0)
-                    max_s = criteria.get("max_score", 100.0)
-                    if (
-                        UnitTest.compare_score(score, [min_s, max_s]) !=
-                        ScoreVerdict.OK
-                    ):
-                        failed = True
-                        errors.append(
-                            f"score {score} is not in range "
-                            f"[{min_s}, {max_s}]"
-                        )
-
                     details = checker.get_submission_details(args.task, sub_id)
                     info = criteria["additional_info"]
-                    R = UnitTest.compute_unit_test_score(details, score, info)
+                    R = UnitTest.check_unit_test(details, score, info)
                     if not R["verdict"][0]:
                         failed = True
 
@@ -776,10 +785,8 @@ def main():
                 failed = True
                 errors.append("Evaluation failed.")
 
-            if not failed:
-                logger.info("%20s: check successful", sol_name)
-            else:
-                has_failures = True
+            if failed:
+                failed_tests.append(sol_name)
                 for err in errors:
                     logger.error("%20s: %s", sol_name, err)
 
@@ -795,85 +802,27 @@ def main():
                 }
             )
 
-            # PRETTY PRINTING
-            # TODO: replace this by HTML output?
-            def w(details, stat_desc, length, z=False):
-                status, desc = stat_desc
-                return pad_left(v(status, details.strip() + " " + desc, z), length)
+            UnitTest.present_verdict_ascii(sol_name, R, criteria)
+            print()
 
-            def v(status, desc, z=False):
-                return {  -1 : red,
-                        0 : (lambda x: str(x)) if z else yellow,
-                        1 : green,
-                        1337 : gray}[status](desc)
-
-            def myheader(name, status):
-                status, desc, _ = status
-                base_space = remaining_line_length() - 15
-                space = base_space - len(name) - len(desc)
-
-                return header(name + " " + (space - 2) * "═" + " " +
-                            v(status, desc), depth=3)
-
-            # Present verdict
-            with header(f"Unit test results for {sol_name}", depth=2):
-                for st in R["subtasks"]:
-                    with myheader(st["name"], st["verdict"]):
-                        print_msg(st["verdict"][2], use_ellipsis=False)
-                        print()
-                        print(indent(side_by_side(
-                            [bold("Codename"), bold("Time"), bold("Memory"), bold("Answer"), bold("Grader response")],
-                            [0, 12, 22, 34, 44])))
-
-                        for c in st["testcases"]:
-                            l = [(b, (a)) for a, b in c["line"]]
-                            ftime = "%.3fs" % c["time"]
-                            if c["memory"] is None:
-                                fmem = "??? MB"
-                            else:
-                                fmem = "%.1fMB" % (float(c["memory"]) / 2**20)
-                            ftime = w(ftime, l[0], 8, z=True)
-                            fmem = w(fmem, l[1], 10, z=True)
-                            fans = v(*l[2], z=True)
-                            fresp = add_line_breaks(c["grader"],
-                                                    remaining_line_length() - 44)
-
-                            print(indent(side_by_side([c["idx"], ftime, fmem, fans, fresp],
-                                                    [2, 10, 19, 34, 44])))
-
-                        print()
-                        print(indent("     max. runtime in this group: " +
-                                        bold("{:.3f}s".format(st["max_runtime"]))))
-                        print(indent("max. memory usage in this group: " +
-                                        bold("%.1fMB" %
-                                            (float(st["max_memory"]) / 2**20))))
-
-                print()
-
-            score_precision = criteria["additional_info"]["score_precision"]
-            score = R["score"]
-            rounded_score = round(score, score_precision)
-            if score != rounded_score:
-                score = "{} ({})".format(rounded_score, score)
-
-            score = green(score) if R["score_okay"] else red(score)
-            expected_score = R["expected_score"]
-            print_msg(f"score: {score}; expected: {expected_score}\n")
-
+        box(f" Unit Test Statistics for Task \"{args.task}\" ",
+            (
+                red(f"{len(failed_tests)} unit test" +
+                    f"{'s' if len(failed_tests) > 1 else ''} failed:") +
+                "\n" + "\n".join(red(f) for f in failed_tests)
+                if len(failed_tests) else
+                green("All unit tests passed.")
+            ),
+            double=True)
         print()
 
-        if has_failures:
-            print_msg(red(bold("Some unit tests failed!")))
-        else:
-            print_msg(green(bold("All unit tests successful.")))
-
-        return 1 if has_failures else 0
+        return 1 if len(failed_tests) else 0
 
     except (ValueError, RuntimeError) as e:
         logger.error("%s", e)
         return 1
     except requests.exceptions.HTTPError as e:
-        err_msg = SolutionChecker._extract_error_message(e)
+        err_msg = GerSolutionChecker._extract_error_message(e)
         status_code = e.response.status_code if e.response is not None else "unknown"
         logger.error("API error (%s): %s", status_code, err_msg)
         return 1
