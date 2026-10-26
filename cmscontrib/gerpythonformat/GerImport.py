@@ -54,9 +54,12 @@ class GerImport(Service):
         self.make_helper()
 
     def make_helper(self):
-        # Unset stack size limit
+        # Unset stack size limit (may be forbidden, e.g. on macOS)
         INFTY = int(.75 * virtual_memory().total)
-        resource.setrlimit(resource.RLIMIT_STACK, (INFTY, INFTY))
+        try:
+            resource.setrlimit(resource.RLIMIT_STACK, (INFTY, INFTY))
+        except (ValueError, OSError):
+            pass
 
         if not os.path.exists(os.path.join(self.odir, "contest-config.py")):
             raise Exception("Directory doesn't contain contest-config.py")

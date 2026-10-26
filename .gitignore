@@ -17,3 +17,6 @@ log/
 codecov/
 .dev/
 test_logs/
+
+# local virtualenv
+.venv/

@@ -73,4 +73,58 @@ def def_asy(name, x):
     return f
 
 
-__all__ = ["escape_latex", "def_latex", "input_latex", "escape_asy", "def_asy"]
+def escape_typst(x):
+    """Return a function returning the result of x, escaped so that it can
+    be embedded in a double-quoted typst string literal.
+    """
+    def f():
+        return str(easycall(x)).replace("\\", "\\\\").replace('"', '\\"')
+    return f
+
+
+def def_typst(name, x):
+    """Return a function returning a typst statement defining `name` to be
+    the string which is the result of x.
+    """
+    def f():
+        return '#let %s = "%s"\n' % (name, easycall(escape_typst(x)))
+    return f
+
+
+def typst_strings(xs):
+    """Return a function returning a typst array of the strings returned
+    by the given (easily callable) items.
+    """
+    def f():
+        # Trailing comma: without it, a single element would be parsed as
+        # grouping parentheses instead of an array.
+        return "(" + "".join('"{}",'
+                             .format(easycall(escape_typst(x)))
+                             for x in xs) + ")"
+    return f
+
+
+def typst_raw_strings(xs):
+    """Return a function returning a typst array of raw blocks containing
+    the contents given by the items.
+    Suitable for verbatim content such as testcase files.
+    """
+    import re
+
+    def raw_block(content):
+        run = max((len(m.group(0)) for m in re.finditer(r"`+", content)),
+                  default=0)
+        delim = "`" * max(3, run + 1)
+        if not content.endswith("\n"):
+            content += "\n"
+        return "{}\n{}{}".format(delim, content, delim)
+
+    def f():
+        # Trailing comma (see above): keep single samples arrays.
+        return "(" + "".join(raw_block(easycall(x)) + "," for x in xs) + ")"
+    return f
+
+
+__all__ = ["escape_latex", "def_latex", "input_latex", "escape_asy",
+           "def_asy", "escape_typst", "def_typst", "typst_strings",
+           "typst_raw_strings"]
