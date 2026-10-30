@@ -2026,7 +2026,7 @@ class TaskConfig(CommonConfig, Scope):
                 add_testcase(t, ...)
 
         """
-        if self.minimal:
+        if not kwargs.get("save") and self.minimal:
             print_msg("Skipping testcase (minimal mode)")
             if len(self.group_stack) > 0:
                 self.group_stack[-1]._dummy_case(kwargs.get("name"))
