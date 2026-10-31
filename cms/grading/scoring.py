@@ -314,9 +314,9 @@ class UnitTest:
 
     @staticmethod
     def _check_limit(value: float, weak_limit: float, strong_limit: float):
-        if value > weak_limit:
+        if value >= weak_limit:
             return LimitVerdict.EXCEEDED
-        if value < strong_limit:
+        if value <= strong_limit:
             return LimitVerdict.OK
         return LimitVerdict.AMBIGUOUS
 
@@ -357,11 +357,11 @@ class UnitTest:
         # TODO What if this is None?
         if evaluation.execution_memory is not None:
             memverdict = UnitTest._check_limit(
-                evaluation.execution_memory / 2**20,
+                evaluation.execution_memory,
                 limits.weak_mem_limit,
                 limits.strong_mem_limit,
             )
-            if "violating memory limits" in (evaluation.text)[0]:
+            if "Memory limit exceeded" in (evaluation.text)[0]:
                 memverdict = LimitVerdict.EXCEEDED
             if memverdict == LimitVerdict.EXCEEDED:
                 result.append("memory")
