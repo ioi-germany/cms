@@ -337,15 +337,21 @@ class DiscordBot(commands.Bot):
         intents.message_content = True
         super().__init__(command_prefix='!', intents=intents, help_command=None)
 
-        self.pwd: str = getattr(config, 'discord_bot_pwd', 'pwd')  # Password needed during startup
-        self.admin_roles: List[str] = getattr(config, 'discord_bot_admin_roles', [])  # Admin roles that can start without password
+        self.pwd: str = getattr(
+            config.discord_bot, "discord_bot_pwd", "pwd"
+        )  # Password needed during startup
+        self.admin_roles: List[str] = getattr(
+            config.discord_bot, "discord_bot_admin_roles", []
+        )  # Admin roles that can start without password
         self.channel_id: Optional[int] = only_listen_to   # We will only communicate with this channel
         self.contests: List[MyContest] = contests or []
         self.questions: Dict[int, MyQuestion] = {}
         self.q_notifications: Dict[int, List[Dict[str, Any]]] = {}
         self.messages_issued: List[discord.Message] = []
         self.err_count: int = 0
-        self.MAX_ERR_COUNT: int = getattr(config, 'discord_bot_max_error_messages', 10)
+        self.MAX_ERR_COUNT: int = getattr(
+            config.discord_bot, "discord_bot_max_error_messages", 10
+        )
         self.is_registered: bool = False
 
 
@@ -1219,7 +1225,7 @@ class DiscordBotService(Service):
 
     def _get_bot_token(self) -> str:
         """Get the Discord bot token from config"""
-        token = getattr(config, 'discord_bot_token', '')
+        token = getattr(config.discord_bot, "discord_bot_token", "")
         if not token:
             raise ValueError("Discord bot token not configured")
         return token
